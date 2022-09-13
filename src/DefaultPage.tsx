@@ -1,32 +1,18 @@
 import React from 'react';
 
-import app from 'assets/app.svg';
-import { SiGithubsponsors } from 'react-icons/si';
-
-export default function DefaultPage() {
+export default function Default() {
   return (
     <div className="default-app">
-      <img src={app} className="profile-pic" alt="app icon" />
-      <p>
-        <h1>Hello there</h1>
-        {' '}
-        <h3 className="text-secondary">
-          Edit
-          {' '}
-          <code>src/App.tsx</code>
-          {' '}
-          and save to reload.
-        </h3>
-      </p>
-      <a
-        className="default-app-link standard-btn href soft"
-        href="https://github.com/sponsors/BSoDium"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <SiGithubsponsors size="1.3em" />
-        Sponsor creator
-      </a>
+      <h1>
+        All hail the
+        <span>HOLY BOX</span>
+      </h1>
+      <div className="box">
+        <div className="face top" />
+        <div className="face left" />
+        <div className="face right" />
+        <div className="face bottom" />
+      </div>
     </div>
   );
 }
