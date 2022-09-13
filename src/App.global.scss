@@ -1,0 +1,30 @@
+@import "./sass/pages/default";
+@import "./sass/text";
+@import "./sass/components/buttons";
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-weight: 300;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:not(input):not(textarea),
+:not(input):not(textarea)::after,
+:not(input):not(textarea)::before {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: inherit;
+}
+
+input,
+button,
+textarea,
+:focus {
+  outline: none;
+}

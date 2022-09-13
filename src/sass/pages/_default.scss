@@ -1,0 +1,54 @@
+@import "../themes/dark";
+@import "../themes/light";
+
+@mixin themable($theme-name, $theme-map) {
+  .#{$theme-name} {
+    .default-app {
+      font-family: "Roboto", sans-serif;
+      background-color: map-get($theme-map, "bg");
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      text-align: center;
+      align-items: center;
+      justify-content: center;
+      font-size: calc(10px + 2vmin);
+      color: map-get($theme-map, "text");
+    }
+
+    .default-app-link {
+      margin-top: 10px;
+    }
+
+    .profile-pic {
+      height: 30vmin;
+      pointer-events: none;
+      filter: drop-shadow(3px 5px 20px map-get($theme-map, "icon-glow"));
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .profile-pic {
+        animation: vibrate alternate infinite 2s ease-in-out;
+      }
+    }
+
+    @keyframes vibrate {
+      0%,
+      100%,
+      45%,
+      65% {
+        transform: rotate(0deg);
+      }
+      50%,
+      60% {
+        transform: rotate(2deg);
+      }
+      55% {
+        transform: rotate(-2deg);
+      }
+    }
+  }
+}
+
+@include themable(light, $light);
+@include themable(dark, $dark);

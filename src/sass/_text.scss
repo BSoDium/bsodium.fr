@@ -1,0 +1,48 @@
+@import "./themes/light";
+@import "./themes/dark";
+
+@mixin themable($theme-name, $theme-map) {
+  .#{$theme-name} {
+    body {
+      background-color: map-get($theme-map, bg);
+      color: map-get($theme-map, text);
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: inherit;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      font-weight: inherit;
+      margin: 0;
+    }
+
+    h3 {
+      font-size: 1.3rem;
+      font-weight: inherit;
+      margin: 0;
+    }
+
+    h4 {
+      font-size: 1.1rem;
+      font-weight: inherit;
+      margin: 0;
+    }
+
+    h5 {
+      font-size: 0.9rem;
+      font-weight: inherit;
+      margin: 0;
+    }
+
+    .text-secondary {
+      color: map-get($theme-map, text-secondary);
+    }
+  }
+}
+
+@include themable(light, $light);
+@include themable(dark, $dark);

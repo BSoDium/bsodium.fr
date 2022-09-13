@@ -1,0 +1,30 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "conventionalCommits.scopes": [],
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": true
+    }
+  },
+  "launch": {
+    "configurations": [
+      {
+        "name": "Debug app",
+        "type": "pwa-node",
+        "request": "launch",
+        "cwd": "${workspaceRoot}",
+        "args": ["start"],
+        "runtimeExecutable": "yarn",
+        "resolveSourceMapLocations": [
+          "${workspaceFolder}/",
+          "!/node_modules/**"
+        ]
+      }
+    ],
+    "compounds": []
+  }
+}
