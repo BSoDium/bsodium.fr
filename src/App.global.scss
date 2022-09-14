@@ -1,5 +1,6 @@
 @import "./sass/pages/default";
-@import "./sass/text";
+@import "./sass/themes/light";
+@import "./sass/themes/dark";
 
 body {
   margin: 0;
@@ -11,12 +12,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-:not(input):not(textarea),
-:not(input):not(textarea)::after,
-:not(input):not(textarea)::before {
-  -webkit-user-select: none;
-  user-select: none;
-  cursor: inherit;
+@mixin themable($theme-name, $theme-map) {
+  .#{$theme-name} {
+    body {
+      background-color: map-get($theme-map, bg);
+      color: map-get($theme-map, text);
+    }
+
+  }
 }
 
 input,
