@@ -6,6 +6,7 @@ import {
 import greeting from 'utils/Greeting';
 import planet from 'assets/planet.png';
 import robot from 'assets/robot.png';
+import sky from 'assets/sky.png';
 import { SxProps } from '@mui/joy/styles/types';
 import Featured from 'components/Featured';
 import Contact from 'components/Contact';
@@ -59,6 +60,18 @@ export default function Flat() {
           top: '-100px',
           left: '0',
           zIndex: -1,
+        }}
+      />
+      <img
+        src={sky}
+        alt="sky"
+        style={{
+          position: 'absolute',
+          width: '100%',
+          top: '0',
+          left: '0',
+          zIndex: -2,
+          filter: 'blur(5px)',
         }}
       />
       {Array.from({ length: Math.round(Math.random() * 4 + 3) }).map(() => {
@@ -143,6 +156,14 @@ export default function Flat() {
         </Stack>
         <Featured />
         <Contact />
+        <Box sx={{
+          padding: 3,
+        }}
+        >
+          <Typography level="body1" textColor="text.tertiary">
+            © 2023 Elliot Négrel-Jerzy. All rights reserved.
+          </Typography>
+        </Box>
       </Stack>
     </Box>
   );

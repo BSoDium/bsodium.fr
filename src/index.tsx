@@ -35,7 +35,7 @@ root.render(
       <CssVarsProvider
         disableTransitionOnChange
         theme={appTheme}
-        defaultMode="system"
+        defaultMode="dark"
         modeStorageKey="app-apperance-mode"
       >
         <CssBaseline />
