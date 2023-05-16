@@ -1,5 +1,5 @@
 import {
-  Box, Card, Stack, Typography,
+  Stack, Typography,
 } from '@mui/joy';
 import React from 'react';
 
@@ -17,6 +17,9 @@ export default function Contact() {
         >
           In touch
         </Typography>
+      </Typography>
+      <Typography textColor="text.secondary">
+        Sorry, this page is still under construction.
       </Typography>
     </Stack>
   );

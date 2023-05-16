@@ -1,16 +1,20 @@
 import {
-  Box, Card, Stack, Typography,
+  Avatar,
+  Box, Button, Card, Chip, Stack, Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
-import getPinnedRepos from 'utils/Api';
+import getPinnedRepos, { PinnedRepo } from 'utils/Api';
 import { BsJournalBookmark } from 'react-icons/bs';
+import {
+  FaCode, FaCodeBranch, FaStar,
+} from 'react-icons/fa';
 
 export default function Featured() {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<PinnedRepo[]>([]);
 
   useEffect(() => {
-    getPinnedRepos().then((response) => {
-      setProjects(response.data);
+    getPinnedRepos().then((data) => {
+      setProjects(data);
     });
   }, []);
 
@@ -18,10 +22,24 @@ export default function Featured() {
     <Stack
       gap={3}
     >
-      <Typography level="h2" sx={{ position: 'relative' }}>
+      <Typography
+        level="h2"
+        sx={{ position: 'relative' }}
+      >
         Featured
         {' '}
-        <Typography textColor="success.400" fontWeight="xl">
+        <Typography
+          textColor="success.400"
+          alignItems="center"
+          fontWeight="xl"
+          endDecorator={(
+            <Chip variant="soft">
+              {projects.length}
+              {' '}
+              repositories
+            </Chip>
+          )}
+        >
           Projects
         </Typography>
       </Typography>
@@ -29,24 +47,100 @@ export default function Featured() {
         component={Stack}
         direction="row"
         gap={3}
-        p={2}
         sx={{
           width: '100%',
-          height: '250px',
-          overflowX: 'auto',
+          display: 'flex',
+          flexWrap: 'wrap',
+          '& > *': {
+            flexGrow: 1,
+            height: '250px',
+            minWidth: '300px',
+          },
         }}
       >
         {projects.map((project) => (
-          <Card variant="outlined" sx={{ width: '500px', height: '100%', flexShrink: 0 }}>
-            <Typography
-              level="h5"
-              sx={{ position: 'relative' }}
-              startDecorator={
-                <BsJournalBookmark />
-            }
-            >
-              {project.repo}
-            </Typography>
+          <Card
+            component={Stack}
+            variant="outlined"
+            key={project.repo}
+            gap={2}
+            p={3}
+            justifyContent="space-between"
+          >
+            <Stack gap={2}>
+              <Stack direction="row" alignItems="center" gap={2}>
+                <Avatar>
+                  <BsJournalBookmark />
+                </Avatar>
+                <Stack>
+                  <Typography level="h5">
+                    {project.repo}
+                  </Typography>
+                  <Typography
+                    level="body2"
+                    startDecorator={(
+                      <FaCode style={{
+                        color: project.languageColor,
+                      }}
+                      />
+                  )}
+                  >
+                    {project.language}
+                  </Typography>
+                </Stack>
+              </Stack>
+              <Typography
+                sx={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  maxWidth: '300px',
+                  maxHeight: '80px',
+                  textOverflow: 'ellipsis',
+                }}
+                level="body2"
+              >
+                {project.description}
+              </Typography>
+            </Stack>
+            <Stack direction="row" gap={2} justifyContent="space-between">
+              <Stack direction="row" gap={2}>
+                <Typography
+                  level="body2"
+                  startDecorator={
+                    <FaStar />
+                }
+                >
+                  {project.stars}
+                </Typography>
+                <Typography
+                  level="body2"
+                  startDecorator={
+                    <FaCodeBranch />
+                }
+                >
+                  {project.forks}
+                </Typography>
+              </Stack>
+              <Stack direction="row" gap={2}>
+                <Button
+                  variant="plain"
+                  component="a"
+                  href={project.link}
+                  target="_blank"
+                >
+                  Repository
+                </Button>
+                {project.website && (
+                <Button
+                  component="a"
+                  href={project.website}
+                  target="_blank"
+                >
+                  Demo
+                </Button>
+                )}
+              </Stack>
+            </Stack>
           </Card>
         ))}
       </Box>

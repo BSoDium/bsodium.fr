@@ -7,7 +7,7 @@ import greeting from 'utils/Greeting';
 import planet from 'assets/planet.png';
 import robot from 'assets/robot.png';
 import sky from 'assets/sky.png';
-import { SxProps } from '@mui/joy/styles/types';
+import { SxProps, TextColor } from '@mui/joy/styles/types';
 import Featured from 'components/Featured';
 import Contact from 'components/Contact';
 import { useMobileMode } from 'components/Responsive';
@@ -15,17 +15,19 @@ import { useMobileMode } from 'components/Responsive';
 export function ATypography({
   children,
   href = '#',
+  textColor = 'inherit',
   sx = {},
 }: {
   children: React.ReactNode;
   href?: string;
+  textColor?: TextColor;
   sx?: SxProps;
 }) {
   return (
     <Typography
       component="a"
       href={href}
-      textColor="inherit"
+      textColor={textColor}
       sx={{
         textDecoration: 'dotted underline',
         '&:hover': {
@@ -78,7 +80,7 @@ export default function Landing() {
         }}
       />
       {Array.from({ length: Math.round(Math.random() * 3 + 1) }).map(() => {
-        const size = Math.random() * 1.1;
+        const size = Math.random() * 0.7 + 0.3;
         const blur = Math.abs(size - 0.7) * 10;
         const top = Math.random() * 35;
         const right = Math.random() * (mobile ? 100 : 35);
@@ -118,14 +120,14 @@ export default function Landing() {
         <Stack
           gap={3}
         >
-          <Typography level="display2">
+          <Typography level="display2" fontWeight="lg">
             {greeting()}
             , stranger
           </Typography>
-          <Typography level="h4" textColor="text.tertiary">
+          <Typography level="h4" textColor="text.tertiary" fontWeight="md">
             The name&apos;s
             {' '}
-            <ATypography>
+            <ATypography textColor="primary.400">
               Elliot Négrel-Jerzy
             </ATypography>
             {' '}
@@ -157,12 +159,18 @@ export default function Landing() {
         </Stack>
         <Featured />
         <Contact />
-        <Box sx={{
-          padding: 3,
-        }}
+        <Box
+          component={Stack}
+          direction="row"
+          gap={2}
+          p={3}
+          justifyContent="space-between"
         >
           <Typography level="body1" textColor="text.tertiary">
             © 2023 Elliot Négrel-Jerzy. All rights reserved.
+          </Typography>
+          <Typography level="body1" textColor="text.tertiary">
+            Illustrations generated with Bing Image Creator powered by DALL·E.
           </Typography>
         </Box>
       </Stack>
