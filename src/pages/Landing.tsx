@@ -10,7 +10,7 @@ import sky from 'assets/sky.png';
 import { SxProps } from '@mui/joy/styles/types';
 import Featured from 'components/Featured';
 import Contact from 'components/Contact';
-import { Default } from 'components/Responsive';
+import { useMobileMode } from 'components/Responsive';
 
 export function ATypography({
   children,
@@ -39,7 +39,9 @@ export function ATypography({
   );
 }
 
-export default function Flat() {
+export default function Landing() {
+  const mobile = useMobileMode();
+
   return (
     <Box sx={{
       width: '100%',
@@ -56,9 +58,10 @@ export default function Flat() {
         alt="planet"
         style={{
           position: 'absolute',
-          width: 'min(100vw, 700px)',
+          width: '700px',
           top: '-100px',
-          left: '0',
+          left: mobile ? '50%' : '0',
+          transform: mobile ? 'translateX(-50%)' : 'none',
           zIndex: -1,
         }}
       />
@@ -67,51 +70,49 @@ export default function Flat() {
         alt="sky"
         style={{
           position: 'absolute',
-          width: '100%',
+          height: '70vh',
           top: '0',
           left: '0',
           zIndex: -2,
           filter: 'blur(5px)',
         }}
       />
-      {Array.from({ length: Math.round(Math.random() * 4 + 3) }).map(() => {
+      {Array.from({ length: Math.round(Math.random() * 3 + 1) }).map(() => {
         const size = Math.random() * 1.1;
         const blur = Math.abs(size - 0.7) * 10;
         const top = Math.random() * 35;
-        const right = Math.random() * 35;
-        const rotation = Math.random() * 360;
+        const right = Math.random() * (mobile ? 100 : 35);
+        const rotation = Math.random() * 40 - 20;
         return {
           size, blur, top, right, rotation,
         };
       }).sort((a, b) => a.size - b.size).map(({
         size, blur, top, right, rotation,
       }) => (
-        <Default>
-          <img
-            src={robot}
-            alt="robot"
-            key={`robot-${size}-${top}-${right}-${rotation}`}
-            style={{
-              position: 'absolute',
-              width: '200px',
-              height: '200px',
-              top: `min(${top}vw, ${top}vh)`,
-              right: `${right}%`,
-              filter: `blur(${blur}px)`,
-              zIndex: -1,
-              transform: `rotate(${rotation}deg) scale(${size})`,
-              animation: 'float 10s ease-in-out infinite',
-              animationDelay: `${Math.random() * 10}s`,
-            }}
-          />
-        </Default>
+        <img
+          src={robot}
+          alt="robot"
+          key={`robot-${size}-${top}-${right}-${rotation}`}
+          style={{
+            position: 'absolute',
+            width: '200px',
+            height: '200px',
+            top: `min(${top}vw, ${top}vh)`,
+            right: `${right}%`,
+            filter: `blur(${blur}px)`,
+            zIndex: -1,
+            transform: `rotate(${rotation}deg) scale(${size})`,
+            animation: 'float 10s ease-in-out infinite',
+            animationDelay: `${Math.random() * 10}s`,
+          }}
+        />
       ))}
       <Stack
         p={3}
         gap={10}
         sx={{
           width: 'min(100%, 1200px)',
-          paddingTop: 'min(100%, 550px)',
+          paddingTop: '450px',
         }}
       >
         <Stack

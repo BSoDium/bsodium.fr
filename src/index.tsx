@@ -11,13 +11,6 @@ const root = ReactDOM.createRoot(
 
 const appTheme = extendTheme({
   colorSchemes: {
-    light: {
-      palette: {
-        background: {
-          body: 'var(--joy-palette-neutral-50)',
-        },
-      },
-    },
     dark: {
       palette: {
         background: {
