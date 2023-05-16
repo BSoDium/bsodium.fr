@@ -1,31 +1,25 @@
-import React, { useEffect, useState } from 'react';
-
-import DefaultPage from 'DefaultPage';
+import React, { useEffect } from 'react';
 
 import 'App.global.scss';
 
-export enum Theme {
-  Light = 'light',
-  Dark = 'dark',
-  System = 'system',
-}
+import Landing from 'pages/Landing';
+import { useColorScheme } from '@mui/joy/styles';
 
 function App(): JSX.Element {
-  const [theme, setTheme] = useState<Theme>((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.Dark : Theme.Light));
+  const { setMode } = useColorScheme();
 
   useEffect(() => {
-    document.getElementsByTagName('html')[0].className = theme;
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
       if (e.matches) {
-        setTheme(Theme.Dark);
+        setMode('dark');
       } else {
-        setTheme(Theme.Light);
+        setMode('light');
       }
     });
   });
 
   return (
-    <DefaultPage />
+    <Landing />
   );
 }
 
