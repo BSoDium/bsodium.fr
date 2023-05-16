@@ -96,6 +96,7 @@ export default function Featured() {
                   maxWidth: '300px',
                   maxHeight: '80px',
                   textOverflow: 'ellipsis',
+                  '-webkit-line-clamp': 3,
                 }}
                 level="body2"
               >
@@ -121,7 +122,7 @@ export default function Featured() {
                   {project.forks}
                 </Typography>
               </Stack>
-              <Stack direction="row" gap={2}>
+              <Stack direction="row" gap={1}>
                 <Button
                   variant="plain"
                   component="a"
