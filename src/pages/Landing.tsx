@@ -15,11 +15,13 @@ import { useMobileMode } from 'components/Responsive';
 export function ATypography({
   children,
   href = '#',
+  target = '_blank',
   textColor = 'inherit',
   sx = {},
 }: {
   children: React.ReactNode;
   href?: string;
+  target?: string;
   textColor?: TextColor;
   sx?: SxProps;
 }) {
@@ -27,6 +29,7 @@ export function ATypography({
     <Typography
       component="a"
       href={href}
+      target={target}
       textColor={textColor}
       sx={{
         textDecoration: 'dotted underline',
@@ -127,13 +130,13 @@ export default function Landing() {
           <Typography level="h4" textColor="text.tertiary" fontWeight="md">
             The name&apos;s
             {' '}
-            <ATypography textColor="primary.400">
+            <ATypography textColor="primary.400" href="https://www.linkedin.com/in/bsodium/">
               Elliot Négrel-Jerzy
             </ATypography>
             {' '}
             , but you can call me
             {' '}
-            <ATypography>
+            <ATypography href="https://github.com/BSoDium">
               BSoDium
             </ATypography>
             . I&apos;m a
@@ -162,14 +165,15 @@ export default function Landing() {
         <Box
           component={Stack}
           direction="row"
+          flexWrap="wrap"
           gap={2}
           p={3}
           justifyContent="space-between"
         >
-          <Typography level="body1" textColor="text.tertiary">
+          <Typography level="body2" textColor="text.tertiary">
             © 2023 Elliot Négrel-Jerzy. All rights reserved.
           </Typography>
-          <Typography level="body1" textColor="text.tertiary">
+          <Typography level="body2" textColor="text.tertiary">
             Illustrations generated with Bing Image Creator powered by DALL·E.
           </Typography>
         </Box>
