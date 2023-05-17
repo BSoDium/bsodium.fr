@@ -1,6 +1,5 @@
 import {
   Button,
-  Divider,
   Stack, Typography,
 } from '@mui/joy';
 import React from 'react';
@@ -48,6 +47,7 @@ export default function Contact() {
             transition: 'transform 0.2s ease-in-out',
             '&:hover': {
               transform: 'scale(1.1)',
+              transition: 'transform 0.2s ease-in-out',
             },
           },
         }}
@@ -55,7 +55,6 @@ export default function Contact() {
         <Button
           component="a"
           href="mailto:negreljerzy.elliot@gmail.com"
-          target="_blank"
           size="lg"
           variant="soft"
           startDecorator={
