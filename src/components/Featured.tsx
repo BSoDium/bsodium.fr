@@ -1,6 +1,6 @@
 import {
   Avatar,
-  Box, Button, Card, Chip, Stack, Typography,
+  Box, Button, Card, Chip, CircularProgress, Stack, Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
 import getPinnedRepos, { PinnedRepo } from 'utils/Api';
@@ -11,10 +11,12 @@ import {
 
 export default function Featured() {
   const [projects, setProjects] = useState<PinnedRepo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getPinnedRepos().then((data) => {
       setProjects(data);
+      setLoading(false);
     });
   }, []);
 
@@ -58,7 +60,9 @@ export default function Featured() {
           },
         }}
       >
-        {projects.map((project) => (
+        {loading ? (
+          <CircularProgress />
+        ) : projects.map((project) => (
           <Card
             component={Stack}
             variant="outlined"
