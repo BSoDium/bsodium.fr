@@ -29,9 +29,8 @@ root.render(
         disableTransitionOnChange
         theme={appTheme}
         defaultMode="dark"
-        modeStorageKey="app-apperance-mode"
       >
-        <CssBaseline />
+        <CssBaseline disableColorScheme />
         <App />
       </CssVarsProvider>
     </StyledEngineProvider>
