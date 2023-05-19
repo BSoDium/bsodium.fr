@@ -185,11 +185,15 @@ export default function Terminal() {
             </Stack>
           </Default>
         </Stack>
-        <Sheet sx={{
-          backgroundColor: 'rgba(47, 51, 54, 0.181)',
-          p: 2,
-          flexGrow: 1,
-        }}
+        <Sheet
+          component={Stack}
+          direction="column"
+          sx={{
+            backgroundColor: 'rgba(47, 51, 54, 0.181)',
+            p: 2,
+            gap: 1,
+            flexGrow: 1,
+          }}
         >
           <Typography
             fontFamily="'Fira Code', monospace"
@@ -221,7 +225,6 @@ export default function Terminal() {
             orientation="horizontal"
             sx={{
               flexWrap: 'wrap',
-              marginTop: 1,
               gap: 1,
             }}
           >
@@ -230,18 +233,11 @@ export default function Terminal() {
               return (
                 <Chip
                   key={name}
-                  variant={checked ? 'solid' : 'outlined'}
+                  variant="soft"
                   color={checked ? 'primary' : 'neutral'}
-                  startDecorator={checked && <FaCheck />}
-                  sx={(theme) => ({
-                    boxShadow: 'sm',
+                  sx={{
                     fontSize: '0.85rem',
-                    ...(!checked && {
-                      '&:not(:hover)': {
-                        borderColor: theme.palette.text.tertiary,
-                      },
-                    }),
-                  })}
+                  }}
                 >
                   <Radio
                     variant="outlined"

@@ -10,7 +10,7 @@ export default function Details({
   switch (category) {
     case 'education':
       return (
-        <Stack p={2}>
+        <Stack gap={1}>
           {[
             {
               name: 'University of California, Berkeley',
@@ -59,7 +59,7 @@ export default function Details({
     case 'interests':
     default:
       return (
-        <Stack p={2}>
+        <Stack>
           The currently selected category is
           {' '}
           {category}
