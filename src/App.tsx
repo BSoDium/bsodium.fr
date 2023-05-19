@@ -11,6 +11,8 @@ import { SxProps, TextColor } from '@mui/joy/styles/types';
 import Featured from 'components/Featured';
 import Contact from 'components/Contact';
 import { useMobileMode } from 'components/Responsive';
+import Terminal from 'components/Terminal';
+import Title from 'components/Title';
 
 export function ATypography({
   children,
@@ -58,6 +60,7 @@ export default function App() {
       position: 'relative',
     }}
     >
+      <Title text="Elliot Négrel-Jerzy" />
       <img
         src={planet}
         alt="planet"
@@ -82,11 +85,24 @@ export default function App() {
           filter: 'blur(5px)',
         }}
       />
-      {Array.from({ length: Math.round(Math.random() * 3 + 1) }).map(() => {
+      <img
+        src={sky}
+        alt="sky"
+        style={{
+          position: 'absolute',
+          height: '70vh',
+          top: '50vh',
+          left: '0',
+          zIndex: -2,
+          filter: 'blur(5px) brightness(0.3)',
+          transform: 'scaleX(-1)',
+        }}
+      />
+      {Array.from({ length: Math.round(Math.random() * 2 + 1) }).map(() => {
         const size = Math.random() * 0.7 + 0.3;
         const blur = Math.abs(size - 0.7) * 10;
         const top = Math.random() * 35;
-        const right = Math.random() * (mobile ? 100 : 35);
+        const right = Math.random() * 35 + 10;
         const rotation = Math.random() * 40 - 20;
         return {
           size, blur, top, right, rotation,
@@ -160,6 +176,7 @@ export default function App() {
             enthusiast.
           </Typography>
         </Stack>
+        <Terminal />
         <Featured />
         <Contact />
         <Box
@@ -174,7 +191,18 @@ export default function App() {
             © 2023 Elliot Négrel-Jerzy. All rights reserved.
           </Typography>
           <Typography level="body2" textColor="text.tertiary">
-            Illustrations generated with Bing Image Creator powered by DALL·E.
+            Illustrations generated with
+            {' '}
+            <ATypography href="https://www.bing.com/create">
+              Bing Image Creator
+            </ATypography>
+            {' '}
+            powered by
+            {' '}
+            <ATypography href="https://openai.com/product/dall-e-2/">
+              DALL·E
+            </ATypography>
+            .
           </Typography>
         </Box>
       </Stack>
