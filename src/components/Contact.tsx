@@ -46,7 +46,7 @@ export default function Contact() {
             maxWidth: '300px',
             transition: 'transform 0.2s ease-in-out',
             '&:hover': {
-              transform: 'scale(1.1)',
+              transform: 'scaleX(1.05) scaleY(1.1)',
               transition: 'transform 0.2s ease-in-out',
             },
           },
