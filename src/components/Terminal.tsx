@@ -7,7 +7,6 @@ import { VscChromeClose, VscChromeMaximize, VscChromeMinimize } from 'react-icon
 import { IoAddOutline } from 'react-icons/io5';
 import { HiChevronDown } from 'react-icons/hi';
 import { TypeAnimation } from 'react-type-animation';
-import { FaCheck } from 'react-icons/fa';
 import { Default } from './Responsive';
 import Details from './Details';
 
@@ -15,8 +14,6 @@ export const categories = [
   'education',
   'skills',
   'experience',
-  'projects',
-  'interests',
 ] as const;
 
 export type Category = typeof categories[number];
@@ -237,6 +234,7 @@ export default function Terminal() {
                   color={checked ? 'primary' : 'neutral'}
                   sx={{
                     fontSize: '0.85rem',
+                    boxShadow: 'sm',
                   }}
                 >
                   <Radio
