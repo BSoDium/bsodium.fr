@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Avatar, Chip, Stack, Typography,
 } from '@mui/joy';
-import details from 'assets/details.json';
+import details from 'assets/Details';
 import { IoSchoolOutline } from 'react-icons/io5';
 import moment from 'moment';
 import { HiOutlineOfficeBuilding } from 'react-icons/hi';
@@ -23,7 +23,15 @@ export default function Details({
             const duration = moment.duration(endDate.getTime() - startDate.getTime()).humanize();
             return (
               <Stack direction="row" gap={1.5} key={`${item.school}-${item.major}-${item.start}-${item.end}`}>
-                <Avatar color="neutral" variant="solid" size="lg">
+                <Avatar
+                  color="neutral"
+                  variant="solid"
+                  size="lg"
+                  src={item.icon}
+                  sx={{
+                    borderRadius: 'var(--Card-radius)',
+                  }}
+                >
                   <IoSchoolOutline />
                 </Avatar>
                 <Stack>
@@ -66,12 +74,36 @@ export default function Details({
       );
     case 'skills':
       return (
-        <Stack alignItems="start" p={1} gap={2}>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            {details.skills.map((skill) => (
-              <Chip variant="solid" color="neutral" size="sm" key={skill}>
-                {skill}
-              </Chip>
+        <Stack alignItems="start" p={1} gap={1}>
+          <Stack alignItems="start" p={1}>
+            {Object.entries(details.skills).map(([skillsetName, skillset]) => (
+              <Stack
+                key={skillsetName}
+                gap={1}
+                p={1}
+              >
+                <Typography
+                  level="body1"
+                  textTransform="capitalize"
+                  fontWeight="lg"
+                  textColor="text.secondary"
+                  alignItems="baseline"
+                  endDecorator={(
+                    <Chip size="sm" variant="soft" color="neutral">
+                      {skillset.length}
+                    </Chip>
+              )}
+                >
+                  {skillsetName}
+                </Typography>
+                <Stack direction="row" flexWrap="wrap" gap={1}>
+                  {skillset.map((skill) => (
+                    <Chip variant="soft" color="primary" size="md" key={skill}>
+                      {skill}
+                    </Chip>
+                  ))}
+                </Stack>
+              </Stack>
             ))}
           </Stack>
           <Typography level="body2">
@@ -88,7 +120,15 @@ export default function Details({
         <Stack gap={1} p={1}>
           {details.experience.map((item) => (
             <Stack direction="row" gap={1.5} key={`${item.company}-${item.position}-${item.start}-${item.end}`}>
-              <Avatar color="neutral" variant="solid" size="lg">
+              <Avatar
+                color="neutral"
+                variant="solid"
+                size="lg"
+                src={item.icon}
+                sx={{
+                  borderRadius: 'var(--Card-radius)',
+                }}
+              >
                 <HiOutlineOfficeBuilding />
               </Avatar>
               <Stack>
@@ -120,7 +160,7 @@ export default function Details({
                 <Typography level="body2">
                   {item.position}
                 </Typography>
-                <Typography level="body2">
+                <Typography level="body2" textColor="text.tertiary">
                   {item.description}
                 </Typography>
               </Stack>

@@ -254,7 +254,7 @@ export default function Terminal() {
             sx={{
               position: 'absolute',
               bottom: '10px',
-              right: '10px',
+              right: '15px',
               zIndex: 1,
             }}
             onClick={() => {
@@ -276,7 +276,11 @@ export default function Terminal() {
             overflowY: 'auto',
           }}
         >
-          <Typography fontFamily="'Fira Code', monospace" fontSize="0.875rem" component="span">
+          <Typography
+            fontFamily="'Fira Code', monospace"
+            fontSize="0.875rem"
+            component="span"
+          >
             <Typography textColor="text.secondary">
               Powershell 7.3.4
               <br />
@@ -329,6 +333,10 @@ export default function Terminal() {
                     color="primary"
                     sx={{
                       borderRadius: '6px',
+                      ...(checked && {
+                        backgroundColor: 'var(--joy-palette-primary-300)',
+                        color: 'var(--joy-palette-primary-900)',
+                      }),
                     }}
                   >
                     {name}
