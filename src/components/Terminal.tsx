@@ -1,27 +1,65 @@
+/* eslint-disable react/jsx-props-no-spreading */
 import {
-  Card, Chip, Divider, IconButton, Radio, RadioGroup, Sheet, Stack, Typography,
+  Card,
+  Chip,
+  Divider,
+  IconButton,
+  IconButtonProps,
+  Sheet,
+  Stack,
+  Tab,
+  TabList,
+  Tabs,
+  Tooltip,
+  Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
 import { SiPowershell } from 'react-icons/si';
-import { VscChromeClose, VscChromeMaximize, VscChromeMinimize } from 'react-icons/vsc';
+import {
+  VscChromeClose,
+  VscChromeMaximize,
+  VscChromeMinimize,
+} from 'react-icons/vsc';
 import { IoAddOutline } from 'react-icons/io5';
 import { HiChevronDown } from 'react-icons/hi';
-import { TypeAnimation } from 'react-type-animation';
+import mockMessages from 'utils/Messages';
+import { FaPause, FaPlay } from 'react-icons/fa';
 import { Default } from './Responsive';
 import Details from './Details';
+import TypeWriter from './TypeWriter';
 
-export const categories = [
-  'education',
-  'skills',
-  'experience',
-] as const;
+export const categories = ['education', 'skills', 'experience'] as const;
 
-export type Category = typeof categories[number];
+export type Category = (typeof categories)[number];
 
 export interface Tab {
   name: string;
   icon: JSX.Element;
-  content: string;
+}
+
+export function FakeButton({
+  children,
+  tooltipIndex,
+  setTooltipIndex,
+  ...props
+}: {
+  children: React.ReactNode;
+  tooltipIndex: number;
+  setTooltipIndex: React.Dispatch<React.SetStateAction<number>>;
+} & IconButtonProps) {
+  return (
+    <Tooltip
+      title={mockMessages[tooltipIndex]}
+      variant="outlined"
+      onClose={() => {
+        if (tooltipIndex < mockMessages.length - 1) {
+          setTooltipIndex(tooltipIndex + 1);
+        }
+      }}
+    >
+      <IconButton {...props}>{children}</IconButton>
+    </Tooltip>
+  );
 }
 
 export default function Terminal() {
@@ -29,20 +67,35 @@ export default function Terminal() {
     {
       name: 'pwsh in bsodium',
       icon: <SiPowershell />,
-      content: 'Welcome to my website!',
     },
   ]);
-  const [selected, setSelected] = useState<Category>();
+  const [displayed, setDisplayed] = useState<Category>('education');
+  const [selected, setSelected] = useState<Category>('education');
   const [loadingTime, setLoadingTime] = useState<number>();
+  const [tooltipIndex, setTooltipIndex] = useState(0);
+  const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
     setLoadingTime(Math.floor(Math.random() * 2000 + 300));
   }, []);
 
+  useEffect(() => {
+    if (playing) {
+      const interval = setInterval(() => {
+        setDisplayed((prev) => {
+          const nextIndex = (categories.indexOf(prev) + 1) % categories.length;
+          return categories[nextIndex];
+        });
+      }, 4000);
+      return () => {
+        clearInterval(interval);
+      };
+    }
+    return undefined;
+  }, [playing, selected]);
+
   return (
-    <Stack
-      gap={3}
-    >
+    <Stack gap={3}>
       <Card
         variant="outlined"
         component={Stack}
@@ -52,7 +105,7 @@ export default function Terminal() {
           border: '1px solid rgb(83, 86, 93)',
           padding: 0,
           overflow: 'hidden',
-          minHeight: '400px',
+          height: '500px',
         }}
       >
         <Stack direction="row" justifyContent="space-between" p={0}>
@@ -69,6 +122,7 @@ export default function Terminal() {
               {tabs.map((tab) => (
                 <Card
                   variant="outlined"
+                  key={tab.name}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -97,7 +151,9 @@ export default function Terminal() {
                   >
                     {tab.name}
                   </Typography>
-                  <IconButton
+                  <FakeButton
+                    tooltipIndex={tooltipIndex}
+                    setTooltipIndex={setTooltipIndex}
                     size="sm"
                     variant="plain"
                     color="neutral"
@@ -108,16 +164,14 @@ export default function Terminal() {
                     }}
                   >
                     <VscChromeClose />
-                  </IconButton>
+                  </FakeButton>
                 </Card>
               ))}
             </Stack>
-            <Stack
-              direction="row"
-              p={0.5}
-              paddingTop={1}
-            >
-              <IconButton
+            <Stack direction="row" p={0.5} paddingTop={1}>
+              <FakeButton
+                tooltipIndex={tooltipIndex}
+                setTooltipIndex={setTooltipIndex}
                 size="sm"
                 variant="soft"
                 color="neutral"
@@ -128,9 +182,11 @@ export default function Terminal() {
                 }}
               >
                 <IoAddOutline />
-              </IconButton>
+              </FakeButton>
               <Divider orientation="vertical" />
-              <IconButton
+              <FakeButton
+                tooltipIndex={tooltipIndex}
+                setTooltipIndex={setTooltipIndex}
                 size="sm"
                 variant="soft"
                 color="neutral"
@@ -141,12 +197,14 @@ export default function Terminal() {
                 }}
               >
                 <HiChevronDown />
-              </IconButton>
+              </FakeButton>
             </Stack>
           </Stack>
           <Default>
             <Stack direction="row">
-              <IconButton
+              <FakeButton
+                tooltipIndex={tooltipIndex}
+                setTooltipIndex={setTooltipIndex}
                 variant="plain"
                 color="neutral"
                 sx={{
@@ -155,8 +213,10 @@ export default function Terminal() {
                 }}
               >
                 <VscChromeMinimize />
-              </IconButton>
-              <IconButton
+              </FakeButton>
+              <FakeButton
+                tooltipIndex={tooltipIndex}
+                setTooltipIndex={setTooltipIndex}
                 variant="plain"
                 color="neutral"
                 sx={{
@@ -165,8 +225,10 @@ export default function Terminal() {
                 }}
               >
                 <VscChromeMaximize />
-              </IconButton>
-              <IconButton
+              </FakeButton>
+              <FakeButton
+                tooltipIndex={tooltipIndex}
+                setTooltipIndex={setTooltipIndex}
                 variant="plain"
                 color="neutral"
                 sx={{
@@ -178,23 +240,47 @@ export default function Terminal() {
                 }}
               >
                 <VscChromeClose />
-              </IconButton>
+              </FakeButton>
             </Stack>
           </Default>
         </Stack>
+        <Tooltip
+          variant="outlined"
+          title={`${playing ? 'Pause' : 'Resume'} auto-play`}
+        >
+          <IconButton
+            size="sm"
+            variant="soft"
+            color="neutral"
+            sx={{
+              position: 'absolute',
+              bottom: '10px',
+              right: '15px',
+              zIndex: 1,
+            }}
+            onClick={() => {
+              setPlaying(!playing);
+            }}
+          >
+            {playing ? <FaPause /> : <FaPlay />}
+          </IconButton>
+        </Tooltip>
         <Sheet
           component={Stack}
           direction="column"
           sx={{
-            backgroundColor: 'rgba(47, 51, 54, 0.181)',
+            position: 'relative',
+            backgroundColor: 'rgba(47, 51, 54, 0.3)',
             p: 2,
             gap: 1,
             flexGrow: 1,
+            overflowY: 'auto',
           }}
         >
           <Typography
             fontFamily="'Fira Code', monospace"
             fontSize="0.875rem"
+            component="span"
           >
             <Typography textColor="text.secondary">
               Powershell 7.3.4
@@ -204,64 +290,63 @@ export default function Terminal() {
               ms.
             </Typography>
             <br />
-            <Typography textColor="primary.300">
-              root@bsodium:~$&nbsp;
-            </Typography>
-            {selected
-              ? `bsodium.exe --${selected}`
-              : (
-                <TypeAnimation
-                  sequence={categories.map((name) => [`bsodium.exe --${name}`, 1000]).flat()}
-                  speed={50}
-                  repeat={Infinity}
-                />
-              )}
+            <Stack direction="row">
+              <Typography textColor="primary.300">
+                root@bsodium:~$&nbsp;
+              </Typography>
+              bsodium.exe&nbsp;
+              <TypeWriter onTransitionEnd={() => {
+                setSelected(displayed);
+              }}
+              >
+                {`--${displayed}`}
+              </TypeWriter>
+            </Stack>
           </Typography>
-          <RadioGroup
-            name="category"
-            orientation="horizontal"
+          <Tabs
+            aria-label="terminal options"
+            value={selected}
+            onChange={
+            (_, newValue) => {
+              setSelected(newValue as Category);
+              setDisplayed(newValue as Category);
+              setPlaying(false);
+            }
+            }
             sx={{
-              flexWrap: 'wrap',
-              gap: 1,
+              width: 'fit-content',
+              backgroundColor: 'transparent',
             }}
           >
-            {categories.map((name) => {
-              const checked = selected === name;
-              return (
-                <Chip
-                  key={name}
-                  variant="soft"
-                  color={checked ? 'primary' : 'neutral'}
-                  sx={{
-                    fontSize: '0.85rem',
-                    boxShadow: 'sm',
-                  }}
-                >
-                  <Radio
-                    variant="outlined"
-                    color={checked ? 'primary' : 'neutral'}
-                    disableIcon
-                    overlay
-                    label={name}
+            <TabList sx={{
+              backgroundColor: 'transparent',
+              gap: 1,
+            }}
+            >
+              {categories.map((name) => {
+                const checked = selected === name;
+                return (
+                  <Chip
+                    component={Tab}
+                    key={name}
                     value={name}
-                    checked={checked}
-                    onChange={(event) => {
-                      if (event.target.checked) {
-                        setSelected(name);
-                      }
-                    }}
+                    variant={checked ? 'solid' : 'outlined'}
+                    color="primary"
                     sx={{
-                      fontSize: 'inherit',
-                      '&  span': {
-                        border: 'none',
-                      },
+                      borderRadius: '6px',
+                      ...(checked && {
+                        backgroundColor: 'var(--joy-palette-primary-300)',
+                        color: 'var(--joy-palette-primary-900)',
+                      }),
                     }}
-                  />
-                </Chip>
-              );
-            })}
-          </RadioGroup>
-          {selected && <Details category={selected} />}
+                  >
+                    {name}
+                  </Chip>
+                );
+              })}
+            </TabList>
+          </Tabs>
+          <Details category={selected} />
         </Sheet>
       </Card>
     </Stack>
