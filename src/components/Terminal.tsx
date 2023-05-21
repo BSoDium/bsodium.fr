@@ -249,6 +249,7 @@ export default function Terminal() {
           title={`${playing ? 'Pause' : 'Resume'} auto-play`}
         >
           <IconButton
+            size="sm"
             variant="soft"
             color="neutral"
             sx={{

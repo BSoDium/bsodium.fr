@@ -116,6 +116,8 @@ const details = {
       'HTML',
       'CSS',
       'SASS',
+      'Julia',
+      'OCaml',
     ],
     frameworks: [
       'React',
@@ -126,6 +128,7 @@ const details = {
       'Docker',
       'Linux',
       'Windows',
+      'Keras',
     ],
     tools: [
       'Scrum',
@@ -138,6 +141,7 @@ const details = {
       'Deck.gl',
       'OpenCV',
       'MUI Joy',
+      'Blender',
     ],
     others: [
       'REST API',
@@ -145,6 +149,8 @@ const details = {
       'Multi-processing',
       'Object-oriented programming',
       'UML',
+      'Design patterns',
+      'MVC',
       'Functional programming',
       'Algorithms',
       '3D rendering',

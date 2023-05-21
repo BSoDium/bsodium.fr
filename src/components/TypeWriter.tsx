@@ -1,6 +1,9 @@
 import { Typography } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
 
+/**
+ * A typewriter effect that types out the text in `children` one character at a time.
+ */
 export default function TypeWriter({
   children: toText,
   typeInterval = 50,
