@@ -5,8 +5,6 @@ import {
   Divider,
   IconButton,
   IconButtonProps,
-  Radio,
-  RadioGroup,
   Sheet,
   Stack,
   Tab,
@@ -26,9 +24,9 @@ import { IoAddOutline } from 'react-icons/io5';
 import { HiChevronDown } from 'react-icons/hi';
 import mockMessages from 'utils/Messages';
 import { FaPause, FaPlay } from 'react-icons/fa';
-import TextTransition, { presets } from 'react-text-transition';
 import { Default } from './Responsive';
 import Details from './Details';
+import TypeWriter from './TypeWriter';
 
 export const categories = ['education', 'skills', 'experience'] as const;
 
@@ -71,6 +69,7 @@ export default function Terminal() {
       icon: <SiPowershell />,
     },
   ]);
+  const [displayed, setDisplayed] = useState<Category>('education');
   const [selected, setSelected] = useState<Category>('education');
   const [loadingTime, setLoadingTime] = useState<number>();
   const [tooltipIndex, setTooltipIndex] = useState(0);
@@ -83,7 +82,7 @@ export default function Terminal() {
   useEffect(() => {
     if (playing) {
       const interval = setInterval(() => {
-        setSelected((prev) => {
+        setDisplayed((prev) => {
           const nextIndex = (categories.indexOf(prev) + 1) % categories.length;
           return categories[nextIndex];
         });
@@ -245,38 +244,38 @@ export default function Terminal() {
             </Stack>
           </Default>
         </Stack>
+        <Tooltip
+          variant="outlined"
+          title={`${playing ? 'Pause' : 'Resume'} auto-play`}
+        >
+          <IconButton
+            variant="soft"
+            color="neutral"
+            sx={{
+              position: 'absolute',
+              bottom: '10px',
+              right: '10px',
+              zIndex: 1,
+            }}
+            onClick={() => {
+              setPlaying(!playing);
+            }}
+          >
+            {playing ? <FaPause /> : <FaPlay />}
+          </IconButton>
+        </Tooltip>
         <Sheet
           component={Stack}
           direction="column"
           sx={{
-            backgroundColor: 'rgba(47, 51, 54, 0.181)',
+            position: 'relative',
+            backgroundColor: 'rgba(47, 51, 54, 0.3)',
             p: 2,
             gap: 1,
             flexGrow: 1,
             overflowY: 'auto',
           }}
         >
-          <Tooltip
-            variant="outlined"
-            title={
-            playing ? 'Pause animation' : 'Resume animation'
-          }
-          >
-            <IconButton
-              variant="plain"
-              color="neutral"
-              sx={{
-                position: 'absolute',
-                bottom: '10px',
-                right: '10px',
-              }}
-              onClick={() => {
-                setPlaying(!playing);
-              }}
-            >
-              {playing ? <FaPause /> : <FaPlay />}
-            </IconButton>
-          </Tooltip>
           <Typography fontFamily="'Fira Code', monospace" fontSize="0.875rem" component="span">
             <Typography textColor="text.secondary">
               Powershell 7.3.4
@@ -291,10 +290,12 @@ export default function Terminal() {
                 root@bsodium:~$&nbsp;
               </Typography>
               bsodium.exe&nbsp;
-              <TextTransition springConfig={presets.wobbly}>
-                --
-                {selected}
-              </TextTransition>
+              <TypeWriter onTransitionEnd={() => {
+                setSelected(displayed);
+              }}
+              >
+                {`--${displayed}`}
+              </TypeWriter>
             </Stack>
           </Typography>
           <Tabs
@@ -303,6 +304,7 @@ export default function Terminal() {
             onChange={
             (_, newValue) => {
               setSelected(newValue as Category);
+              setDisplayed(newValue as Category);
               setPlaying(false);
             }
             }
@@ -324,28 +326,11 @@ export default function Terminal() {
                     key={name}
                     value={name}
                     variant={checked ? 'solid' : 'outlined'}
-                    color="neutral"
-                  >
-                    {/* <Radio
-                    color="neutral"
-                    disableIcon
-                    overlay
-                    label={name}
-                    value={name}
-                    checked={checked}
-                    onChange={(event) => {
-                      if (event.target.checked) {
-                        setSelected(name);
-                        setPlaying(false);
-                      }
-                    }}
+                    color="primary"
                     sx={{
-                      fontSize: 'inherit',
-                      '&  span': {
-                        border: 'none',
-                      },
+                      borderRadius: '6px',
                     }}
-                  /> */}
+                  >
                     {name}
                   </Chip>
                 );

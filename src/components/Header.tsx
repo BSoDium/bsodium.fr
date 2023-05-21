@@ -138,7 +138,7 @@ export default function Header() {
         <Typography level="display2" fontWeight="lg" display="flex">
           {greeting()}
           ,&nbsp;
-          <TextTransition springConfig={presets.gentle}>
+          <TextTransition springConfig={presets.stiff}>
             {visitor}
           </TextTransition>
         </Typography>
