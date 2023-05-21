@@ -20,6 +20,18 @@ const appTheme = extendTheme({
       },
     },
   },
+  components: {
+    JoyChip: {
+      styleOverrides: {
+        root: ({ ownerState }) => ({
+          ...(ownerState.variant === 'outlined' && {
+            border: `1px solid var(--joy-palette-${ownerState.color}-300)`,
+          }),
+        }),
+      },
+    },
+
+  },
 });
 
 root.render(
