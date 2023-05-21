@@ -72,7 +72,9 @@ export default function Details({
                       -
                       {' '}
                       {item.end}
-                      {` (${duration})`}
+                      <Typography textColor="text.tertiary">
+                        {` (${duration})`}
+                      </Typography>
                     </Typography>
                   </Typography>
                   <Typography level="body2">

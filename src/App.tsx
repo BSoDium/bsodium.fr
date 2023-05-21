@@ -76,7 +76,11 @@ export default function App() {
           justifyContent="space-between"
         >
           <Typography level="body2" textColor="text.tertiary">
-            © 2023 Elliot Négrel-Jerzy. All rights reserved.
+            ©
+            {' '}
+            {new Date().getFullYear()}
+            {' '}
+            Elliot Négrel-Jerzy. All rights reserved.
           </Typography>
           <Typography level="body2" textColor="text.tertiary">
             Illustrations generated with
