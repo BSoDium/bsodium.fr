@@ -1,4 +1,3 @@
-/* eslint-disable react/no-array-index-key */
 import React from 'react';
 import {
   Avatar, Chip, Stack, Typography,
@@ -138,8 +137,8 @@ export default function Details({
               return acc;
             }
             return [...acc, [item]];
-          }, [] as typeof details.experience[number][][]).map((items, index) => (
-            <Stack direction="row" gap={1.5} key={`${items[0].company}-${index}}`}>
+          }, [] as typeof details.experience[number][][]).map((items) => (
+            <Stack direction="row" gap={1.5} key={`${items[0].company}-${Math.random()}}`}>
               <Avatar
                 color="neutral"
                 variant="solid"

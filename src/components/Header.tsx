@@ -71,21 +71,6 @@ export default function Header() {
           transform: 'scaleX(-1)',
         }}
       />
-
-      <img
-        src={robot1}
-        alt="robot"
-        style={{
-          position: 'absolute',
-          width: '200px',
-          height: '200px',
-          top: '10vh',
-          right: '20%',
-          zIndex: -1,
-          animation: 'float 10s ease-in-out infinite',
-          animationDelay: `${Math.random() * 10}s`,
-        }}
-      />
       <img
         src={robot1}
         alt="robot"
@@ -109,8 +94,24 @@ export default function Header() {
           position: 'absolute',
           width: '200px',
           height: '200px',
-          top: '25vh',
-          right: '10%',
+          top: '30vh',
+          right: '30%',
+          zIndex: -1,
+          filter: 'blur(5px) brightness(0.8)',
+          transform: 'scale(0.5)',
+          animation: 'float 10s ease-in-out infinite',
+          animationDelay: `${Math.random() * 10}s`,
+        }}
+      />
+      <img
+        src={robot1}
+        alt="robot"
+        style={{
+          position: 'absolute',
+          width: '200px',
+          height: '200px',
+          top: '10vh',
+          right: '20%',
           zIndex: -1,
           animation: 'float 10s ease-in-out infinite',
           animationDelay: `${Math.random() * 10}s`,
@@ -123,11 +124,9 @@ export default function Header() {
           position: 'absolute',
           width: '200px',
           height: '200px',
-          top: '30vh',
-          right: '30%',
+          top: '25vh',
+          right: '10%',
           zIndex: -1,
-          filter: 'blur(5px) brightness(0.8)',
-          transform: 'scale(0.5)',
           animation: 'float 10s ease-in-out infinite',
           animationDelay: `${Math.random() * 10}s`,
         }}
@@ -135,7 +134,7 @@ export default function Header() {
       <Stack
         gap={3}
       >
-        <Typography level="display2" fontWeight="lg" display="flex">
+        <Typography level="display2" fontWeight="lg" display="flex" flexWrap="wrap">
           {greeting()}
           ,&nbsp;
           <TextTransition springConfig={presets.stiff}>
