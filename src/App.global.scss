@@ -10,14 +10,18 @@ main,
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 @keyframes float {
   0% {
     rotate: 0deg;
     translate: 0 0;
   }
   50% {
-    rotate: 10deg;
-    translate: 0 10px;
+    rotate: 5deg;
+    translate: 0 15px;
   }
   100% {
     rotate: 0deg;

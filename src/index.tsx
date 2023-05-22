@@ -8,6 +8,7 @@ import {
   BrowserRouter, Route, Routes,
 } from 'react-router-dom';
 import Resume from 'Resume';
+import 'App.global.scss';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,

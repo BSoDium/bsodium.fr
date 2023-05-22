@@ -1,7 +1,8 @@
+/* eslint-disable react/jsx-props-no-spreading */
 /* eslint-disable react/require-default-props */
 import React from 'react';
 import {
-  Box, Stack, Typography,
+  Box, Stack, Typography, TypographyProps,
 } from '@mui/joy';
 import { SxProps, TextColor } from '@mui/joy/styles/types';
 import Featured from 'components/Featured';
@@ -17,13 +18,14 @@ export function ATypography({
   target = '_blank',
   textColor = 'inherit',
   sx = {},
+  ...props
 }: {
   children: React.ReactNode;
   href?: string;
   target?: string;
   textColor?: TextColor;
   sx?: SxProps;
-}) {
+} & TypographyProps) {
   return (
     <Typography
       component="a"
@@ -37,6 +39,7 @@ export function ATypography({
         },
         ...sx,
       }}
+      {...props}
     >
       {children}
     </Typography>

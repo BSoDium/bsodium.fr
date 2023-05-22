@@ -88,8 +88,8 @@ export default function Header() {
           zIndex: -1,
           filter: 'blur(5px) brightness(0.8)',
           transform: 'scale(0.5)',
-          animation: 'float 10s ease-in-out infinite',
-          animationDelay: `${Math.random() * 10}s`,
+          animation: 'float 20s ease-in-out infinite',
+          animationDelay: '5s',
         }}
       />
       <img
@@ -104,8 +104,8 @@ export default function Header() {
           zIndex: -1,
           filter: 'blur(5px) brightness(0.8)',
           transform: 'scale(0.5)',
-          animation: 'float 10s ease-in-out infinite',
-          animationDelay: `${Math.random() * 10}s`,
+          animation: 'float 20s ease-in-out infinite',
+          animationDelay: '10s',
         }}
       />
       <img
@@ -118,8 +118,7 @@ export default function Header() {
           top: '100px',
           right: '20%',
           zIndex: -1,
-          animation: 'float 10s ease-in-out infinite',
-          animationDelay: `${Math.random() * 10}s`,
+          animation: 'float 20s ease-in-out infinite',
         }}
       />
       <img
@@ -132,8 +131,8 @@ export default function Header() {
           top: '250px',
           right: '10%',
           zIndex: -1,
-          animation: 'float 10s ease-in-out infinite',
-          animationDelay: `${Math.random() * 10}s`,
+          animation: 'float 20s ease-in-out infinite',
+          animationDelay: '13s',
         }}
       />
       <Stack

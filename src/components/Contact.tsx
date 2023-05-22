@@ -15,7 +15,7 @@ export default function Contact() {
     <Stack
       gap={3}
     >
-      <Typography level="h2" sx={{ position: 'relative' }}>
+      <Typography level="h2" sx={{ position: 'relative' }} id="contact">
         Get
         {' '}
         <Typography
