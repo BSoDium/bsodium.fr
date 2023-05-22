@@ -37,7 +37,6 @@ export function Education() {
               src={item.icon}
               sx={(theme) => ({
                 borderRadius: theme.getCssVar('radius-md'),
-                boxShadow: 'md',
               })}
             >
               <IoSchoolOutline />
@@ -148,7 +147,6 @@ export function Experience() {
             src={items[0].icon}
             sx={(theme) => ({
               borderRadius: theme.getCssVar('radius-md'),
-              boxShadow: 'md',
             })}
           >
             <HiOutlineOfficeBuilding />
