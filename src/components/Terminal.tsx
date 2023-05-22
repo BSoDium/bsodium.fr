@@ -76,7 +76,7 @@ export default function Terminal() {
   const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
-    setLoadingTime(Math.floor(Math.random() * 2000 + 300));
+    setLoadingTime(Math.floor(Math.random() * 300));
   }, []);
 
   useEffect(() => {
