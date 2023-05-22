@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fa';
 import { FiMail } from 'react-icons/fi';
 import { SiResearchgate } from 'react-icons/si';
+import details from 'assets/Details';
 
 export default function Contact() {
   return (
@@ -54,7 +55,7 @@ export default function Contact() {
       >
         <Button
           component="a"
-          href="mailto:negreljerzy.elliot@gmail.com"
+          href={`mailto:${details.contact.email}`}
           size="lg"
           variant="soft"
           startDecorator={
@@ -65,7 +66,7 @@ export default function Contact() {
         </Button>
         <Button
           component="a"
-          href="https://www.linkedin.com/in/bsodium/"
+          href={details.contact.linkedin}
           target="_blank"
           size="lg"
           variant="soft"
@@ -77,7 +78,7 @@ export default function Contact() {
         </Button>
         <Button
           component="a"
-          href="https://www.github.com/bsodium"
+          href={details.contact.github}
           target="_blank"
           size="lg"
           variant="soft"
@@ -89,7 +90,7 @@ export default function Contact() {
         </Button>
         <Button
           component="a"
-          href="https://www.researchgate.net/profile/Elliot-Negrel-Jerzy"
+          href={details.contact.researchgate}
           target="_blank"
           size="lg"
           variant="soft"
@@ -101,7 +102,7 @@ export default function Contact() {
         </Button>
         <Button
           component="a"
-          href="https://www.gitlab.com/bsodium"
+          href={details.contact.gitlab}
           target="_blank"
           size="lg"
           variant="soft"
@@ -113,7 +114,7 @@ export default function Contact() {
         </Button>
         <Button
           component="a"
-          href="https://www.deviantart.com/bsodium"
+          href={details.contact.deviantart}
           target="_blank"
           size="lg"
           variant="soft"

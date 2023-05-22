@@ -76,7 +76,7 @@ export default function Terminal() {
   const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
-    setLoadingTime(Math.floor(Math.random() * 2000 + 300));
+    setLoadingTime(Math.floor(Math.random() * 300));
   }, []);
 
   useEffect(() => {
@@ -290,16 +290,20 @@ export default function Terminal() {
               ms.
             </Typography>
             <br />
-            <Stack direction="row">
+            <Stack
+              direction="row"
+              flexWrap="wrap"
+            >
               <Typography textColor="primary.300">
                 root@bsodium:~$&nbsp;
               </Typography>
-              bsodium.exe&nbsp;
-              <TypeWriter onTransitionEnd={() => {
-                setSelected(displayed);
-              }}
+              <TypeWriter
+                onTransitionEnd={() => {
+                  setSelected(displayed);
+                }}
+                typeInterval={20}
               >
-                {`--${displayed}`}
+                {`bsodium.exe --${displayed}`}
               </TypeWriter>
             </Stack>
           </Typography>

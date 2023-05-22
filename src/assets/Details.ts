@@ -3,6 +3,7 @@ import aau from 'assets/icons/aau.jpg';
 import kanop from 'assets/icons/kanop.png';
 import lfdc from 'assets/icons/lfdc.png';
 import akanthas from 'assets/icons/akanthas.jpg';
+import supadm from 'assets/icons/supadm.jpg';
 
 const details = {
   education: [
@@ -104,6 +105,18 @@ const details = {
       description: 'Development of continuous integration/deployment infrastructure, improvements to a Node JS web app and retrieval of image data from Arlo autonomous cameras via public API.',
       technologies: ['Node JS', 'Docker', 'GitHub CI/CD', 'Arlo API', 'React', 'Bootstrap', 'Microsoft Azure', 'Python', 'OpenCV'],
     },
+    {
+      company: 'Sup admission',
+      url: 'https://www.sup-admission.com/',
+      icon: supadm,
+      location: 'Toulouse, France',
+      contract: 'Freelance',
+      position: 'Lecturer & Tutor',
+      start: 'Sep 2021',
+      end: 'Nov 2021',
+      description: 'Lectures and tutoring for students preparing for the competitive entrance exams to French engineering schools.',
+      technologies: ['Mathematics', 'Physics', 'Chemistry', 'Computer Science'],
+    },
   ],
   skills: {
     languages: [
@@ -127,9 +140,11 @@ const details = {
       'Git',
       'CI/CD',
       'Docker',
+      'Bootstrap',
       'Linux',
       'Windows',
       'Keras',
+      'Tensorflow',
     ],
     tools: [
       'Scrum',
@@ -157,6 +172,41 @@ const details = {
       '3D rendering',
       'OpenGL',
     ],
+  },
+  languages: [
+    {
+      name: 'French',
+      level: 'C2',
+      native: true,
+    },
+    {
+      name: 'English',
+      level: 'C1',
+    },
+    {
+      name: 'Spanish',
+      level: 'C1',
+    },
+    {
+      name: 'Polish',
+      level: 'B2',
+    },
+    {
+      name: 'German',
+      level: 'B1',
+    },
+  ],
+  contact: {
+    address: 'Paris, France',
+    email: 'negreljerzy.elliot@gmail.com',
+    phone: '+33 7 83 79 29 25',
+    website: 'https://www.bsodium.fr',
+    linkedin: 'https://www.linkedin.com/in/bsodium/',
+    github: 'https://www.github.com/bsodium',
+    researchgate: 'https://www.researchgate.net/profile/Elliot-Negrel-Jerzy',
+    gitlab: 'https://www.gitlab.com/bsodium',
+    twitter: 'https://www.twitter.com/bs0dium',
+    deviantart: 'https://www.deviantart.com/bsodium',
   },
 };
 
