@@ -77,18 +77,6 @@ export default function Contact() {
         </Button>
         <Button
           component="a"
-          href="https://www.researchgate.net/profile/Elliot-Negrel-Jerzy"
-          target="_blank"
-          size="lg"
-          variant="soft"
-          startDecorator={
-            <SiResearchgate />
-        }
-        >
-          Follow me on ResearchGate
-        </Button>
-        <Button
-          component="a"
           href="https://www.github.com/bsodium"
           target="_blank"
           size="lg"
@@ -98,6 +86,18 @@ export default function Contact() {
         }
         >
           Collaborate on GitHub
+        </Button>
+        <Button
+          component="a"
+          href="https://www.researchgate.net/profile/Elliot-Negrel-Jerzy"
+          target="_blank"
+          size="lg"
+          variant="soft"
+          startDecorator={
+            <SiResearchgate />
+        }
+        >
+          Follow me on ResearchGate
         </Button>
         <Button
           component="a"

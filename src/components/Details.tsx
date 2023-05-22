@@ -181,7 +181,7 @@ export default function Details({
                       </Typography>
                       )}
                     </Typography>
-                    <Typography level="body2" display="flex" gap={1}>
+                    <Typography level="body2" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
                       <Typography fontWeight="lg">
                         {item.position}
                       </Typography>
