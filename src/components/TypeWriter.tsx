@@ -40,7 +40,7 @@ export default function TypeWriter({
         // if currentText is not included in toText, remove one character
         setCurrentText(currentText.slice(0, currentText.length - 1));
       }
-    }, Math.random() * 1.6 * typeInterval + typeInterval * 0.8);
+    }, Math.random() * 4 * typeInterval);
     return () => { clearInterval(interval); };
   }, [toText, currentText]);
 

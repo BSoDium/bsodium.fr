@@ -134,7 +134,7 @@ export default function Header() {
       <Stack
         gap={3}
       >
-        <Typography level="display2" fontWeight="lg" display="flex" flexWrap="wrap">
+        <Typography level={mobile ? 'h1' : 'display2'} fontWeight="lg" display="flex" flexWrap="wrap" marginBottom={mobile ? '1em' : 0}>
           {greeting()}
           ,&nbsp;
           <TextTransition springConfig={presets.stiff}>

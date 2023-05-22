@@ -290,16 +290,20 @@ export default function Terminal() {
               ms.
             </Typography>
             <br />
-            <Stack direction="row">
+            <Stack
+              direction="row"
+              flexWrap="wrap"
+            >
               <Typography textColor="primary.300">
                 root@bsodium:~$&nbsp;
               </Typography>
-              bsodium.exe&nbsp;
-              <TypeWriter onTransitionEnd={() => {
-                setSelected(displayed);
-              }}
+              <TypeWriter
+                onTransitionEnd={() => {
+                  setSelected(displayed);
+                }}
+                typeInterval={20}
               >
-                {`--${displayed}`}
+                {`bsodium.exe --${displayed}`}
               </TypeWriter>
             </Stack>
           </Typography>
