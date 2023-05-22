@@ -4,10 +4,15 @@ import planet from 'assets/planet.png';
 import robot1 from 'assets/robot_flying_1.png';
 import robot2 from 'assets/robot_flying_2.png';
 import sky from 'assets/sky.png';
-import { Stack, Typography } from '@mui/joy';
+import {
+  Avatar, Button, Stack, Typography,
+} from '@mui/joy';
 import TextTransition, { presets } from 'react-text-transition';
 import greeting from 'utils/Greeting';
 import { ATypography } from 'App';
+import { RiArrowRightSLine } from 'react-icons/ri';
+import { IoReaderOutline } from 'react-icons/io5';
+import { Link } from 'react-router-dom';
 import { useMobileMode } from './Responsive';
 
 export const visitors = [
@@ -134,6 +139,38 @@ export default function Header() {
       <Stack
         gap={3}
       >
+        <Button
+          size="lg"
+          component={Link}
+          variant="outlined"
+          to="/resume"
+          startDecorator={(
+            <Avatar size="lg" color="primary">
+              <IoReaderOutline />
+            </Avatar>
+          )}
+          endDecorator={(
+            <RiArrowRightSLine size="1.3em" />
+          )}
+          sx={{
+            '&:not(:hover)': {
+              backgroundColor: '#0000008c',
+            },
+            borderRadius: '100px',
+            width: 'fit-content',
+            padding: 1,
+            paddingRight: 2,
+          }}
+        >
+          <Stack alignItems="flex-start" sx={{ textAlign: 'left' }}>
+            <Typography level="h6" textColor="inherit" fontWeight="lg" lineHeight="1.2em">
+              Access online resume
+            </Typography>
+            <Typography level="body1" textColor="inherit" fontWeight="sm" sx={{ opacity: 0.8 }}>
+              Never out of date, never out of paper
+            </Typography>
+          </Stack>
+        </Button>
         <Typography level={mobile ? 'h1' : 'display2'} fontWeight="lg" display="flex" flexWrap="wrap" marginBottom={mobile ? '1em' : 0}>
           {greeting()}
           ,&nbsp;

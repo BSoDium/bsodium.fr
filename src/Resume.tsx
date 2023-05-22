@@ -4,14 +4,15 @@ import {
 import FixedMode from 'components/FixedMode';
 import React from 'react';
 import {
-  RiBriefcaseLine, RiCompasses2Line, RiContactsLine, RiSettings5Line,
+  RiBriefcaseLine,
+  RiCompasses2Line,
+  RiContactsLine,
+  RiSettings5Line,
 } from 'react-icons/ri';
 import details from 'assets/Details';
 import { TbSchool } from 'react-icons/tb';
 import { IoLanguage } from 'react-icons/io5';
-import {
-  Education, Experience, Skills,
-} from 'components/Details';
+import { Education, Experience, Skills } from 'components/Details';
 import Title from 'components/Title';
 import { useMobileMode } from 'components/Responsive';
 
@@ -43,7 +44,6 @@ export function Languages() {
 
 export default function Resume() {
   const mobile = useMobileMode();
-
   return (
     <FixedMode mode="system">
       <Title text="Curriculum Vitae - Elliot Négrel-Jerzy" />
@@ -55,37 +55,41 @@ export default function Resume() {
         }}
       >
         <Box maxWidth="65em">
-          <Stack paddingX={mobile ? 4 : 12} paddingY={mobile ? 4 : 6} gap={3} width="100%" height="100%">
+          <Stack
+            paddingX={mobile ? 4 : 12}
+            paddingY={mobile ? 4 : 6}
+            gap={3}
+            width="100%"
+            height="100%"
+          >
             <Stack component="header" gap={1}>
               <Typography level="h2" fontWeight="xl">
                 Elliot Négrel-Jerzy
               </Typography>
-              <Typography
-                level="h6"
-                fontWeight="lg"
-                textColor="text.secondary"
-              >
+              <Typography level="h6" fontWeight="lg" textColor="text.secondary">
                 Software Engineer
               </Typography>
               <Typography level="body2">
-                I&apos;m a computer science student at ENSEEIHT, specializing in 3D
-                rendering, image processing, and computer vision. I am
-                interested in 3D engines, physics simulations, and user
-                interfaces. All of my open-source projects can be viewed on my
-                GitHub profile where I actively contribute and showcase my
-                coding abilities.
+                I&apos;m a computer science student at ENSEEIHT with a strong
+                background in web development. I have experience in building
+                user interfaces and working with various web technologies. My
+                open-source projects on my GitHub profile demonstrate my coding
+                abilities and active contributions to the development community.
               </Typography>
             </Stack>
-            <Box sx={{
-              gap: 3,
-              ...(mobile ? {
-                display: 'flex',
-                flexDirection: 'column',
-              } : {
-                display: 'grid',
-                gridTemplateColumns: '1fr 2fr',
-              }),
-            }}
+            <Box
+              sx={{
+                gap: 3,
+                ...(mobile
+                  ? {
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }
+                  : {
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 2fr',
+                  }),
+              }}
             >
               <Stack
                 gap={3}
@@ -101,36 +105,40 @@ export default function Resume() {
                       <Avatar size="sm">
                         <RiContactsLine />
                       </Avatar>
-                      )}
+                    )}
                   >
                     Contact
                   </Typography>
                   <Divider />
                   <Stack gap={1}>
-                    {['address', 'email', 'phone', 'linkedin', 'github'].map((key) => (
-                      <Stack
-                        key={key}
-                      >
-                        <Typography
-                          level="body2"
-                          fontWeight="bold"
-                          textTransform="capitalize"
-                          sx={{
-                            width: '100px',
-                          }}
-                        >
-                          {key}
-                        </Typography>
-                        <Typography
-                          level="body2"
-                          sx={{
-                            wordBreak: 'break-word',
-                          }}
-                        >
-                          {details.contact[key as keyof typeof details.contact]}
-                        </Typography>
-                      </Stack>
-                    ))}
+                    {['address', 'email', 'phone', 'linkedin', 'github'].map(
+                      (key) => (
+                        <Stack key={key}>
+                          <Typography
+                            level="body2"
+                            fontWeight="bold"
+                            textTransform="capitalize"
+                            sx={{
+                              width: '100px',
+                            }}
+                          >
+                            {key}
+                          </Typography>
+                          <Typography
+                            level="body2"
+                            sx={{
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {
+                              details.contact[
+                                key as keyof typeof details.contact
+                              ]
+                            }
+                          </Typography>
+                        </Stack>
+                      ),
+                    )}
                   </Stack>
                 </Stack>
                 <Stack gap={1}>
@@ -141,18 +149,13 @@ export default function Resume() {
                       <Avatar size="sm">
                         <RiSettings5Line />
                       </Avatar>
-                      )}
+                    )}
                   >
                     Technical skills
                   </Typography>
                   <Divider />
                   <Stack gap={1}>
-                    <Skills include={[
-                      'languages',
-                      'frameworks',
-                      'tools',
-                    ]}
-                    />
+                    <Skills include={['languages', 'frameworks', 'tools']} />
                   </Stack>
                 </Stack>
                 <Stack gap={1}>
@@ -163,16 +166,13 @@ export default function Resume() {
                       <Avatar size="sm">
                         <RiCompasses2Line />
                       </Avatar>
-                      )}
+                    )}
                   >
                     Competencies
                   </Typography>
                   <Divider />
                   <Stack gap={1}>
-                    <Skills include={[
-                      'others',
-                    ]}
-                    />
+                    <Skills include={['others']} />
                   </Stack>
                 </Stack>
               </Stack>
@@ -190,7 +190,7 @@ export default function Resume() {
                       <Avatar size="sm">
                         <RiBriefcaseLine />
                       </Avatar>
-                      )}
+                    )}
                   >
                     Work history
                   </Typography>
@@ -205,7 +205,7 @@ export default function Resume() {
                       <Avatar size="sm">
                         <TbSchool />
                       </Avatar>
-                      )}
+                    )}
                   >
                     Education
                   </Typography>
@@ -222,7 +222,7 @@ export default function Resume() {
                       <Avatar size="sm">
                         <IoLanguage />
                       </Avatar>
-                      )}
+                    )}
                   >
                     Languages
                   </Typography>

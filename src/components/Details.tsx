@@ -37,6 +37,7 @@ export function Education() {
               src={item.icon}
               sx={(theme) => ({
                 borderRadius: theme.getCssVar('radius-md'),
+                boxShadow: 'md',
               })}
             >
               <IoSchoolOutline />
@@ -147,13 +148,14 @@ export function Experience() {
             src={items[0].icon}
             sx={(theme) => ({
               borderRadius: theme.getCssVar('radius-md'),
+              boxShadow: 'md',
             })}
           >
             <HiOutlineOfficeBuilding />
           </Avatar>
           <Stack gap={2}>
             {items.map((item, subIndex) => (
-              <Stack>
+              <Stack key={`${item.company}-${item.position}-${item.start}-${item.end}`} gap={1}>
                 <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
                   {subIndex === 0 && (item.url ? (
                     <Typography
@@ -202,7 +204,6 @@ export function Experience() {
             ))}
           </Stack>
         </Stack>
-
       ))}
     </Stack>
   );

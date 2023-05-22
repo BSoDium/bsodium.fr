@@ -62,7 +62,7 @@ export default function App() {
           gap={10}
           sx={{
             width: 'min(100%, 1200px)',
-            paddingTop: '450px',
+            paddingTop: '420px',
           }}
         >
           <Header />
