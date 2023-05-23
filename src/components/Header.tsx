@@ -162,10 +162,10 @@ export default function Header() {
           }}
         >
           <Stack alignItems="flex-start" sx={{ textAlign: 'left' }}>
-            <Typography level="h6" textColor="inherit" fontWeight="lg" lineHeight="1.2em">
+            <Typography level="body1" textColor="inherit" fontWeight="lg" lineHeight="1.2em">
               Access online resume
             </Typography>
-            <Typography level="body1" textColor="inherit" fontWeight="sm" sx={{ opacity: 0.8 }}>
+            <Typography level="body2" textColor="inherit" fontWeight="sm" sx={{ opacity: 0.8 }}>
               Never out of date, never out of paper
             </Typography>
           </Stack>
