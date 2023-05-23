@@ -153,7 +153,7 @@ export function Experience() {
           </Avatar>
           <Stack gap={2}>
             {items.map((item, subIndex) => (
-              <Stack key={`${item.company}-${item.position}-${item.start}-${item.end}`} gap={1}>
+              <Stack key={`${item.company}-${item.position}-${item.start}-${item.end}`} gap={0.5}>
                 <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
                   {subIndex === 0 && (item.url ? (
                     <Typography
@@ -182,7 +182,7 @@ export function Experience() {
                   )}
                 </Typography>
                 <Typography level="body2" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
-                  <Typography fontWeight="lg">
+                  <Typography fontWeight="lg" textColor="text.primary">
                     {item.position}
                   </Typography>
                   {items.length > 1 && (
@@ -194,6 +194,13 @@ export function Experience() {
                     {item.end}
                   </Typography>
                   )}
+                </Typography>
+                <Typography level="body2" textColor="text.secondary" fontWeight="md">
+                  {item.contract}
+                  {' '}
+                  -
+                  {' '}
+                  {item.location}
                 </Typography>
                 <Typography level="body2" textColor="text.tertiary">
                   {item.description}
