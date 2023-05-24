@@ -70,11 +70,12 @@ export default function Resume() {
                 Software Engineer
               </Typography>
               <Typography level="body2">
-                I&apos;m a computer science student at ENSEEIHT with experience in
-                software development. My open-source projects on GitHub
-                demonstrate my coding abilities and contributions to the
-                development community. I am skilled in working with various
-                programming languages and technologies.
+                Software engineer and computer science
+                student at ENSEEIHT. Passionate about software development and
+                contributing to the development community through open-source
+                projects on GitHub. Proficient in various programming languages
+                and technologies, ready to tackle any challenge and be a
+                valuable asset to any team
               </Typography>
             </Stack>
             <Box
