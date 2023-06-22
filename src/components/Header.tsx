@@ -151,22 +151,36 @@ export default function Header() {
           endDecorator={(
             <RiArrowRightSLine size="1.3em" />
           )}
-          sx={{
+          sx={(theme) => ({
             '&:not(:hover)': {
               backgroundColor: '#0000008c',
             },
+            position: 'relative',
             borderRadius: '100px',
             width: 'fit-content',
             padding: 1,
             paddingRight: 2,
-          }}
+            '&::before': mobile ? {} : {
+              position: 'absolute',
+              content: '""',
+              top: '50%',
+              left: '-50px',
+              width: '50px',
+              height: '250%',
+              marginLeft: '-1px',
+              border: `1.5px solid ${theme.palette.primary[700]}`,
+              borderBottom: 'none',
+              borderRight: 'none',
+              borderTopLeftRadius: '100px',
+            },
+          })}
         >
           <Stack alignItems="flex-start" sx={{ textAlign: 'left' }}>
             <Typography level="body1" textColor="inherit" fontWeight="lg" lineHeight="1.2em">
               Access online resume
             </Typography>
             <Typography level="body2" textColor="inherit" fontWeight="sm" sx={{ opacity: 0.8 }}>
-              Never out of date, never out of paper
+              Dynamic, interactive, and responsive
             </Typography>
           </Stack>
         </Button>

@@ -24,7 +24,7 @@ import { IoAddOutline } from 'react-icons/io5';
 import { HiChevronDown } from 'react-icons/hi';
 import mockMessages from 'utils/Messages';
 import { FaPause, FaPlay } from 'react-icons/fa';
-import { Default } from './Responsive';
+import { Default, useMobileMode } from './Responsive';
 import Details from './Details';
 import TypeWriter from './TypeWriter';
 
@@ -75,6 +75,8 @@ export default function Terminal() {
   const [tooltipIndex, setTooltipIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
 
+  const mobile = useMobileMode();
+
   useEffect(() => {
     setLoadingTime(Math.floor(Math.random() * 300));
   }, []);
@@ -95,7 +97,21 @@ export default function Terminal() {
   }, [playing, selected]);
 
   return (
-    <Stack gap={3}>
+    <Stack
+      gap={3}
+      sx={(theme) => ({
+        position: 'relative',
+        '&::before': mobile ? {} : {
+          content: '""',
+          position: 'absolute',
+          top: '-30%',
+          left: '-50px',
+          height: '130%',
+          width: '1px',
+          background: `linear-gradient(to bottom, ${theme.palette.primary[700]}, ${theme.palette.success[400]})`,
+        },
+      })}
+    >
       <Card
         variant="outlined"
         component={Stack}

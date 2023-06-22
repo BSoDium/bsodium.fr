@@ -85,11 +85,11 @@ export default function App() {
               '&::before': mobile ? {} : {
                 content: '""',
                 position: 'absolute',
-                top: '-30%',
+                top: '-20px',
                 left: '-30px',
-                height: '130%',
+                height: 'calc(100% + 20px)',
                 width: '1px',
-                background: `linear-gradient(to bottom, transparent, ${theme.palette.success[400]}, ${theme.palette.info[400]}, #00000000)`,
+                background: `linear-gradient(to bottom, ${theme.palette.success[400]} 10%, ${theme.palette.info[400]} 50%, #00000000)`,
               },
             })}
           >
