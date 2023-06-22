@@ -1,4 +1,5 @@
 import {
+  Avatar,
   Button,
   Stack, Typography,
 } from '@mui/joy';
@@ -9,6 +10,7 @@ import {
 import { FiMail } from 'react-icons/fi';
 import { SiResearchgate } from 'react-icons/si';
 import details from 'assets/Details';
+import { Default } from './Responsive';
 
 export default function Contact() {
   return (
@@ -16,6 +18,20 @@ export default function Contact() {
       gap={3}
     >
       <Typography level="h2" sx={{ position: 'relative' }} id="contact">
+        <Default>
+          <Avatar
+            color="info"
+            sx={(theme) => ({
+              position: 'absolute',
+              marginLeft: '-50px',
+              transform: 'translateX(-50%)',
+              border: 'none',
+              outline: `1px solid ${theme.palette.info[400]}`,
+            })}
+          >
+            <FiMail />
+          </Avatar>
+        </Default>
         Get
         {' '}
         <Typography

@@ -50,7 +50,7 @@ export function FakeButton({
   return (
     <Tooltip
       title={mockMessages[tooltipIndex]}
-      variant="outlined"
+      variant="plain"
       onClose={() => {
         if (tooltipIndex < mockMessages.length - 1) {
           setTooltipIndex(tooltipIndex + 1);

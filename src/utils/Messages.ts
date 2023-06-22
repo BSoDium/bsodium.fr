@@ -1,4 +1,5 @@
 const mock = [
+  "I'm sorry, Dave. I'm afraid I can't do that.",
   'Did you seriously expect this button to do something?',
   'Come on, stop trying... This is a fake UI and you know it.',
   "It's not like I can stop you from clicking, but you're wasting your time here.",

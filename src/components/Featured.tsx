@@ -4,12 +4,13 @@ import {
   Box, Button, Card, Chip, CircularProgress, Stack, Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
-import { BsJournalBookmark } from 'react-icons/bs';
+import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
 import {
   FaCode, FaCodeBranch, FaStar,
 } from 'react-icons/fa';
 import { Repository, getRepositories } from 'utils/Api';
 import colors from 'assets/colors.json';
+import { Default } from './Responsive';
 
 /**
  * Beautifies a string
@@ -127,6 +128,20 @@ export default function Featured() {
         level="h2"
         sx={{ position: 'relative' }}
       >
+        <Default>
+          <Avatar
+            color="success"
+            sx={(theme) => ({
+              position: 'absolute',
+              marginLeft: '-50px',
+              transform: 'translateX(-50%)',
+              border: 'none',
+              outline: `1px solid ${theme.palette.success[400]}`,
+            })}
+          >
+            <BsJournalCode />
+          </Avatar>
+        </Default>
         Featured
         {' '}
         <Typography
