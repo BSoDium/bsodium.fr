@@ -180,7 +180,7 @@ export default function Header() {
               Access online resume
             </Typography>
             <Typography level="body2" textColor="inherit" fontWeight="sm" sx={{ opacity: 0.8 }}>
-              Dynamic, interactive, and responsive
+              Dynamic, interactive, and up-to-date
             </Typography>
           </Stack>
         </Button>
