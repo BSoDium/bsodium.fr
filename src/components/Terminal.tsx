@@ -14,12 +14,13 @@ import {
   Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
-import { SiPowershell } from 'react-icons/si';
 import {
   VscChromeClose,
   VscChromeMaximize,
   VscChromeMinimize,
+  VscTerminalPowershell,
 } from 'react-icons/vsc';
+
 import { IoAddOutline } from 'react-icons/io5';
 import { HiChevronDown } from 'react-icons/hi';
 import mockMessages from 'utils/Messages';
@@ -66,7 +67,7 @@ export default function Terminal() {
   const [tabs] = useState<Tab[]>([
     {
       name: 'pwsh in bsodium',
-      icon: <SiPowershell />,
+      icon: <VscTerminalPowershell />,
     },
   ]);
   const [displayed, setDisplayed] = useState<Category>('education');
@@ -121,7 +122,7 @@ export default function Terminal() {
           border: '1px solid rgb(83, 86, 93)',
           padding: 0,
           overflow: 'hidden',
-          height: '500px',
+          height: '550px',
         }}
       >
         <Stack direction="row" justifyContent="space-between" p={0}>
@@ -352,13 +353,13 @@ export default function Terminal() {
                     value={name}
                     variant={checked ? 'solid' : 'outlined'}
                     color="primary"
-                    sx={{
+                    sx={(theme) => ({
                       borderRadius: '6px',
                       ...(checked && {
-                        backgroundColor: 'var(--joy-palette-primary-300)',
-                        color: 'var(--joy-palette-primary-900)',
+                        backgroundColor: theme.palette.primary[300],
+                        color: theme.palette.primary[900],
                       }),
-                    }}
+                    })}
                   >
                     {name}
                   </Chip>

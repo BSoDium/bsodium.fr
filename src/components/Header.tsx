@@ -155,6 +155,9 @@ export default function Header() {
             '&:not(:hover)': {
               backgroundColor: '#0000008c',
             },
+            '&:hover': {
+              boxShadow: `0 0 40px 5px ${theme.palette.primary[900]}`,
+            },
             position: 'relative',
             borderRadius: '100px',
             width: 'fit-content',
