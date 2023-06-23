@@ -27,6 +27,7 @@ export default function Contact() {
               transform: 'translateX(-50%)',
               border: 'none',
               outline: `1px solid ${theme.palette.info[400]}`,
+              boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
             })}
           >
             <FiMail />

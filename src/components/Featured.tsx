@@ -137,6 +137,7 @@ export default function Featured() {
               transform: 'translateX(-50%)',
               border: 'none',
               outline: `1px solid ${theme.palette.success[400]}`,
+              boxShadow: `0 0 40px 5px ${theme.palette.success[700]}`,
             })}
           >
             <BsJournalCode />
