@@ -130,14 +130,14 @@ export default function Featured() {
       >
         <Default>
           <Avatar
-            color="success"
+            color="info"
             sx={(theme) => ({
               position: 'absolute',
               marginLeft: '-50px',
               transform: 'translateX(-50%)',
               border: 'none',
-              outline: `1px solid ${theme.palette.success[400]}`,
-              boxShadow: `0 0 40px 5px ${theme.palette.success[700]}`,
+              outline: `1.5px solid ${theme.palette.info[400]}`,
+              boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
             })}
           >
             <BsJournalCode />
@@ -146,7 +146,7 @@ export default function Featured() {
         Featured
         {' '}
         <Typography
-          textColor="success.400"
+          textColor="info.400"
           alignItems="center"
           fontWeight="xl"
           endDecorator={(

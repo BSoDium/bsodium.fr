@@ -1,5 +1,6 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import {
+  Avatar,
   Card,
   Chip,
   Divider,
@@ -25,6 +26,7 @@ import { IoAddOutline } from 'react-icons/io5';
 import { HiChevronDown } from 'react-icons/hi';
 import mockMessages from 'utils/Messages';
 import { FaPause, FaPlay } from 'react-icons/fa';
+import { RiUserLine } from 'react-icons/ri';
 import { Default, useMobileMode } from './Responsive';
 import Details from './Details';
 import TypeWriter from './TypeWriter';
@@ -109,16 +111,45 @@ export default function Terminal() {
           left: '-50px',
           height: '130%',
           width: '1px',
-          background: `linear-gradient(to bottom, ${theme.palette.primary[700]}, ${theme.palette.success[400]})`,
+          background: `linear-gradient(to bottom, ${theme.palette.primary[700]}, ${theme.palette.primary[400]} 25%, ${theme.palette.info[400]})`,
         },
       })}
     >
+      <Typography
+        level="h2"
+        sx={{ position: 'relative' }}
+      >
+        <Default>
+          <Avatar
+            color="primary"
+            sx={(theme) => ({
+              position: 'absolute',
+              marginLeft: '-50px',
+              transform: 'translateX(-50%)',
+              border: 'none',
+              outline: `1.5px solid ${theme.palette.primary[400]}`,
+              boxShadow: `0 0 40px 5px ${theme.palette.primary[700]}`,
+            })}
+          >
+            <RiUserLine />
+          </Avatar>
+        </Default>
+        Profile
+        {' '}
+        <Typography
+          textColor="primary.400"
+          alignItems="center"
+          fontWeight="xl"
+        >
+          Overview
+        </Typography>
+      </Typography>
       <Card
         variant="outlined"
         component={Stack}
         sx={{
           backdropFilter: 'blur(20px)',
-          backgroundColor: 'rgba(53, 54, 58, 0.499)',
+          backgroundColor: 'rgba(53, 54, 58, 0.378)',
           border: '1px solid rgb(83, 86, 93)',
           padding: 0,
           overflow: 'hidden',
@@ -146,7 +177,7 @@ export default function Terminal() {
                     justifyContent: 'space-between',
                     flexDirection: 'row',
                     width: '250px',
-                    backgroundColor: '#282C34',
+                    backgroundColor: 'hsl(220, 13%, 15%)',
                     borderBottomRightRadius: 0,
                     borderBottomLeftRadius: 0,
                     overflow: 'hidden',

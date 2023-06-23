@@ -20,14 +20,14 @@ export default function Contact() {
       <Typography level="h2" sx={{ position: 'relative' }} id="contact">
         <Default>
           <Avatar
-            color="info"
+            color="warning"
             sx={(theme) => ({
               position: 'absolute',
               marginLeft: '-50px',
               transform: 'translateX(-50%)',
               border: 'none',
-              outline: `1px solid ${theme.palette.info[400]}`,
-              boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
+              outline: `1.5px solid ${theme.palette.warning[400]}`,
+              boxShadow: `0 0 40px 5px ${theme.palette.warning[700]}`,
             })}
           >
             <FiMail />
@@ -36,7 +36,7 @@ export default function Contact() {
         Get
         {' '}
         <Typography
-          textColor="info.400"
+          textColor="warning.400"
           fontWeight="xl"
         >
           In touch
@@ -65,7 +65,6 @@ export default function Contact() {
             transition: 'transform 0.2s ease-in-out',
             '&:hover': {
               transform: 'scaleX(1.05) scaleY(1.1)',
-              transition: 'transform 0.2s ease-in-out',
             },
           },
         }}

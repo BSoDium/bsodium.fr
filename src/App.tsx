@@ -11,7 +11,9 @@ import Terminal from 'components/Terminal';
 import Title from 'components/Title';
 import Header from 'components/Header';
 import FixedMode from 'components/FixedMode';
-import { useMobileMode } from 'components/Responsive';
+import { useMobileMode, Default } from 'components/Responsive';
+import Footer from 'components/Footer';
+import Divider from 'components/Divider';
 
 export function ATypography({
   children,
@@ -68,6 +70,7 @@ export default function App() {
             width: 'min(100%, 1200px)',
             height: 'fit-content',
             paddingTop: '420px',
+            paddingX: mobile ? 0 : '70px',
           }}
         >
           <Stack
@@ -89,42 +92,33 @@ export default function App() {
                 left: '-30px',
                 height: 'calc(100% + 20px)',
                 width: '1px',
-                background: `linear-gradient(to bottom, ${theme.palette.success[400]} 10%, ${theme.palette.info[400]} 50%, #00000000)`,
+                background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
               },
             })}
           >
             <Featured />
             <Contact />
-            <Box
-              component={Stack}
-              direction="row"
-              flexWrap="wrap"
-              gap={2}
-              p={3}
-              justifyContent="space-between"
-            >
-              <Typography level="body2" textColor="text.tertiary">
-                ©
-                {' '}
-                {new Date().getFullYear()}
-                {' '}
-                Elliot Négrel-Jerzy. All rights reserved.
-              </Typography>
-              <Typography level="body2" textColor="text.tertiary">
-                Illustrations generated with
-                {' '}
-                <ATypography href="https://www.bing.com/create">
-                  Bing Image Creator
-                </ATypography>
-                {' '}
-                powered by
-                {' '}
-                <ATypography href="https://openai.com/product/dall-e-2/">
-                  DALL·E
-                </ATypography>
-                .
-              </Typography>
-            </Box>
+          </Stack>
+          <Default>
+            <Divider />
+          </Default>
+          <Stack
+            p="20px"
+            gap={10}
+            sx={(theme) => ({
+              position: 'relative',
+              '&::before': mobile ? {} : {
+                content: '""',
+                position: 'absolute',
+                top: '0',
+                right: '-30px',
+                height: '100%',
+                width: '1.5px',
+                background: `linear-gradient(to bottom, ${theme.palette.danger[700]}, transparent)`,
+              },
+            })}
+          >
+            <Footer />
           </Stack>
         </Stack>
       </Box>

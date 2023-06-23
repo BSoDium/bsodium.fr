@@ -174,7 +174,7 @@ export default function Header() {
               border: `1.5px solid ${theme.palette.primary[700]}`,
               borderBottom: 'none',
               borderRight: 'none',
-              borderTopLeftRadius: '100px',
+              borderTopLeftRadius: '50px',
             },
           })}
         >
