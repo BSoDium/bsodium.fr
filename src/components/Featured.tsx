@@ -127,13 +127,15 @@ export default function Featured() {
       <Typography
         level="h2"
         sx={{ position: 'relative' }}
+        id="featured"
       >
         <Default>
           <Avatar
             color="info"
             sx={(theme) => ({
               position: 'absolute',
-              marginLeft: '-50px',
+              left: '-50px',
+              top: '0',
               transform: 'translateX(-50%)',
               border: 'none',
               outline: `1.5px solid ${theme.palette.info[400]}`,

@@ -23,7 +23,8 @@ export default function Contact() {
             color="warning"
             sx={(theme) => ({
               position: 'absolute',
-              marginLeft: '-50px',
+              left: '-50px',
+              top: '0',
               transform: 'translateX(-50%)',
               border: 'none',
               outline: `1.5px solid ${theme.palette.warning[400]}`,

@@ -119,6 +119,7 @@ export default function Footer() {
               sx={{
                 position: 'relative',
               }}
+              id="footer"
             >
               <Typography
                 textColor="danger.400"

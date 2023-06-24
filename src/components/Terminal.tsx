@@ -118,13 +118,15 @@ export default function Terminal() {
       <Typography
         level="h2"
         sx={{ position: 'relative' }}
+        id="profile"
       >
         <Default>
           <Avatar
             color="primary"
             sx={(theme) => ({
               position: 'absolute',
-              marginLeft: '-50px',
+              left: '-50px',
+              top: '0',
               transform: 'translateX(-50%)',
               border: 'none',
               outline: `1.5px solid ${theme.palette.primary[400]}`,
@@ -152,6 +154,7 @@ export default function Terminal() {
           backgroundColor: 'rgba(53, 54, 58, 0.378)',
           border: '1px solid rgb(83, 86, 93)',
           padding: 0,
+          gap: 0,
           overflow: 'hidden',
           height: '550px',
         }}
