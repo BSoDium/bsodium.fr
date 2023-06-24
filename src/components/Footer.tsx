@@ -1,8 +1,7 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable react/no-unknown-property */
 import {
-  Avatar,
-  Box, Stack, Typography, useTheme,
+  Avatar, Stack, Typography, useTheme,
 } from '@mui/joy';
 import { AsciiRenderer } from '@react-three/drei';
 import {
@@ -94,13 +93,9 @@ function View() {
 
 export default function Footer() {
   return (
-    <Box
-      component={Stack}
-      direction="row"
-      flexWrap="wrap"
+    <Stack
       gap={7}
       p="20px"
-      justifyContent="space-between"
       sx={{ position: 'relative' }}
     >
       <Default>
@@ -154,27 +149,34 @@ export default function Footer() {
           <View />
         </Stack>
       </Default>
-      <Typography level="body2" textColor="text.tertiary">
-        ©
-        {' '}
-        {new Date().getFullYear()}
-        {' '}
-        Elliot Négrel-Jerzy. All rights reserved.
-      </Typography>
-      <Typography level="body2" textColor="text.tertiary">
-        Illustrations generated with
-        {' '}
-        <ATypography href="https://www.bing.com/create">
-          Bing Image Creator
-        </ATypography>
-        {' '}
-        powered by
-        {' '}
-        <ATypography href="https://openai.com/product/dall-e-2/">
-          DALL·E
-        </ATypography>
-        .
-      </Typography>
-    </Box>
+      <Stack
+        flexWrap="wrap"
+        direction="row"
+        gap={2}
+        justifyContent="space-between"
+      >
+        <Typography level="body2" textColor="text.tertiary">
+          ©
+          {' '}
+          {new Date().getFullYear()}
+          {' '}
+          Elliot Négrel-Jerzy. All rights reserved.
+        </Typography>
+        <Typography level="body2" textColor="text.tertiary">
+          Illustrations generated with
+          {' '}
+          <ATypography href="https://www.bing.com/create">
+            Bing Image Creator
+          </ATypography>
+          {' '}
+          powered by
+          {' '}
+          <ATypography href="https://openai.com/product/dall-e-2/">
+            DALL·E
+          </ATypography>
+          .
+        </Typography>
+      </Stack>
+    </Stack>
   );
 }

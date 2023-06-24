@@ -72,55 +72,70 @@ export default function App() {
             width: 'min(100%, 1200px)',
             height: 'fit-content',
             paddingTop: '420px',
-            paddingX: mobile ? 0 : '70px',
           }}
         >
           <Stack
-            p="20px"
-            gap={10}
+            sx={{
+              paddingLeft: mobile ? 0 : '70px',
+            }}
           >
-            <Header />
-            <Terminal />
-          </Stack>
-          <Stack
-            p="20px"
-            gap={10}
-            sx={(theme) => ({
-              position: 'relative',
-              '&::before': mobile ? {} : {
-                content: '""',
-                position: 'absolute',
-                top: '-20px',
-                left: '-30px',
-                height: 'calc(100% + 20px)',
-                width: '1px',
-                background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
-              },
-            })}
-          >
-            <Featured />
-            <Contact />
+            <Stack
+              p="20px"
+              gap={10}
+            >
+              <Header />
+              <Terminal />
+            </Stack>
+            <Stack
+              p="20px"
+              gap={10}
+              sx={(theme) => ({
+                position: 'relative',
+                '&::before': mobile ? {} : {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-20px',
+                  left: '-30px',
+                  height: 'calc(100% + 20px)',
+                  width: '1px',
+                  background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
+                },
+              })}
+            >
+              <Featured />
+              <Contact />
+            </Stack>
           </Stack>
           <Default>
-            <Divider />
+            <Stack sx={{
+              paddingX: mobile ? 0 : '70px',
+            }}
+            >
+              <Divider />
+            </Stack>
           </Default>
-          <Stack
-            p="20px"
-            gap={10}
-            sx={(theme) => ({
-              position: 'relative',
-              '&::before': mobile ? {} : {
-                content: '""',
-                position: 'absolute',
-                top: '0',
-                right: '-30px',
-                height: '100%',
-                width: '1.5px',
-                background: `linear-gradient(to bottom, ${theme.palette.danger[400]} 30%, transparent)`,
-              },
-            })}
+          <Stack sx={{
+            paddingRight: mobile ? 0 : '70px',
+          }}
           >
-            <Footer />
+            <Stack
+              p="20px"
+              gap={10}
+              sx={(theme) => ({
+                position: 'relative',
+                '&::before': mobile ? {} : {
+                  content: '""',
+                  position: 'absolute',
+                  top: '0',
+                  right: '-30px',
+                  height: '100%',
+                  width: '1.5px',
+                  background: `linear-gradient(to bottom, ${theme.palette.danger[400]} 30%, transparent)`,
+                },
+              })}
+            >
+              <Footer />
+            </Stack>
           </Stack>
         </Stack>
       </Box>
