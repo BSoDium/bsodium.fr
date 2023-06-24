@@ -54,7 +54,7 @@ export default function Resume() {
           height: '100vh',
         }}
       >
-        <Box maxWidth="65em">
+        <Box component="div" maxWidth="65em">
           <Stack
             paddingX={mobile ? 4 : 12}
             paddingY={mobile ? 4 : 6}
@@ -79,6 +79,7 @@ export default function Resume() {
               </Typography>
             </Stack>
             <Box
+              component="section"
               sx={{
                 gap: 3,
                 ...(mobile

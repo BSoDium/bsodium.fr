@@ -55,15 +55,17 @@ export default function App() {
   return (
     <FixedMode>
       <Title text="Elliot Négrel-Jerzy" />
-      <Box sx={{
-        width: '100vw',
-        height: '100vh',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        display: 'flex',
-        justifyContent: 'center',
-        position: 'relative',
-      }}
+      <Box
+        component="div"
+        sx={{
+          width: '100vw',
+          height: '100vh',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          display: 'flex',
+          justifyContent: 'center',
+          position: 'relative',
+        }}
       >
         <Stack
           sx={{
@@ -114,7 +116,7 @@ export default function App() {
                 right: '-30px',
                 height: '100%',
                 width: '1.5px',
-                background: `linear-gradient(to bottom, ${theme.palette.danger[700]}, transparent)`,
+                background: `linear-gradient(to bottom, ${theme.palette.danger[400]} 30%, transparent)`,
               },
             })}
           >
