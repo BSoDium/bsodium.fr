@@ -31,7 +31,7 @@ import { Default, useMobileMode } from './Responsive';
 import Details from './Details';
 import TypeWriter from './TypeWriter';
 
-export const categories = ['education', 'skills', 'experience'] as const;
+export const categories = ['experience', 'education', 'skills'] as const;
 
 export type Category = (typeof categories)[number];
 
