@@ -55,7 +55,7 @@ const details = {
       position: 'Front-end web developer',
       start: 'Mar 2023',
       end: 'Sep 2023',
-      description: 'Revamp of an outdated python flask codebase, documentation of project changes, following best practices for software development and web security, collaboration with UX designers, work with Deck.gl cartography and mass data rendering tools and adaptation to a constantly changing, deadline-driven environment.',
+      description: 'Developed React TypeScript tools for map and chart visualizations of polygon and raster data at Kanop. Automated the testing, building, versioning, and deployment system by creating a robust Continuous Integration (CI) pipeline. Integrated APIs and popular libraries like D3.js and Mapbox GL to ensure optimal performance and accessibility. Collaborated with data science team to create data visualizations that provided critical insights for stakeholders and policymakers. Ensured adherence to best practices and scalability for future expansion. ',
       technologies: ['React', 'Node JS', 'Gitlab CI/CD', 'Mapbox.gl', 'MUI Joy'],
     },
     {
@@ -67,7 +67,7 @@ const details = {
       position: 'Front-end web developer',
       start: 'Sep 2022',
       end: 'Feb 2023',
-      description: 'Unit testing, optimization and redesign of web applications for scalability, speed, security and improved user experience.',
+      description: 'Performed unit testing of web applications and individual components. Optimized web applications for scalability, speed and security. Completed full redesigns of existing websites to improve navigation, enhance visuals and strengthen search engine rankings. Employed coding practices based on commonly accepted standards to establish site layout and user interface.',
       technologies: ['REST API', 'Redux', 'SASS', 'WebGL', 'Typescript', 'Node JS', 'MUI Joy'],
     },
     {
@@ -79,7 +79,7 @@ const details = {
       position: 'Front-end web developer',
       start: 'Jun 2022',
       end: 'Sep 2022',
-      description: 'Revamp of an outdated python flask codebase, documentation of project changes, following best practices for software development and web security, collaboration with UX designers, work with Deck.gl cartography and mass data rendering tools and adaptation to a constantly changing, deadline-driven environment.',
+      description: 'Revamp of an outdated python flask codebase. Documented project changes in team manuals for future reference and use. Followed best practices for software development and web security. Collaborated with UX designers to optimize design and user workflow. Worked with Deck.gl cartography and mass data rendering tools. Adapted quickly to constantly changing, deadline-driven environment.',
       technologies: ['React', 'Node JS', 'Express', 'Gitlab CI/CD', 'Figma', 'WebGL', 'Mapbox.gl'],
     },
     {
@@ -91,7 +91,7 @@ const details = {
       position: 'Facilitator',
       start: 'Feb 2022',
       end: 'Jun 2022',
-      description: 'Facilitation of workshops on climate change awareness',
+      description: 'Facilitation of workshops on climate change awareness.',
     },
     {
       company: 'Akanthas',
