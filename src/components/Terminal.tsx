@@ -72,8 +72,8 @@ export default function Terminal() {
       icon: <VscTerminalPowershell />,
     },
   ]);
-  const [displayed, setDisplayed] = useState<Category>('education');
-  const [selected, setSelected] = useState<Category>('education');
+  const [displayed, setDisplayed] = useState<Category>(categories[0]);
+  const [selected, setSelected] = useState<Category>(categories[0]);
   const [loadingTime, setLoadingTime] = useState<number>();
   const [tooltipIndex, setTooltipIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
