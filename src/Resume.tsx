@@ -70,12 +70,12 @@ export default function Resume() {
                 Software Engineer
               </Typography>
               <Typography level="body2">
-                Software engineer and computer science
+                Software developer and third year computer science
                 student at ENSEEIHT. Passionate about software development and
                 contributing to the development community through open-source
                 projects on GitHub. Proficient in various programming languages
                 and technologies, ready to tackle any challenge and be a
-                valuable asset to any team
+                valuable asset to any team.
               </Typography>
             </Stack>
             <Box

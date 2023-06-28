@@ -5,7 +5,7 @@ import {
 import details from 'assets/Details';
 import { IoSchoolOutline } from 'react-icons/io5';
 import moment from 'moment';
-import { HiOutlineOfficeBuilding } from 'react-icons/hi';
+import { HiExternalLink, HiOutlineOfficeBuilding } from 'react-icons/hi';
 import { FiPackage } from 'react-icons/fi';
 import { BsCode } from 'react-icons/bs';
 import { SlWrench } from 'react-icons/sl';
@@ -49,8 +49,9 @@ export function Education() {
                     href={item.url}
                     textColor="inherit"
                     target="_blank"
+                    endDecorator={<HiExternalLink />}
                     sx={{
-                      textDecoration: 'dotted underline',
+                      textDecoration: 'none',
                       '&:hover': {
                         textDecoration: 'underline',
                       },
@@ -161,8 +162,9 @@ export function Experience() {
                       href={item.url}
                       textColor="inherit"
                       target="_blank"
+                      endDecorator={<HiExternalLink />}
                       sx={{
-                        textDecoration: 'dotted underline',
+                        textDecoration: 'none',
                         '&:hover': {
                           textDecoration: 'underline',
                         },
@@ -202,8 +204,19 @@ export function Experience() {
                   {' '}
                   {item.location}
                 </Typography>
-                <Typography level="body2" textColor="text.tertiary">
-                  {item.description}
+                <Typography level="body3" textColor="text.tertiary">
+                  {typeof item.description === 'string' ? item.description : null}
+                  {typeof item.description === 'object' ? (
+                    <Stack>
+                      {item.description.map((chunk) => (
+                        <Typography key={chunk}>
+                          -
+                          {' '}
+                          {chunk}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  ) : null}
                 </Typography>
               </Stack>
             ))}

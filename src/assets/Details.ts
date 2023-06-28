@@ -45,7 +45,6 @@ const details = {
     },
   ],
   experience: [
-
     {
       company: 'Kanop',
       url: 'https://www.kanop.io/',
@@ -55,8 +54,19 @@ const details = {
       position: 'Front-end web developer',
       start: 'Mar 2023',
       end: 'Sep 2023',
-      description: 'Developed React TypeScript tools for map and chart visualizations of polygon and raster data at Kanop. Automated the testing, building, versioning, and deployment system by creating a robust Continuous Integration (CI) pipeline. Integrated APIs and popular libraries like D3.js and Mapbox GL to ensure optimal performance and accessibility. Collaborated with data science team to create data visualizations that provided critical insights for stakeholders and policymakers. Ensured adherence to best practices and scalability for future expansion. ',
-      technologies: ['React', 'Node JS', 'Gitlab CI/CD', 'Mapbox.gl', 'MUI Joy'],
+      description: [
+        'Developed React TypeScript tools for map and chart visualizations of polygon and raster data at Kanop.',
+        'Automated the testing, building, versioning, and deployment system by creating a robust CI pipeline.',
+        'Integrated APIs and popular libraries like D3.js and Mapbox GL to ensure optimal performance and accessibility.',
+        'Collaborated with data science team to create data visualizations that provided critical insights for stakeholders and policymakers.',
+      ],
+      technologies: [
+        'React',
+        'Node JS',
+        'Gitlab CI/CD',
+        'Mapbox.gl',
+        'MUI Joy',
+      ],
     },
     {
       company: 'Kanop',
@@ -67,8 +77,21 @@ const details = {
       position: 'Front-end web developer',
       start: 'Sep 2022',
       end: 'Feb 2023',
-      description: 'Performed unit testing of web applications and individual components. Optimized web applications for scalability, speed and security. Completed full redesigns of existing websites to improve navigation, enhance visuals and strengthen search engine rankings. Employed coding practices based on commonly accepted standards to establish site layout and user interface.',
-      technologies: ['REST API', 'Redux', 'SASS', 'WebGL', 'Typescript', 'Node JS', 'MUI Joy'],
+      description: [
+        'Performed unit testing of web applications and individual components.',
+        'Optimized web applications for scalability, speed and security.',
+        'Completed full redesigns of existing websites to improve navigation, enhance visuals and strengthen search engine rankings.',
+        'Employed coding practices based on commonly accepted standards to establish site layout and user interface.',
+      ],
+      technologies: [
+        'REST API',
+        'Redux',
+        'SASS',
+        'WebGL',
+        'Typescript',
+        'Node JS',
+        'MUI Joy',
+      ],
     },
     {
       company: 'Kanop',
@@ -79,8 +102,21 @@ const details = {
       position: 'Front-end web developer',
       start: 'Jun 2022',
       end: 'Sep 2022',
-      description: 'Revamp of an outdated python flask codebase. Documented project changes in team manuals for future reference and use. Followed best practices for software development and web security. Collaborated with UX designers to optimize design and user workflow. Worked with Deck.gl cartography and mass data rendering tools. Adapted quickly to constantly changing, deadline-driven environment.',
-      technologies: ['React', 'Node JS', 'Express', 'Gitlab CI/CD', 'Figma', 'WebGL', 'Mapbox.gl'],
+      description: [
+        'Documented project changes in team manuals for future reference and use.',
+        'Collaborated with UX designers to optimize design and user workflow.',
+        'Worked with Deck.gl cartography and mass data rendering tools.',
+        'Adapted quickly to constantly changing, deadline-driven environment.',
+      ],
+      technologies: [
+        'React',
+        'Node JS',
+        'Express',
+        'Gitlab CI/CD',
+        'Figma',
+        'WebGL',
+        'Mapbox.gl',
+      ],
     },
     {
       company: 'La Fresque du Climat',
@@ -102,8 +138,19 @@ const details = {
       position: 'Data Processing & Management architecture developer',
       start: 'Jun 2021',
       end: 'Jul 2021',
-      description: 'Development of continuous integration/deployment infrastructure, improvements to a Node JS web app and retrieval of image data from Arlo autonomous cameras via public API.',
-      technologies: ['Node JS', 'Docker', 'GitHub CI/CD', 'Arlo API', 'React', 'Bootstrap', 'Microsoft Azure', 'Python', 'OpenCV'],
+      description:
+        'Development of continuous integration/deployment infrastructure, improvements to a Node JS web app and retrieval of image data from Arlo autonomous cameras via public API.',
+      technologies: [
+        'Node JS',
+        'Docker',
+        'GitHub CI/CD',
+        'Arlo API',
+        'React',
+        'Bootstrap',
+        'Microsoft Azure',
+        'Python',
+        'OpenCV',
+      ],
     },
     {
       company: 'Sup admission',
@@ -114,7 +161,8 @@ const details = {
       position: 'Lecturer & Tutor',
       start: 'Sep 2021',
       end: 'Nov 2021',
-      description: 'Lectures and tutoring for students preparing for the competitive entrance exams to French engineering schools.',
+      description:
+        'Lectures and tutoring for students preparing for the competitive entrance exams to French engineering schools.',
       technologies: ['Mathematics', 'Physics', 'Chemistry', 'Computer Science'],
     },
   ],
