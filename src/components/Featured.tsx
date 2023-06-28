@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fa';
 import { Repository, getRepositories } from 'utils/Api';
 import colors from 'assets/colors.json';
-import { Default } from './Responsive';
+import { Default, Mobile } from './Responsive';
 
 /**
  * Beautifies a string
@@ -124,44 +124,57 @@ export default function Featured() {
     <Stack
       gap={3}
     >
-      <Typography
-        level="h2"
-        sx={{ position: 'relative' }}
-        id="featured"
+      <Stack
+        gap={1}
       >
-        <Default>
-          <Avatar
-            color="info"
-            sx={(theme) => ({
-              position: 'absolute',
-              left: '-50px',
-              top: '0',
-              transform: 'translateX(-50%)',
-              border: 'none',
-              outline: `1.5px solid ${theme.palette.info[400]}`,
-              boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
-            })}
-          >
-            <BsJournalCode />
-          </Avatar>
-        </Default>
-        Featured
-        {' '}
         <Typography
-          textColor="info.400"
-          alignItems="center"
-          fontWeight="xl"
-          endDecorator={(
-            <Chip variant="soft">
-              {projects.length}
-              {' '}
-              repositories
-            </Chip>
-          )}
+          level="h2"
+          sx={{ position: 'relative' }}
+          id="featured"
         >
-          Projects
+          <Default>
+            <Avatar
+              color="info"
+              sx={(theme) => ({
+                position: 'absolute',
+                left: '-50px',
+                top: '0',
+                transform: 'translateX(-50%)',
+                border: 'none',
+                outline: `1.5px solid ${theme.palette.info[400]}`,
+                boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
+              })}
+            >
+              <BsJournalCode />
+            </Avatar>
+          </Default>
+          Featured
+          {' '}
+          <Typography
+            textColor="info.400"
+            alignItems="center"
+            fontWeight="xl"
+            endDecorator={(
+              <Default>
+                <Chip variant="soft">
+                  {projects.length}
+                  {' '}
+                  repositories
+                </Chip>
+              </Default>
+          )}
+          >
+            Projects
+          </Typography>
         </Typography>
-      </Typography>
+        <Mobile>
+          <Chip variant="soft">
+            {projects.length}
+            {' '}
+            repositories
+          </Chip>
+        </Mobile>
+      </Stack>
       <Box
         component={Stack}
         direction="row"

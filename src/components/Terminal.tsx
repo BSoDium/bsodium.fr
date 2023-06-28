@@ -107,11 +107,11 @@ export default function Terminal() {
         '&::before': mobile ? {} : {
           content: '""',
           position: 'absolute',
-          top: '-30%',
+          top: '0',
           left: '-50px',
-          height: '130%',
+          height: '100%',
           width: '1px',
-          background: `linear-gradient(to bottom, ${theme.palette.primary[700]}, ${theme.palette.primary[400]} 25%, ${theme.palette.info[400]})`,
+          background: `linear-gradient(to bottom, ${theme.palette.primary[400]}, ${theme.palette.info[400]})`,
         },
       })}
     >

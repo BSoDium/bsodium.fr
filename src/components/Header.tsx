@@ -136,7 +136,7 @@ export default function Header() {
         }}
       />
       <Stack
-        gap={3}
+        gap="20px"
       >
         <Button
           size="lg"
@@ -169,7 +169,7 @@ export default function Header() {
               top: '50%',
               left: '-50px',
               width: '50px',
-              height: '250%',
+              height: '70px',
               marginLeft: '-1px',
               border: `1.5px solid ${theme.palette.primary[700]}`,
               borderBottom: 'none',
@@ -187,14 +187,48 @@ export default function Header() {
             </Typography>
           </Stack>
         </Button>
-        <Typography level={mobile ? 'h1' : 'display2'} fontWeight="lg" display="flex" flexWrap="wrap" marginBottom={mobile ? '1em' : 0}>
+        <Typography
+          level={mobile ? 'h1' : 'display2'}
+          fontWeight="lg"
+          display="flex"
+          flexWrap="wrap"
+          marginBottom={mobile ? '1em' : 0}
+          sx={(theme) => ({
+            position: 'relative',
+            '&::before': mobile ? {} : {
+              content: '""',
+              position: 'absolute',
+              top: '0',
+              left: '-50px',
+              height: 'calc(100% + 20px)',
+              width: '1px',
+              background: `linear-gradient(to bottom, ${theme.palette.primary[700]}, ${theme.palette.primary[600]})`,
+            },
+          })}
+        >
           {greeting()}
           ,&nbsp;
           <TextTransition springConfig={presets.stiff}>
             {visitor}
           </TextTransition>
         </Typography>
-        <Typography level="h4" textColor="text.tertiary" fontWeight="md">
+        <Typography
+          level="h4"
+          textColor="text.tertiary"
+          fontWeight="md"
+          sx={(theme) => ({
+            position: 'relative',
+            '&::before': mobile ? {} : {
+              content: '""',
+              position: 'absolute',
+              top: '0',
+              left: '-50px',
+              height: 'calc(100% + 80px)',
+              width: '1px',
+              background: `linear-gradient(to bottom, ${theme.palette.primary[600]}, ${theme.palette.primary[400]})`,
+            },
+          })}
+        >
           The name&apos;s
           {' '}
           <ATypography textColor="primary.400" href="https://www.linkedin.com/in/bsodium/">

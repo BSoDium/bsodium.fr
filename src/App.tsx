@@ -81,14 +81,14 @@ export default function App() {
           >
             <Stack
               p="20px"
-              gap={10}
+              gap="80px"
             >
               <Header />
               <Terminal />
             </Stack>
             <Stack
               p="20px"
-              gap={10}
+              gap="80px"
               sx={(theme) => ({
                 position: 'relative',
                 '&::before': mobile ? {} : {
@@ -120,7 +120,7 @@ export default function App() {
           >
             <Stack
               p="20px"
-              gap={10}
+              gap="80px"
               sx={(theme) => ({
                 position: 'relative',
                 '&::before': mobile ? {} : {
