@@ -26,7 +26,7 @@ export const appTheme = extendTheme({
       styleOverrides: {
         root: ({ ownerState }) => ({
           ...(ownerState.variant === 'outlined' && {
-            border: `1px solid var(--joy-palette-${ownerState.color}-300)`,
+            border: `1px solid var(--joy-palette-${ownerState.color}-600)`,
           }),
         }),
       },

@@ -150,8 +150,8 @@ export default function Terminal() {
         variant="outlined"
         component={Stack}
         sx={{
-          backdropFilter: 'blur(20px)',
-          backgroundColor: 'rgba(53, 54, 58, 0.378)',
+          backdropFilter: 'blur(40px)',
+          backgroundColor: 'rgba(53, 54, 58, 0.4)',
           border: '1px solid rgb(83, 86, 93)',
           padding: 0,
           gap: 0,
@@ -331,7 +331,7 @@ export default function Terminal() {
         >
           <IconButton
             size="sm"
-            variant="soft"
+            variant="plain"
             color="neutral"
             sx={{
               position: 'absolute',
@@ -405,7 +405,7 @@ export default function Terminal() {
           >
             <TabList sx={{
               backgroundColor: 'transparent',
-              gap: 1,
+              gap: 0,
             }}
             >
               {categories.map((name) => {
@@ -415,13 +415,14 @@ export default function Terminal() {
                     component={Tab}
                     key={name}
                     value={name}
-                    variant={checked ? 'solid' : 'outlined'}
-                    color="primary"
+                    variant={checked ? 'solid' : 'plain'}
+                    color="neutral"
                     sx={(theme) => ({
                       borderRadius: '6px',
-                      ...(checked && {
-                        backgroundColor: theme.palette.primary[300],
-                        color: theme.palette.primary[900],
+                      ...(checked ? {
+                        backgroundColor: theme.palette.neutral[300],
+                        color: theme.palette.neutral[900],
+                      } : {
                       }),
                     })}
                   >

@@ -114,8 +114,8 @@ export function Skills({
         ).map(([skillsetName, skillset]) => (
           skillset.map((skill) => (
             <Chip
-              variant="soft"
-              color="primary"
+              variant="outlined"
+              color="neutral"
               size="md"
               key={skill}
               startDecorator={skillIcons[skillsetName as keyof (typeof details)['skills']]}
@@ -204,7 +204,7 @@ export function Experience() {
                   {' '}
                   {item.location}
                 </Typography>
-                <Typography level="body3" textColor="text.tertiary">
+                <Typography level="body3" textColor="text.tertiary" component="div">
                   {typeof item.description === 'string' ? item.description : null}
                   {typeof item.description === 'object' ? (
                     <Stack>
