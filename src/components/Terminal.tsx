@@ -160,7 +160,13 @@ export default function Terminal() {
         }}
       >
         <Stack direction="row" justifyContent="space-between" p={0}>
-          <Stack direction="row" gap={0.5}>
+          <Stack
+            direction="row"
+            gap={0.5}
+            sx={{
+              overflow: 'hidden',
+            }}
+          >
             <Stack
               direction="row"
               sx={{
@@ -180,12 +186,36 @@ export default function Terminal() {
                     justifyContent: 'space-between',
                     flexDirection: 'row',
                     width: '250px',
-                    backgroundColor: 'hsl(220, 13%, 15%)',
+                    backgroundColor: 'rgb(33, 37, 43)',
                     borderBottomRightRadius: 0,
                     borderBottomLeftRadius: 0,
-                    overflow: 'hidden',
                     boxShadow: 'none',
+                    position: 'relative',
                     p: 0,
+                    '&:before': {
+                      zIndex: 100,
+                      content: '""',
+                      position: 'absolute',
+                      left: '-7px',
+                      top: '50%',
+                      height: 'calc(50% + 0.5px)',
+                      width: '6px',
+                      borderRadius: '0 0 6px 0',
+                      backgroundColor: 'transparent',
+                      boxShadow: '0 6px 0px 0px var(--joy-palette-neutral-outlinedBorder)',
+                    },
+                    '&:after': {
+                      zIndex: 100,
+                      content: '""',
+                      position: 'absolute',
+                      right: '-6.5px',
+                      top: '50%',
+                      height: 'calc(50% + 0.5px)',
+                      width: '6px',
+                      borderRadius: '0 0 0 6px',
+                      backgroundColor: 'transparent',
+                      boxShadow: '0 6px 0px 0px var(--joy-palette-neutral-outlinedBorder)',
+                    },
                   }}
                 >
                   <Typography
@@ -321,7 +351,7 @@ export default function Terminal() {
           direction="column"
           sx={{
             position: 'relative',
-            backgroundColor: 'rgba(47, 51, 54, 0.3)',
+            backgroundColor: 'rgba(33, 37, 43, 0.8)',
             p: 2,
             gap: 1,
             flexGrow: 1,
