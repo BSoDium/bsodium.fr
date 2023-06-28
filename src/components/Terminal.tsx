@@ -162,7 +162,7 @@ export default function Terminal() {
         <Stack direction="row" justifyContent="space-between" p={0}>
           <Stack
             direction="row"
-            gap={0.5}
+            gap={0}
             sx={{
               overflow: 'hidden',
             }}
@@ -171,14 +171,13 @@ export default function Terminal() {
               direction="row"
               sx={{
                 p: 1,
+                gap: 0.2,
                 paddingBottom: 0,
                 paddingRight: 0,
               }}
-              gap={0.2}
             >
               {tabs.map((tab) => (
                 <Card
-                  variant="outlined"
                   key={tab.name}
                   sx={{
                     display: 'flex',
@@ -196,25 +195,25 @@ export default function Terminal() {
                       zIndex: 100,
                       content: '""',
                       position: 'absolute',
-                      left: '-7px',
+                      left: '-6px',
                       top: '50%',
-                      height: 'calc(50% + 0.5px)',
+                      height: '50%',
                       width: '6px',
                       borderRadius: '0 0 6px 0',
                       backgroundColor: 'transparent',
-                      boxShadow: '0 6px 0px 0px var(--joy-palette-neutral-outlinedBorder)',
+                      boxShadow: '0 6px 0px 0px rgb(33, 37, 43)',
                     },
                     '&:after': {
                       zIndex: 100,
                       content: '""',
                       position: 'absolute',
-                      right: '-6.5px',
+                      right: '-6px',
                       top: '50%',
-                      height: 'calc(50% + 0.5px)',
+                      height: '50%',
                       width: '6px',
                       borderRadius: '0 0 0 6px',
                       backgroundColor: 'transparent',
-                      boxShadow: '0 6px 0px 0px var(--joy-palette-neutral-outlinedBorder)',
+                      boxShadow: '0 6px 0px 0px rgb(33, 37, 43)',
                     },
                   }}
                 >
@@ -257,6 +256,7 @@ export default function Terminal() {
                 variant="soft"
                 color="neutral"
                 sx={{
+                  borderRadius: '6px',
                   borderTopRightRadius: 0,
                   borderBottomRightRadius: 0,
                   minHeight: '25px',
@@ -272,6 +272,7 @@ export default function Terminal() {
                 variant="soft"
                 color="neutral"
                 sx={{
+                  borderRadius: '6px',
                   borderTopLeftRadius: 0,
                   borderBottomLeftRadius: 0,
                   minHeight: '25px',
