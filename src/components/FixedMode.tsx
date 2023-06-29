@@ -1,5 +1,5 @@
 import {
-  CssBaseline, CssVarsProvider, extendTheme, useColorScheme,
+  CssBaseline, CssVarsProvider, extendTheme,
 } from '@mui/joy';
 import React, { useEffect } from 'react';
 
