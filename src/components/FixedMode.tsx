@@ -1,5 +1,5 @@
 import {
-  CssBaseline, CssVarsProvider, extendTheme,
+  CssBaseline, CssVarsProvider, extendTheme, useColorScheme,
 } from '@mui/joy';
 import React, { useEffect } from 'react';
 
@@ -52,7 +52,7 @@ export default function FixedMode({
       theme={appTheme}
       defaultMode={mode}
     >
-      <CssBaseline />
+      <CssBaseline disableColorScheme />
       {children}
     </CssVarsProvider>
   );
