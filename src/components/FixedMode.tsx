@@ -37,23 +37,37 @@ export const appTheme = extendTheme({
 
 export default function FixedMode({
   children,
-  mode = 'dark',
+  mode = 'system',
+  root = true,
 }: {
   children: React.ReactNode;
   mode?: 'light' | 'dark' | 'system';
+  root?: boolean;
 }) {
   // Clear the localStorage on first load
   useEffect(() => {
     localStorage.clear();
   }, []);
 
+  // If root, then set the data-joy-color-scheme attribute on the root element
+  useEffect(() => {
+    if (root) {
+      document.documentElement.setAttribute(
+        'data-joy-color-scheme',
+        mode !== 'system' ? mode : '',
+      );
+    }
+  }, [mode, root]);
+
   return (
     <CssVarsProvider
       theme={appTheme}
-      defaultMode={mode}
+      defaultMode={mode === 'system' ? mode : undefined}
     >
       <CssBaseline disableColorScheme />
-      {children}
+      <div data-joy-color-scheme={mode !== 'system' ? mode : undefined}>
+        {children}
+      </div>
     </CssVarsProvider>
   );
 }

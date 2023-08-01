@@ -14,7 +14,7 @@
     "configurations": [
       {
         "name": "Debug app",
-        "type": "pwa-node",
+        "type": "node",
         "request": "launch",
         "cwd": "${workspaceRoot}",
         "args": ["start"],

@@ -53,7 +53,7 @@ export default function App() {
   const mobile = useMobileMode();
 
   return (
-    <FixedMode>
+    <FixedMode mode="dark">
       <Title text="Elliot Négrel-Jerzy" />
       <Box
         component="div"
