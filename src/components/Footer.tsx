@@ -1,7 +1,7 @@
 /* eslint-disable no-plusplus */
 /* eslint-disable react/no-unknown-property */
 import {
-  Avatar, Stack, Typography, useTheme,
+  Avatar, Stack, Typography,
 } from '@mui/joy';
 import { AsciiRenderer } from '@react-three/drei';
 import {
@@ -36,7 +36,7 @@ function Icosahedron() {
 function AsteroidRing() {
   const groupRef = useRef<Group>(null);
   const viewport = useThree((state) => state.viewport);
-  const numAsteroids = 1000;
+  const numAsteroids = 500;
   const radius = (2.4 * Math.min(viewport.width, viewport.height)) / 5;
   const asteroidRadius = 0.05;
   const asteroidGeometry = new SphereGeometry(asteroidRadius, 1, 1);
@@ -74,7 +74,6 @@ function AsteroidRing() {
 }
 
 function View() {
-  const theme = useTheme();
   return (
     <Canvas style={{
       height: '100%',
@@ -86,7 +85,7 @@ function View() {
       <ambientLight intensity={0.05} />
       <Icosahedron />
       <AsteroidRing />
-      <AsciiRenderer fgColor={theme.palette.text.primary} characters=" .,:-+*=/%@#" bgColor="transparent" />
+      <AsciiRenderer fgColor="#ffe0e0" characters=" .,:-+*=/%@#" bgColor="transparent" />
     </Canvas>
   );
 }
