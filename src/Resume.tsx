@@ -45,7 +45,7 @@ export function Languages() {
 export default function Resume() {
   const mobile = useMobileMode();
   return (
-    <FixedMode>
+    <FixedMode mode="system">
       <Title text="Curriculum Vitae - Elliot Négrel-Jerzy" />
       <Stack
         alignItems="center"

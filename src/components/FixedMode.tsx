@@ -51,10 +51,10 @@ export default function FixedMode({
 
   // If root, then set the data-joy-color-scheme attribute on the root element
   useEffect(() => {
-    if (root) {
+    if (root && mode !== 'system') {
       document.documentElement.setAttribute(
         'data-joy-color-scheme',
-        mode !== 'system' ? mode : '',
+        mode,
       );
     }
   }, [mode, root]);
