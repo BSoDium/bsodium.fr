@@ -68,7 +68,9 @@ export default function Footer() {
             scene="https://prod.spline.design/D7xRCZ6d7FKAmDLz/scene.splinecode"
             style={{
               width: '100%',
-              marginBottom: '-200px',
+              height: 'calc(100% + 100px)',
+              marginTop: '-50px',
+              marginLeft: '-50px',
             }}
           />
         </Stack>

@@ -62,7 +62,7 @@ export default function Contact() {
           width: '100%',
           '& > *': {
             flexGrow: 1,
-            maxWidth: '300px',
+            maxWidth: '400px',
             transition: 'transform 0.2s ease-in-out',
             '&:hover': {
               transform: 'scaleX(1.05) scaleY(1.1)',
