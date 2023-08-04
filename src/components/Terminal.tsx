@@ -419,6 +419,7 @@ export default function Terminal() {
                     variant={checked ? 'solid' : 'plain'}
                     color="neutral"
                     sx={(theme) => ({
+                      fontFamily: "'Fira Code', monospace",
                       borderRadius: '6px',
                       ...(checked ? {
                         backgroundColor: theme.palette.neutral[300],
