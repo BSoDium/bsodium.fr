@@ -1,7 +1,6 @@
 import {
   Avatar, Box, Chip, Divider, Stack, Typography,
 } from '@mui/joy';
-import FixedMode from 'components/FixedMode';
 import React from 'react';
 import {
   RiBriefcaseLine,
@@ -9,9 +8,10 @@ import {
   RiContactsLine,
   RiSettings5Line,
 } from 'react-icons/ri';
-import details from 'assets/Details';
 import { TbSchool } from 'react-icons/tb';
 import { IoLanguage } from 'react-icons/io5';
+import details from 'assets/Details';
+import FixedMode from 'components/FixedMode';
 import { Education, Experience, Skills } from 'components/Details';
 import Title from 'components/Title';
 import { useMobileMode } from 'components/Responsive';

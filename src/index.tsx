@@ -1,12 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from 'App';
 import {
   StyledEngineProvider,
 } from '@mui/joy';
 import {
   BrowserRouter, Route, Routes,
 } from 'react-router-dom';
+import App from 'App';
 import Resume from 'Resume';
 import 'App.global.scss';
 

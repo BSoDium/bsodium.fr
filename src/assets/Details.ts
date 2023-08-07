@@ -1,8 +1,8 @@
-import enseeiht from 'assets/icons/enseeiht.png';
 import aau from 'assets/icons/aau.jpg';
+import akanthas from 'assets/icons/akanthas.jpg';
+import enseeiht from 'assets/icons/enseeiht.png';
 import kanop from 'assets/icons/kanop.png';
 import lfdc from 'assets/icons/lfdc.png';
-import akanthas from 'assets/icons/akanthas.jpg';
 import supadm from 'assets/icons/supadm.jpg';
 
 const details = {

@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
 
-import planet from 'assets/planet.png';
-import robot1 from 'assets/robot_flying_1.png';
-import robot2 from 'assets/robot_flying_2.png';
-import sky from 'assets/sky.png';
 import {
   Avatar, Button, Stack, Typography,
 } from '@mui/joy';
 import TextTransition, { presets } from 'react-text-transition';
-import greeting from 'utils/Greeting';
-import { ATypography } from 'App';
 import { RiArrowRightSLine } from 'react-icons/ri';
 import { IoReaderOutline } from 'react-icons/io5';
 import { Link } from 'react-router-dom';
+import planet from 'assets/planet.png';
+import robot1 from 'assets/robot_flying_1.png';
+import robot2 from 'assets/robot_flying_2.png';
+import sky from 'assets/sky.png';
+import greeting from 'utils/Greeting';
+import { ATypography } from 'App';
 import { useMobileMode } from './Responsive';
 
 export const visitors = [

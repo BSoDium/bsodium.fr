@@ -24,9 +24,9 @@ import {
 
 import { IoAddOutline } from 'react-icons/io5';
 import { HiChevronDown } from 'react-icons/hi';
-import mockMessages from 'utils/Messages';
 import { FaPause, FaPlay } from 'react-icons/fa';
 import { RiUserLine } from 'react-icons/ri';
+import mockMessages from 'utils/Messages';
 import { Default, useMobileMode } from './Responsive';
 import Details from './Details';
 import TypeWriter from './TypeWriter';

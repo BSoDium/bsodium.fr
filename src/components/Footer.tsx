@@ -3,10 +3,10 @@
 import {
   Avatar, Stack, Typography,
 } from '@mui/joy';
-import { ATypography } from 'App';
 import { HiOutlineCheckBadge } from 'react-icons/hi2';
 import React from 'react';
 import Spline from '@splinetool/react-spline';
+import { ATypography } from 'App';
 import { Default } from './Responsive';
 
 export default function Footer() {
