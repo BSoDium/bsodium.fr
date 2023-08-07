@@ -1,15 +1,15 @@
-import React from 'react';
 import {
   Avatar, Chip, Stack, Typography,
 } from '@mui/joy';
-import details from 'assets/Details';
-import { IoSchoolOutline } from 'react-icons/io5';
 import moment from 'moment';
-import { HiExternalLink, HiOutlineOfficeBuilding } from 'react-icons/hi';
-import { FiPackage } from 'react-icons/fi';
+import React from 'react';
 import { BsCode } from 'react-icons/bs';
+import { FiPackage } from 'react-icons/fi';
+import { HiExternalLink, HiOutlineOfficeBuilding } from 'react-icons/hi';
+import { IoSchoolOutline } from 'react-icons/io5';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
+import details from 'assets/Details';
 import { Category } from './Terminal';
 
 export const skillIcons: {

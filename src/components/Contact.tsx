@@ -1,15 +1,15 @@
-import {
-  Avatar,
-  Button,
-  Stack, Typography,
-} from '@mui/joy';
 import React from 'react';
 import {
-  FaDeviantart, FaGithub, FaGitlab, FaLinkedin,
+  Avatar,
+  Stack, Typography,
+} from '@mui/joy';
+import {
+  FaDeviantart, FaGithub, FaGitlab, FaLinkedin, FaTwitter,
 } from 'react-icons/fa';
-import { FiMail } from 'react-icons/fi';
+import { FiMail, FiPhone } from 'react-icons/fi';
 import { SiResearchgate } from 'react-icons/si';
 import details from 'assets/Details';
+import LinkCarousel from './LinkCarousel';
 import { Default } from './Responsive';
 
 export default function Contact() {
@@ -48,100 +48,71 @@ export default function Contact() {
         level="h5"
         textColor="text.secondary"
       >
-        Feel free to contact me if you have any questions or suggestions. I am
+        Feel free to
+        {' '}
+        <Typography
+          textColor="text.primary"
+        >
+          contact me
+        </Typography>
+        {' '}
+        if you have any questions or suggestions. I am
         always open to new ideas and opportunities.
       </Typography>
 
-      <Stack
-        direction="row"
-        gap={2}
-        justifyContent="center"
-        flexWrap="wrap"
-        sx={{
-          marginTop: '1rem',
-          width: '100%',
-          '& > *': {
-            flexGrow: 1,
-            maxWidth: '400px',
-            transition: 'transform 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'scaleX(1.05) scaleY(1.1)',
-            },
+      <LinkCarousel
+        repeat={4}
+        links={[
+          {
+            url: `mailto:${details.contact.email}`,
+            icon: <FiMail />,
+            title: 'Email',
+            color: '#ea4335',
           },
-        }}
-      >
-        <Button
-          component="a"
-          href={`mailto:${details.contact.email}`}
-          size="lg"
-          variant="soft"
-          startDecorator={
-            <FiMail />
-        }
-        >
-          Send me an email
-        </Button>
-        <Button
-          component="a"
-          href={details.contact.linkedin}
-          target="_blank"
-          size="lg"
-          variant="soft"
-          startDecorator={
-            <FaLinkedin />
-        }
-        >
-          Contact me on LinkedIn
-        </Button>
-        <Button
-          component="a"
-          href={details.contact.github}
-          target="_blank"
-          size="lg"
-          variant="soft"
-          startDecorator={
-            <FaGithub />
-        }
-        >
-          Collaborate on GitHub
-        </Button>
-        <Button
-          component="a"
-          href={details.contact.researchgate}
-          target="_blank"
-          size="lg"
-          variant="soft"
-          startDecorator={
-            <SiResearchgate />
-        }
-        >
-          Follow me on ResearchGate
-        </Button>
-        <Button
-          component="a"
-          href={details.contact.gitlab}
-          target="_blank"
-          size="lg"
-          variant="soft"
-          startDecorator={
-            <FaGitlab />
-        }
-        >
-          Collaborate on GitLab
-        </Button>
-        <Button
-          component="a"
-          href={details.contact.deviantart}
-          target="_blank"
-          size="lg"
-          variant="soft"
-          startDecorator={
-            <FaDeviantart />
-        }
-        >
-          Follow me on DeviantArt
-        </Button>
-      </Stack>
+          {
+            url: `tel:${details.contact.phone}`,
+            icon: <FiPhone />,
+            title: 'Phone',
+            color: '#4285f4',
+          },
+          {
+            url: details.contact.linkedin,
+            icon: <FaLinkedin />,
+            title: 'LinkedIn',
+            color: '#0a66c2',
+          },
+          {
+            url: details.contact.github,
+            icon: <FaGithub />,
+            title: 'GitHub',
+            color: '#24292e',
+          },
+          {
+            url: details.contact.gitlab,
+            icon: <FaGitlab />,
+            title: 'GitLab',
+            color: '#fc6d26',
+          },
+          {
+            url: details.contact.deviantart,
+            icon: <FaDeviantart />,
+            title: 'DeviantArt',
+            color: '#05cc47',
+          },
+          {
+            url: details.contact.researchgate,
+            icon: <SiResearchgate />,
+            title: 'ResearchGate',
+            color: '#1fada2',
+          },
+          {
+            url: details.contact.twitter,
+            icon: <FaTwitter />,
+            title: 'Twitter',
+            color: '#1da1f2',
+          },
+        ]}
+      />
     </Stack>
   );
 }
