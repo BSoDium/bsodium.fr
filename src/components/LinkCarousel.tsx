@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-props-no-spreading */
 import {
   Button, Stack, VariantProp,
 } from '@mui/joy';
@@ -5,27 +6,65 @@ import { useSpringValue } from '@react-spring/web';
 import Color from 'color';
 import React, { useMemo } from 'react';
 
-function getContrastColor(backgroundColor: string): string {
-  const color = Color(backgroundColor);
+function getPalette(primaryColor: string): {
+  color: string,
+  backgroundColor: string,
+  borderColor: string
+} {
+  const color = Color(primaryColor);
   const hsl = color.hsl();
 
-  if (hsl.lightness() < 50) {
-    return hsl.lightness(hsl.lightness() + 50).hex();
-  }
-  return hsl.lightness(hsl.lightness() - 50).hex();
+  return {
+    color: hsl.lightness(90).hex(),
+    backgroundColor: hsl.lightness(10).hex(),
+    borderColor: hsl.lightness(20).hex(),
+  };
+}
+
+type LinkProps = {
+  url: string,
+  icon: React.ReactNode,
+  title: string,
+  color?: string,
+  variant?: VariantProp,
+};
+
+export function Link({
+  url,
+  icon,
+  title,
+  color,
+  variant,
+}: NonNullable<LinkProps>) {
+  return (
+    <Button
+      component="a"
+      href={url}
+      target="_blank"
+      size="lg"
+      color="neutral"
+      variant={variant || 'outlined'}
+      startDecorator={
+              icon
+            }
+      sx={{
+        transition: 'background-color 0.2s ease-in-out, color 0.2s ease-in-out',
+        '&:hover': {
+          ...(color && getPalette(color)
+          ),
+        },
+      }}
+    >
+      {title}
+    </Button>
+  );
 }
 
 export default function LinkCarousel({
   links,
   repeat = 2,
 } : {
-  links: {
-    url: string,
-    icon: React.ReactNode,
-    title: string,
-    color?: string,
-    variant?: VariantProp,
-  }[]
+  links: LinkProps[]
   repeat?: number,
 }) {
   const repeatedLinks = useMemo(() => (
@@ -33,8 +72,8 @@ export default function LinkCarousel({
   ), [links, repeat]);
 
   const animationDurations = useMemo(() => ([
-    Math.random() * 10 + 15,
-    Math.random() * 10 + 15,
+    Math.random() * 30 + 40,
+    Math.random() * 30 + 40,
   ]), []);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -78,81 +117,29 @@ export default function LinkCarousel({
               transform: 'translateX(0)',
             },
             '100%': {
-              transform: `translateX(-${(repeat - 1) * (100 / repeat)}%)`,
+              transform: `translateX(calc(-${(repeat - 1) * (100 / repeat)}% - 8px))`,
             },
           },
         },
       }}
     >
-      <Stack
-        direction="row"
-        gap={1}
-        sx={{
-          width: '100%',
-          animation: `slide ${animationDurations[0]}s linear infinite`,
-          '& > *': {
-            transition: 'transform 0.2s ease-in-out',
+      {[repeatedLinks, repeatedLinks.slice().reverse()].map((_links, i) => (
+        <Stack
+          direction="row"
+          gap={1}
+          sx={{
+            width: 'max-content',
+            animation: `slide ${animationDurations[i]}s linear infinite`,
             '&:hover': {
-              transform: 'scaleX(1.05) scaleY(1.1)',
+              animationPlayState: 'paused',
             },
-          },
-        }}
-      >
-        {repeatedLinks.map((link) => (
-          <Button
-            component="a"
-            href={link.url}
-            target="_blank"
-            size="lg"
-            color="neutral"
-            variant={link.variant || 'outlined'}
-            startDecorator={
-              link.icon
-            }
-          >
-            {link.title}
-          </Button>
-        ))}
-      </Stack>
-      <Stack
-        direction="row"
-        gap={1}
-        sx={{
-          width: '100%',
-          animation: `slide ${animationDurations[1]}s linear infinite`,
-          '& > *': {
-            transition: 'transform 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'scaleX(1.05) scaleY(1.1)',
-            },
-          },
-        }}
-      >
-        {repeatedLinks.reverse().map((link) => (
-          <Button
-            component="a"
-            href={link.url}
-            target="_blank"
-            size="lg"
-            color="neutral"
-            variant={link.variant || 'outlined'}
-            startDecorator={
-              link.icon
-            }
-            sx={{
-              ...(link.color && {
-                transition: 'background-color 0.2s ease-in-out, color 0.2s ease-in-out',
-                '&:hover': {
-                  backgroundColor: getContrastColor(link.color),
-                  color: link.color,
-                },
-              }),
-            }}
-          >
-            {link.title}
-          </Button>
-        ))}
-      </Stack>
+          }}
+        >
+          {_links.map((link) => (
+            <Link {...link} />
+          ))}
+        </Stack>
+      ))}
     </Stack>
   );
 }
