@@ -88,6 +88,7 @@ function ProjectCard({
           <Button
             variant="outlined"
             component="a"
+            color="info"
             href={project.html_url}
             target="_blank"
           >
@@ -96,6 +97,7 @@ function ProjectCard({
           {project.homepage && (
           <Button
             component="a"
+            color="info"
             href={project.homepage}
             target="_blank"
           >
@@ -156,7 +158,7 @@ export default function Featured() {
             fontWeight="xl"
             endDecorator={(
               <Default>
-                <Chip variant="soft">
+                <Chip variant="soft" color="info">
                   {projects.length}
                   {' '}
                   repositories

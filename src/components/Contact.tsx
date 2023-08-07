@@ -11,6 +11,7 @@ import { FiMail } from 'react-icons/fi';
 import { SiResearchgate } from 'react-icons/si';
 import details from 'assets/Details';
 import { Default } from './Responsive';
+import LinkCarousel from './LinkCarousel';
 
 export default function Contact() {
   return (
@@ -48,21 +49,67 @@ export default function Contact() {
         level="h5"
         textColor="text.secondary"
       >
-        Feel free to contact me if you have any questions or suggestions. I am
+        Feel free to
+        {' '}
+        <Typography
+          textColor="text.primary"
+        >
+          contact me
+        </Typography>
+        {' '}
+        if you have any questions or suggestions. I am
         always open to new ideas and opportunities.
       </Typography>
 
+      <LinkCarousel links={[
+        {
+          url: `mailto:${details.contact.email}`,
+          icon: <FiMail />,
+          title: 'Email',
+          color: 'warning',
+        },
+        {
+          url: details.contact.linkedin,
+          icon: <FaLinkedin />,
+          title: 'LinkedIn',
+          color: 'warning',
+        },
+        {
+          url: details.contact.github,
+          icon: <FaGithub />,
+          title: 'GitHub',
+          color: 'warning',
+        },
+        {
+          url: details.contact.gitlab,
+          icon: <FaGitlab />,
+          title: 'GitLab',
+          color: 'warning',
+        },
+        {
+          url: details.contact.deviantart,
+          icon: <FaDeviantart />,
+          title: 'DeviantArt',
+          color: 'warning',
+        },
+        {
+          url: details.contact.researchgate,
+          icon: <SiResearchgate />,
+          title: 'ResearchGate',
+          color: 'warning',
+        },
+      ]}
+      />
+
       <Stack
         direction="row"
-        gap={2}
+        gap={1}
         justifyContent="center"
         flexWrap="wrap"
         sx={{
           marginTop: '1rem',
           width: '100%',
           '& > *': {
-            flexGrow: 1,
-            maxWidth: '400px',
             transition: 'transform 0.2s ease-in-out',
             '&:hover': {
               transform: 'scaleX(1.05) scaleY(1.1)',
@@ -74,72 +121,78 @@ export default function Contact() {
           component="a"
           href={`mailto:${details.contact.email}`}
           size="lg"
+          color="warning"
           variant="soft"
           startDecorator={
             <FiMail />
         }
         >
-          Send me an email
+          Email
         </Button>
         <Button
           component="a"
           href={details.contact.linkedin}
           target="_blank"
           size="lg"
+          color="warning"
           variant="soft"
           startDecorator={
             <FaLinkedin />
         }
         >
-          Contact me on LinkedIn
+          LinkedIn
         </Button>
         <Button
           component="a"
           href={details.contact.github}
           target="_blank"
           size="lg"
+          color="warning"
           variant="soft"
           startDecorator={
             <FaGithub />
         }
         >
-          Collaborate on GitHub
+          GitHub
         </Button>
         <Button
           component="a"
           href={details.contact.researchgate}
           target="_blank"
           size="lg"
+          color="warning"
           variant="soft"
           startDecorator={
             <SiResearchgate />
         }
         >
-          Follow me on ResearchGate
+          ResearchGate
         </Button>
         <Button
           component="a"
           href={details.contact.gitlab}
           target="_blank"
           size="lg"
+          color="warning"
           variant="soft"
           startDecorator={
             <FaGitlab />
         }
         >
-          Collaborate on GitLab
+          GitLab
         </Button>
         <Button
           component="a"
           href={details.contact.deviantart}
           target="_blank"
           size="lg"
+          color="warning"
           variant="soft"
           startDecorator={
             <FaDeviantart />
         }
         >
-          Follow me on DeviantArt
+          DeviantArt
         </Button>
       </Stack>
     </Stack>
