@@ -215,7 +215,6 @@ export default function Header() {
         <Typography
           level="h4"
           textColor="text.tertiary"
-          fontWeight="md"
           sx={(theme) => ({
             position: 'relative',
             '&::before': mobile ? {} : {

@@ -46,7 +46,10 @@ export default function Contact() {
 
       <Typography
         level="h5"
-        textColor="text.secondary"
+        textColor="text.tertiary"
+        sx={{
+          maxWidth: '500px',
+        }}
       >
         Feel free to
         {' '}
