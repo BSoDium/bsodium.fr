@@ -8,6 +8,7 @@ import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
 import {
   FaCode, FaCodeBranch, FaStar,
 } from 'react-icons/fa';
+import { RxOpenInNewWindow } from 'react-icons/rx';
 import { Repository, getRepositories } from 'utils/Api';
 import colors from 'assets/colors.json';
 import { Default, Mobile } from './Responsive';
@@ -33,6 +34,9 @@ function ProjectCard({
       gap={2}
       p={3}
       justifyContent="space-between"
+      sx={{
+        width: 'max(30%, 320px)',
+      }}
     >
       <Stack gap={2}>
         <Stack direction="row" alignItems="center" gap={2}>
@@ -57,10 +61,10 @@ function ProjectCard({
           </Stack>
         </Stack>
         <Typography
-          sx={{
-            maxWidth: '300px',
-          }}
           level="body2"
+          sx={{
+            flexGrow: 0,
+          }}
         >
           {project.description}
         </Typography>
@@ -79,27 +83,34 @@ function ProjectCard({
             level="body2"
             startDecorator={
               <FaCodeBranch />
-                }
+            }
           >
             {project.forks}
           </Typography>
         </Stack>
         <Stack direction="row" gap={1}>
           <Button
-            variant="outlined"
+            variant="plain"
             component="a"
             color="info"
             href={project.html_url}
             target="_blank"
+            sx={{
+              flexShrink: 0,
+            }}
           >
-            Repository
+            Git Repository
           </Button>
           {project.homepage && (
           <Button
             component="a"
             color="info"
+            variant="solid"
             href={project.homepage}
             target="_blank"
+            endDecorator={
+              <RxOpenInNewWindow />
+            }
           >
             Visit
           </Button>
