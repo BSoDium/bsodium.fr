@@ -60,7 +60,14 @@ export default function Contact() {
         </Typography>
         {' '}
         if you have any questions or suggestions. I am
-        always open to new ideas and opportunities.
+        always open to new
+        {' '}
+        <Typography
+          textColor="text.primary"
+        >
+          ideas and opportunities
+        </Typography>
+        .
       </Typography>
 
       <LinkCarousel

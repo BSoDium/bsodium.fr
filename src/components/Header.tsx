@@ -189,7 +189,7 @@ export default function Header() {
         </Button>
         <Typography
           level={mobile ? 'h1' : 'display2'}
-          fontWeight="lg"
+          fontWeight="md"
           display="flex"
           flexWrap="wrap"
           marginBottom={mobile ? '1em' : 0}

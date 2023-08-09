@@ -31,14 +31,6 @@ export const appTheme = extendTheme({
         }),
       },
     },
-    JoyTypography: {
-      styleOverrides: {
-        root: () => ({
-          fontFamily: "'Inter', sans-serif",
-        }),
-      },
-    },
-
   },
 });
 

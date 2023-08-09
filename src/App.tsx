@@ -12,8 +12,9 @@ import Title from 'components/Title';
 import Header from 'components/Header';
 import FixedMode from 'components/FixedMode';
 import { useMobileMode, Default } from 'components/Responsive';
-import Footer from 'components/Footer';
+import OpenSource from 'components/OpenSource';
 import Divider from 'components/Divider';
+import Goals from 'components/Goals';
 
 export function ATypography({
   children,
@@ -130,11 +131,29 @@ export default function App() {
                   right: '-30px',
                   height: '100%',
                   width: '1.5px',
-                  background: `linear-gradient(to bottom, ${theme.palette.danger[400]} 30%, transparent)`,
+                  background: `linear-gradient(to bottom, ${theme.palette.danger[400]} 30%, ${theme.palette.success[400]})`,
                 },
               })}
             >
-              <Footer />
+              <Goals />
+            </Stack>
+            <Stack
+              p="20px"
+              gap="80px"
+              sx={(theme) => ({
+                position: 'relative',
+                '&::before': mobile ? {} : {
+                  content: '""',
+                  position: 'absolute',
+                  top: '0',
+                  right: '-30px',
+                  height: '100%',
+                  width: '1.5px',
+                  background: `linear-gradient(to bottom, ${theme.palette.success[400]}, transparent)`,
+                },
+              })}
+            >
+              <OpenSource />
             </Stack>
           </Stack>
         </Stack>
