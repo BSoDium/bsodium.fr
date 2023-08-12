@@ -41,7 +41,7 @@ export default function OpenSource() {
               id="footer"
             >
               <Typography
-                textColor="success.400"
+                textColor="success.300"
                 fontWeight="xl"
               >
                 Open-source.
@@ -112,10 +112,13 @@ export default function OpenSource() {
             src={lightSide}
             alt="Star wars app store"
             style={{
+              animation: 'blink 5s infinite',
               position: 'absolute',
-              top: '-40px',
-              left: '-40px',
-              width: '650px',
+              left: '-150px',
+              top: '-50px',
+              paddingRight: '20%',
+              maxWidth: '100%',
+              maxHeight: '100%',
             }}
           />
         </Stack>
