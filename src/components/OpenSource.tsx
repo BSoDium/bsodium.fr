@@ -4,12 +4,22 @@ import {
   Avatar, Stack, Typography,
 } from '@mui/joy';
 import { HiOutlineCheckBadge } from 'react-icons/hi2';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ATypography } from 'App';
 import lightSide from 'assets/light_side.png';
 import { Default } from './Responsive';
 
 export default function OpenSource() {
+  const blinkAnimation = useMemo(() => ({
+    '@keyframes blink': Object.fromEntries(
+      [...Array(10).keys()].map(() => Math.random() * 100).sort().map((p) => [
+        [`${p - 1}%`, { opacity: 1 }],
+        [`${p}%`, { opacity: 0 }],
+        [`${p + 1}%`, { opacity: 1 }],
+      ]).flat(),
+    ),
+  }), []);
+
   return (
     <Stack
       gap={7}
@@ -50,13 +60,7 @@ export default function OpenSource() {
               Join the
               {' '}
               <Typography sx={{
-                '@keyframes blink': Object.fromEntries(
-                  [...Array(10).keys()].map(() => Math.random() * 100).sort().map((p) => [
-                    [`${p - 1}%`, { opacity: 1 }],
-                    [`${p}%`, { opacity: 0 }],
-                    [`${p + 1}%`, { opacity: 1 }],
-                  ]).flat(),
-                ),
+                ...blinkAnimation,
                 textShadow: '0 0 10px #86fff1, 0 0 20px #03fee9, 0 0 40px #03fed8',
                 color: '#e4fffe',
                 animation: 'blink 5s infinite',
@@ -112,7 +116,6 @@ export default function OpenSource() {
             src={lightSide}
             alt="Star wars app store"
             style={{
-              animation: 'blink 5s infinite',
               position: 'absolute',
               left: '-150px',
               top: '-50px',
