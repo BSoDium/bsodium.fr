@@ -6,6 +6,7 @@ import {
 import {
   BrowserRouter, Route, Routes,
 } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import App from 'App';
 import Resume from 'Resume';
 import 'App.global.scss';
@@ -23,6 +24,7 @@ root.render(
           <Route path="/resume" element={<Resume />} />
         </Routes>
       </BrowserRouter>
+      <Analytics />
     </StyledEngineProvider>
   </React.StrictMode>,
 );
