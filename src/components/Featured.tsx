@@ -124,11 +124,15 @@ function ProjectCard({
 export default function Featured() {
   const [projects, setProjects] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error>();
 
   useEffect(() => {
     setLoading(true);
     getRepositories('BSoDium').then((data) => {
       setProjects(data.filter((project) => project.topics.includes('featured')));
+    }).catch(() => {
+      setError(new Error('Failed to load projects, check your internet connection.'));
+    }).finally(() => {
       setLoading(false);
     });
   }, []);
@@ -203,6 +207,11 @@ export default function Featured() {
           },
         }}
       >
+        {error && (
+          <Typography level="body1" color="danger">
+            {error.message}
+          </Typography>
+        )}
         {loading ? (
           <CircularProgress />
         ) : (
@@ -211,7 +220,6 @@ export default function Featured() {
               <ProjectCard
                 project={project}
                 key={project.name}
-
               />
             ))}
           </>
