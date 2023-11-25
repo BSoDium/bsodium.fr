@@ -1,3 +1,4 @@
+import escape from 'assets/icons/escape.png';
 import aau from 'assets/icons/aau.jpg';
 import akanthas from 'assets/icons/akanthas.jpg';
 import enseeiht from 'assets/icons/enseeiht.png';
@@ -45,6 +46,24 @@ const details = {
     },
   ],
   experience: [
+    {
+      company: 'Escape technologies',
+      url: 'https://www.escape.tech/',
+      icon: escape,
+      location: 'Paris, France',
+      contract: 'Full-time',
+      position: 'Full-stack engineer',
+      start: 'Nov 2023',
+      end: 'Present',
+      description: 'Development of a SaaS platform for the automated scanning and monitoring of GraphQL and REST APIs.',
+      technologies: [
+        'Svelte',
+        'GraphQL',
+        'NodeJS',
+        'Pothos',
+        'RedPanda',
+      ],
+    },
     {
       company: 'Kanop',
       url: 'https://www.kanop.io/',
