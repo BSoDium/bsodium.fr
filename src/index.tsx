@@ -17,6 +17,7 @@ const root = ReactDOM.createRoot(
 
 root.render(
   <React.StrictMode>
+    <Analytics />
     <StyledEngineProvider injectFirst>
       <BrowserRouter>
         <Routes>
@@ -24,7 +25,6 @@ root.render(
           <Route path="/resume" element={<Resume />} />
         </Routes>
       </BrowserRouter>
-      <Analytics />
     </StyledEngineProvider>
   </React.StrictMode>,
 );

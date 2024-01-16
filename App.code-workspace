@@ -7,7 +7,7 @@
   "settings": {
     "conventionalCommits.scopes": [],
     "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": true
+      "source.fixAll.eslint": "explicit"
     }
   },
   "launch": {

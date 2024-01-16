@@ -61,7 +61,6 @@ const details = {
         'GraphQL',
         'NodeJS',
         'Pothos',
-        'RedPanda',
       ],
     },
     {
@@ -202,6 +201,7 @@ const details = {
     ],
     frameworks: [
       'React',
+      'Svelte',
       'Node JS',
       'Express',
       'Git',
@@ -224,10 +224,14 @@ const details = {
       'Deck.gl',
       'OpenCV',
       'MUI Joy',
+      'Pothos',
+      'Grafana',
       'Blender',
     ],
     others: [
       'REST API',
+      'GraphQL API',
+      'Sveltekit',
       'Multi-threading',
       'Multi-processing',
       'Object-oriented programming',
