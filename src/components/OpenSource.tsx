@@ -125,6 +125,7 @@ export default function OpenSource() {
               maxWidth: '100%',
               maxHeight: '100%',
               filter: 'drop-shadow(0 -20px 20px hsl(185, 94%, 10%)) drop-shadow(0 20px 20px hsl(356, 60%, 11%))',
+              animation: 'float 20s ease-in-out infinite',
             }}
           />
         </Stack>

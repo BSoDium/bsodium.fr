@@ -72,7 +72,7 @@ export default function Illustrations() {
           right: '5%',
           zIndex: -1,
           filter: 'blur(5px) brightness(0.8)',
-          transform: `scale(0.5) ${shift}`,
+          transform: `${shift} scale(0.5)`,
           animation: 'float 20s ease-in-out infinite',
           animationDelay: '5s',
         }}
@@ -88,7 +88,7 @@ export default function Illustrations() {
           right: '30%',
           zIndex: -1,
           filter: 'blur(5px) brightness(0.8)',
-          transform: `scale(0.5) ${shift}`,
+          transform: `${shift} scale(0.5)`,
           animation: 'float 20s ease-in-out infinite',
           animationDelay: '10s',
         }}
