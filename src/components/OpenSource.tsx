@@ -6,7 +6,7 @@ import {
 import { HiOutlineCheckBadge } from 'react-icons/hi2';
 import React, { useMemo } from 'react';
 import { ATypography } from 'App';
-import lightSide from 'assets/light_side.png';
+import vader from 'assets/vader.png';
 import { Default } from './Responsive';
 
 export default function OpenSource() {
@@ -90,7 +90,7 @@ export default function OpenSource() {
               </Avatar>
             </Typography>
             <Typography
-              level="h5"
+              level="h6"
               textColor="text.tertiary"
               sx={{
                 maxWidth: '500px',
@@ -115,15 +115,16 @@ export default function OpenSource() {
             </Typography>
           </Stack>
           <img
-            src={lightSide}
-            alt="Star wars app store"
+            src={vader}
+            alt="Darth vader"
             style={{
               position: 'absolute',
-              left: '-150px',
+              right: '350px',
               top: '-50px',
               paddingRight: '20%',
               maxWidth: '100%',
               maxHeight: '100%',
+              filter: 'drop-shadow(0 -20px 20px hsl(185, 94%, 10%)) drop-shadow(0 20px 20px hsl(356, 60%, 11%))',
             }}
           />
         </Stack>
