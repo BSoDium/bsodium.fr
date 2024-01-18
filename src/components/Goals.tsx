@@ -8,7 +8,7 @@ import React from 'react';
 import Spline from '@splinetool/react-spline';
 import { Default } from './Responsive';
 
-export default function Footer() {
+export default function Goals() {
   return (
     <Default>
       <Stack

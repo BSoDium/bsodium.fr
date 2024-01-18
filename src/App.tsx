@@ -2,7 +2,8 @@
 /* eslint-disable react/require-default-props */
 import React from 'react';
 import {
-  Box, Stack, Typography, TypographyProps,
+  Box,
+  Stack, Typography, TypographyProps,
 } from '@mui/joy';
 import { SxProps, TextColor } from '@mui/joy/styles/types';
 import Featured from 'components/Featured';
@@ -15,6 +16,7 @@ import { useMobileMode, Default } from 'components/Responsive';
 import OpenSource from 'components/OpenSource';
 import Divider from 'components/Divider';
 import Goals from 'components/Goals';
+import Illustrations from 'components/Illustrations';
 
 export function ATypography({
   children,
@@ -58,16 +60,17 @@ export default function App() {
       <Title text="Elliot Négrel-Jerzy" />
       <Box
         component="div"
+        id="scroll-container"
         sx={{
           width: '100vw',
           height: '100vh',
-          overflowY: 'auto',
           overflowX: 'hidden',
           display: 'flex',
           justifyContent: 'center',
           position: 'relative',
         }}
       >
+        <Illustrations />
         <Stack
           sx={{
             width: 'min(100%, 1200px)',

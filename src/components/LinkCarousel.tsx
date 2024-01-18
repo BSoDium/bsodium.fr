@@ -1,3 +1,4 @@
+/* eslint-disable react/no-array-index-key */
 /* eslint-disable react/jsx-props-no-spreading */
 import {
   Button, Stack, VariantProp,
@@ -125,6 +126,7 @@ export default function LinkCarousel({
     >
       {[repeatedLinks, repeatedLinks.slice().reverse()].map((_links, i) => (
         <Stack
+          key={i}
           direction="row"
           gap={1}
           sx={{
@@ -135,8 +137,8 @@ export default function LinkCarousel({
             },
           }}
         >
-          {_links.map((link) => (
-            <Link {...link} />
+          {_links.map((link, index) => (
+            <Link {...link} key={index} />
           ))}
         </Stack>
       ))}

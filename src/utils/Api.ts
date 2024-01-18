@@ -119,17 +119,3 @@ export async function getRepository(
       throw error;
     });
 }
-
-export async function getLinkedinProfile() {
-  // TODKEN: REACT_APP_LINKEDIN_ACCESS_TOKEN
-  return axios
-    .get('https://api.linkedin.com/v2/me', {
-      headers: {
-        Authorization: `Bearer ${process.env.REACT_APP_LINKEDIN_ACCESS_TOKEN}`,
-      },
-    })
-    .then((response) => response.data)
-    .catch((error) => {
-      throw error;
-    });
-}
