@@ -15,8 +15,8 @@
     "@splinetool/runtime": "^0.9.411",
     "@types/color": "^3.0.3",
     "@vercel/analytics": "^1.1.1",
-    "axios": "^1.4.0",
     "color": "^4.2.3",
+    "linkedin-api-client": "^0.3.0",
     "moment": "^2.29.4",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
@@ -30,10 +30,10 @@
     "web-vitals": "^3.4.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
+    "eject": "craco eject"
   },
   "eslintConfig": {
     "extends": [
@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@craco/craco": "^7.1.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.2.0",

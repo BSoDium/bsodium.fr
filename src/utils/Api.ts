@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { RestliClient } from 'linkedin-api-client';
 
 export declare interface User {
   login: string;
@@ -100,12 +101,33 @@ export declare interface Repository {
   watchers: number;
   default_branch: string;
 }
+
 export async function getRepositories(user: string): Promise<Repository[]> {
-  return axios.get(`https://api.github.com/users/${user}/repos`).then((response) => response.data).catch(() => []);
+  return axios
+    .get(`https://api.github.com/users/${user}/repos`)
+    .then((response) => response.data)
+    .catch(() => []);
 }
 
-export async function getRepository(user: string, repo: string): Promise<Repository> {
-  return axios.get(`https://api.github.com/repos/${user}/${repo}`).then((response) => response.data).catch((error) => {
-    throw error;
-  });
+export async function getRepository(
+  user: string,
+  repo: string,
+): Promise<Repository> {
+  return axios
+    .get(`https://api.github.com/repos/${user}/${repo}`)
+    .then((response) => response.data)
+    .catch((error) => {
+      throw error;
+    });
+}
+
+export const restliClient = new RestliClient();
+
+export async function getLinkedinProfile() {
+  return restliClient
+    .get({
+      resourcePath: '/me',
+      accessToken: process.env.REACT_APP_LINKEDIN_ACCESS_TOKEN as string,
+    })
+    .then((response) => response.data);
 }
