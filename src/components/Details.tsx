@@ -9,7 +9,6 @@ import { HiExternalLink, HiOutlineOfficeBuilding } from 'react-icons/hi';
 import { IoSchoolOutline } from 'react-icons/io5';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
-import { RestliEntity } from 'linkedin-api-client';
 import details from 'assets/Details';
 import { getLinkedinProfile } from 'utils/Api';
 import { Category } from './Terminal';
@@ -24,7 +23,7 @@ export const skillIcons: {
 };
 
 export function Education() {
-  const [linkedinProfile, setLinkedinProfile] = React.useState<RestliEntity>();
+  const [linkedinProfile, setLinkedinProfile] = React.useState<unknown>();
 
   React.useEffect(() => {
     getLinkedinProfile().then((profile) => {

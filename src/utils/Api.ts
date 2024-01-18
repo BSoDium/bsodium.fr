@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { RestliClient } from 'linkedin-api-client';
 
 export declare interface User {
   login: string;
@@ -121,13 +120,16 @@ export async function getRepository(
     });
 }
 
-export const restliClient = new RestliClient();
-
 export async function getLinkedinProfile() {
-  return restliClient
-    .get({
-      resourcePath: '/me',
-      accessToken: process.env.REACT_APP_LINKEDIN_ACCESS_TOKEN as string,
+  // TODKEN: REACT_APP_LINKEDIN_ACCESS_TOKEN
+  return axios
+    .get('https://api.linkedin.com/v2/me', {
+      headers: {
+        Authorization: `Bearer ${process.env.REACT_APP_LINKEDIN_ACCESS_TOKEN}`,
+      },
     })
-    .then((response) => response.data);
+    .then((response) => response.data)
+    .catch((error) => {
+      throw error;
+    });
 }
