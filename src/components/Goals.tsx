@@ -3,9 +3,9 @@
 import {
   Avatar, Stack, Typography,
 } from '@mui/joy';
-import { HiOutlineCheckBadge } from 'react-icons/hi2';
 import React from 'react';
 import Spline from '@splinetool/react-spline';
+import { TbHeartHandshake } from 'react-icons/tb';
 import { Default } from './Responsive';
 
 export default function Goals() {
@@ -51,7 +51,7 @@ export default function Goals() {
                 boxShadow: `0 0 40px 5px ${theme.palette.danger[700]}`,
               })}
             >
-              <HiOutlineCheckBadge />
+              <TbHeartHandshake />
             </Avatar>
           </Typography>
           <Typography

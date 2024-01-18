@@ -3,10 +3,10 @@
 import {
   Avatar, Stack, Typography,
 } from '@mui/joy';
-import { HiOutlineCheckBadge } from 'react-icons/hi2';
 import React, { useMemo } from 'react';
 import { ATypography } from 'App';
 import vader from 'assets/vader.png';
+import { RiOpenSourceLine } from 'react-icons/ri';
 import { Default } from './Responsive';
 
 export default function OpenSource() {
@@ -22,7 +22,7 @@ export default function OpenSource() {
 
   return (
     <Stack
-      gap={7}
+      gap={15}
       p="20px"
       sx={{ position: 'relative' }}
     >
@@ -86,7 +86,7 @@ export default function OpenSource() {
                   boxShadow: `0 0 40px 5px ${theme.palette.success[700]}`,
                 })}
               >
-                <HiOutlineCheckBadge />
+                <RiOpenSourceLine />
               </Avatar>
             </Typography>
             <Typography
@@ -120,7 +120,7 @@ export default function OpenSource() {
             style={{
               position: 'absolute',
               right: '350px',
-              top: '-50px',
+              top: '2rem',
               paddingRight: '20%',
               maxWidth: '100%',
               maxHeight: '100%',
