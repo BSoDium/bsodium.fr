@@ -61,11 +61,13 @@ export default function OpenSource() {
               {' '}
               <Typography sx={{
                 ...blinkAnimation,
-                textShadow: '0 0 10px #86fff1, 0 0 20px #03fee9, 0 0 40px #03fed8',
+                textShadow: '0 0 0.5rem #86fff1, 0 0 1rem #03fee9, 0 0 2rem #03fed8',
                 color: '#e4fffe',
                 animation: 'blink 5s infinite',
                 animationDelay: `${Math.random() * 2}s`,
                 fontFamily: "'Tilt Neon', sans-serif",
+                padding: '3rem',
+                margin: '-3rem',
               }}
               >
                 light side
