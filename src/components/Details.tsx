@@ -10,6 +10,7 @@ import { IoSchoolOutline } from 'react-icons/io5';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
 import details from 'assets/Details';
+import { animated, useTransition } from '@react-spring/web';
 import { Category } from './Terminal';
 
 export const skillIcons: {
@@ -232,28 +233,47 @@ export default function Details({
 }: {
   category: Category
 }) {
-  switch (category) {
-    case 'education':
-      return (
-        <Education />
-      );
-    case 'skills':
-      return (
-        <Skills />
-      );
-    case 'experience':
-      return (
-        <Experience />
-      );
-    default:
-      return (
-        <Stack>
-          The currently selected category is
-          {' '}
-          {category}
-          {' '}
-          but there is no content for it yet.
-        </Stack>
-      );
-  }
+  const transitions = useTransition(category, {
+    from: { opacity: 0, width: 0 },
+    enter: { opacity: 1, width: 'auto' },
+    leave: { opacity: 0, width: 0 },
+  });
+  return (
+    <Stack direction="row">
+      {transitions((style, item) => {
+        switch (item) {
+          case 'education':
+            return (
+              <animated.div style={style}>
+                <Education />
+              </animated.div>
+            );
+          case 'skills':
+            return (
+              <animated.div style={style}>
+                <Skills />
+              </animated.div>
+            );
+          case 'experience':
+            return (
+              <animated.div style={style}>
+                <Experience />
+              </animated.div>
+            );
+          default:
+            return (
+              <animated.div style={style}>
+                <Stack>
+                  The currently selected category is
+                  {' '}
+                  {category}
+                  {' '}
+                  but there is no content for it yet.
+                </Stack>
+              </animated.div>
+            );
+        }
+      })}
+    </Stack>
+  );
 }
