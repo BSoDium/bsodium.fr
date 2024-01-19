@@ -4,9 +4,10 @@ import {
   Avatar, Stack, Typography,
 } from '@mui/joy';
 import React from 'react';
-import Spline from '@splinetool/react-spline';
 import { TbHeartHandshake } from 'react-icons/tb';
 import { Default } from './Responsive';
+
+const Spline = React.lazy(() => import('@splinetool/react-spline'));
 
 export default function Goals() {
   return (

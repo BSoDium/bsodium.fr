@@ -12,7 +12,7 @@ export default function Illustrations() {
     <div style={{
       position: 'relative',
       width: '100%',
-      height: '0',
+      height: '100vh',
     }}
     >
       <img

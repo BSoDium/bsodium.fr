@@ -16,8 +16,8 @@ import { useMobileMode, Default } from 'components/Responsive';
 import OpenSource from 'components/OpenSource';
 import Divider from 'components/Divider';
 import Goals from 'components/Goals';
+import { Parallax, ParallaxProvider } from 'react-scroll-parallax';
 import Illustrations from 'components/Illustrations';
-import { Parallax, ParallaxLayer } from '@react-spring/parallax';
 
 export function ATypography({
   children,
@@ -57,36 +57,32 @@ export default function App() {
   const mobile = useMobileMode();
 
   return (
-    <FixedMode mode="dark">
-      <Title text="Elliot Négrel-Jerzy" />
-      <Box
-        component="div"
-        sx={{
-          width: '100vw',
-          height: '100vh',
-          overflowX: 'hidden',
-        }}
-      >
-        <Parallax
-          pages={2.3}
+    <ParallaxProvider>
+      <FixedMode mode="dark">
+        <Title text="Elliot Négrel-Jerzy" />
+        <Box
+          component="div"
+          sx={{
+            width: '100vw',
+            overflowX: 'hidden',
+          }}
         >
-          <ParallaxLayer speed={0.5}>
+          <Parallax speed={-20} startScroll={0}>
             <Illustrations />
-          </ParallaxLayer>
-          <ParallaxLayer
-            speed={1}
+          </Parallax>
+          <div
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               position: 'relative',
+              marginTop: 'calc(-100vh + 420px)',
             }}
           >
             <Stack
               sx={{
                 width: 'min(100%, 1200px)',
                 height: 'fit-content',
-                paddingTop: '420px',
               }}
             >
               <Stack
@@ -171,9 +167,9 @@ export default function App() {
                 </Stack>
               </Stack>
             </Stack>
-          </ParallaxLayer>
-        </Parallax>
-      </Box>
-    </FixedMode>
+          </div>
+        </Box>
+      </FixedMode>
+    </ParallaxProvider>
   );
 }
