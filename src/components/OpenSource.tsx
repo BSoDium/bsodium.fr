@@ -22,7 +22,7 @@ export default function OpenSource() {
 
   return (
     <Stack
-      gap={15}
+      gap={28}
       p="20px"
       sx={{ position: 'relative' }}
     >

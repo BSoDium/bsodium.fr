@@ -157,6 +157,10 @@ export default function Terminal() {
           gap: 0,
           overflow: 'hidden',
           height: '550px',
+          transition: 'transform 0.5s ease',
+          '&:hover': {
+            transform: 'scale(1.02)',
+          },
         }}
       >
         <Stack direction="row" justifyContent="space-between" p={0}>

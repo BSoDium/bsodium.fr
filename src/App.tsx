@@ -17,6 +17,7 @@ import OpenSource from 'components/OpenSource';
 import Divider from 'components/Divider';
 import Goals from 'components/Goals';
 import Illustrations from 'components/Illustrations';
+import { Parallax, ParallaxLayer } from '@react-spring/parallax';
 
 export function ATypography({
   children,
@@ -60,106 +61,118 @@ export default function App() {
       <Title text="Elliot Négrel-Jerzy" />
       <Box
         component="div"
-        id="scroll-container"
         sx={{
           width: '100vw',
           height: '100vh',
           overflowX: 'hidden',
-          display: 'flex',
-          justifyContent: 'center',
-          position: 'relative',
         }}
       >
-        <Illustrations />
-        <Stack
-          sx={{
-            width: 'min(100%, 1200px)',
-            height: 'fit-content',
-            paddingTop: '420px',
-          }}
+        <Parallax
+          pages={2.3}
         >
-          <Stack
-            sx={{
-              paddingLeft: mobile ? 0 : '70px',
+          <ParallaxLayer speed={0.5}>
+            <Illustrations />
+          </ParallaxLayer>
+          <ParallaxLayer
+            speed={1}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              position: 'relative',
             }}
           >
             <Stack
-              p="20px"
-              gap="80px"
+              sx={{
+                width: 'min(100%, 1200px)',
+                height: 'fit-content',
+                paddingTop: '420px',
+              }}
             >
-              <Header />
-              <Terminal />
+              <Stack
+                sx={{
+                  paddingLeft: mobile ? 0 : '70px',
+                }}
+              >
+                <Stack
+                  p="20px"
+                  gap="80px"
+                >
+                  <Header />
+                  <Terminal />
+                </Stack>
+                <Stack
+                  p="20px"
+                  gap="80px"
+                  sx={(theme) => ({
+                    position: 'relative',
+                    '&::before': mobile ? {} : {
+                      content: '""',
+                      position: 'absolute',
+                      top: '-20px',
+                      left: '-30px',
+                      height: 'calc(100% + 20px)',
+                      width: '1px',
+                      background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
+                    },
+                  })}
+                >
+                  <Featured />
+                  <Contact />
+                </Stack>
+              </Stack>
+              <Default>
+                <Stack sx={{
+                  paddingX: mobile ? 0 : '70px',
+                }}
+                >
+                  <Divider />
+                </Stack>
+              </Default>
+              <Stack sx={{
+                paddingRight: mobile ? 0 : '70px',
+              }}
+              >
+                <Stack
+                  p="20px"
+                  gap="80px"
+                  sx={(theme) => ({
+                    position: 'relative',
+                    '&::before': mobile ? {} : {
+                      content: '""',
+                      position: 'absolute',
+                      top: '0',
+                      right: '-30px',
+                      height: '100%',
+                      width: '1.5px',
+                      background: `linear-gradient(to bottom, ${theme.palette.danger[400]} 30%, ${theme.palette.success[400]})`,
+                    },
+                  })}
+                >
+                  <Goals />
+                </Stack>
+                <Stack
+                  p="20px"
+                  gap="80px"
+                  sx={(theme) => ({
+                    position: 'relative',
+                    '&::before': mobile ? {} : {
+                      content: '""',
+                      position: 'absolute',
+                      top: '0',
+                      right: '-30px',
+                      height: '100%',
+                      width: '1.5px',
+                      background: `linear-gradient(to bottom, ${theme.palette.success[400]}, transparent)`,
+                    },
+                  })}
+                >
+                  <OpenSource />
+                </Stack>
+              </Stack>
             </Stack>
-            <Stack
-              p="20px"
-              gap="80px"
-              sx={(theme) => ({
-                position: 'relative',
-                '&::before': mobile ? {} : {
-                  content: '""',
-                  position: 'absolute',
-                  top: '-20px',
-                  left: '-30px',
-                  height: 'calc(100% + 20px)',
-                  width: '1px',
-                  background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
-                },
-              })}
-            >
-              <Featured />
-              <Contact />
-            </Stack>
-          </Stack>
-          <Default>
-            <Stack sx={{
-              paddingX: mobile ? 0 : '70px',
-            }}
-            >
-              <Divider />
-            </Stack>
-          </Default>
-          <Stack sx={{
-            paddingRight: mobile ? 0 : '70px',
-          }}
-          >
-            <Stack
-              p="20px"
-              gap="80px"
-              sx={(theme) => ({
-                position: 'relative',
-                '&::before': mobile ? {} : {
-                  content: '""',
-                  position: 'absolute',
-                  top: '0',
-                  right: '-30px',
-                  height: '100%',
-                  width: '1.5px',
-                  background: `linear-gradient(to bottom, ${theme.palette.danger[400]} 30%, ${theme.palette.success[400]})`,
-                },
-              })}
-            >
-              <Goals />
-            </Stack>
-            <Stack
-              p="20px"
-              gap="80px"
-              sx={(theme) => ({
-                position: 'relative',
-                '&::before': mobile ? {} : {
-                  content: '""',
-                  position: 'absolute',
-                  top: '0',
-                  right: '-30px',
-                  height: '100%',
-                  width: '1.5px',
-                  background: `linear-gradient(to bottom, ${theme.palette.success[400]}, transparent)`,
-                },
-              })}
-            >
-              <OpenSource />
-            </Stack>
-          </Stack>
-        </Stack>
+          </ParallaxLayer>
+        </Parallax>
       </Box>
     </FixedMode>
   );

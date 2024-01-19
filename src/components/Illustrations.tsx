@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import planet from 'assets/planet.png';
 import robot1 from 'assets/robot_flying_1.png';
 import robot2 from 'assets/robot_flying_2.png';
@@ -8,21 +8,13 @@ import { useMobileMode } from './Responsive';
 export default function Illustrations() {
   const mobile = useMobileMode();
 
-  const [shift, setShift] = useState<string>('');
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollContainer = document.getElementById('scroll-container');
-      const scrollValue = scrollContainer?.scrollTop || 0;
-      setShift(`translateY(${scrollValue * 0.3}px)`);
-    };
-
-    window.addEventListener('wheel', handleScroll, { passive: true });
-    return () => window.removeEventListener('wheel', handleScroll);
-  }, []);
-
   return (
-    <>
+    <div style={{
+      position: 'relative',
+      width: '100%',
+      height: '0',
+    }}
+    >
       <img
         src={planet}
         alt="planet"
@@ -31,7 +23,7 @@ export default function Illustrations() {
           width: '700px',
           top: '-100px',
           left: mobile ? '50%' : '0',
-          transform: `${mobile ? 'translateX(-50%)' : ''} ${shift}`,
+          transform: mobile ? 'translateX(-50%)' : '',
           zIndex: -1,
         }}
       />
@@ -45,7 +37,6 @@ export default function Illustrations() {
           left: '0',
           zIndex: -2,
           filter: 'blur(5px)',
-          transform: shift,
         }}
       />
       <img
@@ -58,7 +49,7 @@ export default function Illustrations() {
           left: '0',
           zIndex: -2,
           filter: 'blur(5px) brightness(0.3)',
-          transform: `scaleX(-1) ${shift}`,
+          transform: 'scaleX(-1)',
         }}
       />
       <img
@@ -72,7 +63,7 @@ export default function Illustrations() {
           right: '5%',
           zIndex: -1,
           filter: 'blur(5px) brightness(0.8)',
-          transform: `${shift} scale(0.5)`,
+          transform: 'scale(0.5)',
           animation: 'float 20s ease-in-out infinite',
           animationDelay: '5s',
         }}
@@ -88,7 +79,7 @@ export default function Illustrations() {
           right: '30%',
           zIndex: -1,
           filter: 'blur(5px) brightness(0.8)',
-          transform: `${shift} scale(0.5)`,
+          transform: 'scale(0.5)',
           animation: 'float 20s ease-in-out infinite',
           animationDelay: '10s',
         }}
@@ -104,7 +95,6 @@ export default function Illustrations() {
           right: '20%',
           zIndex: -1,
           animation: 'float 20s ease-in-out infinite',
-          transform: shift,
         }}
       />
       <img
@@ -119,9 +109,8 @@ export default function Illustrations() {
           zIndex: -1,
           animation: 'float 20s ease-in-out infinite',
           animationDelay: '13s',
-          transform: shift,
         }}
       />
-    </>
+    </div>
   );
 }

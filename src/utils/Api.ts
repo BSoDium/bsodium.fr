@@ -119,3 +119,16 @@ export async function getRepository(
       throw error;
     });
 }
+
+export async function getRepositoryPreviewUrl(
+  user: string,
+  repo: string,
+): Promise<string | undefined> {
+  const parser = new DOMParser();
+  return axios
+    .get(`https://github.com/${user}/${repo}`)
+    .then((response) => parser.parseFromString(response.data, 'text/html'))
+    // retrieve the meta property="og:image" content
+    .then((document) => document.querySelector('meta[property="og:image"]'))
+    .then((meta) => meta?.getAttribute('content') || undefined);
+}
