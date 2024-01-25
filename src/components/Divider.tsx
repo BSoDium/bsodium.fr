@@ -13,7 +13,7 @@ export default function Divider() {
         marginY: '50px',
         height: '1px',
         width: 'calc(100% - 40px)',
-        background: `linear-gradient(to right, ${theme.palette.warning[700]}, ${theme.palette.danger[400]})`,
+        background: `linear-gradient(to right, ${theme.palette.warning[700]}, ${theme.palette.success[400]})`,
         '&::before': mobile ? {} : {
           content: '""',
           position: 'absolute',
@@ -34,7 +34,7 @@ export default function Divider() {
           height: '51px',
           width: '50px',
           borderTopRightRadius: '50px',
-          border: `1.5px solid ${theme.palette.danger[400]}`,
+          border: `1.5px solid ${theme.palette.success[400]}`,
           borderLeft: 'none',
           borderBottom: 'none',
         },

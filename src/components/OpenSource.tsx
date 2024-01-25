@@ -4,9 +4,9 @@ import {
   Avatar, Stack, Typography,
 } from '@mui/joy';
 import React, { useMemo } from 'react';
-import { ATypography } from 'App';
 import vader from 'assets/vader.png';
 import { RiOpenSourceLine } from 'react-icons/ri';
+import { Parallax } from 'react-scroll-parallax';
 import { Default } from './Responsive';
 
 export default function OpenSource() {
@@ -114,50 +114,28 @@ export default function OpenSource() {
               Any contribution, no matter how small, is and will always be appreciated.
             </Typography>
           </Stack>
-          <img
-            src={vader}
-            alt="Darth vader"
+          <Parallax
+            speed={10}
+            opacity={[0.2, 1]}
+            easing="ease"
             style={{
               position: 'absolute',
-              right: '350px',
+              right: 'calc(350px + 20%)',
               top: '2rem',
-              paddingRight: '20%',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              filter: 'drop-shadow(0 -20px 20px hsl(185, 94%, 10%)) drop-shadow(0 20px 20px hsl(356, 60%, 11%))',
+              zIndex: 1,
               animation: 'float 20s ease-in-out infinite',
             }}
-          />
+          >
+            <img
+              src={vader}
+              alt="Darth vader"
+              style={{
+                filter: 'drop-shadow(0 -20px 20px hsl(185, 94%, 10%)) drop-shadow(0 20px 20px hsl(356, 60%, 11%))',
+              }}
+            />
+          </Parallax>
         </Stack>
       </Default>
-      <Stack
-        flexWrap="wrap"
-        direction="row"
-        gap={2}
-        justifyContent="space-between"
-      >
-        <Typography level="body2" textColor="text.tertiary">
-          ©
-          {' '}
-          {new Date().getFullYear()}
-          {' '}
-          Elliot Négrel-Jerzy. All rights reserved.
-        </Typography>
-        <Typography level="body2" textColor="text.tertiary">
-          Illustrations generated with
-          {' '}
-          <ATypography href="https://www.bing.com/create">
-            Bing Image Creator
-          </ATypography>
-          {' '}
-          powered by
-          {' '}
-          <ATypography href="https://openai.com/product/dall-e-2/">
-            DALL·E
-          </ATypography>
-          .
-        </Typography>
-      </Stack>
     </Stack>
   );
 }

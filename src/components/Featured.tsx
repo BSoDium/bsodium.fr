@@ -11,6 +11,7 @@ import {
 import { RxOpenInNewWindow } from 'react-icons/rx';
 import { Repository, getRepositories } from 'utils/Api';
 import colors from 'assets/colors.json';
+import { Parallax } from 'react-scroll-parallax';
 import { Default, Mobile } from './Responsive';
 
 /**
@@ -192,39 +193,46 @@ export default function Featured() {
           </Chip>
         </Mobile>
       </Stack>
-      <Box
-        component={Stack}
-        direction="row"
-        gap={3}
-        sx={{
-          width: '100%',
-          display: 'flex',
-          flexWrap: 'wrap',
-          '& > *': {
-            flexGrow: 1,
-            height: '250px',
-            minWidth: '300px',
-          },
-        }}
+      <Parallax
+        translateY={['50px', '0px']}
+        scale={[0.9, 1]}
+        opacity={[0, 1]}
+        easing="easeOutBack"
       >
-        {error && (
+        <Box
+          component={Stack}
+          direction="row"
+          gap={3}
+          sx={{
+            width: '100%',
+            display: 'flex',
+            flexWrap: 'wrap',
+            '& > *': {
+              flexGrow: 1,
+              height: '250px',
+              minWidth: '300px',
+            },
+          }}
+        >
+          {error && (
           <Typography level="body1" color="danger">
             {error.message}
           </Typography>
-        )}
-        {loading ? (
-          <CircularProgress />
-        ) : (
-          <>
-            {projects.map((project) => (
-              <ProjectCard
-                project={project}
-                key={project.name}
-              />
-            ))}
-          </>
-        )}
-      </Box>
+          )}
+          {loading ? (
+            <CircularProgress />
+          ) : (
+            <>
+              {projects.map((project) => (
+                <ProjectCard
+                  project={project}
+                  key={project.name}
+                />
+              ))}
+            </>
+          )}
+        </Box>
+      </Parallax>
     </Stack>
   );
 }

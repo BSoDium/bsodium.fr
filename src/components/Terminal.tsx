@@ -27,6 +27,7 @@ import { HiChevronDown } from 'react-icons/hi';
 import { FaPause, FaPlay } from 'react-icons/fa';
 import { RiUserLine } from 'react-icons/ri';
 import mockMessages from 'utils/Messages';
+import { Parallax } from 'react-scroll-parallax';
 import { Default, useMobileMode } from './Responsive';
 import Details from './Details';
 import TypeWriter from './TypeWriter';
@@ -146,301 +147,303 @@ export default function Terminal() {
           Overview
         </Typography>
       </Typography>
-      <Card
-        variant="outlined"
-        component={Stack}
-        sx={{
-          backdropFilter: 'blur(40px)',
-          backgroundColor: 'rgba(53, 54, 58, 0.4)',
-          border: '1px solid rgb(83, 86, 93)',
-          padding: 0,
-          gap: 0,
-          overflow: 'hidden',
-          height: '550px',
-          transition: 'transform 0.5s ease',
-          '&:hover': {
-            transform: 'scale(1.02)',
-          },
-        }}
+      <Parallax
+        translateY={['100px', '0px']}
+        opacity={[0, 1]}
+        easing="easeOutBack"
       >
-        <Stack direction="row" justifyContent="space-between" p={0}>
-          <Stack
-            direction="row"
-            gap={0}
-            sx={{
-              overflow: 'hidden',
-            }}
-          >
+        <Card
+          variant="outlined"
+          component={Stack}
+          sx={{
+            backdropFilter: 'blur(40px)',
+            backgroundColor: 'rgba(53, 54, 58, 0.4)',
+            border: '1px solid rgb(83, 86, 93)',
+            padding: 0,
+            gap: 0,
+            overflow: 'hidden',
+            height: '550px',
+          }}
+        >
+          <Stack direction="row" justifyContent="space-between" p={0}>
             <Stack
               direction="row"
+              gap={0}
               sx={{
-                p: 1,
-                gap: 0.2,
-                paddingBottom: 0,
-                paddingRight: 0,
+                overflow: 'hidden',
               }}
             >
-              {tabs.map((tab) => (
-                <Card
-                  key={tab.name}
+              <Stack
+                direction="row"
+                sx={{
+                  p: 1,
+                  gap: 0.2,
+                  paddingBottom: 0,
+                  paddingRight: 0,
+                }}
+              >
+                {tabs.map((tab) => (
+                  <Card
+                    key={tab.name}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexDirection: 'row',
+                      width: '250px',
+                      backgroundColor: 'rgb(33, 37, 43)',
+                      borderBottomRightRadius: 0,
+                      borderBottomLeftRadius: 0,
+                      boxShadow: 'none',
+                      position: 'relative',
+                      p: 0,
+                      '&:before': {
+                        zIndex: 100,
+                        content: '""',
+                        position: 'absolute',
+                        left: '-6px',
+                        top: '50%',
+                        height: '50%',
+                        width: '6px',
+                        borderRadius: '0 0 6px 0',
+                        backgroundColor: 'transparent',
+                        boxShadow: '0 6px 0px 0px rgb(33, 37, 43)',
+                      },
+                      '&:after': {
+                        zIndex: 100,
+                        content: '""',
+                        position: 'absolute',
+                        right: '-6px',
+                        top: '50%',
+                        height: '50%',
+                        width: '6px',
+                        borderRadius: '0 0 0 6px',
+                        backgroundColor: 'transparent',
+                        boxShadow: '0 6px 0px 0px rgb(33, 37, 43)',
+                      },
+                    }}
+                  >
+                    <Typography
+                      level="body2"
+                      textColor="text.primary"
+                      fontWeight="lg"
+                      startDecorator={tab.icon}
+                      sx={{
+                        marginLeft: 1,
+                        gap: 0.5,
+                        wordWrap: 'nowrap',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {tab.name}
+                    </Typography>
+                    <FakeButton
+                      tooltipIndex={tooltipIndex}
+                      setTooltipIndex={setTooltipIndex}
+                      size="sm"
+                      variant="plain"
+                      color="neutral"
+                      sx={{
+                        height: '25px',
+                        minHeight: '25px',
+                        marginRight: 0.5,
+                      }}
+                    >
+                      <VscChromeClose />
+                    </FakeButton>
+                  </Card>
+                ))}
+              </Stack>
+              <Stack direction="row" p={0.5} paddingTop={1}>
+                <FakeButton
+                  tooltipIndex={tooltipIndex}
+                  setTooltipIndex={setTooltipIndex}
+                  size="sm"
+                  variant="soft"
+                  color="neutral"
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexDirection: 'row',
-                    width: '250px',
-                    backgroundColor: 'rgb(33, 37, 43)',
+                    borderRadius: '6px',
+                    borderTopRightRadius: 0,
                     borderBottomRightRadius: 0,
+                    minHeight: '25px',
+                  }}
+                >
+                  <IoAddOutline />
+                </FakeButton>
+                <Divider orientation="vertical" />
+                <FakeButton
+                  tooltipIndex={tooltipIndex}
+                  setTooltipIndex={setTooltipIndex}
+                  size="sm"
+                  variant="soft"
+                  color="neutral"
+                  sx={{
+                    borderRadius: '6px',
+                    borderTopLeftRadius: 0,
                     borderBottomLeftRadius: 0,
-                    boxShadow: 'none',
-                    position: 'relative',
-                    p: 0,
-                    '&:before': {
-                      zIndex: 100,
-                      content: '""',
-                      position: 'absolute',
-                      left: '-6px',
-                      top: '50%',
-                      height: '50%',
-                      width: '6px',
-                      borderRadius: '0 0 6px 0',
-                      backgroundColor: 'transparent',
-                      boxShadow: '0 6px 0px 0px rgb(33, 37, 43)',
-                    },
-                    '&:after': {
-                      zIndex: 100,
-                      content: '""',
-                      position: 'absolute',
-                      right: '-6px',
-                      top: '50%',
-                      height: '50%',
-                      width: '6px',
-                      borderRadius: '0 0 0 6px',
-                      backgroundColor: 'transparent',
-                      boxShadow: '0 6px 0px 0px rgb(33, 37, 43)',
+                    minHeight: '25px',
+                  }}
+                >
+                  <HiChevronDown />
+                </FakeButton>
+              </Stack>
+            </Stack>
+            <Default>
+              <Stack direction="row">
+                <FakeButton
+                  tooltipIndex={tooltipIndex}
+                  setTooltipIndex={setTooltipIndex}
+                  variant="plain"
+                  color="neutral"
+                  sx={{
+                    borderRadius: 0,
+                    paddingX: 2,
+                  }}
+                >
+                  <VscChromeMinimize />
+                </FakeButton>
+                <FakeButton
+                  tooltipIndex={tooltipIndex}
+                  setTooltipIndex={setTooltipIndex}
+                  variant="plain"
+                  color="neutral"
+                  sx={{
+                    borderRadius: 0,
+                    paddingX: 2,
+                  }}
+                >
+                  <VscChromeMaximize />
+                </FakeButton>
+                <FakeButton
+                  tooltipIndex={tooltipIndex}
+                  setTooltipIndex={setTooltipIndex}
+                  variant="plain"
+                  color="neutral"
+                  sx={{
+                    borderRadius: 0,
+                    paddingX: 2,
+                    '&:hover': {
+                      backgroundColor: 'rgb(255, 0, 0, 0.7)',
                     },
                   }}
                 >
-                  <Typography
-                    level="body2"
-                    textColor="text.primary"
-                    fontWeight="lg"
-                    startDecorator={tab.icon}
-                    sx={{
-                      marginLeft: 1,
-                      gap: 0.5,
-                      wordWrap: 'nowrap',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {tab.name}
-                  </Typography>
-                  <FakeButton
-                    tooltipIndex={tooltipIndex}
-                    setTooltipIndex={setTooltipIndex}
-                    size="sm"
-                    variant="plain"
-                    color="neutral"
-                    sx={{
-                      height: '25px',
-                      minHeight: '25px',
-                      marginRight: 0.5,
-                    }}
-                  >
-                    <VscChromeClose />
-                  </FakeButton>
-                </Card>
-              ))}
-            </Stack>
-            <Stack direction="row" p={0.5} paddingTop={1}>
-              <FakeButton
-                tooltipIndex={tooltipIndex}
-                setTooltipIndex={setTooltipIndex}
-                size="sm"
-                variant="soft"
-                color="neutral"
-                sx={{
-                  borderRadius: '6px',
-                  borderTopRightRadius: 0,
-                  borderBottomRightRadius: 0,
-                  minHeight: '25px',
-                }}
-              >
-                <IoAddOutline />
-              </FakeButton>
-              <Divider orientation="vertical" />
-              <FakeButton
-                tooltipIndex={tooltipIndex}
-                setTooltipIndex={setTooltipIndex}
-                size="sm"
-                variant="soft"
-                color="neutral"
-                sx={{
-                  borderRadius: '6px',
-                  borderTopLeftRadius: 0,
-                  borderBottomLeftRadius: 0,
-                  minHeight: '25px',
-                }}
-              >
-                <HiChevronDown />
-              </FakeButton>
-            </Stack>
+                  <VscChromeClose />
+                </FakeButton>
+              </Stack>
+            </Default>
           </Stack>
-          <Default>
-            <Stack direction="row">
-              <FakeButton
-                tooltipIndex={tooltipIndex}
-                setTooltipIndex={setTooltipIndex}
-                variant="plain"
-                color="neutral"
-                sx={{
-                  borderRadius: 0,
-                  paddingX: 2,
-                }}
-              >
-                <VscChromeMinimize />
-              </FakeButton>
-              <FakeButton
-                tooltipIndex={tooltipIndex}
-                setTooltipIndex={setTooltipIndex}
-                variant="plain"
-                color="neutral"
-                sx={{
-                  borderRadius: 0,
-                  paddingX: 2,
-                }}
-              >
-                <VscChromeMaximize />
-              </FakeButton>
-              <FakeButton
-                tooltipIndex={tooltipIndex}
-                setTooltipIndex={setTooltipIndex}
-                variant="plain"
-                color="neutral"
-                sx={{
-                  borderRadius: 0,
-                  paddingX: 2,
-                  '&:hover': {
-                    backgroundColor: 'rgb(255, 0, 0, 0.7)',
-                  },
-                }}
-              >
-                <VscChromeClose />
-              </FakeButton>
-            </Stack>
-          </Default>
-        </Stack>
-        <Tooltip
-          variant="outlined"
-          title={`${playing ? 'Pause' : 'Resume'} auto-play`}
-        >
-          <IconButton
-            size="sm"
-            variant="plain"
-            color="neutral"
-            sx={{
-              position: 'absolute',
-              bottom: '10px',
-              right: '15px',
-              zIndex: 1,
-            }}
-            onClick={() => {
-              setPlaying(!playing);
-            }}
+          <Tooltip
+            variant="outlined"
+            title={`${playing ? 'Pause' : 'Resume'} auto-play`}
           >
-            {playing ? <FaPause /> : <FaPlay />}
-          </IconButton>
-        </Tooltip>
-        <Sheet
-          component={Stack}
-          direction="column"
-          sx={{
-            position: 'relative',
-            backgroundColor: 'rgba(33, 37, 43, 0.8)',
-            p: 2,
-            gap: 1,
-            flexGrow: 1,
-            overflowY: 'auto',
-          }}
-        >
-          <Typography
-            fontFamily="'Fira Code', monospace"
-            fontSize="0.875rem"
-            component="span"
-          >
-            <Typography textColor="text.secondary">
-              Powershell 7.3.4
-              <br />
-              Loading personal and system profiles took&nbsp;
-              {loadingTime}
-              ms.
-            </Typography>
-            <br />
-            <Stack
-              direction="row"
-              flexWrap="wrap"
+            <IconButton
+              size="sm"
+              variant="plain"
+              color="neutral"
+              sx={{
+                position: 'absolute',
+                bottom: '10px',
+                right: '15px',
+                zIndex: 1,
+              }}
+              onClick={() => {
+                setPlaying(!playing);
+              }}
             >
-              <Typography textColor="primary.300">
-                root@bsodium:~$&nbsp;
+              {playing ? <FaPause /> : <FaPlay />}
+            </IconButton>
+          </Tooltip>
+          <Sheet
+            component={Stack}
+            direction="column"
+            sx={{
+              position: 'relative',
+              backgroundColor: 'rgba(33, 37, 43, 0.8)',
+              p: 2,
+              gap: 1,
+              flexGrow: 1,
+              overflowY: 'auto',
+            }}
+          >
+            <Typography
+              fontFamily="'Fira Code', monospace"
+              fontSize="0.875rem"
+              component="span"
+            >
+              <Typography textColor="text.secondary">
+                Powershell 7.3.4
+                <br />
+                Loading personal and system profiles took&nbsp;
+                {loadingTime}
+                ms.
               </Typography>
-              <TypeWriter
-                onTransitionEnd={() => {
-                  setSelected(displayed);
-                }}
-                typeInterval={20}
+              <br />
+              <Stack
+                direction="row"
+                flexWrap="wrap"
               >
-                {`bsodium.exe --${displayed}`}
-              </TypeWriter>
-            </Stack>
-          </Typography>
-          <Tabs
-            aria-label="terminal options"
-            value={selected}
-            onChange={
+                <Typography textColor="primary.300">
+                  root@bsodium:~$&nbsp;
+                </Typography>
+                <TypeWriter
+                  onTransitionEnd={() => {
+                    setSelected(displayed);
+                  }}
+                  typeInterval={20}
+                >
+                  {`bsodium.exe --${displayed}`}
+                </TypeWriter>
+              </Stack>
+            </Typography>
+            <Tabs
+              aria-label="terminal options"
+              value={selected}
+              onChange={
             (_, newValue) => {
               setSelected(newValue as Category);
               setDisplayed(newValue as Category);
               setPlaying(false);
             }
             }
-            sx={{
-              width: 'fit-content',
-              backgroundColor: 'transparent',
-            }}
-          >
-            <TabList sx={{
-              backgroundColor: 'transparent',
-              gap: 0,
-            }}
+              sx={{
+                width: 'fit-content',
+                backgroundColor: 'transparent',
+              }}
             >
-              {categories.map((name) => {
-                const checked = selected === name;
-                return (
-                  <Chip
-                    component={Tab}
-                    key={name}
-                    value={name}
-                    variant={checked ? 'solid' : 'plain'}
-                    color="neutral"
-                    sx={(theme) => ({
-                      fontFamily: "'Fira Code', monospace",
-                      borderRadius: '6px',
-                      ...(checked ? {
-                        backgroundColor: theme.palette.neutral[300],
-                        color: theme.palette.neutral[900],
-                      } : {
-                      }),
-                    })}
-                  >
-                    {name}
-                  </Chip>
-                );
-              })}
-            </TabList>
-          </Tabs>
-          <Details category={selected} />
-        </Sheet>
-      </Card>
+              <TabList sx={{
+                backgroundColor: 'transparent',
+                gap: 0,
+              }}
+              >
+                {categories.map((name) => {
+                  const checked = selected === name;
+                  return (
+                    <Chip
+                      component={Tab}
+                      key={name}
+                      value={name}
+                      variant={checked ? 'solid' : 'plain'}
+                      color="neutral"
+                      sx={(theme) => ({
+                        fontFamily: "'Fira Code', monospace",
+                        borderRadius: '6px',
+                        ...(checked ? {
+                          backgroundColor: theme.palette.neutral[300],
+                          color: theme.palette.neutral[900],
+                        } : {
+                        }),
+                      })}
+                    >
+                      {name}
+                    </Chip>
+                  );
+                })}
+              </TabList>
+            </Tabs>
+            <Details category={selected} />
+          </Sheet>
+        </Card>
+      </Parallax>
     </Stack>
   );
 }

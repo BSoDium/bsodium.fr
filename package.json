@@ -11,8 +11,6 @@
     "@emotion/styled": "^11.11.0",
     "@mui/joy": "5.0.0-alpha.85",
     "@react-spring/web": "^9.7.3",
-    "@splinetool/react-spline": "^2.2.6",
-    "@splinetool/runtime": "^1.0.30",
     "@types/color": "^3.0.3",
     "@vercel/analytics": "^1.1.1",
     "axios": "^1.6.5",
