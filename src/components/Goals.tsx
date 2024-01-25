@@ -74,45 +74,51 @@ function Comment({ step } : {step: number}) {
 }
 
 function Cursor({ step } : {step: number}) {
-  const springOptions = {
+  const fastSpringOptions = {
     config: {
       friction: 50,
     },
   };
+
+  const labelTransforms = {
+    left: 'translate(calc(-100% + 6px), 18px)',
+    right: 'translate(calc(100% + 0px), 18px)',
+  };
+
   const positions: Record<number, {
-    top: string, left: string, transform: string, labelTranform: string}> = {
+    top: string, left: string, rotate: string}> = {
       0: {
         top: '0',
         left: '20%',
-        transform: 'rotate(0deg)',
-        labelTranform: 'translate(calc(-100% + 6px), 18px)',
+        rotate: '0deg',
       },
       1: {
         top: '52%',
         left: '60%',
-        transform: 'rotate(-90deg)',
-        labelTranform: 'translate(calc(100% + 0), 18px)',
+        rotate: '-90deg',
       },
       2: {
-        top: '30%',
-        left: '50%',
-        transform: 'rotate(0deg)',
-        labelTranform: 'translate(calc(-100% + 6px), 18px)',
+        top: '32%',
+        left: '40%',
+        rotate: '-90deg',
       },
     };
 
-  const currentPosition = useMemo(() => positions[step], [step]);
+  const currentPosition = useMemo(() => ({
+    ...positions[step],
+    labelTransform: labelTransforms[positions[step].rotate === '0deg' ? 'left' : 'right'],
+  }), [step]);
 
-  const top = useSpringValue(currentPosition?.top, springOptions);
-  const left = useSpringValue(currentPosition?.left, springOptions);
-  const transform = useSpringValue(currentPosition?.transform, springOptions);
-  const labelTransform = useSpringValue(currentPosition?.labelTranform, springOptions);
+  const top = useSpringValue(currentPosition?.top, fastSpringOptions);
+  const left = useSpringValue(currentPosition?.left, fastSpringOptions);
+  const rotate = useSpringValue(currentPosition?.rotate);
+  const labelTransform = useSpringValue(currentPosition?.labelTransform, fastSpringOptions);
 
   useEffect(() => {
     top.start(currentPosition?.top);
     left.start(currentPosition?.left);
-    transform.start(currentPosition?.transform);
-    labelTransform.start(currentPosition?.labelTranform);
+    rotate.start(currentPosition?.rotate);
+    labelTransform.start(currentPosition?.labelTransform);
   }, [step]);
 
   return (
@@ -127,6 +133,7 @@ function Cursor({ step } : {step: number}) {
           zIndex: 99,
           borderRadius: 'var(--joy-radius-sm)',
           transformOrigin: 'top right',
+          transform: currentPosition?.labelTransform,
         }}
         style={{
           top,
@@ -143,7 +150,7 @@ function Cursor({ step } : {step: number}) {
         style={{
           top,
           left,
-          transform,
+          rotate,
         }}
       >
         <svg
