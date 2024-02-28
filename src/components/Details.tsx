@@ -2,7 +2,7 @@ import {
   Avatar, Chip, Stack, Typography,
 } from '@mui/joy';
 import moment from 'moment';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BsCode } from 'react-icons/bs';
 import { FiPackage } from 'react-icons/fi';
 import { HiExternalLink, HiOutlineOfficeBuilding } from 'react-icons/hi';
@@ -10,7 +10,7 @@ import { IoSchoolOutline } from 'react-icons/io5';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
 import details from 'assets/Details';
-import { animated, useTransition } from '@react-spring/web';
+import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import { Category } from './Terminal';
 
 export const skillIcons: {
@@ -233,11 +233,19 @@ export default function Details({
 }: {
   category: Category
 }) {
+  const transRef = useSpringRef();
+
   const transitions = useTransition(category, {
-    from: { opacity: 0, width: 0 },
-    enter: { opacity: 1, width: 'auto' },
-    leave: { opacity: 0, width: 0 },
+    ref: transRef,
+    keys: null,
+    from: { opacity: 0, transform: 'translate3d(100%,0,0)' },
+    enter: { opacity: 1, transform: 'translate3d(0%,0,0)' },
+    leave: { opacity: 0, transform: 'translate3d(-50%,0,0)', position: 'absolute' },
   });
+
+  useEffect(() => {
+    transRef.start();
+  }, [category]);
   return (
     <Stack direction="row">
       {transitions((style, item) => {
