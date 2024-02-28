@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Avatar, Button, Card, Chip, Sheet, Stack, Typography,
+  Avatar, Box, Button, Card, Chip, Sheet, Stack, Typography,
 } from '@mui/joy';
 import { TbHeartHandshake } from 'react-icons/tb';
 import { ColorPaletteProp, SxProps } from '@mui/joy/styles/types';
@@ -66,7 +66,7 @@ function Comment({ step } : {step: number}) {
           </Typography>
         </Typography>
         <Typography level="body2" textColor="text.secondary" sx={{ marginRight: '0.5rem' }}>
-          Let&apos;s make these buttons bigger!
+          Let&apos;s add a text input under these!
         </Typography>
       </Stack>
     </Card>
@@ -74,55 +74,75 @@ function Comment({ step } : {step: number}) {
 }
 
 function Cursor({ step } : {step: number}) {
-  const fastSpringOptions = {
-    config: {
-      friction: 50,
-    },
-  };
-
   const labelTransforms = {
     left: 'translate(calc(-100% + 6px), 18px)',
     right: 'translate(calc(100% + 0px), 18px)',
   };
 
-  const positions: Record<number, {
-    top: string, left: string, rotate: string}> = {
-      0: {
-        top: '0',
-        left: '20%',
-        rotate: '0deg',
-      },
-      1: {
-        top: '52%',
-        left: '60%',
-        rotate: '-90deg',
-      },
-      2: {
-        top: '32%',
-        left: '40%',
-        rotate: '-90deg',
-      },
-    };
+  const positions: {
+    top: string;
+    left: string;
+    rotate: string;
+    opacity: string;
+  }[] = [{
+    top: '0',
+    left: '20%',
+    rotate: '0deg',
+    opacity: '0',
+  }, {
+    top: '12%',
+    left: '49%',
+    rotate: '0deg',
+    opacity: '1',
+  }, {
+    top: '52%',
+    left: '60%',
+    rotate: '-90deg',
+    opacity: '1',
+  }, {
+    top: '80%',
+    left: '20%',
+    rotate: '0deg',
+    opacity: '1',
+  }, {
+    top: '80%',
+    left: '20%',
+    rotate: '0deg',
+    opacity: '0',
+  }];
 
   const currentPosition = useMemo(() => ({
     ...positions[step],
     labelTransform: labelTransforms[positions[step].rotate === '0deg' ? 'left' : 'right'],
   }), [step]);
 
-  const top = useSpringValue(currentPosition?.top, fastSpringOptions);
-  const left = useSpringValue(currentPosition?.left, fastSpringOptions);
+  const top = useSpringValue(currentPosition?.top);
+  const left = useSpringValue(currentPosition?.left);
   const rotate = useSpringValue(currentPosition?.rotate);
-  const labelTransform = useSpringValue(currentPosition?.labelTransform, fastSpringOptions);
+  const labelTransform = useSpringValue(currentPosition?.labelTransform);
+  const opacity = useSpringValue(currentPosition?.opacity);
 
   useEffect(() => {
     top.start(currentPosition?.top);
     left.start(currentPosition?.left);
     rotate.start(currentPosition?.rotate);
     labelTransform.start(currentPosition?.labelTransform);
-  }, [step]);
+    opacity.start(currentPosition?.opacity);
+  }, [currentPosition]);
 
   return (
-    <>
+    <Box
+      component={animated.div}
+      sx={{
+        zIndex: 99,
+        position: 'absolute',
+      }}
+      style={{
+        top,
+        left,
+        opacity,
+      }}
+    >
       <Chip
         size="sm"
         component={animated.div}
@@ -130,14 +150,12 @@ function Cursor({ step } : {step: number}) {
         color="danger"
         sx={{
           position: 'absolute',
-          zIndex: 99,
           borderRadius: 'var(--joy-radius-sm)',
           transformOrigin: 'top right',
           transform: currentPosition?.labelTransform,
+          filter: 'drop-shadow(0 0 10px var(--joy-palette-background-body))',
         }}
         style={{
-          top,
-          left,
           transform: labelTransform,
         }}
       >
@@ -146,10 +164,11 @@ function Cursor({ step } : {step: number}) {
       <Stack
         className="wrapper"
         component={animated.div}
-        sx={{ position: 'absolute', zIndex: 100, transformOrigin: 'top right' }}
+        sx={{
+          position: 'absolute',
+          transformOrigin: 'top right',
+        }}
         style={{
-          top,
-          left,
           rotate,
         }}
       >
@@ -163,11 +182,11 @@ function Cursor({ step } : {step: number}) {
           <path d="M15.5036 3.11002L12.5357 15.4055C12.2666 16.5204 10.7637 16.7146 10.22 15.7049L7.4763 10.6094L2.00376 8.65488C0.915938 8.26638 0.891983 6.73663 1.96711 6.31426L13.8314 1.65328C14.7729 1.28341 15.741 2.12672 15.5036 3.11002ZM7.56678 10.6417L7.56645 10.6416C7.56656 10.6416 7.56667 10.6416 7.56678 10.6417L7.65087 10.4062L7.56678 10.6417Z" strokeWidth="1.5" />
         </svg>
       </Stack>
-    </>
+    </Box>
   );
 }
 
-function Board() {
+function Board({ step } : {step: number}) {
   const [cardScrollProgress, setCardScrollProgress] = useState(0);
   const cardColor = useMemo(() => ['danger', 'warning', 'success'][Math.floor(cardScrollProgress * 3)] as ColorPaletteProp, [cardScrollProgress]);
   return (
@@ -181,13 +200,13 @@ function Board() {
       }}
     >
       <Parallax
-        speed={-10}
+        speed={-20}
         style={{
           position: 'absolute',
           top: '0',
           left: '0',
           width: '100%',
-          height: '100%',
+          height: '130%',
         }}
       >
         <Grid />
@@ -355,13 +374,18 @@ function Board() {
 
 export default function Goals() {
   const [scrollingProgress, setScrollingProgress] = useState(0);
-  const animationStep = useMemo(() => Math.round(
-    (scrollingProgress / 0.6) * 2,
-  ), [scrollingProgress]);
+  const animationStep = useMemo(() => Math.round(scrollingProgress * 4), [scrollingProgress]);
+
+  useEffect(() => {
+    console.log(scrollingProgress, animationStep);
+  }, [scrollingProgress]);
 
   return (
     <Default>
-      <Parallax onProgressChange={(progress) => setScrollingProgress(progress)}>
+      <Parallax
+        shouldAlwaysCompleteAnimation
+        onProgressChange={(progress) => setScrollingProgress(progress)}
+      >
         <Stack
           sx={{ width: '100%', height: '1200px', position: 'relative' }}
           p="37px"
@@ -421,7 +445,7 @@ export default function Goals() {
               height: '100%',
             }}
           >
-            <Board />
+            <Board step={animationStep} />
           </Stack>
         </Stack>
       </Parallax>

@@ -6,7 +6,7 @@ import {
 import {
   BrowserRouter, Route, Routes,
 } from 'react-router-dom';
-import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import App from 'App';
 import Resume from 'Resume';
 import 'App.global.scss';
@@ -17,7 +17,7 @@ const root = ReactDOM.createRoot(
 
 root.render(
   <React.StrictMode>
-    <Analytics />
+    <SpeedInsights />
     <StyledEngineProvider injectFirst>
       <BrowserRouter>
         <Routes>
