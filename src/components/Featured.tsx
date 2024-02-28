@@ -37,6 +37,13 @@ function ProjectCard({
       justifyContent="space-between"
       sx={{
         width: 'max(30%, 320px)',
+        transition: 'all 0.3s ease',
+        cursor: 'pointer',
+        '&:hover': {
+          boxShadow: '0 0 40px 5px rgba(0, 0, 0, 0.5)',
+          transform: 'scale(1.03)',
+          zIndex: 1,
+        },
       }}
     >
       <Stack gap={2}>
@@ -220,7 +227,7 @@ export default function Featured() {
           </Typography>
           )}
           {loading ? (
-            <CircularProgress />
+            <CircularProgress color="info" />
           ) : (
             <>
               {projects.map((project) => (

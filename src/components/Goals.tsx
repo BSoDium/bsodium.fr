@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Avatar, Box, Button, Card, Chip, Sheet, Stack, Typography,
+  Avatar, Box, Button, Card, Chip,
+  FormControl, FormLabel,
+  Input, Sheet, Stack, Textarea, Typography,
 } from '@mui/joy';
 import { TbHeartHandshake } from 'react-icons/tb';
 import { ColorPaletteProp, SxProps } from '@mui/joy/styles/types';
-import { MdOutlineRocketLaunch } from 'react-icons/md';
+import { MdMail, MdOutlineRocketLaunch, MdSend } from 'react-icons/md';
 import { HiOutlineSparkles } from 'react-icons/hi2';
 import { Parallax } from 'react-scroll-parallax';
 import { animated, useSpring, useSpringValue } from '@react-spring/web';
+import { FaFire } from 'react-icons/fa';
 import { Default } from './Responsive';
 
 function Grid({ sx }: {sx?: SxProps}) {
@@ -36,8 +39,15 @@ function Grid({ sx }: {sx?: SxProps}) {
 }
 
 function Comment({ step } : {step: number}) {
+  const opacity = useSpringValue(0);
+
+  useEffect(() => {
+    opacity.start(step >= 3 ? 1 : 0);
+  }, [step]);
+
   return (
     <Card
+      component={animated.div}
       variant="outlined"
       color="primary"
       sx={{
@@ -52,6 +62,9 @@ function Comment({ step } : {step: number}) {
         alignItems: 'center',
         gap: '0.7rem',
         padding: '0.5rem',
+      }}
+      style={{
+        opacity,
       }}
     >
       <Avatar color="primary" variant="solid" size="sm">
@@ -79,7 +92,7 @@ function Cursor({ step } : {step: number}) {
     right: 'translate(calc(100% + 0px), 18px)',
   };
 
-  const positions: {
+  const states: {
     top: string;
     left: string;
     rotate: string;
@@ -100,35 +113,40 @@ function Cursor({ step } : {step: number}) {
     rotate: '-90deg',
     opacity: '1',
   }, {
-    top: '80%',
-    left: '20%',
+    top: '52%',
+    left: '60%',
+    rotate: '-90deg',
+    opacity: '1',
+  }, {
+    top: '76%',
+    left: '10%',
     rotate: '0deg',
     opacity: '1',
   }, {
-    top: '80%',
+    top: '100%',
     left: '20%',
     rotate: '0deg',
     opacity: '0',
   }];
 
-  const currentPosition = useMemo(() => ({
-    ...positions[step],
-    labelTransform: labelTransforms[positions[step].rotate === '0deg' ? 'left' : 'right'],
+  const currentState = useMemo(() => ({
+    ...states[step],
+    labelTransform: labelTransforms[states[step].rotate === '0deg' ? 'left' : 'right'],
   }), [step]);
 
-  const top = useSpringValue(currentPosition?.top);
-  const left = useSpringValue(currentPosition?.left);
-  const rotate = useSpringValue(currentPosition?.rotate);
-  const labelTransform = useSpringValue(currentPosition?.labelTransform);
-  const opacity = useSpringValue(currentPosition?.opacity);
+  const top = useSpringValue(currentState?.top);
+  const left = useSpringValue(currentState?.left);
+  const rotate = useSpringValue(currentState?.rotate);
+  const labelTransform = useSpringValue(currentState?.labelTransform);
+  const opacity = useSpringValue(currentState?.opacity);
 
   useEffect(() => {
-    top.start(currentPosition?.top);
-    left.start(currentPosition?.left);
-    rotate.start(currentPosition?.rotate);
-    labelTransform.start(currentPosition?.labelTransform);
-    opacity.start(currentPosition?.opacity);
-  }, [currentPosition]);
+    top.start(currentState?.top);
+    left.start(currentState?.left);
+    rotate.start(currentState?.rotate);
+    labelTransform.start(currentState?.labelTransform);
+    opacity.start(currentState?.opacity);
+  }, [currentState]);
 
   return (
     <Box
@@ -152,7 +170,7 @@ function Cursor({ step } : {step: number}) {
           position: 'absolute',
           borderRadius: 'var(--joy-radius-sm)',
           transformOrigin: 'top right',
-          transform: currentPosition?.labelTransform,
+          transform: currentState?.labelTransform,
           filter: 'drop-shadow(0 0 10px var(--joy-palette-background-body))',
         }}
         style={{
@@ -366,19 +384,147 @@ function Board({ step } : {step: number}) {
         >
           Ship it
         </Button>
-        <Comment step={1} />
+        <Comment step={step} />
       </Card>
     </Sheet>
   );
 }
 
-export default function Goals() {
-  const [scrollingProgress, setScrollingProgress] = useState(0);
-  const animationStep = useMemo(() => Math.round(scrollingProgress * 4), [scrollingProgress]);
+function Reach({ step } : {step: number}) {
+  const opacity = useSpringValue(0);
+  const top = useSpringValue('80%');
 
   useEffect(() => {
-    console.log(scrollingProgress, animationStep);
-  }, [scrollingProgress]);
+    opacity.start(step >= 4 ? 1 : 0);
+    top.start(step >= 4 ? '67%' : '80%');
+  }, [step]);
+
+  return (
+    <Box
+      component={animated.form}
+      action="https://api.web3forms.com/submit"
+      method="POST"
+      onSubmit={() => {
+        opacity.start(0);
+        top.start('80%');
+      }}
+      sx={{
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 10,
+        overflow: 'hidden',
+        position: 'absolute',
+        width: '100%',
+        maxHeight: '27rem',
+      }}
+      style={{
+        opacity,
+        top,
+      }}
+    >
+
+      <Stack sx={{
+        width: 'min(30rem, 90%)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1,
+      }}
+      >
+        <input type="hidden" name="access_key" value="4e4e6aee-a458-4774-a6e3-a6df6c19abe5" />
+        <Typography level="h1">
+          Let&apos;s
+          {' '}
+          <Typography color="danger">
+            connect.
+          </Typography>
+        </Typography>
+        <Input
+          variant="plain"
+          placeholder="john@acme.co.uk"
+          type="email"
+          name="email"
+          required
+        />
+        <Input
+          variant="plain"
+          placeholder="John Doe"
+          type="text"
+          name="name"
+          required
+        />
+        <Textarea
+          variant="plain"
+          placeholder="Your message here..."
+          name="message"
+          required
+          minRows={4}
+        />
+        <Stack direction="row" justifyContent="end" gap={1}>
+          <Button
+            component="a"
+            color="danger"
+            variant="soft"
+            href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            target="_blank"
+            startDecorator={(
+              <FaFire />
+        )}
+          >
+            Get rickrolled
+          </Button>
+          <Button
+            type="submit"
+            variant="soft"
+            startDecorator={(
+              <MdSend />
+          )}
+          >
+            Submit
+          </Button>
+        </Stack>
+      </Stack>
+      <Typography
+        level="display1"
+        fontWeight="300"
+        fontSize="7rem"
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'linear-gradient(-45deg, var(--joy-palette-danger-900), var(--joy-palette-danger-400))',
+          '-webkit-background-clip': 'text',
+          '-webkit-text-fill-color': 'transparent',
+        }}
+      >
+        Together.
+        <Typography
+          fontSize="3rem"
+        >
+          We can build the
+          {' '}
+          <Typography
+            color="danger"
+            fontWeight={600}
+            sx={{
+              background: 'initial',
+              '-webkit-background-clip': 'initial',
+              '-webkit-text-fill-color': 'initial',
+            }}
+          >
+            future.
+          </Typography>
+        </Typography>
+      </Typography>
+
+    </Box>
+  );
+}
+
+export default function Goals() {
+  const [scrollingProgress, setScrollingProgress] = useState(0);
+  const animationStep = useMemo(() => Math.round(scrollingProgress * 5), [scrollingProgress]);
 
   return (
     <Default>
@@ -446,6 +592,7 @@ export default function Goals() {
             }}
           >
             <Board step={animationStep} />
+            <Reach step={animationStep} />
           </Stack>
         </Stack>
       </Parallax>
