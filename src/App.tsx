@@ -185,7 +185,7 @@ export default function App() {
                   gap="80px"
                   sx={(theme) => ({
                     position: 'relative',
-                    '&::after': mobile ? {} : {
+                    '&::before': mobile ? {} : {
                       content: '""',
                       position: 'absolute',
                       top: '0',
