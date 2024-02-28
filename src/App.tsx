@@ -60,6 +60,13 @@ function Credits() {
       direction="row"
       gap={2}
       justifyContent="space-between"
+      sx={{
+        '& > *': {
+          flex: 1,
+          minWidth: '200px',
+          textAlign: 'center',
+        },
+      }}
     >
       <Typography level="body2" textColor="text.tertiary">
         ©

@@ -1,4 +1,5 @@
 import { Typography } from '@mui/joy';
+import { SxProps } from '@mui/joy/styles/types';
 import React, { useEffect, useState } from 'react';
 
 /**
@@ -10,10 +11,12 @@ export default function TypeWriter({
   onTransitionEnd = () => {
     // noop
   },
+  sx,
 }: {
   children: string
   typeInterval?: number
   onTransitionEnd?: () => void
+  sx?: SxProps
 }) {
   // Text that is currently displayed
   const [currentText, setCurrentText] = useState('');
@@ -45,7 +48,7 @@ export default function TypeWriter({
   }, [toText, currentText]);
 
   return (
-    <Typography>
+    <Typography sx={sx}>
       {currentText}
     </Typography>
   );

@@ -156,15 +156,22 @@ export default function Terminal() {
           variant="outlined"
           component={Stack}
           sx={{
-            backdropFilter: 'blur(40px)',
-            backgroundColor: 'rgba(53, 54, 58, 0.4)',
-            border: '1px solid rgb(83, 86, 93)',
+            ...(mobile ? {
+              backgroundColor: 'transparent',
+              border: 'none',
+            } : {
+              backdropFilter: 'blur(40px)',
+              backgroundColor: 'rgba(53, 54, 58, 0.4)',
+              border: '1px solid rgb(83, 86, 93)',
+              height: '550px',
+            }),
             padding: 0,
             gap: 0,
+            margin: mobile ? '-1rem' : '0',
             overflow: 'hidden',
-            height: '550px',
           }}
         >
+          {!mobile && (
           <Stack direction="row" justifyContent="space-between" p={0}>
             <Stack
               direction="row"
@@ -332,6 +339,7 @@ export default function Terminal() {
               </Stack>
             </Default>
           </Stack>
+          )}
           <Tooltip
             variant="outlined"
             title={`${playing ? 'Pause' : 'Resume'} auto-play`}
@@ -357,12 +365,17 @@ export default function Terminal() {
             component={Stack}
             direction="column"
             sx={{
+              ...(mobile ? {
+                backgroundColor: 'transparent',
+              } : {
+                backgroundColor: 'rgba(33, 37, 43, 0.8)',
+              }),
               position: 'relative',
-              backgroundColor: 'rgba(33, 37, 43, 0.8)',
               p: 2,
               gap: 1,
               flexGrow: 1,
               overflowY: 'auto',
+              overflowX: 'hidden',
             }}
           >
             <Typography
@@ -380,7 +393,7 @@ export default function Terminal() {
               <br />
               <Stack
                 direction="row"
-                flexWrap="wrap"
+                flexWrap="nowrap"
               >
                 <Typography textColor="primary.300">
                   root@bsodium:~$&nbsp;
@@ -390,6 +403,7 @@ export default function Terminal() {
                     setSelected(displayed);
                   }}
                   typeInterval={20}
+                  sx={{ whiteSpace: 'nowrap' }}
                 >
                   {`bsodium.exe --${displayed}`}
                 </TypeWriter>

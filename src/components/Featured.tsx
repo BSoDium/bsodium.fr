@@ -193,7 +193,7 @@ export default function Featured() {
           </Typography>
         </Typography>
         <Mobile>
-          <Chip variant="soft">
+          <Chip variant="soft" color="info">
             {projects.length}
             {' '}
             repositories

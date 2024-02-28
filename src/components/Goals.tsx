@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Avatar, Box, Button, Card, Chip,
-  FormControl, FormLabel,
   Input, Sheet, Stack, Textarea, Typography,
 } from '@mui/joy';
 import { TbHeartHandshake } from 'react-icons/tb';
@@ -10,9 +9,9 @@ import { ColorPaletteProp, SxProps } from '@mui/joy/styles/types';
 import { MdMail, MdOutlineRocketLaunch, MdSend } from 'react-icons/md';
 import { HiOutlineSparkles } from 'react-icons/hi2';
 import { Parallax } from 'react-scroll-parallax';
-import { animated, useSpring, useSpringValue } from '@react-spring/web';
+import { animated, useSpringValue } from '@react-spring/web';
 import { FaFire } from 'react-icons/fa';
-import { Default } from './Responsive';
+import { Default, useMobileMode } from './Responsive';
 
 function Grid({ sx }: {sx?: SxProps}) {
   return (
@@ -375,12 +374,14 @@ function Board({ step } : {step: number}) {
         <Button
           variant="soft"
           color="neutral"
+          sx={{ whiteSpace: 'nowrap' }}
         >
           Get Started
         </Button>
         <Button
           color="primary"
           startDecorator={<MdOutlineRocketLaunch />}
+          sx={{ whiteSpace: 'nowrap' }}
         >
           Ship it
         </Button>
@@ -391,6 +392,8 @@ function Board({ step } : {step: number}) {
 }
 
 function Reach({ step } : {step: number}) {
+  const mobile = useMobileMode();
+
   const opacity = useSpringValue(0);
   const top = useSpringValue('80%');
 
@@ -415,10 +418,12 @@ function Reach({ step } : {step: number}) {
         justifyContent: 'center',
         alignItems: 'center',
         gap: 10,
+        left: 0,
         overflow: 'hidden',
         position: 'absolute',
-        width: '100%',
+        width: mobile ? 'calc(100% + 2rem)' : '100%',
         maxHeight: '27rem',
+        marginX: mobile ? '-1rem' : 'auto',
       }}
       style={{
         opacity,
@@ -527,41 +532,43 @@ export default function Goals() {
   const animationStep = useMemo(() => Math.round(scrollingProgress * 5), [scrollingProgress]);
 
   return (
-    <Default>
-      <Parallax
-        shouldAlwaysCompleteAnimation
-        onProgressChange={(progress) => setScrollingProgress(progress)}
+    <Parallax
+      shouldAlwaysCompleteAnimation
+      onProgressChange={(progress) => setScrollingProgress(progress)}
+    >
+      <Stack
+        sx={{ width: '100%', height: '1200px', position: 'relative' }}
+        p="37px"
       >
-        <Stack
-          sx={{ width: '100%', height: '1200px', position: 'relative' }}
-          p="37px"
-        >
+        <Default>
           <Cursor step={animationStep} />
-          <Stack
+        </Default>
+        <Stack
+          sx={{
+            position: 'absolute',
+            top: '-37px',
+            right: '0',
+            gap: 1,
+            zIndex: 1,
+            textAlign: 'right',
+          }}
+        >
+          <Typography
+            level="h2"
             sx={{
-              position: 'absolute',
-              top: '-37px',
-              right: '0',
-              gap: 1,
-              zIndex: 1,
-              textAlign: 'right',
+              position: 'relative',
             }}
+            id="footer"
           >
             <Typography
-              level="h2"
-              sx={{
-                position: 'relative',
-              }}
-              id="footer"
+              textColor="danger.400"
+              fontWeight="xl"
             >
-              <Typography
-                textColor="danger.400"
-                fontWeight="xl"
-              >
-                Software.
-              </Typography>
-              {' '}
-              The way we see it.
+              Software.
+            </Typography>
+            {' '}
+            The way we see it.
+            <Default>
               <Avatar
                 color="danger"
                 sx={(theme) => ({
@@ -576,26 +583,26 @@ export default function Goals() {
               >
                 <TbHeartHandshake />
               </Avatar>
-            </Typography>
-            <Typography
-              level="body1"
-              textColor="text.secondary"
-            >
-              Let&apos;s build products that people love. Together.
-            </Typography>
-          </Stack>
-          <Stack
-            component="div"
-            sx={{
-              width: '100%',
-              height: '100%',
-            }}
+            </Default>
+          </Typography>
+          <Typography
+            level="body1"
+            textColor="text.secondary"
           >
-            <Board step={animationStep} />
-            <Reach step={animationStep} />
-          </Stack>
+            Let&apos;s build products that people love. Together.
+          </Typography>
         </Stack>
-      </Parallax>
-    </Default>
+        <Stack
+          component="div"
+          sx={{
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <Board step={animationStep} />
+          <Reach step={animationStep} />
+        </Stack>
+      </Stack>
+    </Parallax>
   );
 }

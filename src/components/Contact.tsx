@@ -16,6 +16,7 @@ export default function Contact() {
   return (
     <Stack
       gap={3}
+      sx={{ zIndex: 1 }}
     >
       <Typography level="h2" sx={{ position: 'relative' }} id="contact">
         <Default>
