@@ -118,7 +118,7 @@ export default function Terminal() {
     >
       <Typography
         level="h2"
-        sx={{ position: 'relative' }}
+        sx={{ position: 'relative', textAlign: mobile ? 'center' : 'left' }}
         id="profile"
       >
         <Default>

@@ -36,6 +36,7 @@ export default function Header() {
   return (
     <Stack
       gap="20px"
+      alignItems={mobile ? 'center' : 'flex-start'}
     >
       <Button
         size="lg"
@@ -91,9 +92,9 @@ export default function Header() {
         fontWeight="md"
         display="flex"
         flexWrap="wrap"
-        marginBottom={mobile ? '1em' : 0}
         sx={(theme) => ({
           position: 'relative',
+          justifyContent: mobile ? 'center' : 'flex-start',
           '&::before': mobile ? {} : {
             content: '""',
             position: 'absolute',
@@ -116,6 +117,7 @@ export default function Header() {
         textColor="text.tertiary"
         sx={(theme) => ({
           position: 'relative',
+          textAlign: mobile ? 'center' : 'left',
           '&::before': mobile ? {} : {
             content: '""',
             position: 'absolute',

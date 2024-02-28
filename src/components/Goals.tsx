@@ -528,6 +528,8 @@ function Reach({ step } : {step: number}) {
 }
 
 export default function Goals() {
+  const mobile = useMobileMode();
+
   const [scrollingProgress, setScrollingProgress] = useState(0);
   const animationStep = useMemo(() => Math.round(scrollingProgress * 5), [scrollingProgress]);
 
@@ -546,11 +548,11 @@ export default function Goals() {
         <Stack
           sx={{
             position: 'absolute',
-            top: '-37px',
+            top: mobile ? '-7rem' : '-2.5rem',
             right: '0',
             gap: 1,
             zIndex: 1,
-            textAlign: 'right',
+            textAlign: mobile ? 'center' : 'right',
           }}
         >
           <Typography
@@ -566,7 +568,7 @@ export default function Goals() {
             >
               Software.
             </Typography>
-            {' '}
+            {mobile ? <br /> : ' '}
             The way we see it.
             <Default>
               <Avatar

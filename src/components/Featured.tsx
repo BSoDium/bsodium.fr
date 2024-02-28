@@ -1,7 +1,7 @@
 /* eslint-disable no-bitwise */
 import {
   Avatar,
-  Box, Button, Card, Chip, CircularProgress, Stack, Typography,
+  Box, Button, Card, Chip, CircularProgress, Divider, Stack, Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
 import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
@@ -12,7 +12,7 @@ import { RxOpenInNewWindow } from 'react-icons/rx';
 import { Repository, getRepositories } from 'utils/Api';
 import colors from 'assets/colors.json';
 import { Parallax } from 'react-scroll-parallax';
-import { Default, Mobile } from './Responsive';
+import { Default, Mobile, useMobileMode } from './Responsive';
 
 /**
  * Beautifies a string
@@ -28,6 +28,8 @@ function ProjectCard({
 }: {
   project: Repository;
 }) {
+  const mobile = useMobileMode();
+
   return (
     <Card
       component={Stack}
@@ -36,6 +38,11 @@ function ProjectCard({
       p={3}
       justifyContent="space-between"
       sx={{
+        ...(mobile && {
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+        }),
         width: 'max(30%, 320px)',
         transition: 'all 0.3s ease',
         cursor: 'pointer',
@@ -62,7 +69,7 @@ function ProjectCard({
                   color: colors[project.language as keyof typeof colors]?.color || 'white',
                 }}
                 />
-                  )}
+              )}
             >
               {project.language}
             </Typography>
@@ -130,6 +137,8 @@ function ProjectCard({
 }
 
 export default function Featured() {
+  const mobile = useMobileMode();
+
   const [projects, setProjects] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error>();
@@ -151,10 +160,11 @@ export default function Featured() {
     >
       <Stack
         gap={1}
+        alignItems={mobile ? 'center' : 'flex-start'}
       >
         <Typography
           level="h2"
-          sx={{ position: 'relative' }}
+          sx={{ position: 'relative', textAlign: mobile ? 'center' : 'left' }}
           id="featured"
         >
           <Default>
@@ -216,8 +226,7 @@ export default function Featured() {
             flexWrap: 'wrap',
             '& > *': {
               flexGrow: 1,
-              height: '250px',
-              minWidth: '300px',
+              minWidth: 'min(300px, 100%)',
             },
           }}
         >
@@ -230,11 +239,14 @@ export default function Featured() {
             <CircularProgress color="info" />
           ) : (
             <>
-              {projects.map((project) => (
-                <ProjectCard
-                  project={project}
-                  key={project.name}
-                />
+              {projects.map((project, index) => (
+                <>
+                  <ProjectCard
+                    project={project}
+                    key={project.name}
+                  />
+                  {mobile && index < projects.length - 1 && <Divider />}
+                </>
               ))}
             </>
           )}

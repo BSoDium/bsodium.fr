@@ -10,13 +10,15 @@ import { FiMail, FiPhone } from 'react-icons/fi';
 import { SiResearchgate } from 'react-icons/si';
 import details from 'assets/Details';
 import LinkCarousel from './LinkCarousel';
-import { Default } from './Responsive';
+import { Default, useMobileMode } from './Responsive';
 
 export default function Contact() {
+  const mobile = useMobileMode();
+
   return (
     <Stack
       gap={3}
-      sx={{ zIndex: 1 }}
+      sx={{ zIndex: 1, textAlign: mobile ? 'center' : 'left' }}
     >
       <Typography level="h2" sx={{ position: 'relative' }} id="contact">
         <Default>
@@ -41,7 +43,7 @@ export default function Contact() {
           textColor="warning.400"
           fontWeight="xl"
         >
-          In touch
+          in touch
         </Typography>
       </Typography>
 
