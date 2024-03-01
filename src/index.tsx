@@ -9,7 +9,10 @@ import {
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import App from 'App';
 import Resume from 'Resume';
+import ReactGA from 'react-ga4';
 import 'App.global.scss';
+
+ReactGA.initialize('G-QETT923XKJ');
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,
