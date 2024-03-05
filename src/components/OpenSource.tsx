@@ -65,7 +65,7 @@ export default function OpenSource() {
               color: '#e4fffe',
               animation: 'blink 5s infinite',
               animationDelay: `${Math.random() * 2}s`,
-              fontFamily: "'Tilt Neon', sans-serif",
+              fontWeight: '300',
               padding: '3rem',
               margin: '-3rem',
             }}

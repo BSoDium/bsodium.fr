@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap');
 @import url('https://fonts.googleapis.com/css?family=Poppins:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css?family=Tilt+Neon:wght@300;400;500;600;700&display=swap');
 
 html,
 body,
@@ -21,10 +20,12 @@ html {
     rotate: 0deg;
     translate: 0 0;
   }
+
   50% {
     rotate: 5deg;
     translate: 0 -10%;
   }
+
   100% {
     rotate: 0deg;
     translate: 0 0;
