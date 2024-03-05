@@ -264,7 +264,7 @@ function Board({ step } : {step: number}) {
         style={{
           position: 'absolute',
           top: '35%',
-          left: '33%',
+          right: '25%',
         }}
       >
         <Card
@@ -347,7 +347,7 @@ function Board({ step } : {step: number}) {
             <Typography>
               Innovate.
             </Typography>
-            <Typography level="body2">
+            <Typography level="body2" whiteSpace="nowrap">
               Shape tomorrow&apos;s guidelines.
             </Typography>
           </Stack>
@@ -491,38 +491,40 @@ function Reach({ step } : {step: number}) {
           </Button>
         </Stack>
       </Stack>
-      <Typography
-        level="display1"
-        fontWeight="300"
-        fontSize="7rem"
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'linear-gradient(-45deg, var(--joy-palette-danger-900), var(--joy-palette-danger-400))',
-          '-webkit-background-clip': 'text',
-          '-webkit-text-fill-color': 'transparent',
-        }}
-      >
-        Together.
+      <Default>
         <Typography
-          fontSize="3rem"
+          level="display1"
+          fontWeight="300"
+          fontSize="7rem"
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'linear-gradient(-45deg, var(--joy-palette-danger-400), var(--joy-palette-primary-400))',
+            '-webkit-background-clip': 'text',
+            '-webkit-text-fill-color': 'transparent',
+          }}
         >
-          We can build the
-          {' '}
+          Together.
           <Typography
-            color="danger"
-            fontWeight={600}
-            sx={{
-              background: 'initial',
-              '-webkit-background-clip': 'initial',
-              '-webkit-text-fill-color': 'initial',
-            }}
+            fontSize="3rem"
           >
-            future.
+            We can build the
+            {' '}
+            <Typography
+              color="danger"
+              fontWeight={600}
+              sx={{
+                background: 'initial',
+                '-webkit-background-clip': 'initial',
+                '-webkit-text-fill-color': 'initial',
+                filter: 'drop-shadow(0 0 30px var(--joy-palette-danger-600))',
+              }}
+            >
+              future.
+            </Typography>
           </Typography>
         </Typography>
-      </Typography>
-
+      </Default>
     </Box>
   );
 }
@@ -539,7 +541,9 @@ export default function Goals() {
       onProgressChange={(progress) => setScrollingProgress(progress)}
     >
       <Stack
-        sx={{ width: '100%', height: '1200px', position: 'relative' }}
+        sx={{
+          width: '100%', height: '1200px', position: 'relative', overflow: 'visible',
+        }}
         p="37px"
       >
         <Default>

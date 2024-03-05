@@ -25,13 +25,15 @@ export default function Header() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setVisitor((prev) => {
-        const nextIndex = (visitors.indexOf(prev) + 1) % visitors.length;
-        return visitors[nextIndex];
-      });
+      if (!mobile) {
+        setVisitor((prev) => {
+          const nextIndex = (visitors.indexOf(prev) + 1) % visitors.length;
+          return visitors[nextIndex];
+        });
+      }
     }, 2000);
     return () => { clearInterval(interval); };
-  }, []);
+  }, [mobile]);
 
   return (
     <Stack

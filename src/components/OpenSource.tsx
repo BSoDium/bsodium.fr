@@ -138,7 +138,7 @@ export default function OpenSource() {
             alt="Darth vader"
             style={{
               ...(mobile && {
-                width: '100%',
+                height: '350px',
               }),
               filter: 'drop-shadow(0 -20px 20px hsl(185, 94%, 10%)) drop-shadow(0 20px 20px hsl(356, 60%, 11%))',
             }}

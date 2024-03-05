@@ -41,7 +41,8 @@ function ProjectCard({
         ...(mobile && {
           background: 'transparent',
           border: 'none',
-          padding: 0,
+          paddingX: 1,
+          paddingY: 0,
         }),
         width: 'max(30%, 320px)',
         transition: 'all 0.3s ease',

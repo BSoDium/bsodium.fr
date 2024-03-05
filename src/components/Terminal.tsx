@@ -100,6 +100,12 @@ export default function Terminal() {
     return undefined;
   }, [playing, selected]);
 
+  useEffect(() => {
+    if (mobile) {
+      setPlaying(false);
+    }
+  }, [mobile]);
+
   return (
     <Stack
       gap={3}
@@ -340,27 +346,29 @@ export default function Terminal() {
             </Default>
           </Stack>
           )}
-          <Tooltip
-            variant="outlined"
-            title={`${playing ? 'Pause' : 'Resume'} auto-play`}
-          >
-            <IconButton
-              size="sm"
-              variant="plain"
-              color="neutral"
-              sx={{
-                position: 'absolute',
-                bottom: '10px',
-                right: '15px',
-                zIndex: 1,
-              }}
-              onClick={() => {
-                setPlaying(!playing);
-              }}
+          <Default>
+            <Tooltip
+              variant="outlined"
+              title={`${playing ? 'Pause' : 'Resume'} auto-play`}
             >
-              {playing ? <FaPause /> : <FaPlay />}
-            </IconButton>
-          </Tooltip>
+              <IconButton
+                size="sm"
+                variant="plain"
+                color="neutral"
+                sx={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  right: '15px',
+                  zIndex: 1,
+                }}
+                onClick={() => {
+                  setPlaying(!playing);
+                }}
+              >
+                {playing ? <FaPause /> : <FaPlay />}
+              </IconButton>
+            </Tooltip>
+          </Default>
           <Sheet
             component={Stack}
             direction="column"
