@@ -120,6 +120,7 @@ export default function App() {
             }}
           >
             <Stack
+              gap={mobile ? 3 : 0}
               sx={{
                 paddingLeft: mobile ? 0 : '70px',
               }}
