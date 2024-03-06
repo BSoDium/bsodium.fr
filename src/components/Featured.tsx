@@ -241,13 +241,14 @@ export default function Featured() {
           ) : (
             <>
               {projects.map((project, index) => (
-                <>
+                <React.Fragment
+                  key={project.name}
+                >
                   <ProjectCard
                     project={project}
-                    key={project.name}
                   />
                   {mobile && index < projects.length - 1 && <Divider />}
-                </>
+                </React.Fragment>
               ))}
             </>
           )}
