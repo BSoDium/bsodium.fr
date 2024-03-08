@@ -30,6 +30,7 @@ const details = {
     },
     {
       school: 'CPGE Lycée Déodat de Séverac',
+      url: 'https://dossier.parcoursup.fr/Candidats/public/fiches/afficherFicheFormation?g_ta_cod=4052',
       location: 'Toulouse, France',
       degree: 'Bachelor',
       major: 'Mathematics and Physics',
@@ -55,7 +56,11 @@ const details = {
       position: 'Full-stack engineer',
       start: 'Nov 2023',
       end: 'Present',
-      description: 'Development of a SaaS platform for the automated scanning and monitoring of GraphQL and REST APIs.',
+      description: [
+        'Developmed a SaaS platform for the automated scanning and monitoring of GraphQL and REST APIs.',
+        'Designed and built a Svelte component library based on the latest Material UI guidelines.',
+        'Implemented a Node.js backend to support a GraphQL API and a PostgreSQL database.',
+      ],
       technologies: [
         'Svelte',
         'GraphQL',
@@ -69,14 +74,11 @@ const details = {
       icon: kanop,
       location: 'Paris, France',
       contract: 'Internship',
-      position: 'Front-end web developer',
+      position: 'Front-end engineer',
       start: 'Mar 2023',
       end: 'Sep 2023',
       description: [
-        'Developed React TypeScript tools for map and chart visualizations of polygon and raster data at Kanop.',
-        'Automated the testing, building, versioning, and deployment system by creating a robust CI pipeline.',
-        'Integrated APIs and popular libraries like D3.js and Mapbox GL to ensure optimal performance and accessibility.',
-        'Collaborated with data science team to create data visualizations that provided critical insights for stakeholders and policymakers.',
+        'Designed cutting-edge React TypeScript tools for advanced map and chart visualizations.', 'Pioneered automation of testing, building, version control, and deployment processes through a robust CI pipeline implementation.', 'Utilized APIs and top libraries like D3.js and Mapbox GL to maximize performance and accessibility of web applications.', 'Collaborated closely with the data science team to develop impactful data visualizations that delivered key insights for stakeholders and policymakers.',
       ],
       technologies: [
         'React',
@@ -92,14 +94,14 @@ const details = {
       location: 'Klagenfurt, Austria (remote)',
       icon: kanop,
       contract: 'Freelance',
-      position: 'Front-end web developer',
+      position: 'Front-end engineer',
       start: 'Sep 2022',
       end: 'Feb 2023',
       description: [
-        'Performed unit testing of web applications and individual components.',
-        'Optimized web applications for scalability, speed and security.',
-        'Completed full redesigns of existing websites to improve navigation, enhance visuals and strengthen search engine rankings.',
-        'Employed coding practices based on commonly accepted standards to establish site layout and user interface.',
+        'Conducted rigorous unit testing on web applications and individual components to ensure optimal performance and functionality.',
+        'Implemented optimization techniques to enhance scalability, speed, and security of web applications.',
+        'Led complete overhauls of existing websites, focusing on improving navigation, enhancing visuals, and boosting search engine rankings.',
+        'Utilized industry-standard coding practices to establish site layouts and user interfaces that prioritize user experience and functionality.',
       ],
       technologies: [
         'REST API',
@@ -121,10 +123,9 @@ const details = {
       start: 'Jun 2022',
       end: 'Sep 2022',
       description: [
-        'Documented project changes in team manuals for future reference and use.',
-        'Collaborated with UX designers to optimize design and user workflow.',
-        'Worked with Deck.gl cartography and mass data rendering tools.',
-        'Adapted quickly to constantly changing, deadline-driven environment.',
+        'Created comprehensive project documentation for team manuals to ensure knowledge sharing and future reference.',
+        'Partnered with UX designers to enhance design aesthetics and streamline user workflows.',
+        'Utilized Deck.gl cartography and data rendering tools to support data visualization and analysis.',
       ],
       technologies: [
         'React',
@@ -145,7 +146,7 @@ const details = {
       position: 'Facilitator',
       start: 'Feb 2022',
       end: 'Jun 2022',
-      description: 'Facilitation of workshops on climate change awareness.',
+      description: 'Facilitated workshops on climate change awareness in high schools and universities.',
     },
     {
       company: 'Akanthas',
@@ -157,7 +158,7 @@ const details = {
       start: 'Jun 2021',
       end: 'Jul 2021',
       description:
-        'Development of continuous integration/deployment infrastructure, improvements to a Node JS web app and retrieval of image data from Arlo autonomous cameras via public API.',
+        'Enhanced continuous integration/deployment infrastructure to streamline operations, implemented enhancements to a Node.js web application, and successfully retrieved image data from Arlo autonomous cameras using a public API.',
       technologies: [
         'Node JS',
         'Docker',
@@ -195,23 +196,17 @@ const details = {
       'Matlab',
       'HTML',
       'CSS',
-      'SASS',
-      'Julia',
-      'OCaml',
+      'SCSS',
     ],
     frameworks: [
       'React',
       'Svelte',
       'Node JS',
+      'Next JS',
       'Express',
       'Git',
       'CI/CD',
-      'Docker',
       'Bootstrap',
-      'Linux',
-      'Windows',
-      'Keras',
-      'Tensorflow',
     ],
     tools: [
       'Scrum',
@@ -227,6 +222,7 @@ const details = {
       'Pothos',
       'Grafana',
       'Blender',
+      'Docker',
     ],
     others: [
       'REST API',
@@ -242,6 +238,9 @@ const details = {
       'Algorithms',
       '3D rendering',
       'OpenGL',
+      'WebGL',
+      'D3.js',
+      'Mapbox GL',
     ],
   },
   languages: [

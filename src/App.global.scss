@@ -15,6 +15,12 @@ html {
   scroll-behavior: smooth;
 }
 
+@media print {
+  .pagebreak {
+    page-break-before: always;
+  }
+}
+
 @keyframes float {
   0% {
     rotate: 0deg;

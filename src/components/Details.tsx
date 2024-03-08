@@ -141,7 +141,11 @@ export function Experience() {
         }
         return [...acc, [item]];
       }, [] as typeof details.experience[number][][]).map((items) => (
-        <Stack direction="row" gap={1.5} key={`${items[0].company}-${Math.random()}}`}>
+        <Stack
+          direction="row"
+          gap={1.5}
+          key={`${items[0].company}-${Math.random()}}`}
+        >
           <Avatar
             color="neutral"
             variant="solid"
@@ -153,7 +157,21 @@ export function Experience() {
           >
             <HiOutlineOfficeBuilding />
           </Avatar>
-          <Stack gap={2}>
+          <Stack
+            gap={2}
+            sx={(theme) => ({
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                width: '1px',
+                height: 'calc(100% - 3rem - 12px)',
+                backgroundColor: theme.palette.divider,
+                left: 'calc(-1.5rem - 12px)',
+                top: 'calc(3rem + 12px)',
+              },
+            })}
+          >
             {items.map((item, subIndex) => (
               <Stack key={`${item.company}-${item.position}-${item.start}-${item.end}`} gap={0.5}>
                 <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>

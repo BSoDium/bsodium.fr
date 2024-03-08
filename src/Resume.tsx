@@ -23,11 +23,11 @@ export function Languages() {
         <Chip
           size="lg"
           key={language.name}
-          color={language.native ? 'success' : 'info'}
+          color={language.native ? 'primary' : 'info'}
           variant="soft"
           startDecorator={(
             <Avatar
-              color={language.native ? 'success' : 'info'}
+              color={language.native ? 'primary' : 'info'}
               variant="solid"
               size="sm"
             >
@@ -70,12 +70,11 @@ export default function Resume() {
                 Software Engineer
               </Typography>
               <Typography level="body2">
-                Software developer and third year computer science
-                student at ENSEEIHT. Passionate about software development and
-                contributing to the development community through open-source
-                projects on GitHub. Proficient in various programming languages
-                and technologies, ready to tackle any challenge and be a
-                valuable asset to any team.
+                Accomplished software developer with expertise in
+                various programming languages and technologies.
+                Dedicated to contributing to the development community
+                through impactful open-source projects on GitHub.
+                Proven ability to tackle challenging tasks and excel as a valuable team member.
               </Typography>
             </Stack>
             <Box
@@ -114,32 +113,52 @@ export default function Resume() {
                   <Divider />
                   <Stack gap={1}>
                     {['address', 'email', 'phone', 'linkedin', 'github'].map(
-                      (key) => (
-                        <Stack key={key}>
-                          <Typography
-                            level="body2"
-                            fontWeight="bold"
-                            textTransform="capitalize"
-                            sx={{
-                              width: '100px',
-                            }}
-                          >
-                            {key}
-                          </Typography>
-                          <Typography
-                            level="body2"
-                            sx={{
-                              wordBreak: 'break-word',
-                            }}
-                          >
-                            {
-                              details.contact[
-                                key as keyof typeof details.contact
-                              ]
-                            }
-                          </Typography>
-                        </Stack>
-                      ),
+                      (key) => {
+                        const value = details.contact[
+                          key as keyof typeof details.contact
+                        ];
+                        const isUrl = value.startsWith('http');
+                        return (
+                          <Stack key={key}>
+                            <Typography
+                              level="body2"
+                              fontWeight="bold"
+                              textTransform="capitalize"
+                              sx={{
+                                width: '100px',
+                              }}
+                            >
+                              {key}
+                            </Typography>
+                            {isUrl ? (
+                              <Typography
+                                component="a"
+                                level="body2"
+                                href={value}
+                                target="_blank"
+                                sx={{
+                                  wordBreak: 'break-word',
+                                  textDecoration: 'none',
+                                  '&:hover': {
+                                    textDecoration: 'underline',
+                                  },
+                                }}
+                              >
+                                {value}
+                              </Typography>
+                            ) : (
+                              <Typography
+                                level="body2"
+                                sx={{
+                                  wordBreak: 'break-word',
+                                }}
+                              >
+                                {value}
+                              </Typography>
+                            )}
+                          </Stack>
+                        );
+                      },
                     )}
                   </Stack>
                 </Stack>
@@ -160,6 +179,7 @@ export default function Resume() {
                     <Skills include={['languages', 'frameworks', 'tools']} />
                   </Stack>
                 </Stack>
+                <div className="pagebreak" />
                 <Stack gap={1}>
                   <Typography
                     level="h6"
@@ -199,6 +219,7 @@ export default function Resume() {
                   <Divider />
                   <Experience />
                 </Stack>
+                <div className="pagebreak" />
                 <Stack gap={1}>
                   <Typography
                     level="h6"
