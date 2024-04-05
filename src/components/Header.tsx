@@ -3,13 +3,13 @@ import React, { useEffect, useState } from 'react';
 import {
   Avatar, Button, Stack, Typography,
 } from '@mui/joy';
-import TextTransition, { presets } from 'react-text-transition';
 import { RiArrowRightSLine } from 'react-icons/ri';
 import { IoReaderOutline } from 'react-icons/io5';
 import { Link } from 'react-router-dom';
 import greeting from 'utils/Greeting';
 import { ATypography } from 'App';
 import { useMobileMode } from './Responsive';
+import TypeWriter from './TypeWriter';
 
 export const visitors = [
   'stranger',
@@ -31,7 +31,7 @@ export default function Header() {
           return visitors[nextIndex];
         });
       }
-    }, 2000);
+    }, 3000);
     return () => { clearInterval(interval); };
   }, [mobile]);
 
@@ -93,6 +93,7 @@ export default function Header() {
         level={mobile ? 'h1' : 'display2'}
         fontWeight="md"
         display="flex"
+        fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
         sx={(theme) => ({
           position: 'relative',
@@ -109,10 +110,13 @@ export default function Header() {
         })}
       >
         {greeting()}
-        ,&nbsp;
-        <TextTransition springConfig={presets.stiff}>
+        &nbsp;
+        <TypeWriter
+          typeInterval={20}
+          sx={{ whiteSpace: 'nowrap' }}
+        >
           {visitor}
-        </TextTransition>
+        </TypeWriter>
       </Typography>
       <Typography
         level="h4"
