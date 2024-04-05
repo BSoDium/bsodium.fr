@@ -12,8 +12,8 @@ import { Default, useMobileMode } from './Responsive';
 export default function OpenSource() {
   const mobile = useMobileMode();
 
-  const blinkAnimation = useMemo(() => ({
-    '@keyframes blink': Object.fromEntries(
+  const flickerAnimation = useMemo(() => ({
+    '@keyframes flicker': Object.fromEntries(
       [...Array(10).keys()].map(() => Math.random() * 100).sort().map((p) => [
         [`${p - 1}%`, { opacity: 1 }],
         [`${p}%`, { opacity: 0 }],
@@ -60,10 +60,10 @@ export default function OpenSource() {
             Join the
             {' '}
             <Typography sx={{
-              ...blinkAnimation,
+              ...flickerAnimation,
               textShadow: '0 0 0.5rem #86fff1, 0 0 1rem #03fee9, 0 0 2rem #03fed8',
               color: '#e4fffe',
-              animation: 'blink 5s infinite',
+              animation: 'flicker 5s infinite',
               animationDelay: `${Math.random() * 2}s`,
               fontWeight: '300',
               padding: '3rem',

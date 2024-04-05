@@ -1,8 +1,8 @@
 import React from 'react';
-import planet from 'assets/planet.png';
+import planet from 'assets/planet.webp';
 import robot1 from 'assets/robot_flying_1.png';
 import robot2 from 'assets/robot_flying_2.png';
-import sky from 'assets/sky.png';
+import sky from 'assets/sky.webp';
 import { useMobileMode } from './Responsive';
 
 export default function Illustrations() {

@@ -9,7 +9,7 @@ To run the app locally, you need to have Node.js and yarn installed on your mach
 ```bash
 yarn install # install dependencies
 yarn start # start development server
-```
+```$$
 
 The app will be available at http://localhost:3000.
 
