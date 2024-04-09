@@ -37,10 +37,17 @@ export default function OpenSource() {
           sx={{
             position: 'absolute',
             top: '-20px',
-            right: '0',
             gap: 3,
             textAlign: mobile ? 'center' : 'right',
-            alignItems: 'flex-end',
+            ...(mobile ? {
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '100%',
+              alignItems: 'center',
+            } : {
+              right: '0',
+              alignItems: 'flex-end',
+            }),
           }}
         >
           <Typography
@@ -48,7 +55,6 @@ export default function OpenSource() {
             sx={{
               position: 'relative',
             }}
-            id="footer"
           >
             <Typography
               textColor="success.300"
@@ -122,6 +128,9 @@ export default function OpenSource() {
           easing="ease"
           style={mobile ? {
             position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             marginTop: '20rem',
             zIndex: 1,
             animation: 'float 20s ease-in-out infinite',

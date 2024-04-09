@@ -552,11 +552,20 @@ export default function Goals() {
         <Stack
           sx={{
             position: 'absolute',
-            top: mobile ? '-7rem' : '-2.5rem',
-            right: '0',
             gap: 1,
             zIndex: 1,
             textAlign: mobile ? 'center' : 'right',
+            ...(mobile ? {
+              top: '-7rem',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '100%',
+              alignItems: 'center',
+            } : {
+              top: '-2.5rem',
+              right: '0',
+              alignItems: 'flex-end',
+            }),
           }}
         >
           <Typography

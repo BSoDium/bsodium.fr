@@ -18,7 +18,7 @@ export default function Contact() {
   return (
     <Stack
       gap={3}
-      sx={{ zIndex: 1, textAlign: mobile ? 'center' : 'left' }}
+      sx={{ zIndex: 1, textAlign: mobile ? 'center' : 'left', alignItems: mobile ? 'center' : undefined }}
     >
       <Typography level="h2" sx={{ position: 'relative' }} id="contact">
         <Default>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import {
   Avatar, Button, Stack, Typography,
@@ -8,6 +8,7 @@ import { IoReaderOutline } from 'react-icons/io5';
 import { Link } from 'react-router-dom';
 import greeting from 'utils/Greeting';
 import { ATypography } from 'App';
+import details from 'assets/Details';
 import { useMobileMode } from './Responsive';
 import TypeWriter from './TypeWriter';
 
@@ -32,6 +33,8 @@ export default function Header() {
     }, 3000);
     return () => { clearInterval(interval); };
   }, [mobile]);
+
+  const currentCompany = useMemo(() => details.experience.find((experience) => experience.end === 'Present') || undefined, []);
 
   return (
     <Stack
@@ -105,7 +108,7 @@ export default function Header() {
         level={mobile ? 'h1' : 'display2'}
         fontWeight="md"
         display="flex"
-        justifyContent="center"
+        justifyContent={mobile ? 'center' : 'initial'}
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
       >
@@ -123,6 +126,7 @@ export default function Header() {
         textColor="text.tertiary"
         sx={{
           position: 'relative',
+          padding: mobile ? '0 1rem' : 0,
           textAlign: mobile ? 'center' : 'left',
         }}
       >
@@ -142,7 +146,16 @@ export default function Header() {
         <Typography textColor="text.primary">
           Software engineer
         </Typography>
-        {' '}
+            &nbsp;
+        {currentCompany ? (
+          <>
+            {'at '}
+            <ATypography textColor="text.primary" href={currentCompany.url}>
+              {currentCompany.company}
+            </ATypography>
+            &nbsp;
+          </>
+        ) : null}
         and an
         {' '}
         <Typography textColor="text.primary">

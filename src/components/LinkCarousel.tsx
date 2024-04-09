@@ -3,7 +3,6 @@
 import {
   Button, Stack, VariantProp,
 } from '@mui/joy';
-import { useSpringValue } from '@react-spring/web';
 import Color from 'color';
 import React, { useMemo } from 'react';
 
@@ -77,14 +76,6 @@ export default function LinkCarousel({
     Math.random() * 30 + 40,
   ]), []);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const scale = useSpringValue(1, {
-    config: {
-      mass: 0.1,
-      tension: 320,
-    },
-  });
-
   return (
     <Stack
       gap={1}
@@ -92,6 +83,7 @@ export default function LinkCarousel({
         position: 'relative',
         py: 1,
         overflow: 'hidden',
+        width: '100%',
         marginX: -5,
         '&::before': {
           position: 'absolute',
