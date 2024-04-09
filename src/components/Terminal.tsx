@@ -390,6 +390,7 @@ export default function Terminal() {
               fontFamily="'Fira Code', monospace"
               fontSize="0.875rem"
               component="span"
+              padding={mobile ? '0 1rem' : 'initial'}
             >
               <Typography textColor="text.secondary">
                 Powershell 7.3.4
@@ -430,6 +431,7 @@ export default function Terminal() {
               sx={{
                 width: 'fit-content',
                 backgroundColor: 'transparent',
+                padding: mobile ? '0 1rem' : 'initial',
               }}
             >
               <TabList sx={{

@@ -25,12 +25,10 @@ export default function Header() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!mobile) {
-        setVisitor((prev) => {
-          const nextIndex = (visitors.indexOf(prev) + 1) % visitors.length;
-          return visitors[nextIndex];
-        });
-      }
+      setVisitor((prev) => {
+        const nextIndex = (visitors.indexOf(prev) + 1) % visitors.length;
+        return visitors[nextIndex];
+      });
     }, 3000);
     return () => { clearInterval(interval); };
   }, [mobile]);
@@ -38,7 +36,20 @@ export default function Header() {
   return (
     <Stack
       gap="20px"
+      height="30rem"
       alignItems={mobile ? 'center' : 'flex-start'}
+      sx={(theme) => ({
+        position: 'relative',
+        '&::before': mobile ? {} : {
+          content: '""',
+          position: 'absolute',
+          top: 'calc(70px + 33px)',
+          left: '-50px',
+          height: 'calc(100% + 80px - 70px - 33px)',
+          width: '1.5px',
+          background: `linear-gradient(to bottom, ${theme.palette.primary[700]}, ${theme.palette.primary[400]})`,
+        },
+      })}
     >
       <Button
         size="lg"
@@ -63,6 +74,7 @@ export default function Header() {
           position: 'relative',
           borderRadius: '100px',
           width: 'fit-content',
+          height: '66px',
           padding: 1,
           paddingRight: 2,
           '&::before': mobile ? {} : {
@@ -93,21 +105,9 @@ export default function Header() {
         level={mobile ? 'h1' : 'display2'}
         fontWeight="md"
         display="flex"
+        justifyContent="center"
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
-        sx={(theme) => ({
-          position: 'relative',
-          justifyContent: mobile ? 'center' : 'flex-start',
-          '&::before': mobile ? {} : {
-            content: '""',
-            position: 'absolute',
-            top: '0',
-            left: '-50px',
-            height: 'calc(100% + 20px)',
-            width: '1px',
-            background: `linear-gradient(to bottom, ${theme.palette.primary[700]}, ${theme.palette.primary[600]})`,
-          },
-        })}
       >
         {greeting()}
         &nbsp;
@@ -121,19 +121,10 @@ export default function Header() {
       <Typography
         level="h4"
         textColor="text.tertiary"
-        sx={(theme) => ({
+        sx={{
           position: 'relative',
           textAlign: mobile ? 'center' : 'left',
-          '&::before': mobile ? {} : {
-            content: '""',
-            position: 'absolute',
-            top: '0',
-            left: '-50px',
-            height: 'calc(100% + 80px)',
-            width: '1px',
-            background: `linear-gradient(to bottom, ${theme.palette.primary[600]}, ${theme.palette.primary[400]})`,
-          },
-        })}
+        }}
       >
         The name&apos;s
         {' '}
