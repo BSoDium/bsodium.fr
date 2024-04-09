@@ -96,6 +96,9 @@ export default function Illustrations() {
           right: '20%',
           zIndex: -1,
           animation: 'float 20s ease-in-out infinite',
+          ...(mobile && {
+            filter: 'brightness(0.8)',
+          }),
         }}
       />
       <img
@@ -110,6 +113,9 @@ export default function Illustrations() {
           zIndex: -1,
           animation: 'float 20s ease-in-out infinite',
           animationDelay: '13s',
+          ...(mobile && {
+            filter: 'brightness(0.7)',
+          }),
         }}
       />
     </div>

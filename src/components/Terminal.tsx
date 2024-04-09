@@ -156,6 +156,7 @@ export default function Terminal() {
       <Parallax
         translateY={['100px', '0px']}
         opacity={[0, 1]}
+        disabled={mobile}
         easing="easeOutBack"
       >
         <Card
