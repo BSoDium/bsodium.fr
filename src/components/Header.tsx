@@ -77,6 +77,7 @@ export default function Header() {
           position: 'relative',
           borderRadius: '100px',
           width: 'fit-content',
+          backdropFilter: 'blur(5px)',
           flexShrink: 0,
           padding: 1,
           paddingRight: 2,
