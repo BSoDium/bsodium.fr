@@ -39,7 +39,7 @@ export default function Header() {
   return (
     <Stack
       gap="20px"
-      height={mobile ? '30rem' : '20rem'}
+      height="20rem"
       alignItems={mobile ? 'center' : 'flex-start'}
       sx={(theme) => ({
         position: 'relative',
@@ -105,10 +105,11 @@ export default function Header() {
         </Stack>
       </Button>
       <Typography
-        level={mobile ? 'h1' : 'display2'}
+        level={mobile ? 'h2' : 'display2'}
         fontWeight="md"
         display="flex"
         justifyContent={mobile ? 'center' : 'initial'}
+        textAlign={mobile ? 'center' : 'initial'}
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
       >
@@ -116,13 +117,12 @@ export default function Header() {
         &nbsp;
         <TypeWriter
           typeInterval={20}
-          sx={{ whiteSpace: 'nowrap' }}
         >
           {visitor}
         </TypeWriter>
       </Typography>
       <Typography
-        level="h4"
+        level={mobile ? 'h5' : 'h4'}
         textColor="text.tertiary"
         sx={{
           position: 'relative',
