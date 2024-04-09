@@ -44,7 +44,6 @@ function ProjectCard({
           paddingX: 1,
           paddingY: 0,
         }),
-        width: 'max(30%, 320px)',
         transition: 'all 0.3s ease',
         cursor: 'pointer',
         '&:hover': {
@@ -219,15 +218,15 @@ export default function Featured() {
       >
         <Box
           component={Stack}
-          direction="row"
           gap={3}
           sx={{
             width: '100%',
             display: 'flex',
+            flexDirection: mobile ? 'column' : 'row',
             flexWrap: 'wrap',
             '& > *': {
               flexGrow: 1,
-              minWidth: 'min(300px, 100%)',
+              width: mobile ? 'auto' : 'min(300px, 100%)',
             },
           }}
         >
