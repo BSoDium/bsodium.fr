@@ -499,9 +499,6 @@ function Reach({ step } : {step: number}) {
           sx={{
             display: 'flex',
             flexDirection: 'column',
-            background: 'linear-gradient(-45deg, var(--joy-palette-danger-400), var(--joy-palette-primary-400))',
-            '-webkit-background-clip': 'text',
-            '-webkit-text-fill-color': 'transparent',
           }}
         >
           Together.
@@ -532,8 +529,12 @@ function Reach({ step } : {step: number}) {
 export default function Goals() {
   const mobile = useMobileMode();
 
+  const animationDelay = 0.2;
+
   const [scrollingProgress, setScrollingProgress] = useState(0);
-  const animationStep = useMemo(() => Math.round(scrollingProgress * 5), [scrollingProgress]);
+  const animationStep = useMemo(() => Math.round(
+    Math.max(0, scrollingProgress - animationDelay) * (5 / (1 - animationDelay)),
+  ), [scrollingProgress]);
 
   return (
     <Parallax

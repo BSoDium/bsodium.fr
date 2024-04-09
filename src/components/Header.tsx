@@ -39,7 +39,7 @@ export default function Header() {
   return (
     <Stack
       gap="20px"
-      height="30rem"
+      height={mobile ? '30rem' : '20rem'}
       alignItems={mobile ? 'center' : 'flex-start'}
       sx={(theme) => ({
         position: 'relative',
@@ -77,7 +77,7 @@ export default function Header() {
           position: 'relative',
           borderRadius: '100px',
           width: 'fit-content',
-          height: '66px',
+          flexShrink: 0,
           padding: 1,
           paddingRight: 2,
           '&::before': mobile ? {} : {
