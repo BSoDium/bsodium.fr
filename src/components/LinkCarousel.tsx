@@ -45,8 +45,8 @@ export function Link({
       color="neutral"
       variant={variant || 'outlined'}
       startDecorator={
-              icon
-            }
+          icon
+        }
       sx={{
         transition: 'background-color 0.2s ease-in-out, color 0.2s ease-in-out',
         '&:hover': {

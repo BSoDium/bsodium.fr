@@ -6,12 +6,12 @@ import {
 import React, { useEffect, useState } from 'react';
 import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
 import {
-  FaCode, FaCodeBranch, FaStar,
+  FaCode, FaCodeBranch, FaGithub, FaStar,
 } from 'react-icons/fa';
-import { RxOpenInNewWindow } from 'react-icons/rx';
 import { Repository, getRepositories } from 'utils/Api';
 import colors from 'assets/colors.json';
 import { Parallax } from 'react-scroll-parallax';
+import { FiExternalLink } from 'react-icons/fi';
 import { Default, Mobile, useMobileMode } from './Responsive';
 
 /**
@@ -37,7 +37,7 @@ function ProjectCard({
       gap={2}
       p={3}
       justifyContent="space-between"
-      sx={{
+      sx={(theme) => ({
         ...(mobile && {
           background: 'transparent',
           border: 'none',
@@ -45,17 +45,20 @@ function ProjectCard({
           paddingY: 0,
         }),
         transition: 'all 0.3s ease',
-        cursor: 'pointer',
         '&:hover': {
-          boxShadow: '0 0 40px 5px rgba(0, 0, 0, 0.5)',
-          transform: 'scale(1.03)',
+          transform: 'translate(.6rem, -.6rem)',
+          transformOrigin: 'bottom left',
+          filter: `drop-shadow(-.3rem .3rem 0 ${theme.palette.info[700]}) drop-shadow(-.3rem .3rem 0 ${theme.palette.info[800]})`,
+          borderColor: theme.palette.info[500],
+          backgroundColor: theme.palette.info[900],
+          boxShadow: 'none',
           zIndex: 1,
         },
-      }}
+      })}
     >
       <Stack gap={2}>
         <Stack direction="row" alignItems="center" gap={2}>
-          <Avatar>
+          <Avatar color="info" variant="outlined">
             <BsJournalBookmark />
           </Avatar>
           <Stack>
@@ -113,8 +116,11 @@ function ProjectCard({
             sx={{
               flexShrink: 0,
             }}
+            startDecorator={
+              <FaGithub />
+            }
           >
-            Git Repository
+            Code
           </Button>
           {project.homepage && (
           <Button
@@ -123,11 +129,11 @@ function ProjectCard({
             variant="solid"
             href={project.homepage}
             target="_blank"
-            endDecorator={
-              <RxOpenInNewWindow />
+            startDecorator={
+              <FiExternalLink />
             }
           >
-            Visit
+            Website
           </Button>
           )}
         </Stack>
@@ -191,7 +197,15 @@ export default function Featured() {
             fontWeight="xl"
             endDecorator={(
               <Default>
-                <Chip variant="soft" color="info">
+                <Chip
+                  variant="soft"
+                  color="info"
+                  startDecorator={(
+                    <Avatar color="info" variant="outlined">
+                      <FaGithub size="1rem" />
+                    </Avatar>
+                )}
+                >
                   {projects.length}
                   {' '}
                   repositories

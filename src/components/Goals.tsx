@@ -4,9 +4,10 @@ import {
   Avatar, Box, Button, Card, Chip,
   Input, Sheet, Stack, Textarea, Typography,
 } from '@mui/joy';
+import robot from 'assets/robot_taking_notes.png';
 import { TbHeartHandshake } from 'react-icons/tb';
 import { ColorPaletteProp, SxProps } from '@mui/joy/styles/types';
-import { MdMail, MdOutlineRocketLaunch, MdSend } from 'react-icons/md';
+import { MdOutlineRocketLaunch, MdSend } from 'react-icons/md';
 import { HiOutlineSparkles } from 'react-icons/hi2';
 import { Parallax } from 'react-scroll-parallax';
 import { animated, useSpringValue } from '@react-spring/web';
@@ -118,12 +119,12 @@ function Cursor({ step } : {step: number}) {
     opacity: '1',
   }, {
     top: '76%',
-    left: '10%',
+    left: '15%',
     rotate: '0deg',
     opacity: '1',
   }, {
     top: '100%',
-    left: '20%',
+    left: '30%',
     rotate: '0deg',
     opacity: '0',
   }];
@@ -412,15 +413,13 @@ function Reach({ step } : {step: number}) {
         top.start('80%');
       }}
       sx={{
+        position: 'absolute',
+        left: 0,
         display: 'flex',
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
+        justifyContent: mobile ? 'center' : 'flex-start',
+        paddingX: mobile ? '0' : '5%',
         alignItems: 'center',
-        gap: 10,
-        left: 0,
-        overflow: 'hidden',
-        position: 'absolute',
         width: mobile ? 'calc(100% + 2rem)' : '100%',
         maxHeight: '27rem',
         marginX: mobile ? '-1rem' : 'auto',
@@ -492,35 +491,17 @@ function Reach({ step } : {step: number}) {
         </Stack>
       </Stack>
       <Default>
-        <Typography
-          level="display1"
-          fontWeight="300"
-          fontSize="7rem"
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
+        <img
+          src={robot}
+          alt="robot taking notes"
+          style={{
+            position: 'absolute',
+            top: '-5rem',
+            left: 'max(65%, 32rem)',
+            height: '30rem',
+            filter: 'drop-shadow(0 -1rem 20px #feffee37) brightness(0.8)',
           }}
-        >
-          Together.
-          <Typography
-            fontSize="3rem"
-          >
-            We can build the
-            {' '}
-            <Typography
-              color="danger"
-              fontWeight={600}
-              sx={{
-                background: 'initial',
-                '-webkit-background-clip': 'initial',
-                '-webkit-text-fill-color': 'initial',
-                filter: 'drop-shadow(0 0 30px var(--joy-palette-danger-600))',
-              }}
-            >
-              future.
-            </Typography>
-          </Typography>
-        </Typography>
+        />
       </Default>
     </Box>
   );

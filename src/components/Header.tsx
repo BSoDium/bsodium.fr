@@ -73,6 +73,17 @@ export default function Header() {
           },
           '&:hover': {
             boxShadow: `0 0 40px 5px ${theme.palette.primary[900]}`,
+            '& > span > svg': {
+              transform: 'translateX(.6rem) scale(1.2)',
+              filter: `drop-shadow(-.3rem 0 0 ${theme.palette.primary[300]}) drop-shadow(-.3rem 0 0 ${theme.palette.primary[400]})`,
+            },
+          },
+          '&:active > span > svg': {
+            transform: 'translateX(.6rem) scale(1.1)',
+            filter: `drop-shadow(-.3rem 0 0 ${theme.palette.primary[200]}) drop-shadow(-.3rem 0 0 ${theme.palette.primary[200]})`,
+          },
+          '& > span > svg': {
+            transition: 'all ease .2s',
           },
           position: 'relative',
           borderRadius: '100px',
