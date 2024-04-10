@@ -543,7 +543,7 @@ export default function Goals() {
     >
       <Stack
         sx={{
-          width: '100%', height: '1200px', position: 'relative', overflow: 'visible',
+          width: '100%', height: '1200px', position: 'relative',
         }}
         p="37px"
       >
@@ -611,8 +611,10 @@ export default function Goals() {
         <Stack
           component="div"
           sx={{
-            width: '100%',
+            width: mobile ? '100vw' : '100%',
             height: '100%',
+            margin: mobile ? '0 calc(-50vw + 50%)' : '0',
+            overflow: 'hidden',
           }}
         >
           <Board step={animationStep} />
