@@ -45,7 +45,7 @@ function ProjectCard({
           paddingY: 0,
         }),
         transition: 'all 0.3s ease',
-        '&:hover': {
+        '&:hover': mobile ? {} : {
           transform: 'translate(.6rem, -.6rem)',
           transformOrigin: 'bottom left',
           filter: `drop-shadow(-.3rem .3rem 0 ${theme.palette.info[700]}) drop-shadow(-.3rem .3rem 0 ${theme.palette.info[800]})`,
