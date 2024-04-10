@@ -217,7 +217,14 @@ export default function Featured() {
           </Typography>
         </Typography>
         <Mobile>
-          <Chip variant="soft" color="info">
+          <Chip
+            variant="soft"
+            color="info"
+            startDecorator={(
+              <Avatar color="info" variant="outlined">
+                <FaGithub size="1rem" />
+              </Avatar>
+        )}>
             {projects.length}
             {' '}
             repositories

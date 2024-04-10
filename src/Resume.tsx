@@ -62,14 +62,14 @@ export default function Resume() {
             width="100%"
             height="100%"
           >
-            <Stack component="header" gap={1}>
+            <Stack component="header" gap={0.5}>
               <Typography level="h2" fontWeight="xl">
                 Elliot Négrel-Jerzy
               </Typography>
               <Typography level="h6" fontWeight="lg" textColor="text.secondary">
                 Software Engineer
               </Typography>
-              <Typography level="body2">
+              <Typography level="body2" marginTop={0.5}>
                 Accomplished software developer with expertise in
                 various programming languages and technologies.
                 Dedicated to contributing to the development community

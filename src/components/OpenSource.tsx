@@ -119,7 +119,12 @@ export default function OpenSource() {
             </Typography>
             {' '}
             lay the foundation upon which the digital world we live in is built.
-            Any contribution, no matter how small, is and will always be appreciated.
+            Any
+            {' '}
+            <Typography textColor="text.primary">
+              contribution
+            </Typography>
+            , no matter how small, is and will always be appreciated.
           </Typography>
         </Stack>
         <Parallax

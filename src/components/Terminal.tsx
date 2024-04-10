@@ -28,7 +28,7 @@ import { FaPause, FaPlay } from 'react-icons/fa';
 import { RiUserLine } from 'react-icons/ri';
 import mockMessages from 'utils/Messages';
 import { Parallax } from 'react-scroll-parallax';
-import { Default, useMobileMode } from './Responsive';
+import { Default, Mobile, useMobileMode } from './Responsive';
 import Details from './Details';
 import TypeWriter from './TypeWriter';
 
@@ -109,6 +109,7 @@ export default function Terminal() {
   return (
     <Stack
       gap={3}
+      alignItems={mobile ? 'center' : 'flex-start'}
       sx={(theme) => ({
         position: 'relative',
         '&::before': mobile ? {} : {
@@ -117,11 +118,34 @@ export default function Terminal() {
           top: '0',
           left: '-50px',
           height: '100%',
-          width: '1px',
+          width: '1.5px',
           background: `linear-gradient(to bottom, ${theme.palette.primary[400]}, ${theme.palette.info[400]})`,
         },
       })}
     >
+      <Mobile>
+        <Avatar
+          color="primary"
+          sx={(theme) => ({
+            position: 'relative',
+            border: 'none',
+            outline: `1.5px solid ${theme.palette.primary[400]}`,
+            boxShadow: `0 0 40px 5px ${theme.palette.primary[700]}`,
+            overflow: 'visible',
+            marginTop: '3rem',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: '-5rem',
+              height: '5rem',
+              width: '1.5px',
+              background: `linear-gradient(to bottom, transparent, ${theme.palette.primary[400]})`,
+            },
+          })}
+        >
+          <RiUserLine />
+        </Avatar>
+      </Mobile>
       <Typography
         level="h2"
         sx={{ position: 'relative', textAlign: mobile ? 'center' : 'left' }}
@@ -143,6 +167,7 @@ export default function Terminal() {
             <RiUserLine />
           </Avatar>
         </Default>
+
         Profile
         {' '}
         <Typography

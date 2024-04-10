@@ -586,7 +586,11 @@ export default function Goals() {
             level="body1"
             textColor="text.secondary"
           >
-            Let&apos;s build products that people love. Together.
+            Let&apos;s build products that people love.
+            {' '}
+            <Typography textColor="text.primary" fontWeight="600">
+              Together.
+            </Typography>
           </Typography>
         </Stack>
         <Stack

@@ -17,12 +17,14 @@ export const visitors = [
   'collaborator',
   'fellow developer',
   'fellow human',
+  'visitor',
   'friend',
 ];
 
 export default function Header() {
   const mobile = useMobileMode();
   const [visitor, setVisitor] = useState(visitors[0]);
+  const [greetingLine, setGreetingLine] = useState(greeting());
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -30,6 +32,7 @@ export default function Header() {
         const nextIndex = (visitors.indexOf(prev) + 1) % visitors.length;
         return visitors[nextIndex];
       });
+      setGreetingLine(greeting());
     }, 3000);
     return () => { clearInterval(interval); };
   }, [mobile]);
@@ -126,12 +129,10 @@ export default function Header() {
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
       >
-        {greeting()}
-        &nbsp;
         <TypeWriter
           typeInterval={20}
         >
-          {visitor}
+          {`${greetingLine} ${visitor}`}
         </TypeWriter>
       </Typography>
       <Typography
