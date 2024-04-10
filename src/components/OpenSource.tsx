@@ -30,7 +30,7 @@ export default function OpenSource() {
       <Stack sx={{
         width: '100%',
         height: mobile ? '45rem' : '400px',
-        overflow: 'hidden',
+        // overflow: 'hidden',
       }}
       >
         <Stack
