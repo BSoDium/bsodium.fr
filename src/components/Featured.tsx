@@ -165,9 +165,33 @@ export default function Featured() {
       gap={3}
     >
       <Stack
-        gap={1}
+        gap={2}
         alignItems={mobile ? 'center' : 'flex-start'}
       >
+        <Mobile>
+          <Avatar
+            color="info"
+            sx={(theme) => ({
+              position: 'relative',
+              border: 'none',
+              outline: `1.5px solid ${theme.palette.info[400]}`,
+              boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
+              overflow: 'visible',
+              marginTop: '3rem',
+              marginBottom: '1rem',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: '-5rem',
+                height: '5rem',
+                width: '1.5px',
+                background: `linear-gradient(to bottom, transparent, ${theme.palette.info[400]})`,
+              },
+            })}
+          >
+            <BsJournalCode />
+          </Avatar>
+        </Mobile>
         <Typography
           level="h2"
           sx={{ position: 'relative', textAlign: mobile ? 'center' : 'left' }}
@@ -236,6 +260,7 @@ export default function Featured() {
         scale={[0.9, 1]}
         opacity={[0, 1]}
         easing="easeOutBack"
+        disabled={mobile}
       >
         <Box
           component={Stack}

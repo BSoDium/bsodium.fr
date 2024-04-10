@@ -12,7 +12,7 @@ import { HiOutlineSparkles } from 'react-icons/hi2';
 import { Parallax } from 'react-scroll-parallax';
 import { animated, useSpringValue } from '@react-spring/web';
 import { FaFire } from 'react-icons/fa';
-import { Default, useMobileMode } from './Responsive';
+import { Default, Mobile, useMobileMode } from './Responsive';
 
 function Grid({ sx }: {sx?: SxProps}) {
   return (
@@ -524,7 +524,10 @@ export default function Goals() {
     >
       <Stack
         sx={{
-          width: '100%', height: '1200px', position: 'relative',
+          width: '100%',
+          height: '1200px',
+          marginTop: mobile ? '10rem' : '0',
+          position: 'relative',
         }}
         p="37px"
       >
@@ -538,7 +541,7 @@ export default function Goals() {
             zIndex: 1,
             textAlign: mobile ? 'center' : 'right',
             ...(mobile ? {
-              top: '-7rem',
+              top: '-10rem',
               left: '50%',
               transform: 'translateX(-50%)',
               width: '100%',
@@ -550,6 +553,30 @@ export default function Goals() {
             }),
           }}
         >
+          <Mobile>
+            <Avatar
+              color="danger"
+              sx={(theme) => ({
+                position: 'relative',
+                border: 'none',
+                outline: `1.5px solid ${theme.palette.danger[400]}`,
+                boxShadow: `0 0 40px 5px ${theme.palette.danger[700]}`,
+                overflow: 'visible',
+                marginTop: '3rem',
+                marginBottom: '1rem',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-5rem',
+                  height: '5rem',
+                  width: '1.5px',
+                  background: `linear-gradient(to bottom, transparent, ${theme.palette.danger[400]})`,
+                },
+              })}
+            >
+              <TbHeartHandshake />
+            </Avatar>
+          </Mobile>
           <Typography
             level="h2"
             sx={{

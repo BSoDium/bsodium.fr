@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
 import vader from 'assets/vader.png';
 import { RiOpenSourceLine } from 'react-icons/ri';
 import { Parallax } from 'react-scroll-parallax';
-import { Default, useMobileMode } from './Responsive';
+import { Default, Mobile, useMobileMode } from './Responsive';
 
 export default function OpenSource() {
   const mobile = useMobileMode();
@@ -50,6 +50,29 @@ export default function OpenSource() {
             }),
           }}
         >
+          <Mobile>
+            <Avatar
+              color="success"
+              sx={(theme) => ({
+                position: 'relative',
+                border: 'none',
+                outline: `1.5px solid ${theme.palette.success[400]}`,
+                boxShadow: `0 0 40px 5px ${theme.palette.success[700]}`,
+                overflow: 'visible',
+                marginTop: '3rem',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-5rem',
+                  height: '5rem',
+                  width: '1.5px',
+                  background: `linear-gradient(to bottom, transparent, ${theme.palette.success[400]})`,
+                },
+              })}
+            >
+              <RiOpenSourceLine />
+            </Avatar>
+          </Mobile>
           <Typography
             level="h2"
             sx={{
@@ -136,7 +159,7 @@ export default function OpenSource() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginTop: '20rem',
+            marginTop: '25rem',
             zIndex: 1,
             animation: 'float 20s ease-in-out infinite',
           } : {

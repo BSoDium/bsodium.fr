@@ -10,7 +10,7 @@ import { FiMail, FiPhone } from 'react-icons/fi';
 import { SiResearchgate } from 'react-icons/si';
 import details from 'assets/Details';
 import LinkCarousel from './LinkCarousel';
-import { Default, useMobileMode } from './Responsive';
+import { Default, Mobile, useMobileMode } from './Responsive';
 
 export default function Contact() {
   const mobile = useMobileMode();
@@ -20,6 +20,29 @@ export default function Contact() {
       gap={3}
       sx={{ zIndex: 1, textAlign: mobile ? 'center' : 'left', alignItems: mobile ? 'center' : undefined }}
     >
+      <Mobile>
+        <Avatar
+          color="warning"
+          sx={(theme) => ({
+            position: 'relative',
+            border: 'none',
+            outline: `1.5px solid ${theme.palette.warning[400]}`,
+            boxShadow: `0 0 40px 5px ${theme.palette.warning[700]}`,
+            overflow: 'visible',
+            marginTop: '3rem',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: '-5rem',
+              height: '5rem',
+              width: '1.5px',
+              background: `linear-gradient(to bottom, transparent, ${theme.palette.warning[400]})`,
+            },
+          })}
+        >
+          <FiMail />
+        </Avatar>
+      </Mobile>
       <Typography level="h2" sx={{ position: 'relative' }} id="contact">
         <Default>
           <Avatar
