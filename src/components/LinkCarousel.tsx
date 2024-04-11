@@ -10,6 +10,12 @@ function getPalette(primaryColor: string): {
   color: string,
   backgroundColor: string,
   borderColor: string
+  shadow: {
+    1: string,
+    2: string,
+    3: string
+    4: string
+  }
 } {
   const color = Color(primaryColor);
   const hsl = color.hsl();
@@ -18,6 +24,12 @@ function getPalette(primaryColor: string): {
     color: hsl.lightness(90).hex(),
     backgroundColor: hsl.lightness(10).hex(),
     borderColor: hsl.lightness(20).hex(),
+    shadow: {
+      1: hsl.lightness(5).hex(),
+      2: hsl.lightness(10).hex(),
+      3: hsl.lightness(15).hex(),
+      4: hsl.lightness(20).hex(),
+    },
   };
 }
 
@@ -36,6 +48,8 @@ export function Link({
   color,
   variant,
 }: NonNullable<LinkProps>) {
+  const { shadow, ...css } = color ? getPalette(color) : { shadow: undefined };
+
   return (
     <Button
       component="a"
@@ -48,11 +62,12 @@ export function Link({
           icon
         }
       sx={{
-        transition: 'background-color 0.2s ease-in-out, color 0.2s ease-in-out',
-        '&:hover': {
-          ...(color && getPalette(color)
-          ),
-        },
+        transition: 'all 0.2s ease',
+        '&:hover': css && shadow ? {
+          ...css,
+          transform: 'translateY(-.8rem)',
+          filter: `drop-shadow(0 .2rem 0 ${shadow[4]}) drop-shadow(0 .2rem 0 ${shadow[3]}) drop-shadow(0 .2rem 0 ${shadow[2]}) drop-shadow(0 .2rem 0 ${shadow[1]})`,
+        } : undefined,
       }}
     >
       {title}
@@ -81,7 +96,7 @@ export default function LinkCarousel({
       gap={1}
       sx={{
         position: 'relative',
-        py: 1,
+        py: '.8rem',
         overflow: 'hidden',
         width: '100%',
         marginX: -5,
@@ -89,6 +104,7 @@ export default function LinkCarousel({
           position: 'absolute',
           content: '""',
           height: '100%',
+          top: 0,
           width: '25%',
           zIndex: 2,
           pointerEvents: 'none',
@@ -99,6 +115,7 @@ export default function LinkCarousel({
           content: '""',
           height: '100%',
           width: '25%',
+          top: 0,
           right: 0,
           zIndex: 2,
           pointerEvents: 'none',
