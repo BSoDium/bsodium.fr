@@ -183,6 +183,7 @@ export default function Terminal() {
         opacity={[0, 1]}
         disabled={mobile}
         easing="easeOutBack"
+        style={{ width: '100%' }}
       >
         <Card
           variant="outlined"
