@@ -99,7 +99,7 @@ export default function App() {
     <ParallaxProvider>
       <FixedMode mode="dark">
         <Title text="Elliot Négrel-Jerzy" />
-        <Parallax speed={-20} startScroll={0}>
+        <Parallax speed={-20} startScroll={0} disabled={mobile}>
           <Illustrations />
         </Parallax>
         <div

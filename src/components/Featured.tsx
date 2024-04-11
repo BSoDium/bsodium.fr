@@ -1,7 +1,7 @@
 /* eslint-disable no-bitwise */
 import {
   Avatar,
-  Box, Button, Card, Chip, CircularProgress, Divider, Stack, Typography,
+  Box, Button, Card, Chip, CircularProgress, ColorPaletteProp, Divider, Stack, Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
 import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
@@ -25,8 +25,10 @@ export function beautify(str: string) {
 
 function ProjectCard({
   project,
+  color = 'info',
 }: {
   project: Repository;
+  color?: ColorPaletteProp
 }) {
   const mobile = useMobileMode();
 
@@ -48,9 +50,9 @@ function ProjectCard({
         '&:hover': mobile ? {} : {
           transform: 'translate(.6rem, -.6rem)',
           transformOrigin: 'bottom left',
-          filter: `drop-shadow(-.3rem .3rem 0 ${theme.palette.info[700]}) drop-shadow(-.3rem .3rem 0 ${theme.palette.info[800]})`,
-          borderColor: theme.palette.info[500],
-          backgroundColor: theme.palette.info[900],
+          filter: `drop-shadow(-.3rem .3rem 0 ${theme.palette[color][700]}) drop-shadow(-.3rem .3rem 0 ${theme.palette[color][800]})`,
+          borderColor: theme.palette[color][500],
+          backgroundColor: theme.palette[color][900],
           boxShadow: 'none',
           zIndex: 1,
         },
@@ -58,7 +60,7 @@ function ProjectCard({
     >
       <Stack gap={2}>
         <Stack direction="row" alignItems="center" gap={2}>
-          <Avatar color="info" variant="outlined">
+          <Avatar color={color} variant="outlined">
             <BsJournalBookmark />
           </Avatar>
           <Stack>
@@ -110,7 +112,7 @@ function ProjectCard({
           <Button
             variant="plain"
             component="a"
-            color="info"
+            color={color}
             href={project.html_url}
             target="_blank"
             sx={{
@@ -125,7 +127,7 @@ function ProjectCard({
           {project.homepage && (
           <Button
             component="a"
-            color="info"
+            color={color}
             variant="solid"
             href={project.homepage}
             target="_blank"

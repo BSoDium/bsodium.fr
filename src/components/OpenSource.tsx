@@ -154,6 +154,7 @@ export default function OpenSource() {
           speed={10}
           opacity={[0.2, 1]}
           easing="ease"
+          disabled={mobile}
           style={mobile ? {
             position: 'relative',
             display: 'flex',
