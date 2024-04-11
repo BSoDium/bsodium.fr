@@ -76,6 +76,19 @@ export function Link({
             height: '.8rem',
           },
         } : undefined,
+        '&:active': css && shadow ? {
+          ...css,
+          transform: 'translateY(-.4rem)',
+          filter: `drop-shadow(0 .1rem 0 ${shadow[4]}) drop-shadow(0 .1rem 0 ${shadow[3]}) drop-shadow(0 .1rem 0 ${shadow[2]}) drop-shadow(0 .1rem 0 ${shadow[1]})`,
+          '&:after': {
+            content: '""',
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            width: '100%',
+            height: '.4rem',
+          },
+        } : undefined,
       }}
     >
       {title}

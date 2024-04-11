@@ -21,7 +21,7 @@ import { Default, Mobile, useMobileMode } from './Responsive';
  * @returns The beautified string
  */
 export function beautify(str: string) {
-  return str.replace(/-/g, ' ').replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+  return str.replace(/-/g, ' ').replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 }
 
 function ProjectCard({
