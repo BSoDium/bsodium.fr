@@ -499,7 +499,7 @@ function Reach({ step } : {step: number}) {
             top: '-5rem',
             left: 'max(65%, 32rem)',
             height: '30rem',
-            filter: 'drop-shadow(0 -1rem 20px #feffee37) brightness(0.8)',
+            filter: 'drop-shadow(0 -1rem 20px #feffee37) drop-shadow(3rem 5rem 40px var(--joy-palette-danger-900)) brightness(0.8)',
           }}
         />
       </Default>
