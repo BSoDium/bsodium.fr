@@ -12,6 +12,7 @@ import { Repository, getRepositories } from 'utils/Api';
 import colors from 'assets/colors.json';
 import { Parallax } from 'react-scroll-parallax';
 import { FiExternalLink } from 'react-icons/fi';
+import { RiBracesLine } from 'react-icons/ri';
 import { Default, Mobile, useMobileMode } from './Responsive';
 
 /**
@@ -119,7 +120,7 @@ function ProjectCard({
               flexShrink: 0,
             }}
             startDecorator={
-              <FaGithub />
+              <RiBracesLine />
             }
           >
             Code

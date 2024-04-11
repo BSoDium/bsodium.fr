@@ -38,10 +38,12 @@ export default function FixedMode({
   children,
   mode = 'system',
   root = true,
+  style,
 }: {
   children: React.ReactNode;
   mode?: 'light' | 'dark' | 'system';
   root?: boolean;
+  style?: React.CSSProperties;
 }) {
   // Clear the localStorage on first load
   useEffect(() => {
@@ -64,7 +66,7 @@ export default function FixedMode({
       defaultMode={mode === 'system' ? mode : undefined}
     >
       <CssBaseline disableColorScheme />
-      <div data-joy-color-scheme={mode !== 'system' ? mode : undefined}>
+      <div data-joy-color-scheme={mode !== 'system' ? mode : undefined} style={style}>
         {children}
       </div>
     </CssVarsProvider>

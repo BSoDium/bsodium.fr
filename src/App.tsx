@@ -97,7 +97,7 @@ export default function App() {
 
   return (
     <ParallaxProvider>
-      <FixedMode mode="dark">
+      <FixedMode mode="dark" style={{ overflow: 'hidden' }}>
         <Title text="Elliot Négrel-Jerzy" />
         <Parallax speed={-20} startScroll={0} disabled={mobile}>
           <Illustrations />
