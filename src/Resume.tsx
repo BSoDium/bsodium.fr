@@ -1,11 +1,10 @@
 import {
-  Avatar, Box, Chip, Divider, Stack, Typography,
+  Avatar, Box, Button, Chip, Divider, Stack, Textarea, Typography,
 } from '@mui/joy';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   RiBriefcaseLine,
   RiCompasses2Line,
-  RiContactsLine,
   RiSettings5Line,
 } from 'react-icons/ri';
 import { TbSchool } from 'react-icons/tb';
@@ -44,6 +43,10 @@ export function Languages() {
 
 export default function Resume() {
   const mobile = useMobileMode();
+
+  const [descriptionEditable, setDescriptionEditable] = useState(false);
+  const [descriptionContent, setDescriptionContent] = useState('Accomplished software developer with expertise in various programming languages and technologies. Dedicated to contributing to the development community through impactful open-source projects on GitHub. Proven ability to tackle challenging tasks and excel as a valuable team member.');
+
   return (
     <FixedMode mode="system">
       <Title text="Curriculum Vitae - Elliot Négrel-Jerzy" />
@@ -52,6 +55,7 @@ export default function Resume() {
         sx={{
           width: '100vw',
           height: '100vh',
+
         }}
       >
         <Box component="div" maxWidth="65em">
@@ -69,190 +73,202 @@ export default function Resume() {
               <Typography level="h6" fontWeight="lg" textColor="text.secondary">
                 Software Engineer
               </Typography>
-              <Typography level="body2" marginTop={0.5}>
-                Accomplished software developer with expertise in
-                various programming languages and technologies.
-                Dedicated to contributing to the development community
-                through impactful open-source projects on GitHub.
-                Proven ability to tackle challenging tasks and excel as a valuable team member.
-              </Typography>
+              {descriptionEditable ? (
+                <Stack gap={1.5}>
+                  <Textarea
+                    value={descriptionContent}
+                    onChange={(event) => {
+                      setDescriptionContent(event.target.value);
+                    }}
+                    sx={{
+                      padding: '.2rem .5rem',
+                      margin: '-.2rem -.5rem',
+                      marginTop: '.2rem',
+                      fontSize: 'var(--joy-fontSize-sm)',
+                    }}
+                  />
+                  <Stack direction="row" justifyContent="end">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setDescriptionEditable(false);
+                      }}
+                    >
+                      Save changes
+                    </Button>
+                  </Stack>
+                </Stack>
+              ) : (
+                <Typography
+                  component="div"
+                  role="textbox"
+                  onClick={() => {
+                    setDescriptionEditable(true);
+                  }}
+                  level="body2"
+                  sx={{
+                    position: 'relative',
+                    borderRadius: '.5rem',
+                    padding: '.2rem .5rem',
+                    margin: '-.2rem -.5rem',
+                    marginTop: '.2rem',
+                    outline: '1px solid transparent',
+                    transition: 'all ease .2s',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      outlineColor: 'var(--joy-palette-divider)',
+                    },
+                  }}
+                >
+                  {descriptionContent}
+                </Typography>
+              )}
             </Stack>
             <Box
               component="section"
               sx={{
                 gap: 3,
-                ...(mobile
-                  ? {
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }
-                  : {
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 2fr',
-                  }),
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              <Stack
-                gap={3}
-                sx={{
-                  gridColumn: '1 / 2',
-                }}
-              >
-                <Stack gap={1}>
-                  <Typography
-                    level="h6"
-                    fontWeight="lg"
-                    startDecorator={(
-                      <Avatar size="sm">
-                        <RiContactsLine />
-                      </Avatar>
-                    )}
-                  >
-                    Contact
-                  </Typography>
-                  <Divider />
-                  <Stack gap={1}>
-                    {['address', 'email', 'phone', 'linkedin', 'github'].map(
-                      (key) => {
-                        const value = details.contact[
+              <Stack direction="row" flexWrap="wrap" columnGap={2} rowGap={1}>
+                {[
+                  { key: 'address', label: 'Address' },
+                  { key: 'email', label: 'Email' },
+                  { key: 'phone', label: 'Phone' },
+                  { key: 'website', label: 'Website' },
+                ].map(
+                  ({ key, label }) => {
+                    const value = details.contact[
                           key as keyof typeof details.contact
-                        ];
-                        const isUrl = value.startsWith('http');
-                        return (
-                          <Stack key={key}>
-                            <Typography
-                              level="body2"
-                              fontWeight="bold"
-                              textTransform="capitalize"
-                              sx={{
-                                width: '100px',
-                              }}
-                            >
-                              {key}
-                            </Typography>
-                            {isUrl ? (
-                              <Typography
-                                component="a"
-                                level="body2"
-                                href={value}
-                                target="_blank"
-                                sx={{
-                                  wordBreak: 'break-word',
-                                  textDecoration: 'none',
-                                  '&:hover': {
-                                    textDecoration: 'underline',
-                                  },
-                                }}
-                              >
-                                {value}
-                              </Typography>
-                            ) : (
-                              <Typography
-                                level="body2"
-                                sx={{
-                                  wordBreak: 'break-word',
-                                }}
-                              >
-                                {value}
-                              </Typography>
-                            )}
-                          </Stack>
-                        );
-                      },
+                    ];
+                    const isUrl = value.startsWith('http');
+                    return (
+                      <Stack key={key}>
+                        <Typography
+                          level="body2"
+                          fontWeight="bold"
+                          textTransform="capitalize"
+                        >
+                          {label}
+                        </Typography>
+                        {isUrl ? (
+                          <Typography
+                            component="a"
+                            level="body2"
+                            href={value}
+                            target="_blank"
+                            sx={{
+                              wordBreak: 'break-word',
+                              textDecoration: 'none',
+                              '&:hover': {
+                                textDecoration: 'underline',
+                              },
+                            }}
+                          >
+                            {value}
+                          </Typography>
+                        ) : (
+                          <Typography
+                            level="body2"
+                            sx={{
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {value}
+                          </Typography>
+                        )}
+                      </Stack>
+                    );
+                  },
+                )}
+              </Stack>
+              <Stack gap={1}>
+                <Typography
+                  level="h6"
+                  fontWeight="lg"
+                  startDecorator={(
+                    <Avatar size="sm">
+                      <RiBriefcaseLine />
+                    </Avatar>
                     )}
-                  </Stack>
-                </Stack>
+                >
+                  Experience
+                </Typography>
+                <Divider />
+                <Experience />
+              </Stack>
+
+              <Stack gap={1}>
+                <Typography
+                  level="h6"
+                  fontWeight="lg"
+                  startDecorator={(
+                    <Avatar size="sm">
+                      <TbSchool />
+                    </Avatar>
+                    )}
+                >
+                  Education
+                </Typography>
+                <Divider />
                 <Stack gap={1}>
-                  <Typography
-                    level="h6"
-                    fontWeight="lg"
-                    startDecorator={(
-                      <Avatar size="sm">
-                        <RiSettings5Line />
-                      </Avatar>
-                    )}
-                  >
-                    Technical skills
-                  </Typography>
-                  <Divider />
-                  <Stack gap={1}>
-                    <Skills include={['languages', 'frameworks', 'tools']} />
-                  </Stack>
-                </Stack>
-                <div className="pagebreak" />
-                <Stack gap={1}>
-                  <Typography
-                    level="h6"
-                    fontWeight="lg"
-                    startDecorator={(
-                      <Avatar size="sm">
-                        <RiCompasses2Line />
-                      </Avatar>
-                    )}
-                  >
-                    Competencies
-                  </Typography>
-                  <Divider />
-                  <Stack gap={1}>
-                    <Skills include={['others']} />
-                  </Stack>
+                  <Education />
                 </Stack>
               </Stack>
-              <Stack
-                gap={3}
-                sx={{
-                  gridColumn: '2 / 3',
-                }}
-              >
-                <Stack gap={1}>
-                  <Typography
-                    level="h6"
-                    fontWeight="lg"
-                    startDecorator={(
-                      <Avatar size="sm">
-                        <RiBriefcaseLine />
-                      </Avatar>
+
+              <Stack gap={1}>
+                <Typography
+                  level="h6"
+                  fontWeight="lg"
+                  startDecorator={(
+                    <Avatar size="sm">
+                      <RiSettings5Line />
+                    </Avatar>
                     )}
-                  >
-                    Work history
-                  </Typography>
-                  <Divider />
-                  <Experience />
+                >
+                  Technical skills
+                </Typography>
+                <Divider />
+                <Stack gap={1}>
+                  <Skills include={['languages', 'frameworks', 'tools']} />
                 </Stack>
-                <div className="pagebreak" />
-                <Stack gap={1}>
-                  <Typography
-                    level="h6"
-                    fontWeight="lg"
-                    startDecorator={(
-                      <Avatar size="sm">
-                        <TbSchool />
-                      </Avatar>
+              </Stack>
+
+              <Stack gap={1}>
+                <Typography
+                  level="h6"
+                  fontWeight="lg"
+                  startDecorator={(
+                    <Avatar size="sm">
+                      <RiCompasses2Line />
+                    </Avatar>
                     )}
-                  >
-                    Education
-                  </Typography>
-                  <Divider />
-                  <Stack gap={1}>
-                    <Education />
-                  </Stack>
+                >
+                  Competencies
+                </Typography>
+                <Divider />
+                <Stack gap={1}>
+                  <Skills include={['others']} />
                 </Stack>
-                <Stack gap={1}>
-                  <Typography
-                    level="h6"
-                    fontWeight="lg"
-                    startDecorator={(
-                      <Avatar size="sm">
-                        <IoLanguage />
-                      </Avatar>
+              </Stack>
+
+              <Stack gap={1}>
+                <Typography
+                  level="h6"
+                  fontWeight="lg"
+                  startDecorator={(
+                    <Avatar size="sm">
+                      <IoLanguage />
+                    </Avatar>
                     )}
-                  >
-                    Languages
-                  </Typography>
-                  <Divider />
-                  <Stack gap={1}>
-                    <Languages />
-                  </Stack>
+                >
+                  Languages
+                </Typography>
+                <Divider />
+                <Stack gap={1}>
+                  <Languages />
                 </Stack>
               </Stack>
             </Box>

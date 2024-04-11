@@ -148,7 +148,7 @@ export function Experience() {
         >
           <Avatar
             color="neutral"
-            variant="solid"
+            variant="outlined"
             size="lg"
             src={items[0].icon}
             sx={(theme) => ({
