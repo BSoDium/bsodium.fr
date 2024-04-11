@@ -56,6 +56,22 @@ function ProjectCard({
           backgroundColor: theme.palette[color][900],
           boxShadow: 'none',
           zIndex: 1,
+          '&:before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            right: '100%',
+            width: '.6rem',
+            height: '100%',
+          },
+          '&:after': {
+            content: '""',
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            width: '100%',
+            height: '.6rem',
+          },
         },
       })}
     >
