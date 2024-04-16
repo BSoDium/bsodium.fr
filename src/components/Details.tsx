@@ -5,7 +5,7 @@ import moment from 'moment';
 import React, { useEffect } from 'react';
 import { BsCode } from 'react-icons/bs';
 import { FiPackage } from 'react-icons/fi';
-import { HiExternalLink, HiOutlineOfficeBuilding } from 'react-icons/hi';
+import { HiOutlineOfficeBuilding } from 'react-icons/hi';
 import { IoSchoolOutline } from 'react-icons/io5';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
@@ -50,7 +50,6 @@ export function Education({ wrap } : {wrap?: boolean} = { wrap: false }) {
                     href={item.url}
                     textColor="inherit"
                     target="_blank"
-                    endDecorator={<HiExternalLink />}
                     sx={{
                       textDecoration: 'none',
                       '&:hover': {
@@ -197,7 +196,7 @@ export function Experience() {
                     {item.location}
                   </Typography>
                   )}
-                  <Stack direction="row" alignItems="start" flexWrap="wrap" gap={1}>
+                  <Stack direction="row" alignItems="start" flexWrap="wrap" gap={1} paddingY={0.5}>
                     {item.skills.map((skill) => (
                       <Chip
                         variant="outlined"
