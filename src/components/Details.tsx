@@ -5,12 +5,12 @@ import moment from 'moment';
 import React, { useEffect } from 'react';
 import { BsCode } from 'react-icons/bs';
 import { FiPackage } from 'react-icons/fi';
-import { HiOutlineOfficeBuilding } from 'react-icons/hi';
-import { IoSchoolOutline } from 'react-icons/io5';
+import { GoOrganization } from 'react-icons/go';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
 import details from 'assets/Details';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
+import { IoSchoolOutline } from 'react-icons/io5';
 import { Category } from './Terminal';
 
 export const skillIcons: {
@@ -25,61 +25,54 @@ export const skillIcons: {
 export function Education({ wrap } : {wrap?: boolean} = { wrap: false }) {
   return (
     <Stack direction={wrap ? 'row' : 'column'} flexWrap="wrap" justifyContent="space-between" gap={2} p={1}>
-      {details.education.map((item) => {
-        const startDate = moment(item.start, 'MMM YYYY').toDate();
-        const endDate = moment(item.end, 'MMM YYYY').toDate();
-        const duration = moment.duration(endDate.getTime() - startDate.getTime()).humanize();
-        return (
-          <Stack direction="row" gap={1.5} key={`${item.school}-${item.major}-${item.start}-${item.end}`}>
-            <Avatar
-              color="neutral"
-              variant="solid"
-              size="lg"
-              src={item.icon}
-              sx={(theme) => ({
-                borderRadius: theme.getCssVar('radius-md'),
-              })}
-            >
-              <IoSchoolOutline />
-            </Avatar>
-            <Stack>
-              <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
-                {item.url ? (
-                  <Typography
-                    component="a"
-                    href={item.url}
-                    textColor="inherit"
-                    target="_blank"
-                    sx={{
-                      textDecoration: 'none',
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
-                    }}
-                  >
-                    {item.school}
-                  </Typography>
-                ) : item.school }
-                <Typography level="body2" component="span" textColor="text.secondary">
-                  {item.start}
-                  {' '}
-                  -
-                  {' '}
-                  {item.end}
-                  <Typography textColor="text.tertiary">
-                    {` (${duration})`}
-                  </Typography>
+      {details.education.map((item) => (
+        <Stack direction="row" gap={1.5} key={`${item.school}-${item.major}-${item.start}-${item.end}`}>
+          <Avatar
+            color="neutral"
+            variant="soft"
+            size="lg"
+            src={item.icon}
+            sx={(theme) => ({
+              borderRadius: theme.getCssVar('radius-md'),
+              border: `1px solid ${theme.getCssVar('palette-divider')}`,
+            })}
+          >
+            <IoSchoolOutline />
+          </Avatar>
+          <Stack>
+            <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
+              {item.url ? (
+                <Typography
+                  component="a"
+                  href={item.url}
+                  textColor="inherit"
+                  target="_blank"
+                  sx={{
+                    textDecoration: 'none',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  {item.school}
                 </Typography>
+              ) : item.school }
+              <Typography level="body2" component="span" textColor="text.secondary">
+                {item.start}
+                {' '}
+                -
+                {' '}
+                {item.end}
               </Typography>
-              <Typography level="body2">
-                {item.degree}
-                {' - '}
-                {item.major}
-              </Typography>
-            </Stack>
+            </Typography>
+            <Typography level="body2">
+              {item.degree}
+              {' - '}
+              {item.major}
+            </Typography>
           </Stack>
-        );
-      })}
+        </Stack>
+      ))}
     </Stack>
   );
 }
@@ -102,14 +95,15 @@ export function Experience() {
         >
           <Avatar
             color="neutral"
-            variant="outlined"
+            variant="soft"
             size="lg"
             src={items[0].icon}
             sx={(theme) => ({
               borderRadius: theme.getCssVar('radius-md'),
+              border: `1px solid ${theme.getCssVar('palette-divider')}`,
             })}
           >
-            <HiOutlineOfficeBuilding />
+            <GoOrganization />
           </Avatar>
           <Stack
             gap={2}

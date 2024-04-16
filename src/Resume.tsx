@@ -1,7 +1,8 @@
+/* eslint-disable react/no-danger */
 import {
   Avatar, Box, Button, Chip, ColorPaletteProp, Divider, Stack, Textarea, Typography,
 } from '@mui/joy';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   RiBriefcaseLine,
 } from 'react-icons/ri';
@@ -12,6 +13,7 @@ import FixedMode from 'components/FixedMode';
 import { Education, Experience } from 'components/Details';
 import Title from 'components/Title';
 import { useMobileMode } from 'components/Responsive';
+import { marked } from 'marked';
 
 export function Languages() {
   const color = (level: string): ColorPaletteProp => {
@@ -21,7 +23,7 @@ export function Languages() {
       case 'B1':
         return 'neutral';
       case 'B2':
-        return 'danger';
+        return 'info';
       case 'C1':
         return 'primary';
       case 'C2':
@@ -41,6 +43,7 @@ export function Languages() {
           variant="outlined"
           startDecorator={(
             <Avatar
+              alt={language.name}
               color={color(language.level)}
               variant="solid"
               size="sm"
@@ -60,7 +63,11 @@ export default function Resume() {
   const mobile = useMobileMode();
 
   const [descriptionEditable, setDescriptionEditable] = useState(false);
-  const [descriptionContent, setDescriptionContent] = useState('Leveraging expertise in various programming languages and technologies, I build impactful open-source projects on GitHub and contribute to the development community. Proven ability to tackle challenging tasks and excel as a valuable team member ensures I deliver results and become a force multiplier for your development team.');
+  const [descriptionContent, setDescriptionContent] = useState('Skilled **full-stack developer** with expertise in diverse programming languages and frameworks. Proven ability to deliver impactful projects on GitHub, fostering a **collaborative environment**. Adept at tackling **complex challenges** and thriving in team settings. Seeking to leverage skills in a dynamic role.');
+  const parsedDescriptionContent = useMemo(
+    () => (marked.parse(descriptionContent) as string).replace(/<p>/g, '').replace(/<\/p>/g, ''),
+    [descriptionContent],
+  );
 
   return (
     <FixedMode mode="system">
@@ -135,7 +142,7 @@ export default function Resume() {
                     },
                   }}
                 >
-                  {descriptionContent}
+                  <div dangerouslySetInnerHTML={{ __html: parsedDescriptionContent }} />
                 </Typography>
               )}
             </Stack>

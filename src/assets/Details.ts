@@ -1,10 +1,10 @@
 import escape from 'assets/icons/escape.png';
 import aau from 'assets/icons/aau.jpg';
-import akanthas from 'assets/icons/akanthas.jpg';
+import akanthas from 'assets/icons/akanthas.png';
 import enseeiht from 'assets/icons/enseeiht.png';
 import kanop from 'assets/icons/kanop.png';
 import lfdc from 'assets/icons/lfdc.png';
-import supadm from 'assets/icons/supadm.jpg';
+import supadm from 'assets/icons/supadm.png';
 
 const details = {
   education: [
@@ -24,7 +24,7 @@ const details = {
       icon: aau,
       location: 'Klagenfurt, Austria',
       degree: 'Master',
-      major: 'Computer Science',
+      major: 'Computer Graphics and Vision',
       start: 'Sep 2022',
       end: 'Mar 2023',
     },
@@ -141,6 +141,11 @@ const details = {
   ],
   languages: [
     {
+      name: 'French',
+      level: 'C2',
+      native: true,
+    },
+    {
       name: 'English',
       level: 'C1',
     },
@@ -155,11 +160,6 @@ const details = {
     {
       name: 'German',
       level: 'B1',
-    },
-    {
-      name: 'French',
-      level: 'C2',
-      native: true,
     },
   ],
   contact: {
