@@ -22,9 +22,9 @@ export const skillIcons: {
   others: <TbCircleDashed />,
 };
 
-export function Education() {
+export function Education({ wrap } : {wrap?: boolean} = { wrap: false }) {
   return (
-    <Stack direction="row" flexWrap="wrap" justifyContent="space-between" gap={2} p={1}>
+    <Stack direction={wrap ? 'row' : 'column'} flexWrap="wrap" justifyContent="space-between" gap={2} p={1}>
       {details.education.map((item) => {
         const startDate = moment(item.start, 'MMM YYYY').toDate();
         const endDate = moment(item.end, 'MMM YYYY').toDate();
@@ -81,32 +81,6 @@ export function Education() {
           </Stack>
         );
       })}
-    </Stack>
-  );
-}
-
-export function Skills({
-  include,
-}: {
-  /** The indices of the experience items whose skills should be included. */
-  include?: number[];
-}) {
-  const displayedSkills = [...new Set(include
-    ? include.flatMap((i) => details.experience[i].skills)
-    : details.experience.flatMap((exp) => exp.skills))];
-
-  return (
-    <Stack direction="row" alignItems="start" flexWrap="wrap" gap={1}>
-      {displayedSkills.map((skill) => (
-        <Chip
-          variant="outlined"
-          color="neutral"
-          size="sm"
-          key={skill}
-        >
-          {skill}
-        </Chip>
-      ))}
     </Stack>
   );
 }
@@ -226,7 +200,7 @@ export function Experience() {
                   <Stack direction="row" alignItems="start" flexWrap="wrap" gap={1}>
                     {item.skills.map((skill) => (
                       <Chip
-                        variant="soft"
+                        variant="outlined"
                         color="neutral"
                         size="sm"
                         key={skill}
@@ -286,12 +260,6 @@ export default function Details({
             return (
               <animated.div style={style}>
                 <Education />
-              </animated.div>
-            );
-          case 'skills':
-            return (
-              <animated.div style={style}>
-                <Skills />
               </animated.div>
             );
           case 'experience':

@@ -60,7 +60,7 @@ export default function Resume() {
   const mobile = useMobileMode();
 
   const [descriptionEditable, setDescriptionEditable] = useState(false);
-  const [descriptionContent, setDescriptionContent] = useState('Dedicated software developer with expertise in various programming languages and technologies. Dedicated to contributing to the development community through impactful open-source projects on GitHub. Proven ability to tackle challenging tasks and excel as a valuable team member.');
+  const [descriptionContent, setDescriptionContent] = useState('Leveraging expertise in various programming languages and technologies, I build impactful open-source projects on GitHub and contribute to the development community. Proven ability to tackle challenging tasks and excel as a valuable team member ensures I deliver results and become a force multiplier for your development team.');
 
   return (
     <FixedMode mode="system">
@@ -229,7 +229,7 @@ export default function Resume() {
                 </Typography>
                 <Divider />
                 <Stack gap={1}>
-                  <Education />
+                  <Education wrap />
                 </Stack>
               </Stack>
 
