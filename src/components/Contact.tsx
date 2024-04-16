@@ -22,6 +22,7 @@ export default function Contact() {
     >
       <Mobile>
         <Avatar
+          alt="Email"
           color="warning"
           sx={(theme) => ({
             position: 'relative',
@@ -46,6 +47,7 @@ export default function Contact() {
       <Typography level="h2" sx={{ position: 'relative' }} id="contact">
         <Default>
           <Avatar
+            alt="Email"
             color="warning"
             sx={(theme) => ({
               position: 'absolute',

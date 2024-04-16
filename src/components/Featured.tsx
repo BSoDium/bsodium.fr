@@ -77,7 +77,11 @@ function ProjectCard({
     >
       <Stack gap={2}>
         <Stack direction="row" alignItems="center" gap={2}>
-          <Avatar color={color} variant="outlined">
+          <Avatar
+            alt={project.name}
+            color={color}
+            variant="outlined"
+          >
             <BsJournalBookmark />
           </Avatar>
           <Stack>
@@ -189,6 +193,7 @@ export default function Featured() {
       >
         <Mobile>
           <Avatar
+            alt="Featured"
             color="info"
             sx={(theme) => ({
               position: 'relative',
@@ -218,6 +223,7 @@ export default function Featured() {
         >
           <Default>
             <Avatar
+              alt="Featured"
               color="info"
               sx={(theme) => ({
                 position: 'absolute',
@@ -244,7 +250,11 @@ export default function Featured() {
                   variant="soft"
                   color="info"
                   startDecorator={(
-                    <Avatar color="info" variant="outlined">
+                    <Avatar
+                      alt="GitHub"
+                      color="info"
+                      variant="outlined"
+                    >
                       <FaGithub size="1rem" />
                     </Avatar>
                 )}
@@ -264,7 +274,11 @@ export default function Featured() {
             variant="soft"
             color="info"
             startDecorator={(
-              <Avatar color="info" variant="outlined">
+              <Avatar
+                alt="GitHub"
+                color="info"
+                variant="outlined"
+              >
                 <FaGithub size="1rem" />
               </Avatar>
         )}>

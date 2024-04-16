@@ -28,6 +28,7 @@ export function Education({ wrap } : {wrap?: boolean} = { wrap: false }) {
       {details.education.map((item) => (
         <Stack direction="row" gap={1.5} key={`${item.school}-${item.major}-${item.start}-${item.end}`}>
           <Avatar
+            alt={item.school}
             color="neutral"
             variant="soft"
             size="lg"
@@ -94,6 +95,7 @@ export function Experience() {
           key={`${items[0].company}-${Math.random()}}`}
         >
           <Avatar
+            alt={items[0].company}
             color="neutral"
             variant="soft"
             size="lg"

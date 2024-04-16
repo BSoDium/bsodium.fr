@@ -67,7 +67,12 @@ function Comment({ step } : {step: number}) {
         opacity,
       }}
     >
-      <Avatar color="primary" variant="solid" size="sm">
+      <Avatar
+        alt="Michael"
+        color="primary"
+        variant="solid"
+        size="sm"
+      >
         M
       </Avatar>
       <Stack>
@@ -336,6 +341,7 @@ function Board({ step } : {step: number}) {
       >
         <Stack direction="row" gap={1}>
           <Avatar
+            alt="Innovate"
             size="lg"
             sx={{
               fontSize: '1.5rem',

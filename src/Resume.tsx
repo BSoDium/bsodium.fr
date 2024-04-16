@@ -211,7 +211,7 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={(
-                    <Avatar size="sm">
+                    <Avatar size="sm" alt="Work experience">
                       <RiBriefcaseLine />
                     </Avatar>
                     )}
@@ -227,7 +227,7 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={(
-                    <Avatar size="sm">
+                    <Avatar size="sm" alt="Education">
                       <TbSchool />
                     </Avatar>
                     )}
@@ -245,7 +245,7 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={(
-                    <Avatar size="sm">
+                    <Avatar size="sm" alt="Languages">
                       <IoLanguage />
                     </Avatar>
                     )}
