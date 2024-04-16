@@ -1,32 +1,47 @@
 import {
-  Avatar, Box, Button, Chip, Divider, Stack, Textarea, Typography,
+  Avatar, Box, Button, Chip, ColorPaletteProp, Divider, Stack, Textarea, Typography,
 } from '@mui/joy';
 import React, { useState } from 'react';
 import {
   RiBriefcaseLine,
-  RiCompasses2Line,
-  RiSettings5Line,
 } from 'react-icons/ri';
 import { TbSchool } from 'react-icons/tb';
 import { IoLanguage } from 'react-icons/io5';
 import details from 'assets/Details';
 import FixedMode from 'components/FixedMode';
-import { Education, Experience, Skills } from 'components/Details';
+import { Education, Experience } from 'components/Details';
 import Title from 'components/Title';
 import { useMobileMode } from 'components/Responsive';
 
 export function Languages() {
+  const color = (level: string): ColorPaletteProp => {
+    switch (level) {
+      case 'A1':
+      case 'A2':
+      case 'B1':
+        return 'neutral';
+      case 'B2':
+        return 'danger';
+      case 'C1':
+        return 'primary';
+      case 'C2':
+        return 'success';
+      default:
+        return 'info';
+    }
+  };
+
   return (
     <Stack direction="row" flexWrap="wrap" gap={2} p={1}>
       {details.languages.map((language) => (
         <Chip
           size="lg"
           key={language.name}
-          color={language.native ? 'primary' : 'info'}
-          variant="soft"
+          color={color(language.level)}
+          variant="outlined"
           startDecorator={(
             <Avatar
-              color={language.native ? 'primary' : 'info'}
+              color={color(language.level)}
               variant="solid"
               size="sm"
             >
@@ -45,7 +60,7 @@ export default function Resume() {
   const mobile = useMobileMode();
 
   const [descriptionEditable, setDescriptionEditable] = useState(false);
-  const [descriptionContent, setDescriptionContent] = useState('Accomplished software developer with expertise in various programming languages and technologies. Dedicated to contributing to the development community through impactful open-source projects on GitHub. Proven ability to tackle challenging tasks and excel as a valuable team member.');
+  const [descriptionContent, setDescriptionContent] = useState('Leveraging expertise in various programming languages and technologies, I build impactful open-source projects on GitHub and contribute to the development community. Proven ability to tackle challenging tasks and excel as a valuable team member ensures I deliver results and become a force multiplier for your development team.');
 
   return (
     <FixedMode mode="system">
@@ -66,11 +81,11 @@ export default function Resume() {
             width="100%"
             height="100%"
           >
-            <Stack component="header" gap={0.5}>
+            <Stack component="header" gap={0}>
               <Typography level="h2" fontWeight="xl">
                 Elliot Négrel-Jerzy
               </Typography>
-              <Typography level="h6" fontWeight="lg" textColor="text.secondary">
+              <Typography level="h6" fontWeight="lg" textColor="text.secondary" marginBottom={0.5}>
                 Software Engineer
               </Typography>
               {descriptionEditable ? (
@@ -194,7 +209,7 @@ export default function Resume() {
                     </Avatar>
                     )}
                 >
-                  Experience
+                  Work experience
                 </Typography>
                 <Divider />
                 <Experience />
@@ -214,43 +229,7 @@ export default function Resume() {
                 </Typography>
                 <Divider />
                 <Stack gap={1}>
-                  <Education />
-                </Stack>
-              </Stack>
-
-              <Stack gap={1}>
-                <Typography
-                  level="h6"
-                  fontWeight="lg"
-                  startDecorator={(
-                    <Avatar size="sm">
-                      <RiSettings5Line />
-                    </Avatar>
-                    )}
-                >
-                  Technical skills
-                </Typography>
-                <Divider />
-                <Stack gap={1}>
-                  <Skills include={['languages', 'frameworks', 'tools']} />
-                </Stack>
-              </Stack>
-
-              <Stack gap={1}>
-                <Typography
-                  level="h6"
-                  fontWeight="lg"
-                  startDecorator={(
-                    <Avatar size="sm">
-                      <RiCompasses2Line />
-                    </Avatar>
-                    )}
-                >
-                  Competencies
-                </Typography>
-                <Divider />
-                <Stack gap={1}>
-                  <Skills include={['others']} />
+                  <Education wrap />
                 </Stack>
               </Stack>
 

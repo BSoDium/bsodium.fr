@@ -477,7 +477,7 @@ function Reach({ step } : {step: number}) {
               <FaFire />
         )}
           >
-            Get rickrolled
+            Surprise me
           </Button>
           <Button
             type="submit"
