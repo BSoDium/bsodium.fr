@@ -23,7 +23,7 @@ export function Languages() {
           size="lg"
           key={language.name}
           color={language.native ? 'primary' : 'info'}
-          variant="soft"
+          variant="outlined"
           startDecorator={(
             <Avatar
               color={language.native ? 'primary' : 'info'}
@@ -45,7 +45,7 @@ export default function Resume() {
   const mobile = useMobileMode();
 
   const [descriptionEditable, setDescriptionEditable] = useState(false);
-  const [descriptionContent, setDescriptionContent] = useState('Accomplished software developer with expertise in various programming languages and technologies. Dedicated to contributing to the development community through impactful open-source projects on GitHub. Proven ability to tackle challenging tasks and excel as a valuable team member.');
+  const [descriptionContent, setDescriptionContent] = useState('Dedicated software developer with expertise in various programming languages and technologies. Dedicated to contributing to the development community through impactful open-source projects on GitHub. Proven ability to tackle challenging tasks and excel as a valuable team member.');
 
   return (
     <FixedMode mode="system">
@@ -194,7 +194,7 @@ export default function Resume() {
                     </Avatar>
                     )}
                 >
-                  Experience
+                  Work experience
                 </Typography>
                 <Divider />
                 <Experience />
@@ -215,6 +215,24 @@ export default function Resume() {
                 <Divider />
                 <Stack gap={1}>
                   <Education />
+                </Stack>
+              </Stack>
+
+              <Stack gap={1}>
+                <Typography
+                  level="h6"
+                  fontWeight="lg"
+                  startDecorator={(
+                    <Avatar size="sm">
+                      <IoLanguage />
+                    </Avatar>
+                    )}
+                >
+                  Languages
+                </Typography>
+                <Divider />
+                <Stack gap={1}>
+                  <Languages />
                 </Stack>
               </Stack>
 
@@ -254,23 +272,6 @@ export default function Resume() {
                 </Stack>
               </Stack>
 
-              <Stack gap={1}>
-                <Typography
-                  level="h6"
-                  fontWeight="lg"
-                  startDecorator={(
-                    <Avatar size="sm">
-                      <IoLanguage />
-                    </Avatar>
-                    )}
-                >
-                  Languages
-                </Typography>
-                <Divider />
-                <Stack gap={1}>
-                  <Languages />
-                </Stack>
-              </Stack>
             </Box>
           </Stack>
         </Box>
