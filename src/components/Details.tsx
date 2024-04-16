@@ -88,44 +88,25 @@ export function Education() {
 export function Skills({
   include,
 }: {
-  include?: string[];
+  /** The indices of the experience items whose skills should be included. */
+  include?: number[];
 }) {
+  const displayedSkills = [...new Set(include
+    ? include.flatMap((i) => details.experience[i].skills)
+    : details.experience.flatMap((exp) => exp.skills))];
+
   return (
-    <Stack alignItems="start" gap={2} paddingTop={1}>
-      {((include && include.length > 1) || !include) && (
-      <Stack direction="row" flexWrap="wrap" gap={1}>
-        {Object.entries(skillIcons).filter(
-          ([skillsetName]) => !include || include.includes(skillsetName as keyof (typeof details)['skills']),
-        ).map(([skillsetName, skillsetIcon]) => (
-          <Chip
-            variant="plain"
-            color="neutral"
-            size="sm"
-            key={skillsetName}
-            startDecorator={skillsetIcon}
-          >
-            {skillsetName}
-          </Chip>
-        ))}
-      </Stack>
-      )}
-      <Stack direction="row" alignItems="start" flexWrap="wrap" gap={1}>
-        {Object.entries(details.skills).filter(
-          ([skillsetName]) => !include || include.includes(skillsetName as keyof (typeof details)['skills']),
-        ).map(([skillsetName, skillset]) => (
-          skillset.map((skill) => (
-            <Chip
-              variant="outlined"
-              color="neutral"
-              size="md"
-              key={skill}
-              startDecorator={skillIcons[skillsetName as keyof (typeof details)['skills']]}
-            >
-              {skill}
-            </Chip>
-          ))
-        ))}
-      </Stack>
+    <Stack direction="row" alignItems="start" flexWrap="wrap" gap={1}>
+      {displayedSkills.map((skill) => (
+        <Chip
+          variant="outlined"
+          color="neutral"
+          size="sm"
+          key={skill}
+        >
+          {skill}
+        </Chip>
+      ))}
     </Stack>
   );
 }
@@ -242,6 +223,18 @@ export function Experience() {
                     {item.location}
                   </Typography>
                   )}
+                  <Stack direction="row" alignItems="start" flexWrap="wrap" gap={1}>
+                    {item.skills.map((skill) => (
+                      <Chip
+                        variant="soft"
+                        color="neutral"
+                        size="sm"
+                        key={skill}
+                      >
+                        {skill}
+                      </Chip>
+                    ))}
+                  </Stack>
                   <Typography level="body3" textColor="text.tertiary" component="div">
                     {typeof item.description === 'string' ? item.description : null}
                     {typeof item.description === 'object' ? (
@@ -256,6 +249,7 @@ export function Experience() {
                       </Stack>
                     ) : null}
                   </Typography>
+
                 </Stack>
               );
             })}
