@@ -124,11 +124,11 @@ export function Experience() {
           >
             {items.map((item, subIndex) => {
               const startDate = moment(item.start, 'MMM YYYY').toDate();
-              const endDate = moment(item.end, 'MMM YYYY').toDate();
+              const endDate = moment(item.end === 'Present' ? new Date(Date.now()) : item.end, 'MMM YYYY').toDate();
               const duration = moment.duration(endDate.getTime() - startDate.getTime()).humanize();
               return (
                 <Stack key={`${item.company}-${item.position}-${item.start}-${item.end}`} gap={0.5}>
-                  <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
+                  <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" columnGap={1} rowGap={0.3}>
                     {subIndex === 0 && (item.url ? (
                       <Typography
                         component="a"
@@ -160,7 +160,7 @@ export function Experience() {
                     </>
                     )}
                   </Typography>
-                  <Typography level="body2" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
+                  <Typography level="body2" display="flex" alignItems="baseline" flexWrap="wrap" columnGap={1} rowGap={0.3}>
                     <Typography fontWeight="lg" textColor="text.primary">
                       {item.position}
                     </Typography>
