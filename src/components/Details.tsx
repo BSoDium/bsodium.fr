@@ -125,7 +125,10 @@ export function Experience() {
             {items.map((item, subIndex) => {
               const startDate = moment(item.start, 'MMM YYYY').toDate();
               const endDate = moment(item.end === 'Present' ? new Date(Date.now()) : item.end, 'MMM YYYY').toDate();
-              const duration = moment.duration(endDate.getTime() - startDate.getTime()).humanize();
+              const momentDuration = moment.duration(endDate.getTime() - startDate.getTime());
+              const years = momentDuration.years();
+              const months = momentDuration.months() + 1;
+              const duration = `${years > 0 ? `${years} year${years !== 1 ? 's' : ''} ` : ''}${months} month${months !== 1 ? 's' : ''}`;
               return (
                 <Stack key={`${item.company}-${item.position}-${item.start}-${item.end}`} gap={0.5}>
                   <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" columnGap={1} rowGap={0.3}>
