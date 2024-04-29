@@ -22,6 +22,7 @@ function ThemeSwitcherButton() {
       variant="outlined"
       color="neutral"
       size="lg"
+      className={`state-${mode || systemMode}`}
       onClick={() => {
         setMode((mode || systemMode) === 'light' ? 'dark' : 'light');
       }}
@@ -32,6 +33,7 @@ function ThemeSwitcherButton() {
         width: 'fit-content',
         flexShrink: 0,
         padding: '1 2',
+        overflow: 'hidden',
 
         '& > svg': {
           transition: 'all ease .2s',
@@ -48,9 +50,30 @@ function ThemeSwitcherButton() {
         '&:active': {
           transform: 'scale(.98)',
         },
+
+        '& > div': {
+          transition: 'all ease .2s',
+        },
+
+        '&.state-light > div, &.state-dark:hover > div': {
+          transform: 'translate(-50%, calc(-50% - 21px))',
+        },
+
+        '&.state-dark > div, &.state-light:hover > div': {
+          transform: 'translate(-50%, calc(-50% + 21px))',
+        },
       })}
     >
-      {(mode || systemMode) === 'light' ? <GoSun /> : <GoMoon />}
+      <Stack
+        direction="column"
+        gap={3}
+        sx={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        }}
+      >
+        <GoMoon />
+        <GoSun />
+      </Stack>
     </IconButton>
   );
 }
