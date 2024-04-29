@@ -39,9 +39,6 @@ function ThemeSwitcherButton() {
         '&:active': {
           transform: 'scale(.98)',
         },
-        '& > span > svg': {
-          transition: 'all ease .2s',
-        },
       })}
     >
       {(mode || systemMode) === 'light' ? <GoSun /> : <GoMoon />}
