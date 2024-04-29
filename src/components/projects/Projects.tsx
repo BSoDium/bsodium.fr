@@ -1,21 +1,100 @@
 import {
+  Box,
   Button, IconButton, Stack, Typography,
+  useColorScheme,
 } from '@mui/joy';
 import FixedMode from 'components/FixedMode';
 import React from 'react';
+import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
-import { LuDices } from 'react-icons/lu';
 import { Link } from 'react-router-dom';
+import architectureLight from 'assets/architecture-light.jpg';
+import architectureDark from 'assets/architecture-dark.jpg';
+
+function ThemeSwitcherButton() {
+  const { mode, systemMode, setMode } = useColorScheme();
+
+  return (
+    <IconButton
+      variant="outlined"
+      color="neutral"
+      size="lg"
+      onClick={() => {
+        setMode((mode || systemMode) === 'light' ? 'dark' : 'light');
+      }}
+      sx={(theme) => ({
+        transition: 'all ease .2s',
+        position: 'relative',
+        borderRadius: '0',
+        width: 'fit-content',
+        flexShrink: 0,
+        padding: '1 2',
+
+        '&:hover': {
+          background: theme.palette.text.primary,
+          color: theme.palette.background.level1,
+          borderColor: theme.palette.text.primary,
+        },
+        '&:active': {
+          transform: 'scale(.98)',
+        },
+        '& > span > svg': {
+          transition: 'all ease .2s',
+        },
+      })}
+    >
+      {(mode || systemMode) === 'light' ? <GoSun /> : <GoMoon />}
+    </IconButton>
+  );
+}
+
+function ThemeAwareIllustration() {
+  const { mode, systemMode } = useColorScheme();
+
+  return (
+    <Stack sx={{
+      position: 'absolute',
+      right: 'min(0rem, calc(100vw - 100rem))',
+      width: '100rem',
+      '&:after': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backdropFilter: 'blur(20px)',
+        mask: 'linear-gradient(to left, transparent, black 60%)',
+      },
+    }}
+    >
+      <Box
+        component="img"
+        src={(mode || systemMode) === 'light' ? architectureLight : architectureDark}
+        alt="Brutalist building by Arthur Swiffen"
+        sx={{
+          position: 'relative',
+          marginTop: '-23rem',
+          width: '100%',
+          WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+          maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+          filter: 'grayscale(1)',
+        }}
+      />
+    </Stack>
+  );
+}
 
 export default function Projects() {
   return (
-    <FixedMode mode="system" style={{ overflow: 'hidden' }}>
-      <Stack padding="min(5rem, 5%)" gap={2} alignItems="start">
+    <FixedMode mode="system" style={{ overflow: 'hidden', position: 'relative' }}>
+      <ThemeAwareIllustration />
+      <Stack padding="5rem" gap={2} alignItems="start">
         <Stack>
           <Typography
             level="display1"
             fontSize="10rem"
-            fontWeight={500}
+            fontWeight={200}
             lineHeight={1}
             sx={{ position: 'relative', marginLeft: '2.72rem' }}
           >
@@ -31,7 +110,7 @@ export default function Projects() {
             >
               Featured
             </Typography>
-            Projects
+            Projects &
           </Typography>
           <Typography
             level="display1"
@@ -39,10 +118,11 @@ export default function Projects() {
             fontWeight={300}
             lineHeight={0.6}
             marginBottom="3rem"
+            zIndex={1}
+            fontFamily={'"Righteous", sans-serif'}
           >
             Experiments
           </Typography>
-
         </Stack>
         <Stack direction="row" gap={1}>
           <Button
@@ -85,33 +165,7 @@ export default function Projects() {
           >
             Back to homepage
           </Button>
-          <IconButton
-            variant="outlined"
-            color="neutral"
-            size="lg"
-            sx={(theme) => ({
-              transition: 'all ease .2s',
-              position: 'relative',
-              borderRadius: '0',
-              width: 'fit-content',
-              flexShrink: 0,
-              padding: '1 2',
-
-              '&:hover': {
-                background: theme.palette.text.primary,
-                color: theme.palette.background.level1,
-                borderColor: theme.palette.text.primary,
-              },
-              '&:active': {
-                transform: 'scale(.98)',
-              },
-              '& > span > svg': {
-                transition: 'all ease .2s',
-              },
-            })}
-          >
-            <LuDices />
-          </IconButton>
+          <ThemeSwitcherButton />
         </Stack>
       </Stack>
     </FixedMode>
