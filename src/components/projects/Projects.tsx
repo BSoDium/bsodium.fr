@@ -70,7 +70,7 @@ function ThemeAwareIllustration() {
   });
 
   useEffect(() => {
-    if (loaded) transRef.start();
+    if (loaded) { transRef.start(); }
   }, [mode, systemMode, loaded]);
 
   const imgSx = {
@@ -121,7 +121,7 @@ function ThemeAwareIllustration() {
                 <Box
                   component="img"
                   src={architectureDark}
-                  alt="High Rise Building during Nighttime by Harsh limbachiya"
+                  alt="Red lamps in Subway in Hamburg by Travel with Lenses"
                   sx={imgSx}
                   onLoad={() => setLoaded(true)}
                 />

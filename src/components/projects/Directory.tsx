@@ -5,9 +5,7 @@ import {
 } from '@mui/joy';
 import React, { useState } from 'react';
 import { IoIosClose, IoIosSearch, IoIosShuffle } from 'react-icons/io';
-import {
-  IoLogoDeviantart, IoLogoFigma, IoLogoGithub, IoLogoGitlab,
-} from 'react-icons/io5';
+import { Platform, platformDetails } from 'assets/Projects';
 
 export default function Directory() {
   const [search, setSearch] = useState('');
@@ -70,23 +68,22 @@ export default function Directory() {
             </IconButton>
           )}
           indicator={platform !== null ? null : undefined}
+          renderValue={(option) => {
+            const details = platformDetails[option?.value as Platform];
+            return option && details && (
+            <Stack direction="row" gap={1} alignItems="center">
+              <details.icon />
+              {option.label}
+            </Stack>
+            );
+          }}
         >
-          <Option color="neutral" value="github" component={Stack} direction="row" gap={1}>
-            <IoLogoGithub />
-            GitHub
-          </Option>
-          <Option color="neutral" value="gitlab" component={Stack} direction="row" gap={1}>
-            <IoLogoGitlab />
-            GitLab
-          </Option>
-          <Option color="neutral" value="figma" component={Stack} direction="row" gap={1}>
-            <IoLogoFigma />
-            Figma
-          </Option>
-          <Option color="neutral" value="deviantart" component={Stack} direction="row" gap={1}>
-            <IoLogoDeviantart />
-            Deviantart
-          </Option>
+          {Object.entries(platformDetails).map(([key, item]) => (
+            <Option color="neutral" component={Stack} key={key} value={key} direction="row" gap={1}>
+              <item.icon />
+              {item.label}
+            </Option>
+          ))}
         </Select>
         <Button
           size="lg"
