@@ -30,16 +30,32 @@ export default function Directory() {
             width: 'min(100%, 30rem)',
             cursor: 'pointer',
             borderRadius: '0',
+            outline: 'none',
             backgroundColor: theme.palette.background.body,
-            '--Input-focusedHighlight': theme.palette.background.level2,
+            '--Input-focusedHighlight': theme.palette.text.secondary,
+            '&:before': {
+              transition: 'all ease .2s',
+            },
+
+            '&:has(:focus)': {
+              borderRadius: '100vmax 0 0 100vmax',
+            },
+
           })}
         />
         <Select
           placeholder="Filter by platform"
+          color="neutral"
           variant="outlined"
           sx={(theme) => ({
+            transition: 'all ease .2s',
             borderRadius: '0',
             backgroundColor: theme.palette.background.body,
+            width: '12rem',
+            '& + ul': {
+              borderRadius: '0',
+              padding: 0,
+            },
           })}
           value={platform}
           onChange={(e, newValue) => setPlatform(newValue)}
@@ -55,21 +71,21 @@ export default function Directory() {
           )}
           indicator={platform !== null ? null : undefined}
         >
-          <Option value="GitHub" component={Stack} direction="row" gap={1}>
+          <Option color="neutral" value="github" component={Stack} direction="row" gap={1}>
             <IoLogoGithub />
-            GitHub projects
+            GitHub
           </Option>
-          <Option value="GitLab" component={Stack} direction="row" gap={1}>
+          <Option color="neutral" value="gitlab" component={Stack} direction="row" gap={1}>
             <IoLogoGitlab />
-            GitLab projects
+            GitLab
           </Option>
-          <Option value="Figma" component={Stack} direction="row" gap={1}>
+          <Option color="neutral" value="figma" component={Stack} direction="row" gap={1}>
             <IoLogoFigma />
-            Figma projects
+            Figma
           </Option>
-          <Option value="Deviantart" component={Stack} direction="row" gap={1}>
+          <Option color="neutral" value="deviantart" component={Stack} direction="row" gap={1}>
             <IoLogoDeviantart />
-            Deviantart projects
+            Deviantart
           </Option>
         </Select>
         <Button

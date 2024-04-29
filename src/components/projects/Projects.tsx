@@ -4,12 +4,12 @@ import {
   useColorScheme,
 } from '@mui/joy';
 import FixedMode from 'components/FixedMode';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
 import { Link } from 'react-router-dom';
-import architectureLight from 'assets/architecture-light.jpg';
-import architectureDark from 'assets/architecture-dark.jpg';
+import architectureLight from 'assets/architecture-light.webp';
+import architectureDark from 'assets/architecture-dark.webp';
 import Title from 'components/Title';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import Directory from './Directory';
@@ -33,10 +33,17 @@ function ThemeSwitcherButton() {
         flexShrink: 0,
         padding: '1 2',
 
+        '& > svg': {
+          transition: 'all ease .2s',
+        },
+
         '&:hover': {
           background: theme.palette.text.primary,
           color: theme.palette.background.level1,
           borderColor: theme.palette.text.primary,
+          '& > svg': {
+            transform: 'rotate(-45deg)',
+          },
         },
         '&:active': {
           transform: 'scale(.98)',
@@ -50,6 +57,8 @@ function ThemeSwitcherButton() {
 
 function ThemeAwareIllustration() {
   const { mode, systemMode } = useColorScheme();
+  const [loaded, setLoaded] = useState(false);
+
   const transRef = useSpringRef();
 
   const transitions = useTransition((mode || systemMode), {
@@ -61,15 +70,24 @@ function ThemeAwareIllustration() {
   });
 
   useEffect(() => {
-    transRef.start();
-  }, [mode, systemMode]);
+    if (loaded) transRef.start();
+  }, [mode, systemMode, loaded]);
+
+  const imgSx = {
+    position: 'relative',
+    marginTop: '-23rem',
+    width: '100%',
+    WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+    maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+    filter: 'grayscale(1)',
+  };
 
   return (
     <Stack sx={{
       position: 'absolute',
       right: 'min(0rem, calc(100vw - 100rem))',
       width: '100rem',
-      height: 'min(100%, 30rem)',
+      height: 'min(100%, 31rem)',
       overflow: 'hidden',
       '&:after': {
         content: '""',
@@ -92,14 +110,8 @@ function ThemeAwareIllustration() {
                   component="img"
                   src={architectureLight}
                   alt="Brutalist building by Arthur Swiffen"
-                  sx={{
-                    position: 'relative',
-                    marginTop: '-23rem',
-                    width: '100%',
-                    WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
-                    maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
-                    filter: 'grayscale(1)',
-                  }}
+                  sx={imgSx}
+                  onLoad={() => setLoaded(true)}
                 />
               </animated.div>
             );
@@ -110,14 +122,8 @@ function ThemeAwareIllustration() {
                   component="img"
                   src={architectureDark}
                   alt="High Rise Building during Nighttime by Harsh limbachiya"
-                  sx={{
-                    position: 'relative',
-                    marginTop: '-23rem',
-                    width: '100%',
-                    WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
-                    maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
-                    filter: 'grayscale(1)',
-                  }}
+                  sx={imgSx}
+                  onLoad={() => setLoaded(true)}
                 />
               </animated.div>
             );
