@@ -10,6 +10,7 @@ import { IoIosReturnLeft } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 import architectureLight from 'assets/architecture-light.jpg';
 import architectureDark from 'assets/architecture-dark.jpg';
+import Directory from './Directory';
 
 function ThemeSwitcherButton() {
   const { mode, systemMode, setMode } = useColorScheme();
@@ -56,6 +57,8 @@ function ThemeAwareIllustration() {
       position: 'absolute',
       right: 'min(0rem, calc(100vw - 100rem))',
       width: '100rem',
+      height: 'min(100%, 30rem)',
+      overflow: 'hidden',
       '&:after': {
         content: '""',
         position: 'absolute',
@@ -167,6 +170,7 @@ export default function Projects() {
           </Button>
           <ThemeSwitcherButton />
         </Stack>
+        <Directory />
       </Stack>
     </FixedMode>
   );
