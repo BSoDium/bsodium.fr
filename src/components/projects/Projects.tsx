@@ -4,12 +4,14 @@ import {
   useColorScheme,
 } from '@mui/joy';
 import FixedMode from 'components/FixedMode';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 import architectureLight from 'assets/architecture-light.jpg';
 import architectureDark from 'assets/architecture-dark.jpg';
+import Title from 'components/Title';
+import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import Directory from './Directory';
 
 function ThemeSwitcherButton() {
@@ -48,6 +50,19 @@ function ThemeSwitcherButton() {
 
 function ThemeAwareIllustration() {
   const { mode, systemMode } = useColorScheme();
+  const transRef = useSpringRef();
+
+  const transitions = useTransition((mode || systemMode), {
+    ref: transRef,
+    keys: null,
+    from: { opacity: 0 },
+    enter: { opacity: 1 },
+    leave: { opacity: 0, filter: 'blur(10px)', position: 'absolute' },
+  });
+
+  useEffect(() => {
+    transRef.start();
+  }, [mode, systemMode]);
 
   return (
     <Stack sx={{
@@ -68,19 +83,48 @@ function ThemeAwareIllustration() {
       },
     }}
     >
-      <Box
-        component="img"
-        src={(mode || systemMode) === 'light' ? architectureLight : architectureDark}
-        alt="Brutalist building by Arthur Swiffen"
-        sx={{
-          position: 'relative',
-          marginTop: '-23rem',
-          width: '100%',
-          WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
-          maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
-          filter: 'grayscale(1)',
-        }}
-      />
+      {transitions((style, item) => {
+        switch (item) {
+          case 'light':
+            return (
+              <animated.div style={style}>
+                <Box
+                  component="img"
+                  src={architectureLight}
+                  alt="Brutalist building by Arthur Swiffen"
+                  sx={{
+                    position: 'relative',
+                    marginTop: '-23rem',
+                    width: '100%',
+                    WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+                    maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+                    filter: 'grayscale(1)',
+                  }}
+                />
+              </animated.div>
+            );
+          case 'dark':
+            return (
+              <animated.div style={style}>
+                <Box
+                  component="img"
+                  src={architectureDark}
+                  alt="High Rise Building during Nighttime by Harsh limbachiya"
+                  sx={{
+                    position: 'relative',
+                    marginTop: '-23rem',
+                    width: '100%',
+                    WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+                    maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+                    filter: 'grayscale(1)',
+                  }}
+                />
+              </animated.div>
+            );
+          default:
+            return null;
+        }
+      })}
     </Stack>
   );
 }
@@ -88,6 +132,7 @@ function ThemeAwareIllustration() {
 export default function Projects() {
   return (
     <FixedMode mode="system" style={{ overflow: 'hidden', position: 'relative' }}>
+      <Title text="Projects and experiments - Elliot Négrel-Jerzy" />
       <ThemeAwareIllustration />
       <Stack padding="5rem" gap={2} alignItems="start">
         <Stack>

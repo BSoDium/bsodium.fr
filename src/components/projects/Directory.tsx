@@ -5,6 +5,9 @@ import {
 } from '@mui/joy';
 import React, { useState } from 'react';
 import { IoIosClose, IoIosSearch, IoIosShuffle } from 'react-icons/io';
+import {
+  IoLogoDeviantart, IoLogoFigma, IoLogoGithub, IoLogoGitlab,
+} from 'react-icons/io5';
 
 export default function Directory() {
   const [search, setSearch] = useState('');
@@ -52,10 +55,22 @@ export default function Directory() {
           )}
           indicator={platform !== null ? null : undefined}
         >
-          <Option value="GitHub">GitHub projects</Option>
-          <Option value="GitLab">GitLab projects</Option>
-          <Option value="Figma">Figma projects</Option>
-          <Option value="Deviantart">Deviantart projects</Option>
+          <Option value="GitHub" component={Stack} direction="row" gap={1}>
+            <IoLogoGithub />
+            GitHub projects
+          </Option>
+          <Option value="GitLab" component={Stack} direction="row" gap={1}>
+            <IoLogoGitlab />
+            GitLab projects
+          </Option>
+          <Option value="Figma" component={Stack} direction="row" gap={1}>
+            <IoLogoFigma />
+            Figma projects
+          </Option>
+          <Option value="Deviantart" component={Stack} direction="row" gap={1}>
+            <IoLogoDeviantart />
+            Deviantart projects
+          </Option>
         </Select>
         <Button
           size="lg"
