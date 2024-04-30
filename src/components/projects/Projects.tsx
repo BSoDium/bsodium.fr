@@ -12,6 +12,9 @@ import architectureLight from 'assets/architecture-light.webp';
 import architectureDark from 'assets/architecture-dark.webp';
 import Title from 'components/Title';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
+import {
+  Desktop, Mobile, Tablet, useMobileMode,
+} from 'components/Responsive';
 import Directory from './Directory';
 
 function ThemeSwitcherButton() {
@@ -34,6 +37,7 @@ function ThemeSwitcherButton() {
         flexShrink: 0,
         padding: '1 2',
         overflow: 'hidden',
+        background: theme.palette.background.body,
 
         '& > svg': {
           transition: 'all ease .2s',
@@ -163,46 +167,129 @@ function ThemeAwareIllustration() {
 }
 
 export default function Projects() {
+  const mobile = useMobileMode();
   return (
     <FixedMode mode="system" style={{ overflow: 'hidden', position: 'relative' }}>
       <Title text="Projects and experiments - Elliot Négrel-Jerzy" />
       <ThemeAwareIllustration />
-      <Stack padding="5rem" gap={2} alignItems="start">
-        <Stack>
-          <Typography
-            level="display1"
-            fontSize="10rem"
-            fontWeight={200}
-            lineHeight={1}
-            sx={{ position: 'relative', marginLeft: '2.72rem' }}
-          >
+      <Stack padding={mobile ? '1rem' : '5rem'} gap={2} alignItems="start">
+        <Desktop>
+          <Stack>
             <Typography
-              level="h2"
-              fontSize="2,25rem"
-              sx={{
-                position: 'absolute',
-                left: '-1.3rem',
-                bottom: '66px',
-                transform: 'translateX(-50%) rotate(-90deg)',
-              }}
+              level="display1"
+              fontSize="10rem"
+              fontWeight={200}
+              lineHeight={1}
+              sx={{ position: 'relative', marginLeft: '2.72rem' }}
             >
-              Featured
+              <Typography
+                level="h2"
+                sx={{
+                  position: 'absolute',
+                  left: '-1.3rem',
+                  bottom: '66px',
+                  transform: 'translateX(-50%) rotate(-90deg)',
+                }}
+              >
+                Featured
+              </Typography>
+              Projects &
             </Typography>
-            Projects &
-          </Typography>
-          <Typography
-            level="display1"
-            fontSize="10rem"
-            fontWeight={300}
-            lineHeight={0.6}
-            marginBottom="3rem"
-            zIndex={1}
-            fontFamily={'"Righteous", sans-serif'}
-          >
-            Experiments
-          </Typography>
-        </Stack>
-        <Stack direction="row" gap={1}>
+            <Typography
+              level="display1"
+              fontSize="10rem"
+              fontWeight={300}
+              lineHeight={0.6}
+              marginBottom="3rem"
+              zIndex={1}
+              fontFamily={'"Righteous", sans-serif'}
+            >
+              Experiments
+            </Typography>
+          </Stack>
+        </Desktop>
+        <Tablet>
+          <Stack>
+            <Typography
+              level="display1"
+              fontSize="6rem"
+              fontWeight={200}
+              lineHeight={1}
+              sx={{ position: 'relative', marginLeft: '1.25rem' }}
+            >
+              <Typography
+                level="h2"
+                fontSize="1rem"
+                sx={{
+                  position: 'absolute',
+                  left: '-0.5rem',
+                  bottom: '34px',
+                  transform: 'translateX(-50%) rotate(-90deg)',
+                }}
+              >
+                Featured
+              </Typography>
+              Projects &
+            </Typography>
+            <Typography
+              level="display1"
+              fontSize="6rem"
+              fontWeight={300}
+              lineHeight={0.6}
+              marginBottom="3rem"
+              zIndex={1}
+              fontFamily={'"Righteous", sans-serif'}
+            >
+              Experiments
+            </Typography>
+          </Stack>
+        </Tablet>
+        <Mobile>
+          <Stack paddingTop={5} paddingX={1} width="100%" alignItems="center">
+            <Typography
+              level="display1"
+              fontSize="4rem"
+              fontWeight={200}
+              lineHeight={1}
+              sx={{ position: 'relative', marginLeft: '1.1rem' }}
+            >
+              <Typography
+                level="h2"
+                fontSize="1rem"
+                sx={{
+                  position: 'absolute',
+                  left: '-0.5rem',
+                  bottom: '30px',
+                  transform: 'translateX(-50%) rotate(-90deg)',
+                }}
+              >
+                Featured
+              </Typography>
+              Projects &
+            </Typography>
+            <Typography
+              level="display1"
+              fontSize="4rem"
+              fontWeight={300}
+              lineHeight={0.6}
+              marginBottom="3rem"
+              zIndex={1}
+              fontFamily={'"Righteous", sans-serif'}
+            >
+              Experiments
+            </Typography>
+          </Stack>
+        </Mobile>
+        <Stack
+          direction="row"
+          gap={1}
+          sx={mobile ? {
+            width: '100%',
+            '& > *:first-child': {
+              flex: 1,
+            },
+          } : {}}
+        >
           <Button
             size="lg"
             component={Link}
@@ -219,6 +306,7 @@ export default function Projects() {
               width: 'fit-content',
               flexShrink: 0,
               padding: '1 2',
+              background: theme.palette.background.body,
 
               '&:hover': {
                 background: theme.palette.text.primary,
