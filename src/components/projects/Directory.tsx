@@ -50,6 +50,7 @@ function ProjectCard({
 
   return (
     <Stack
+      id={project.title}
       direction="row"
       padding={2}
       gap={2}
@@ -337,6 +338,18 @@ export default function Directory() {
     ));
   }, [search, platform]);
 
+  // Pick a random project from the list and open it, then scroll to it
+  const randomize = () => {
+    const randomIndex = Math.floor(Math.random() * projects.length);
+    const randomProject = projects[randomIndex];
+    setOpenProject(randomProject.title);
+    document.getElementById(randomProject.title)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'center',
+    });
+  };
+
   return (
     <Stack paddingY={1} width="100%">
       <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -425,6 +438,7 @@ export default function Directory() {
           variant="outlined"
           color="neutral"
           startDecorator={<IoIosShuffle style={{ fontSize: '1.5rem' }} />}
+          onClick={randomize}
           sx={(theme) => ({
             transition: 'all ease .2s',
             position: 'relative',
