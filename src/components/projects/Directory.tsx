@@ -28,7 +28,7 @@ import {
   getRepositories,
 } from 'utils/Api';
 import moment from 'moment';
-import { FiFile, FiPlay } from 'react-icons/fi';
+import { FiCode, FiFile, FiPlay } from 'react-icons/fi';
 import { useMobileMode } from 'components/Responsive';
 
 function ProjectCard({
@@ -43,21 +43,23 @@ function ProjectCard({
   const mobile = useMobileMode();
 
   const footer = useMemo(
-    () => `${
-      project.pubDate ? `${moment(project.pubDate).fromNow()} -` : ''
-    }published to ${platformDetails[project.platform].label}`,
+    () => `published to ${platformDetails[project.platform].label}${
+      project.createdAt ? ` ${moment(project.createdAt).fromNow()}` : ''
+    }${
+      project.updatedAt ? `, updated ${moment(project.updatedAt).fromNow()}` : ''
+    }`,
     [project],
   );
 
   return (
     <Stack
       id={project.title}
-      direction="row"
+      direction={mobile ? 'column' : 'row'}
       padding={2}
       gap={2}
       onClick={() => onClick()}
       className={open ? 'open' : ''}
-      alignItems="start"
+      alignItems="stretch"
       flexWrap="wrap"
       sx={(theme) => ({
         transition: 'all ease .2s',
@@ -167,10 +169,14 @@ function ProjectCard({
       >
         <Typography level="h3" alignItems="baseline">
           {project.title}
+          <Typography textColor="text.tertiary" fontWeight="300" marginLeft={1}>
+            {platformDetails[project.platform].sublabel.toLocaleLowerCase()}
+          </Typography>
         </Typography>
         <Typography
           level="body2"
           sx={{
+            flex: 1,
             '& p': {
               margin: 0,
             },
@@ -188,7 +194,7 @@ function ProjectCard({
         direction="row"
         zIndex={1}
         gap={1}
-        alignItems="end"
+        alignItems="start"
         marginTop={mobile ? '.5rem' : 'initial'}
         justifyContent={mobile ? 'end' : 'initial'}
         width={mobile ? '100%' : 'initial'}
@@ -217,9 +223,10 @@ function ProjectCard({
               transform: 'scale(.98)',
             },
           })}
-          startDecorator={<FiFile />}
+          startDecorator={project.language !== undefined ? (<FiCode />) : (<FiFile />)}
         >
-          Explore source
+
+          {project.language !== undefined ? 'Explore source' : 'Show project'}
         </Button>
         {project.demo && (
           <Button
@@ -306,7 +313,9 @@ export default function Directory() {
                 description: repository.description,
                 source: repository.html_url,
                 demo: repository.homepage,
+                language: repository.language,
                 platform: 'github',
+                createdAt: repository.created_at,
                 interactions: {
                   stars: repository.stargazers_count,
                   forks: repository.forks,
@@ -384,6 +393,7 @@ export default function Directory() {
           sx={(theme) => ({
             transition: 'all ease .2s',
             borderRadius: '0',
+            flex: mobile ? 1 : 'initial',
             backgroundColor: theme.palette.background.body,
             width: '12rem',
             '& + ul': {
@@ -482,8 +492,8 @@ export default function Directory() {
               {index < filteredProjects.length - 1 && (<Divider />)}
             </>
           ))}
-        {filteredProjects.length === 0 && (
-        <Stack direction="row" justifyContent="left" alignItems="center" gap={5} padding={10}>
+        {filteredProjects.length === 0 && !loading && (
+        <Stack direction="row" justifyContent="center" alignItems="center" gap={5} padding={15}>
           <TfiHeartBroken size="5rem" />
           <Stack direction="column" gap={1} maxWidth="25rem">
             <Typography level="h3">

@@ -3,19 +3,33 @@ import {
   FaCodeBranch, FaCommentAlt, FaHeart, FaStar,
 } from 'react-icons/fa';
 import {
-  FiFigma, FiGithub, FiGitlab,
+  FiFigma, FiGithub,
 } from 'react-icons/fi';
 import { TbBrandDeviantart } from 'react-icons/tb';
 
-export const platforms = ['github', 'gitlab', 'figma', 'deviantart'] as const;
+export const platforms = ['github', 'figma', 'deviantart'] as const;
 export type Platform = (typeof platforms)[number]
 
-export const platformDetails: Record<Platform, { label: string, icon: IconType }> = {
-  github: { label: 'GitHub', icon: FiGithub },
-  gitlab: { label: 'GitLab', icon: FiGitlab },
-  figma: { label: 'Figma', icon: FiFigma },
-  deviantart: { label: 'DeviantArt', icon: TbBrandDeviantart },
-};
+export const platformDetails: Record<Platform, {
+  label: string,
+  sublabel: string,
+  icon: IconType }> = {
+    github: {
+      label: 'GitHub',
+      icon: FiGithub,
+      sublabel: 'Code repository',
+    },
+    figma: {
+      label: 'Figma',
+      icon: FiFigma,
+      sublabel: 'Design prototype',
+    },
+    deviantart: {
+      label: 'DeviantArt',
+      icon: TbBrandDeviantart,
+      sublabel: 'Artwork',
+    },
+  };
 
 export const interactions = ['stars', 'forks', 'comments', 'likes'] as const;
 export type Interaction = (typeof interactions)[number];
@@ -34,7 +48,8 @@ export interface Project {
   source: string;
   demo?: string;
   language?: string;
-  pubDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
   interactions?: Partial<Record<Interaction, number>>;
   platform: Platform;
 }
