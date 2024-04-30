@@ -1,19 +1,207 @@
+/* eslint-disable react/no-danger */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Input, Select, Option, Stack,
   IconButton,
   Button,
+  Typography,
+  Avatar,
+  Box,
+  Badge,
 } from '@mui/joy';
-import React, { useState } from 'react';
-import { IoIosClose, IoIosSearch, IoIosShuffle } from 'react-icons/io';
-import { Platform, platformDetails } from 'assets/Projects';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  IoIosClose, IoIosSearch, IoIosShuffle,
+} from 'react-icons/io';
+import {
+  Interaction,
+  interactionDetails,
+  Platform, platformDetails, Project, rank,
+} from 'assets/Projects';
+import {
+  getDeviations, getFigmaFiles, getRepositories, Repository,
+} from 'utils/Api';
+import moment from 'moment';
+
+function ProjectCard({ project }: { project: Project }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Stack
+      direction="row"
+      padding={2}
+      gap={2}
+      onClick={() => setOpen(!open)}
+      className={open ? 'open' : ''}
+      sx={(theme) => ({
+        transition: 'all ease .2s',
+        position: 'relative',
+        cursor: 'pointer',
+        borderRadius: '0',
+        backgroundColor: theme.palette.background.body,
+        border: '1px solid transparent',
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        overflow: 'hidden',
+        '&:hover, &.open': {
+          zIndex: 1,
+          borderRadius: '1rem',
+          border: `1px solid ${theme.palette.text.primary}`,
+          filter: `drop-shadow(0 .4rem 0 ${theme.palette.text.primary})`,
+          transform: 'translateY(-.4rem)',
+          '&:after': {
+            content: '""',
+            position: 'absolute',
+            bottom: '-.4rem',
+            left: 0,
+            width: '100%',
+            height: '.4rem',
+            backgroundColor: 'transparent',
+          },
+          '& .illustration': {
+            opacity: 1,
+          },
+
+          '& .icon': {
+            backgroundColor: theme.palette.text.primary,
+            color: theme.palette.background.level1,
+          },
+        },
+      })}
+    >
+      <Stack direction="column" gap={1}>
+        <Avatar component="span" className="icon" variant="plain" size="md" sx={{ borderRadius: '.5rem', transition: 'all ease .2s', zIndex: 1 }}>
+          {platformDetails[project.platform].icon({ size: '1.3rem' })}
+        </Avatar>
+        <Stack
+          component="div"
+          className={`interactions${open ? ' open' : ''}`}
+          direction="column"
+          gap={1}
+          sx={{
+            transition: 'all ease .4s',
+            opacity: 0,
+            maxHeight: 0,
+            transform: 'translateY(-100%) scale(.8)',
+            '&.open': {
+              opacity: 1,
+              maxHeight: '100vmax',
+              transform: 'translateY(0) scale(1)',
+            },
+          }}
+        >
+          {Object.entries(interactionDetails)
+            .map(([key, item]) => (project.interactions !== undefined
+                && Object.keys(project.interactions).includes(key) ? (
+                  <Stack key={key} alignItems="center">
+                    <Stack
+                      alignItems="center"
+                      gap={0.5}
+                      sx={{
+                        padding: '.3rem .1rem',
+                        lineHeight: 0.9,
+                      }}
+                    >
+                      {item.icon({})}
+                      <span style={{ fontSize: '0.9rem' }}>
+                        {project.interactions[key as Interaction]}
+                      </span>
+                    </Stack>
+                  </Stack>
+              ) : null))}
+        </Stack>
+      </Stack>
+
+      <Stack zIndex={1} gap={0.25}>
+        <Typography
+          level="h3"
+          alignItems="baseline"
+        >
+          {project.title}
+        </Typography>
+        <Typography level="body2">
+          <span dangerouslySetInnerHTML={{ __html: project.description || '' }} />
+        </Typography>
+        <Typography level="body3" marginTop={1}>
+          {`${project.pubDate ? moment(project.pubDate).fromNow() : ''} - published on ${platformDetails[project.platform].label}`}
+        </Typography>
+      </Stack>
+      {project.thumbnail && (
+        <Box
+          component="img"
+          src={project.thumbnail}
+          alt={project.title}
+          className="illustration"
+          sx={{
+            transition: 'all ease .2s',
+            position: 'absolute',
+            right: 0,
+            width: '60%',
+            top: '50%',
+            WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+            maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
+            opacity: 0,
+            filter: 'blur(5px) brightness(.8)',
+            transform: 'translateY(-50%)',
+          }}
+        />
+      )}
+    </Stack>
+  );
+}
 
 export default function Directory() {
   const [search, setSearch] = useState('');
   const [platform, setPlatform] = useState<string | null>(null);
 
+  const [projects, setProjects] = useState([] as Project[]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error>();
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      getRepositories('BSoDium'),
+      getDeviations(),
+      getFigmaFiles(),
+    ]).then(([repositories, deviations, figmaFiles]) => {
+      setProjects([
+        ...repositories.filter((project) => project.topics.includes('featured')).map((repository) => ({
+          title: repository.name,
+          description: repository.description,
+          source: repository.html_url,
+          demo: repository.homepage,
+          platform: 'github',
+          interactions: {
+            stars: repository.stargazers_count,
+            forks: repository.forks,
+          },
+        } as Project)),
+        ...deviations,
+        ...figmaFiles,
+      ]);
+    }).catch(() => {
+      setError(new Error('Failed to load projects, check your internet connection.'));
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    setProjects((p) => p.filter((project) => (
+      (search === ''
+      || project.title.toLowerCase().includes(search.toLowerCase())
+      || (project.description && project.description.toLowerCase().includes(search.toLowerCase()))
+      )
+      && (platform === null || project.platform === platform)
+    )));
+  }, [search, platform]);
+
   return (
-    <Stack paddingY={1} width="100%">
-      <Stack direction="row" gap={1}>
+    <Stack
+      paddingY={1}
+      width="100%"
+    >
+      <Stack direction="row" flexWrap="wrap" gap={1}>
         <Input
           size="lg"
           placeholder="Search for a project"
@@ -100,6 +288,7 @@ export default function Directory() {
             flexShrink: 0,
             paddingInline: '1rem',
 
+            borderColor: theme.palette.text.primary,
             background: theme.palette.text.primary,
             color: theme.palette.background.level1,
             '& > span > svg': {
@@ -119,6 +308,11 @@ export default function Directory() {
         >
           Randomize
         </Button>
+      </Stack>
+      <Stack paddingBlockStart={4}>
+        {projects.sort((a, b) => rank(b, projects) - rank(a, projects)).map((project) => (
+          <ProjectCard key={project.title} project={project} />
+        ))}
       </Stack>
     </Stack>
   );

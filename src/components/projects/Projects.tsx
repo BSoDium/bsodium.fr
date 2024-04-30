@@ -22,9 +22,9 @@ function ThemeSwitcherButton() {
       variant="outlined"
       color="neutral"
       size="lg"
-      className={`state-${mode || systemMode}`}
+      className={`state-${systemMode || mode}`}
       onClick={() => {
-        setMode((mode || systemMode) === 'light' ? 'dark' : 'light');
+        setMode((systemMode || mode) === 'light' ? 'dark' : 'light');
       }}
       sx={(theme) => ({
         transition: 'all ease .2s',
@@ -55,12 +55,16 @@ function ThemeSwitcherButton() {
           transition: 'all ease .2s',
         },
 
-        '&.state-light > div, &.state-dark:hover > div': {
+        '&.state-light > div': {
           transform: 'translate(-50%, calc(-50% - 21px))',
         },
 
-        '&.state-dark > div, &.state-light:hover > div': {
+        '&.state-dark > div': {
           transform: 'translate(-50%, calc(-50% + 21px))',
+        },
+
+        '&:hover > div': {
+          transform: 'translate(-50%, -50%)',
         },
       })}
     >
@@ -84,7 +88,7 @@ function ThemeAwareIllustration() {
 
   const transRef = useSpringRef();
 
-  const transitions = useTransition((mode || systemMode), {
+  const transitions = useTransition((systemMode || mode), {
     ref: transRef,
     keys: null,
     from: { opacity: 0 },
