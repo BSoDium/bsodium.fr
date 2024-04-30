@@ -250,6 +250,7 @@ export default function Details({
   useEffect(() => {
     transRef.start();
   }, [category]);
+
   return (
     <Stack direction="row">
       {transitions((style, item) => {

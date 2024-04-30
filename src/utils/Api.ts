@@ -1,3 +1,4 @@
+import { Project } from 'assets/Projects';
 import axios from 'axios';
 
 export declare interface User {
@@ -131,4 +132,18 @@ export async function getRepositoryPreviewUrl(
     // retrieve the meta property="og:image" content
     .then((document) => document.querySelector('meta[property="og:image"]'))
     .then((meta) => meta?.getAttribute('content') || undefined);
+}
+
+export async function getDeviations(): Promise<Project[]> {
+  return axios
+    .get('https://api.bsodium.fr/api/featured/deviantart')
+    .then((response) => response.data)
+    .catch(() => []);
+}
+
+export async function getFigmaFiles(): Promise<Project[]> {
+  return axios
+    .get('https://api.bsodium.fr/api/featured/figma')
+    .then((response) => response.data)
+    .catch(() => []);
 }
