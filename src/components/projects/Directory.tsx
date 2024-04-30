@@ -483,7 +483,7 @@ export default function Directory() {
             </>
           ))}
         {filteredProjects.length === 0 && (
-        <Stack direction="row" justifyContent="center" alignItems="center" gap={5} padding={10}>
+        <Stack direction="row" justifyContent="left" alignItems="center" gap={5} padding={10}>
           <TfiHeartBroken size="5rem" />
           <Stack direction="column" gap={1} maxWidth="25rem">
             <Typography level="h3">
