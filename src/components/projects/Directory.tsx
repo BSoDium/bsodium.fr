@@ -182,7 +182,15 @@ function ProjectCard({
           {footer.charAt(0).toUpperCase() + footer.slice(1)}
         </Typography>
       </Stack>
-      <Stack direction="row" zIndex={1} gap={1} alignItems="end" justifyContent={mobile ? 'end' : 'initial'} width={mobile ? '100%' : 'initial'}>
+      <Stack
+        direction="row"
+        zIndex={1}
+        gap={1}
+        alignItems="end"
+        marginTop={mobile ? '.5rem' : 'initial'}
+        justifyContent={mobile ? 'end' : 'initial'}
+        width={mobile ? '100%' : 'initial'}
+      >
         <Button
           component="a"
           href={project.source}
