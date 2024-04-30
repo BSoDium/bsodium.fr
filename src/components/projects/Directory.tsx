@@ -187,7 +187,15 @@ function ProjectCard({
           />
         </Typography>
         <Typography level="body3" marginTop={1}>
-          {footer.charAt(0).toUpperCase() + footer.slice(1)}
+          {project.language ? (
+            <>
+              <Typography textColor="text.primary">
+                {project.language}
+              </Typography>
+              {' project '}
+            </>
+          ) : 'Project '}
+          {footer}
         </Typography>
       </Stack>
       <Stack
@@ -225,7 +233,6 @@ function ProjectCard({
           })}
           startDecorator={project.language !== undefined ? (<FiCode />) : (<FiFile />)}
         >
-
           {project.language !== undefined ? 'Explore source' : 'Show project'}
         </Button>
         {project.demo && (
@@ -316,6 +323,7 @@ export default function Directory() {
                 language: repository.language,
                 platform: 'github',
                 createdAt: repository.created_at,
+                updatedAt: repository.updated_at,
                 interactions: {
                   stars: repository.stargazers_count,
                   forks: repository.forks,
