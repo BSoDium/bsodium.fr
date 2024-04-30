@@ -13,6 +13,7 @@ import {
 } from '@mui/joy';
 import React, { useEffect, useMemo, useState } from 'react';
 import { IoIosClose, IoIosSearch, IoIosShuffle } from 'react-icons/io';
+import { TfiHeartBroken } from 'react-icons/tfi';
 import {
   Interaction,
   interactionDetails,
@@ -326,17 +327,16 @@ export default function Directory() {
       });
   }, []);
 
-  useEffect(() => {
-    setProjects((p) => p.filter(
-      (project) => (search === ''
-            || project.title.toLowerCase().includes(search.toLowerCase())
-            || (project.description
-              && project.description
-                .toLowerCase()
-                .includes(search.toLowerCase())))
-          && (platform === null || project.platform === platform),
-    ));
-  }, [search, platform]);
+  // Filter projects based on search and selected platform
+  const filteredProjects = useMemo(() => projects.filter(
+    (project) => (search === ''
+          || project.title.toLowerCase().includes(search.toLowerCase())
+          || (project.description
+            && project.description
+              .toLowerCase()
+              .includes(search.toLowerCase())))
+        && (platform === null || project.platform === platform),
+  ), [projects, search, platform]);
 
   // Pick a random project from the list and open it, then scroll to it
   const randomize = () => {
@@ -469,8 +469,8 @@ export default function Directory() {
         </Button>
       </Stack>
       <Stack paddingBlockStart={4}>
-        {projects
-          .sort((a, b) => rank(b, projects) - rank(a, projects))
+        {filteredProjects
+          .sort((a, b) => rank(b, filteredProjects) - rank(a, filteredProjects))
           .map((project, index) => (
             <>
               <ProjectCard
@@ -479,9 +479,23 @@ export default function Directory() {
                 open={openProject === project.title}
                 onClick={() => (openProject === project.title ? setOpenProject('') : setOpenProject(project.title))}
               />
-              {index < projects.length - 1 && <Divider />}
+              {index < filteredProjects.length - 1 && (<Divider />)}
             </>
           ))}
+        {filteredProjects.length === 0 && (
+        <Stack direction="row" justifyContent="center" alignItems="center" gap={5} padding={10}>
+          <TfiHeartBroken size="5rem" />
+          <Stack direction="column" gap={1} maxWidth="25rem">
+            <Typography level="h3">
+              This usually never happens...
+            </Typography>
+            <Typography level="body2">
+              We couldn&apos;t find any projects matching your search criteria. Try
+              a different search term or platform.
+            </Typography>
+          </Stack>
+        </Stack>
+        )}
       </Stack>
     </Stack>
   );
