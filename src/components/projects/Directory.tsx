@@ -29,6 +29,32 @@ import { CiSearch, CiWifiOff } from 'react-icons/ci';
 import { useMobileMode } from 'components/Responsive';
 import { GoDownload } from 'react-icons/go';
 
+function Message({
+  children,
+  title,
+  subtitle,
+}: {
+  children: JSX.Element;
+  title: string;
+  subtitle: string;
+}) {
+  const mobile = useMobileMode();
+
+  return (
+    <Stack direction="row" justifyContent="center" alignItems="center" flexWrap="wrap" gap={mobile ? 3 : 5} padding={mobile ? '6rem 3rem' : 15}>
+      {children}
+      <Stack direction="column" gap={0.5} maxWidth="25rem" textAlign={mobile ? 'center' : 'left'}>
+        <Typography level="h3">
+          {title}
+        </Typography>
+        <Typography level="body2">
+          {subtitle}
+        </Typography>
+      </Stack>
+    </Stack>
+  );
+}
+
 function ProjectCard({
   project,
   open,
@@ -458,19 +484,11 @@ export default function Directory() {
       </Stack>
       <Stack paddingBlockStart={4}>
         {loading ? (
-          <Stack direction="row" justifyContent="center" alignItems="center" gap={5} padding={15}>
+          <Message title="Working on it..." subtitle="We are fetching the projects for you. This should only take a few seconds.">
             <CircularProgress size="lg" color="neutral" variant="outlined">
               <GoDownload size="1.5rem" />
             </CircularProgress>
-            <Stack direction="column" gap={0.5} maxWidth="25rem">
-              <Typography level="h3">
-                Working on it...
-              </Typography>
-              <Typography level="body2">
-                We are fetching the projects for you. This should only take a few seconds.
-              </Typography>
-            </Stack>
-          </Stack>
+          </Message>
         ) : filteredProjects
           .sort((a, b) => rank(b, filteredProjects) - rank(a, filteredProjects))
           .map((project, index) => (
@@ -485,17 +503,9 @@ export default function Directory() {
             </>
           ))}
         {filteredProjects.length === 0 && !loading && (
-          <Stack direction="row" justifyContent="center" alignItems="center" gap={5} padding={15}>
+          <Message title={error ? 'This usually never happens...' : 'Well that\'s embarrassing...'} subtitle={error ? error.message : 'We couldn\'t find any projects matching your search criteria. Try a different search term or platform.'}>
             {error ? <CiWifiOff size="5rem" /> : <CiSearch size="5rem" />}
-            <Stack direction="column" gap={0.5} maxWidth="25rem">
-              <Typography level="h3">
-                {error ? 'This usually never happens...' : 'Well that\'s embarrassing...' }
-              </Typography>
-              <Typography level="body2">
-                {error ? error.message : 'We couldn\'t find any projects matching your search criteria. Try a different search term or platform.'}
-              </Typography>
-            </Stack>
-          </Stack>
+          </Message>
         )}
       </Stack>
     </Stack>
