@@ -341,7 +341,7 @@ export default function Directory() {
   const [platform, setPlatform] = useState<string | null>(searchParams.get('platform') || null);
 
   const [projects, setProjects] = useState([] as Project[]);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchProgress, setSearchProgress] = useState(100);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error>();
 
@@ -366,7 +366,15 @@ export default function Directory() {
   }, [search, platform]);
 
   useEffect(() => {
-    setSearchLoading(true);
+    setSearchProgress(0);
+
+    const debounceDelay = Math.random() * 300 + 300;
+
+    const intervalTimer = setInterval(() => {
+      const step = 100 * (50 / debounceDelay);
+      setSearchProgress((prevProgress) => prevProgress + step);
+    }, 50);
+
     const debounceTimer = setTimeout(() => {
       const filtered = projects.filter(
         (project) => (search === ''
@@ -380,10 +388,12 @@ export default function Directory() {
         ) && (platform === null || project.platform === platform),
       );
       setFilteredProjects(filtered);
-      setSearchLoading(false);
-    }, 300);
+      clearInterval(intervalTimer);
+      setSearchProgress(100);
+    }, debounceDelay);
 
     return () => {
+      clearInterval(intervalTimer);
       clearTimeout(debounceTimer);
     };
   }, [projects, search, platform]);
@@ -408,10 +418,22 @@ export default function Directory() {
           placeholder={`Search ${projects.length} featured projects`}
           variant="outlined"
           value={search}
-          className={searchLoading ? 'loading' : ''}
+          className={searchProgress !== 100 ? 'loading' : ''}
           onChange={(e) => setSearch(e.target.value)}
-          startDecorator={searchLoading ? (
-            <CircularProgress size="sm" color="neutral" variant="soft" sx={{ margin: '-4px' }} />
+          startDecorator={searchProgress !== 100 ? (
+            <CircularProgress
+              size="sm"
+              color="neutral"
+              variant="soft"
+              determinate
+              value={searchProgress}
+              sx={{
+                margin: '-4px',
+                '& circle': {
+                  transition: 'all ease .05s',
+                },
+              }}
+            />
           ) : (<IoIosSearch />)}
           endDecorator={search !== '' && (
             <IconButton
@@ -553,7 +575,7 @@ export default function Directory() {
               {index < filteredProjects.length - 1 && (<Divider />)}
             </React.Fragment>
           ))}
-        {filteredProjects.length === 0 && !loading && !searchLoading && (
+        {filteredProjects.length === 0 && !loading && searchProgress === 100 && (
           <Message title={error ? 'This usually never happens...' : 'Well that\'s embarrassing...'} subtitle={error ? error.message : 'We couldn\'t find any projects matching your search criteria. Try a different search term or platform.'}>
             {error ? <CiWifiOff size="5rem" /> : <CiSearch size="5rem" />}
           </Message>
