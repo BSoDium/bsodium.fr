@@ -10,10 +10,10 @@ import {
   Avatar,
   Box,
   Divider,
+  CircularProgress,
 } from '@mui/joy';
 import React, { useEffect, useMemo, useState } from 'react';
 import { IoIosClose, IoIosSearch, IoIosShuffle } from 'react-icons/io';
-import { TfiHeartBroken } from 'react-icons/tfi';
 import {
   Interaction,
   interactionDetails,
@@ -25,7 +25,9 @@ import {
 import getProjects from 'utils/Api';
 import moment from 'moment';
 import { FiCode, FiFile, FiPlay } from 'react-icons/fi';
+import { CiSearch, CiWifiOff } from 'react-icons/ci';
 import { useMobileMode } from 'components/Responsive';
+import { GoDownload } from 'react-icons/go';
 
 function ProjectCard({
   project,
@@ -298,9 +300,7 @@ export default function Directory() {
   const [platform, setPlatform] = useState<string | null>(null);
 
   const [projects, setProjects] = useState([] as Project[]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<Error>();
 
   useEffect(() => {
@@ -308,7 +308,7 @@ export default function Directory() {
     getProjects().then((data) => {
       setProjects(data);
     }).catch(() => {
-      setError(new Error('Failed to load projects.'));
+      setError(new Error('There was an error loading the projects. Please try again later.'));
     }).finally(() => {
       setLoading(false);
     });
@@ -457,7 +457,21 @@ export default function Directory() {
         </Button>
       </Stack>
       <Stack paddingBlockStart={4}>
-        {filteredProjects
+        {loading ? (
+          <Stack direction="row" justifyContent="center" alignItems="center" gap={5} padding={15}>
+            <CircularProgress size="lg" color="neutral" variant="outlined">
+              <GoDownload size="1.5rem" />
+            </CircularProgress>
+            <Stack direction="column" gap={0.5} maxWidth="25rem">
+              <Typography level="h3">
+                Working on it...
+              </Typography>
+              <Typography level="body2">
+                We are fetching the projects for you. This should only take a few seconds.
+              </Typography>
+            </Stack>
+          </Stack>
+        ) : filteredProjects
           .sort((a, b) => rank(b, filteredProjects) - rank(a, filteredProjects))
           .map((project, index) => (
             <>
@@ -471,18 +485,17 @@ export default function Directory() {
             </>
           ))}
         {filteredProjects.length === 0 && !loading && (
-        <Stack direction="row" justifyContent="center" alignItems="center" gap={5} padding={15}>
-          <TfiHeartBroken size="5rem" />
-          <Stack direction="column" gap={1} maxWidth="25rem">
-            <Typography level="h3">
-              This usually never happens...
-            </Typography>
-            <Typography level="body2">
-              We couldn&apos;t find any projects matching your search criteria. Try
-              a different search term or platform.
-            </Typography>
+          <Stack direction="row" justifyContent="center" alignItems="center" gap={5} padding={15}>
+            {error ? <CiWifiOff size="5rem" /> : <CiSearch size="5rem" />}
+            <Stack direction="column" gap={0.5} maxWidth="25rem">
+              <Typography level="h3">
+                {error ? 'This usually never happens...' : 'Well that\'s embarrassing...' }
+              </Typography>
+              <Typography level="body2">
+                {error ? error.message : 'We couldn\'t find any projects matching your search criteria. Try a different search term or platform.'}
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
         )}
       </Stack>
     </Stack>
