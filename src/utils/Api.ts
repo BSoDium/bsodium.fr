@@ -2,7 +2,7 @@ import { Project } from 'assets/Projects';
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'https://api.bsodium.fr',
+  baseURL: process.env.REACT_APP_API_URL,
 });
 
 export default async function getProjects() {
