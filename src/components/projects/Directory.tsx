@@ -112,7 +112,7 @@ function ProjectCard({
             backgroundColor: 'transparent',
           },
           '& .illustration': {
-            opacity: 1,
+            opacity: 0.8,
           },
 
           '& .icon': {
@@ -309,7 +309,7 @@ function ProjectCard({
               'linear-gradient(to left,black 10%,transparent 80%)',
             maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
             opacity: 0,
-            filter: 'blur(5px) brightness(.8)',
+            filter: 'blur(5px)',
             transform: 'translateY(-50%)',
           }}
         />
@@ -378,11 +378,21 @@ export default function Directory() {
       <Stack direction="row" flexWrap="wrap" gap={1}>
         <Input
           size="lg"
-          placeholder="Search for a project"
+          placeholder={`Search ${projects.length} featured projects`}
           variant="outlined"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           startDecorator={<IoIosSearch />}
+          endDecorator={search !== '' && (
+            <IconButton
+              variant="plain"
+              color="neutral"
+              sx={{ fontSize: '1.5rem' }}
+              onClick={() => setSearch('')}
+            >
+              <IoIosClose />
+            </IconButton>
+          )}
           sx={(theme) => ({
             transition: 'all ease .2s',
             width: mobile ? '100%' : 'min(100%, 30rem)',
@@ -503,7 +513,7 @@ export default function Directory() {
           .sort((a, b) => rank(b, filteredProjects) - rank(a, filteredProjects))
           .map((project, index) => (
             <React.Fragment
-              key={`${project.platform}-${project.title}`}
+              key={`${project.platform}-${project.title}-${project.source}`}
             >
               <ProjectCard
                 project={project}
