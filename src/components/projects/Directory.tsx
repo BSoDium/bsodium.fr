@@ -28,6 +28,7 @@ import { FiCode, FiFile, FiPlay } from 'react-icons/fi';
 import { CiSearch, CiWifiOff } from 'react-icons/ci';
 import { useMobileMode } from 'components/Responsive';
 import { GoDownload } from 'react-icons/go';
+import { useSearchParams } from 'react-router-dom';
 
 function Message({
   children,
@@ -318,12 +319,14 @@ function ProjectCard({
 }
 
 export default function Directory() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [openProject, setOpenProject] = useState('');
 
   const mobile = useMobileMode();
 
-  const [search, setSearch] = useState('');
-  const [platform, setPlatform] = useState<string | null>(null);
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [platform, setPlatform] = useState<string | null>(searchParams.get('platform') || null);
 
   const [projects, setProjects] = useState([] as Project[]);
   const [loading, setLoading] = useState(false);
@@ -336,9 +339,16 @@ export default function Directory() {
     }).catch(() => {
       setError(new Error('There was an error loading the projects. Please try again later.'));
     }).finally(() => {
-      // setLoading(false);
+      setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (platform) params.set('platform', platform);
+    setSearchParams(params);
+  }, [search, platform]);
 
   // Filter projects based on search and selected platform
   const filteredProjects = useMemo(() => projects.filter(
