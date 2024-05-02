@@ -8,11 +8,12 @@ import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
 import {
   FaCode, FaCodeBranch, FaGithub, FaStar,
 } from 'react-icons/fa';
-import { Repository, getRepositories } from 'utils/Api';
+import getProjects from 'utils/Api';
 import colors from 'assets/colors.json';
 import { Parallax } from 'react-scroll-parallax';
 import { FiExternalLink } from 'react-icons/fi';
 import { RiBracesLine } from 'react-icons/ri';
+import { Project } from 'assets/Projects';
 import { Default, Mobile, useMobileMode } from './Responsive';
 
 /**
@@ -28,7 +29,7 @@ function ProjectCard({
   project,
   color = 'info',
 }: {
-  project: Repository;
+  project: Project;
   color?: ColorPaletteProp
 }) {
   const mobile = useMobileMode();
@@ -78,7 +79,7 @@ function ProjectCard({
       <Stack gap={2}>
         <Stack direction="row" alignItems="center" gap={2}>
           <Avatar
-            alt={project.name}
+            alt={project.title}
             color={color}
             variant="outlined"
           >
@@ -86,7 +87,7 @@ function ProjectCard({
           </Avatar>
           <Stack>
             <Typography level="h5">
-              {beautify(project.name)}
+              {beautify(project.title)}
             </Typography>
             <Typography
               level="body2"
@@ -118,7 +119,7 @@ function ProjectCard({
               <FaStar />
                 }
           >
-            {project.stargazers_count}
+            {project.interactions?.stars}
           </Typography>
           <Typography
             level="body2"
@@ -126,7 +127,7 @@ function ProjectCard({
               <FaCodeBranch />
             }
           >
-            {project.forks}
+            {project.interactions?.forks}
           </Typography>
         </Stack>
         <Stack direction="row" gap={1}>
@@ -134,7 +135,7 @@ function ProjectCard({
             variant="plain"
             component="a"
             color={color}
-            href={project.html_url}
+            href={project.source}
             target="_blank"
             sx={{
               flexShrink: 0,
@@ -145,12 +146,12 @@ function ProjectCard({
           >
             Code
           </Button>
-          {project.homepage && (
+          {project.demo && (
           <Button
             component="a"
             color={color}
             variant="solid"
-            href={project.homepage}
+            href={project.demo}
             target="_blank"
             startDecorator={
               <FiExternalLink />
@@ -168,14 +169,14 @@ function ProjectCard({
 export default function Featured() {
   const mobile = useMobileMode();
 
-  const [projects, setProjects] = useState<Repository[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error>();
 
   useEffect(() => {
     setLoading(true);
-    getRepositories('BSoDium').then((data) => {
-      setProjects(data.filter((project) => project.topics.includes('featured')));
+    getProjects().then((data) => {
+      setProjects(data.filter((project) => project.platform === 'github'));
     }).catch(() => {
       setError(new Error('Failed to load projects, check your internet connection.'));
     }).finally(() => {
@@ -320,7 +321,7 @@ export default function Featured() {
             <>
               {projects.map((project, index) => (
                 <React.Fragment
-                  key={project.name}
+                  key={project.title}
                 >
                   <ProjectCard
                     project={project}

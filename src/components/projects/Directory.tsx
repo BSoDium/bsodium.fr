@@ -22,11 +22,7 @@ import {
   Project,
   rank,
 } from 'assets/Projects';
-import {
-  getDeviations,
-  getFigmaFiles,
-  getRepositories,
-} from 'utils/Api';
+import getProjects from 'utils/Api';
 import moment from 'moment';
 import { FiCode, FiFile, FiPlay } from 'react-icons/fi';
 import { useMobileMode } from 'components/Responsive';
@@ -309,39 +305,13 @@ export default function Directory() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([getRepositories('BSoDium'), getDeviations(), getFigmaFiles()])
-      .then(([repositories, deviations, figmaFiles]) => {
-        setProjects([
-          ...repositories
-            .filter((project) => project.topics.includes('featured'))
-            .map(
-              (repository) => ({
-                title: repository.name,
-                description: repository.description,
-                source: repository.html_url,
-                demo: repository.homepage,
-                language: repository.language,
-                platform: 'github',
-                createdAt: repository.created_at,
-                updatedAt: repository.updated_at,
-                interactions: {
-                  stars: repository.stargazers_count,
-                  forks: repository.forks,
-                },
-              } as Project),
-            ),
-          ...deviations,
-          ...figmaFiles,
-        ]);
-      })
-      .catch(() => {
-        setError(
-          new Error('Failed to load projects, check your internet connection.'),
-        );
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    getProjects().then((data) => {
+      setProjects(data);
+    }).catch(() => {
+      setError(new Error('Failed to load projects.'));
+    }).finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   // Filter projects based on search and selected platform

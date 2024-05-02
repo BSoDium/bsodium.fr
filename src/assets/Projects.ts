@@ -5,9 +5,10 @@ import {
 import {
   FiFigma, FiGithub,
 } from 'react-icons/fi';
+import { SiResearchgate } from 'react-icons/si';
 import { TbBrandDeviantart } from 'react-icons/tb';
 
-export const platforms = ['github', 'figma', 'deviantart'] as const;
+export const platforms = ['github', 'figma', 'deviantart', 'researchgate'] as const;
 export type Platform = (typeof platforms)[number]
 
 export const platformDetails: Record<Platform, {
@@ -28,6 +29,11 @@ export const platformDetails: Record<Platform, {
       label: 'DeviantArt',
       icon: TbBrandDeviantart,
       sublabel: 'Artwork',
+    },
+    researchgate: {
+      label: 'ResearchGate',
+      sublabel: 'Research paper',
+      icon: SiResearchgate,
     },
   };
 
