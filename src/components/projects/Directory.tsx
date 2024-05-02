@@ -41,7 +41,7 @@ function Message({
   const mobile = useMobileMode();
 
   return (
-    <Stack direction="row" justifyContent="center" alignItems="center" flexWrap="wrap" gap={mobile ? 3 : 5} padding={mobile ? '6rem 3rem' : 15}>
+    <Stack direction="row" justifyContent="center" alignItems="center" flexWrap="wrap" gap={mobile ? 3 : 5} padding={mobile ? '2rem 3rem' : 15}>
       {children}
       <Stack direction="column" gap={0.5} maxWidth="25rem" textAlign={mobile ? 'center' : 'left'}>
         <Typography level="h3">
@@ -308,7 +308,7 @@ function ProjectCard({
               'linear-gradient(to left,black 10%,transparent 80%)',
             maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
             opacity: 0,
-            filter: 'blur(2px) brightness(.8)',
+            filter: 'blur(5px) brightness(.8)',
             transform: 'translateY(-50%)',
           }}
         />
@@ -336,7 +336,7 @@ export default function Directory() {
     }).catch(() => {
       setError(new Error('There was an error loading the projects. Please try again later.'));
     }).finally(() => {
-      setLoading(false);
+      // setLoading(false);
     });
   }, []);
 
