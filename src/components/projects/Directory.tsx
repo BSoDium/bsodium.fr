@@ -445,9 +445,9 @@ export default function Directory() {
         >
           {Object.entries(platformDetails).map(([key, item]) => (
             <Option
+              key={key}
               color="neutral"
               component={Stack}
-              key={key}
               value={key}
               direction="row"
               gap={1}
@@ -502,15 +502,16 @@ export default function Directory() {
         ) : filteredProjects
           .sort((a, b) => rank(b, filteredProjects) - rank(a, filteredProjects))
           .map((project, index) => (
-            <>
+            <React.Fragment
+              key={`${project.platform}-${project.title}`}
+            >
               <ProjectCard
-                key={project.title}
                 project={project}
                 open={openProject === project.title}
                 onClick={() => (openProject === project.title ? setOpenProject('') : setOpenProject(project.title))}
               />
               {index < filteredProjects.length - 1 && (<Divider />)}
-            </>
+            </React.Fragment>
           ))}
         {filteredProjects.length === 0 && !loading && (
           <Message title={error ? 'This usually never happens...' : 'Well that\'s embarrassing...'} subtitle={error ? error.message : 'We couldn\'t find any projects matching your search criteria. Try a different search term or platform.'}>
