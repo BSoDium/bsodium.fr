@@ -42,7 +42,19 @@ function Message({
   const mobile = useMobileMode();
 
   return (
-    <Stack direction="row" justifyContent="center" alignItems="center" flexWrap="wrap" gap={mobile ? 3 : 5} padding={mobile ? '2rem 3rem' : 15}>
+    <Stack
+      direction="row"
+      justifyContent="center"
+      alignItems="center"
+      flexWrap="wrap"
+      gap={mobile ? 3 : 5}
+      padding={mobile ? '2rem 3rem' : 15}
+      sx={mobile ? (theme) => ({
+        background: theme.palette.background.body,
+        width: '100vw',
+        zIndex: 1,
+      }) : undefined}
+    >
       {children}
       <Stack direction="column" gap={0.5} maxWidth="25rem" textAlign={mobile ? 'center' : 'left'}>
         <Typography level="h3">
@@ -329,8 +341,11 @@ export default function Directory() {
   const [platform, setPlatform] = useState<string | null>(searchParams.get('platform') || null);
 
   const [projects, setProjects] = useState([] as Project[]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error>();
+
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -350,16 +365,28 @@ export default function Directory() {
     setSearchParams(params);
   }, [search, platform]);
 
-  // Filter projects based on search and selected platform
-  const filteredProjects = useMemo(() => projects.filter(
-    (project) => (search === ''
+  useEffect(() => {
+    setSearchLoading(true);
+    const debounceTimer = setTimeout(() => {
+      const filtered = projects.filter(
+        (project) => (search === ''
           || project.title.toLowerCase().includes(search.toLowerCase())
           || (project.description
             && project.description
               .toLowerCase()
-              .includes(search.toLowerCase())))
-        && (platform === null || project.platform === platform),
-  ), [projects, search, platform]);
+              .includes(search.toLowerCase()))
+          || project.language?.toLowerCase().includes(search.toLowerCase())
+          || project.platform.toLowerCase().includes(search.toLowerCase())
+        ) && (platform === null || project.platform === platform),
+      );
+      setFilteredProjects(filtered);
+      setSearchLoading(false);
+    }, 300);
+
+    return () => {
+      clearTimeout(debounceTimer);
+    };
+  }, [projects, search, platform]);
 
   // Pick a random project from the list and open it, then scroll to it
   const randomize = () => {
@@ -381,8 +408,11 @@ export default function Directory() {
           placeholder={`Search ${projects.length} featured projects`}
           variant="outlined"
           value={search}
+          className={searchLoading ? 'loading' : ''}
           onChange={(e) => setSearch(e.target.value)}
-          startDecorator={<IoIosSearch />}
+          startDecorator={searchLoading ? (
+            <CircularProgress size="sm" color="neutral" variant="soft" sx={{ margin: '-4px' }} />
+          ) : (<IoIosSearch />)}
           endDecorator={search !== '' && (
             <IconButton
               variant="plain"
@@ -405,7 +435,7 @@ export default function Directory() {
               transition: 'all ease .2s',
             },
 
-            '&:has(:focus)': {
+            '&:has(:focus), &.loading': {
               borderRadius: mobile ? '100vmax' : '100vmax 0 0 100vmax',
             },
           })}
@@ -523,7 +553,7 @@ export default function Directory() {
               {index < filteredProjects.length - 1 && (<Divider />)}
             </React.Fragment>
           ))}
-        {filteredProjects.length === 0 && !loading && (
+        {filteredProjects.length === 0 && !loading && !searchLoading && (
           <Message title={error ? 'This usually never happens...' : 'Well that\'s embarrassing...'} subtitle={error ? error.message : 'We couldn\'t find any projects matching your search criteria. Try a different search term or platform.'}>
             {error ? <CiWifiOff size="5rem" /> : <CiSearch size="5rem" />}
           </Message>
