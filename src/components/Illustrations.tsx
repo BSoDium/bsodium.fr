@@ -4,6 +4,7 @@ import planet2 from 'assets/planet_2.png';
 import robot1 from 'assets/robot_flying_1.png';
 import robot2 from 'assets/robot_flying_2.png';
 import sky from 'assets/sky.webp';
+import { Box } from '@mui/joy';
 import { Default, useMobileMode } from './Responsive';
 
 export default function Illustrations() {
@@ -25,7 +26,7 @@ export default function Illustrations() {
           top: '0',
           left: '0',
           zIndex: -1,
-          filter: 'blur(calc(100vw * 0,002)) brightness(0.8) hue-rotate(30deg)',
+          filter: 'blur(calc(100vw / 1200)) brightness(0.5) hue-rotate(30deg)',
           maskImage: 'linear-gradient(to bottom, black 10%, transparent 80%)',
           WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 80%)',
         }}
@@ -40,24 +41,24 @@ export default function Illustrations() {
           left: '0',
           transform: 'translate(-40%, -40%) rotate(80deg)',
           zIndex: -1,
-          filter: 'blur(5px) brightness(0.8) hue-rotate(30deg)',
+          filter: 'blur(calc(100vw / 2000)) brightness(0.8) hue-rotate(30deg)',
           maskImage: 'radial-gradient(circle at center, white 50%, transparent 60%)',
           WebkitMaskImage: 'radial-gradient(circle at center, white 50%, transparent 60%)',
         }}
       />
-      <img
+      <Box
+        component="img"
         src={planet2}
         alt="planet"
-        style={{
+        sx={(theme) => ({
           position: 'absolute',
           width: 'min(500px, 80vw)',
           top: '12rem',
           left: '90%',
           transform: 'translateX(-50%) scaleX(-1)',
           zIndex: -1,
-          maskImage: 'linear-gradient(to bottom, black 10%, transparent 80%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 80%)',
-        }}
+          filter: `drop-shadow(-1rem 1rem 20px ${theme.palette.background.body})`,
+        })}
       />
       <img
         src={robot1}
