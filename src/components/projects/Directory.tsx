@@ -11,6 +11,7 @@ import {
   Box,
   Divider,
   CircularProgress,
+  Chip,
 } from '@mui/joy';
 import React, { useEffect, useMemo, useState } from 'react';
 import { IoIosClose, IoIosSearch, IoIosShuffle } from 'react-icons/io';
@@ -367,7 +368,7 @@ export default function Directory() {
 
   // Update the debounced search term
   useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedSearch(search), 500);
+    const timeout = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timeout);
   }, [search]);
 
@@ -405,7 +406,7 @@ export default function Directory() {
       <Stack direction="row" flexWrap="wrap" gap={1}>
         <Input
           size="lg"
-          placeholder={`Search ${projects.length} featured projects`}
+          placeholder={`Search ${filteredProjects.length} project${filteredProjects.length === 1 ? '' : 's'}`}
           variant="outlined"
           value={search}
           className={debouncedSearch !== search ? 'loading' : ''}
@@ -493,19 +494,30 @@ export default function Directory() {
             );
           }}
         >
-          {Object.entries(platformDetails).map(([key, item]) => (
-            <Option
-              key={key}
-              color="neutral"
-              component={Stack}
-              value={key}
-              direction="row"
-              gap={1}
-            >
-              <item.icon />
-              {item.label}
-            </Option>
-          ))}
+          {Object.entries(platformDetails).map(([key, item]) => {
+            const selected = platform === key;
+            const occurrences = projects.filter((project) => project.platform === key).length;
+            return (
+              <Option
+                key={key}
+                color="neutral"
+                component={Stack}
+                label={item.label}
+                value={key}
+                direction="row"
+                disabled={occurrences === 0}
+                gap={1}
+              >
+                <item.icon />
+                <Typography flex="1">
+                  {item.label}
+                </Typography>
+                <Chip size="sm" variant={selected ? 'solid' : 'soft'} color="neutral">
+                  {occurrences}
+                </Chip>
+              </Option>
+            );
+          })}
         </Select>
         <Button
           size="lg"
