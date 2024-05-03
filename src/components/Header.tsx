@@ -63,7 +63,7 @@ export default function Header() {
         variant="outlined"
         to="/resume"
         startDecorator={(
-          <Avatar size="lg" color="primary">
+          <Avatar size="lg" color="primary" sx={(theme) => ({ border: `1px solid ${theme.palette.primary[700]}` })}>
             <IoReaderOutline />
           </Avatar>
           )}
@@ -72,7 +72,7 @@ export default function Header() {
           )}
         sx={(theme) => ({
           '&:not(:hover)': {
-            backgroundColor: '#0000008c',
+            backgroundColor: '#08101ddd',
           },
           '&:hover': {
             boxShadow: `0 0 40px 5px ${theme.palette.primary[900]}`,
