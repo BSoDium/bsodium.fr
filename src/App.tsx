@@ -94,10 +94,9 @@ function Credits() {
 
 export default function App() {
   const mobile = useMobileMode();
-
   return (
-    <ParallaxProvider>
-      <FixedMode mode="dark" style={{ overflow: 'hidden' }}>
+    <FixedMode mode="system" style={{ overflow: 'hidden' }}>
+      <ParallaxProvider>
         <Title text="Elliot Négrel-Jerzy" />
         <Parallax speed={-20} startScroll={0} disabled={mobile}>
           <Illustrations />
@@ -142,7 +141,7 @@ export default function App() {
                     top: '-20px',
                     left: '-30px',
                     height: 'calc(100% + 20px)',
-                    width: '1px',
+                    width: '1.5px',
                     background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
                   },
                 })}
@@ -203,7 +202,7 @@ export default function App() {
             </Stack>
           </Stack>
         </div>
-      </FixedMode>
-    </ParallaxProvider>
+      </ParallaxProvider>
+    </FixedMode>
   );
 }
