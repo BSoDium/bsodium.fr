@@ -337,11 +337,11 @@ export default function Directory() {
 
   const mobile = useMobileMode();
 
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [platform, setPlatform] = useState<string | null>(searchParams.get('platform') || null);
 
   const [projects, setProjects] = useState([] as Project[]);
-  const [searchProgress, setSearchProgress] = useState(100);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error>();
 
@@ -365,38 +365,28 @@ export default function Directory() {
     setSearchParams(params);
   }, [search, platform]);
 
+  // Update the debounced search term
   useEffect(() => {
-    setSearchProgress(0);
+    const timeout = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(timeout);
+  }, [search]);
 
-    const debounceDelay = Math.random() * 300 + 300;
+  // Filtering
+  useEffect(() => {
+    setFilteredProjects(projects.filter(
+      (project) => (platform === null || project.platform === platform) && (debouncedSearch === ''
+      || project.title.toLowerCase().includes(debouncedSearch.toLowerCase())
+      || project.platform.toLowerCase().includes(debouncedSearch.toLowerCase())
+      || project.description?.toLowerCase().includes(debouncedSearch.toLowerCase())
+      || project.language?.toLowerCase().includes(debouncedSearch.toLowerCase())
+      ),
+    ));
 
-    const intervalTimer = setInterval(() => {
-      const step = 100 * (50 / debounceDelay);
-      setSearchProgress((prevProgress) => prevProgress + step);
-    }, 50);
-
-    const debounceTimer = setTimeout(() => {
-      const filtered = projects.filter(
-        (project) => (search === ''
-          || project.title.toLowerCase().includes(search.toLowerCase())
-          || (project.description
-            && project.description
-              .toLowerCase()
-              .includes(search.toLowerCase()))
-          || project.language?.toLowerCase().includes(search.toLowerCase())
-          || project.platform.toLowerCase().includes(search.toLowerCase())
-        ) && (platform === null || project.platform === platform),
-      );
-      setFilteredProjects(filtered);
-      clearInterval(intervalTimer);
-      setSearchProgress(100);
-    }, debounceDelay);
-
-    return () => {
-      clearInterval(intervalTimer);
-      clearTimeout(debounceTimer);
-    };
-  }, [projects, search, platform]);
+    // If the open project is not in the filtered list, close it
+    if (openProject !== '' && !projects.find((project) => project.title === openProject)) {
+      setOpenProject('');
+    }
+  }, [projects, debouncedSearch, platform]);
 
   // Pick a random project from the list and open it, then scroll to it
   const randomize = () => {
@@ -418,15 +408,13 @@ export default function Directory() {
           placeholder={`Search ${projects.length} featured projects`}
           variant="outlined"
           value={search}
-          className={searchProgress !== 100 ? 'loading' : ''}
+          className={debouncedSearch !== search ? 'loading' : ''}
           onChange={(e) => setSearch(e.target.value)}
-          startDecorator={searchProgress !== 100 ? (
+          startDecorator={debouncedSearch !== search ? (
             <CircularProgress
               size="sm"
               color="neutral"
               variant="soft"
-              determinate
-              value={searchProgress}
               sx={{
                 margin: '-4px',
                 '& circle': {
@@ -575,7 +563,7 @@ export default function Directory() {
               {index < filteredProjects.length - 1 && (<Divider />)}
             </React.Fragment>
           ))}
-        {filteredProjects.length === 0 && !loading && searchProgress === 100 && (
+        {filteredProjects.length === 0 && !loading && debouncedSearch === search && (
           <Message title={error ? 'This usually never happens...' : 'Well that\'s embarrassing...'} subtitle={error ? error.message : 'We couldn\'t find any projects matching your search criteria. Try a different search term or platform.'}>
             {error ? <CiWifiOff size="5rem" /> : <CiSearch size="5rem" />}
           </Message>
