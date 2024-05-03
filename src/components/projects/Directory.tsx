@@ -401,11 +401,24 @@ export default function Directory() {
     });
   };
 
+  // When F is pressed, focus the search input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('search')?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <Stack paddingY={1} width="100%">
       <Stack direction="row" flexWrap="wrap" gap={1}>
         <Input
           size="lg"
+          id="search"
           placeholder={`Search ${filteredProjects.length} project${filteredProjects.length === 1 ? '' : 's'}`}
           variant="outlined"
           value={search}
