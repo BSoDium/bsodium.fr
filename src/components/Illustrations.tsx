@@ -26,9 +26,24 @@ export default function Illustrations() {
           top: '0',
           left: '0',
           zIndex: -1,
-          filter: 'blur(calc(100vw / 1200)) brightness(0.5) hue-rotate(30deg)',
-          maskImage: 'linear-gradient(to bottom, black 10%, transparent 80%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 80%)',
+          filter: 'blur(calc(100vw / 1200)) brightness(0.5)',
+          maskImage: 'linear-gradient(to bottom, black 10%, #0000007b 80%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 10%, #0000007b 80%)',
+        }}
+      />
+      <img
+        src={sky}
+        alt="sky"
+        style={{
+          position: 'absolute',
+          width: '100vw',
+          top: '70vh',
+          left: '0',
+          zIndex: -1,
+          transform: 'scaleY(-1)',
+          filter: 'blur(calc(100vw / 1200)) brightness(0.5)',
+          maskImage: 'linear-gradient(to bottom, #0000007b 20%, black 50%, transparent 80%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, #0000007b 20%, black 50%, transparent 80%)',
         }}
       />
       <img
@@ -36,29 +51,27 @@ export default function Illustrations() {
         alt="planet"
         style={{
           position: 'absolute',
-          width: 'max(75rem, 100vw - 75rem)',
+          width: 'max(65rem, 100vw - 65rem)',
           top: '0',
           left: '0',
           transform: 'translate(-40%, -40%) rotate(80deg)',
           zIndex: -1,
-          filter: 'blur(calc(100vw / 2000)) brightness(0.8) hue-rotate(30deg)',
-          maskImage: 'radial-gradient(circle at center, white 50%, transparent 60%)',
-          WebkitMaskImage: 'radial-gradient(circle at center, white 50%, transparent 60%)',
+          filter: 'blur(calc(100vw / 2000)) brightness(1) hue-rotate(20deg) drop-shadow(1rem -.5rem 3rem #100009) drop-shadow(-8rem -2rem 1rem #84E0F7)',
         }}
       />
       <Box
         component="img"
         src={planet2}
         alt="planet"
-        sx={(theme) => ({
+        sx={{
           position: 'absolute',
           width: 'min(500px, 80vw)',
           top: '12rem',
           left: '90%',
           transform: 'translateX(-50%) scaleX(-1)',
           zIndex: -1,
-          filter: `drop-shadow(-1rem 1rem 20px ${theme.palette.background.body})`,
-        })}
+          filter: 'drop-shadow(-1rem 1rem 20px #01030C) drop-shadow(1rem -2rem 1rem #e7f9fa32)',
+        }}
       />
       <img
         src={robot1}

@@ -98,17 +98,13 @@ function ProjectCard({
           </Typography>
 
         </Stack>
-        <Chip
-          size="sm"
-          variant="outlined"
+        <Typography
+          level="body3"
           color="neutral"
           startDecorator={(<FiCode />)}
-          style={{
-            borderColor: colors[project.language as keyof typeof colors]?.color?.replace('#', '#0F') || undefined,
-          }}
         >
           {project.language}
-        </Chip>
+        </Typography>
         <Typography
           level="body2"
           sx={{
