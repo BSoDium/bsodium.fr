@@ -1,11 +1,9 @@
 import React from 'react';
 import planet from 'assets/planet.png';
 import planet2 from 'assets/planet_2.png';
-import robot1 from 'assets/robot_flying_1.png';
-import robot2 from 'assets/robot_flying_2.png';
 import sky from 'assets/sky.webp';
 import { Box } from '@mui/joy';
-import { Default, useMobileMode } from './Responsive';
+import { useMobileMode } from './Responsive';
 
 export default function Illustrations() {
   const mobile = useMobileMode();
@@ -22,13 +20,13 @@ export default function Illustrations() {
         alt="sky"
         style={{
           position: 'absolute',
-          width: '100vw',
+          width: 'max(100vw, 200vh)',
           top: '0',
           left: '0',
           zIndex: -1,
           filter: 'blur(calc(100vw / 1200)) brightness(0.5)',
-          maskImage: 'linear-gradient(to bottom, black 10%, #0000007b 80%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 10%, #0000007b 80%)',
+          maskImage: 'linear-gradient(to bottom, black 10%, transparent 90%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 90%)',
         }}
       />
       <img
@@ -36,14 +34,14 @@ export default function Illustrations() {
         alt="sky"
         style={{
           position: 'absolute',
-          width: '100vw',
-          top: '70vh',
+          width: 'max(100vw, 200vh)',
+          top: 'calc(max(100vw, 200vh) / 7)',
           left: '0',
           zIndex: -1,
           transform: 'scaleY(-1)',
           filter: 'blur(calc(100vw / 1200)) brightness(0.5)',
-          maskImage: 'linear-gradient(to bottom, #0000007b 20%, black 50%, transparent 80%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, #0000007b 20%, black 50%, transparent 80%)',
+          maskImage: 'linear-gradient(to bottom, transparent 20%, #00000059 50%, transparent 80%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 20%, 00000059 50%, transparent 80%)',
         }}
       />
       <img
@@ -51,12 +49,12 @@ export default function Illustrations() {
         alt="planet"
         style={{
           position: 'absolute',
-          width: 'max(65rem, 100vw - 65rem)',
-          top: '0',
-          left: '0',
-          transform: 'translate(-40%, -40%) rotate(80deg)',
+          width: '75rem',
+          top: '-44rem',
+          left: 'calc(50% - 37.5rem)',
           zIndex: -1,
-          filter: 'blur(calc(100vw / 2000)) brightness(1) hue-rotate(20deg) drop-shadow(1rem -.5rem 3rem #100009) drop-shadow(-8rem -2rem 1rem #84E0F7)',
+          filter: `${mobile ? 'brightness(0.5)' : 'brightness(1)'} hue-rotate(20deg) drop-shadow(0 0 4rem #0C0223) drop-shadow(-3rem -3rem 3rem #3570b55b)`,
+          animation: 'spin 360s linear infinite',
         }}
       />
       <Box
@@ -70,75 +68,9 @@ export default function Illustrations() {
           left: '90%',
           transform: 'translateX(-50%) scaleX(-1)',
           zIndex: -1,
-          filter: 'drop-shadow(-1rem 1rem 20px #01030C) drop-shadow(1rem -2rem 1rem #e7f9fa32)',
+          filter: 'drop-shadow(-1rem 1rem 20px #01030C) drop-shadow(1rem -2rem 1rem #e7f9fa18)',
         }}
       />
-      <img
-        src={robot1}
-        alt="robot"
-        style={{
-          position: 'absolute',
-          width: '200px',
-          height: '200px',
-          top: '100px',
-          right: '5%',
-          zIndex: -1,
-          filter: 'blur(5px) brightness(0.8)',
-          transform: 'scale(0.5)',
-          animation: 'float 20s ease-in-out infinite',
-          animationDelay: '5s',
-        }}
-      />
-      <Default>
-        <img
-          src={robot2}
-          alt="robot"
-          style={{
-            position: 'absolute',
-            width: '200px',
-            height: '200px',
-            top: '300px',
-            right: '30%',
-            zIndex: -1,
-            filter: 'blur(5px) brightness(0.8)',
-            transform: 'scale(0.5)',
-            animation: 'float 20s ease-in-out infinite',
-            animationDelay: '10s',
-          }}
-        />
-      </Default>
-      <img
-        src={robot1}
-        alt="robot"
-        style={{
-          position: 'absolute',
-          width: '200px',
-          height: '200px',
-          top: mobile ? '200px' : '100px',
-          right: mobile ? '40%' : '20%',
-          zIndex: -1,
-          animation: 'float 20s ease-in-out infinite',
-          ...(mobile && {
-            filter: 'brightness(0.8)',
-          }),
-        }}
-      />
-      <Default>
-        <img
-          src={robot2}
-          alt="robot"
-          style={{
-            position: 'absolute',
-            width: '200px',
-            height: '200px',
-            top: '250px',
-            right: '10%',
-            zIndex: -1,
-            animation: 'float 20s ease-in-out infinite',
-            animationDelay: '13s',
-          }}
-        />
-      </Default>
     </div>
   );
 }
