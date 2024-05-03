@@ -509,10 +509,15 @@ export default function Directory() {
                 gap={1}
               >
                 <item.icon />
-                <Typography flex="1">
+                <Typography flex="1" textColor="inherit">
                   {item.label}
                 </Typography>
-                <Chip size="sm" variant={selected ? 'solid' : 'soft'} color="neutral">
+                <Chip
+                  size="sm"
+                  variant={selected ? 'solid' : 'soft'}
+                  color="neutral"
+                  disabled={occurrences === 0}
+                >
                   {occurrences}
                 </Chip>
               </Option>
