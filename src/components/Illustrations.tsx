@@ -1,6 +1,6 @@
 import React from 'react';
 import planet from 'assets/planet.png';
-import planet2 from 'assets/planet_2.png';
+import spaceStation from 'assets/space-station.png';
 import sky from 'assets/sky.webp';
 import { Box } from '@mui/joy';
 import { useMobileMode } from './Responsive';
@@ -59,16 +59,16 @@ export default function Illustrations() {
       />
       <Box
         component="img"
-        src={planet2}
-        alt="planet"
+        src={spaceStation}
+        alt="space station"
         sx={{
           position: 'absolute',
           width: 'min(500px, 80vw)',
-          top: '12rem',
-          left: '90%',
-          transform: 'translateX(-50%) scaleX(-1)',
+          top: mobile ? '5rem' : '12rem',
+          left: mobile ? 'calc(50%)' : '85%',
+          transform: 'translateX(-50%)',
           zIndex: -1,
-          filter: 'drop-shadow(-1rem 1rem 20px #01030C) drop-shadow(1rem -2rem 1rem #e7f9fa18)',
+          filter: `${mobile ? 'brightness(0.6)' : 'brightness(1)'} drop-shadow(0 0 1rem #3339442c) drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
         }}
       />
     </div>
