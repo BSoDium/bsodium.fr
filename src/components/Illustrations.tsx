@@ -1,6 +1,6 @@
 import React from 'react';
-import planet from 'assets/planet.png';
-import spaceStation from 'assets/space-station.png';
+import planet from 'assets/planet.webp';
+import spaceStation from 'assets/space-station.webp';
 import sky from 'assets/sky.webp';
 import { Box } from '@mui/joy';
 import { Parallax } from 'react-scroll-parallax';
@@ -70,7 +70,7 @@ export default function Illustrations() {
             left: '50%',
             transform: `translateX(${mobile ? '-50%' : '20vw'})`,
             zIndex: -1,
-            filter: `${mobile ? 'brightness(0.6)' : 'brightness(1)'} drop-shadow(0 0 1rem #3339442c) drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
+            filter: `${mobile ? 'brightness(0.6)' : 'brightness(1)'} drop-shadow(0 0 .5rem #141619b0) drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
           }}
         />
       </div>

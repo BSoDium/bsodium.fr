@@ -4,7 +4,7 @@ import {
   Avatar, Box, Button, Card, Chip,
   Input, Sheet, Stack, Textarea, Typography,
 } from '@mui/joy';
-import robot from 'assets/robot_taking_notes.png';
+import robot from 'assets/robot_taking_notes.webp';
 import { TbHeartHandshake } from 'react-icons/tb';
 import { ColorPaletteProp, SxProps } from '@mui/joy/styles/types';
 import { MdOutlineRocketLaunch, MdSend } from 'react-icons/md';
