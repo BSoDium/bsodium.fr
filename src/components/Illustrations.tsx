@@ -1,124 +1,79 @@
 import React from 'react';
 import planet from 'assets/planet.webp';
-import robot1 from 'assets/robot_flying_1.png';
-import robot2 from 'assets/robot_flying_2.png';
+import spaceStation from 'assets/space-station.webp';
 import sky from 'assets/sky.webp';
-import { Default, useMobileMode } from './Responsive';
+import { Box } from '@mui/joy';
+import { Parallax } from 'react-scroll-parallax';
+import { useMobileMode } from './Responsive';
 
 export default function Illustrations() {
   const mobile = useMobileMode();
 
   return (
-    <div style={{
-      position: 'relative',
-      width: '100vw',
-      height: '100vh',
-      overflow: 'hidden',
-    }}
-    >
-      <img
-        src={planet}
-        alt="planet"
-        style={{
-          position: 'absolute',
-          width: 'min(700px, 140vw)',
-          top: '-100px',
-          left: 'min(350px, 50vw)',
-          transform: 'translateX(-50%)',
-          zIndex: -1,
-        }}
-      />
-      <img
-        src={sky}
-        alt="sky"
-        style={{
-          position: 'absolute',
-          height: '70vh',
-          top: '0',
-          left: '0',
-          zIndex: -2,
-          filter: 'blur(5px)',
-        }}
-      />
-      <img
-        src={sky}
-        alt="sky"
-        style={{
-          position: 'absolute',
-          height: '70vh',
-          top: '50vh',
-          left: '0',
-          zIndex: -2,
-          filter: 'blur(5px) brightness(0.3)',
-          transform: 'scaleX(-1)',
-        }}
-      />
-      <img
-        src={robot1}
-        alt="robot"
-        style={{
-          position: 'absolute',
-          width: '200px',
-          height: '200px',
-          top: '100px',
-          right: '5%',
-          zIndex: -1,
-          filter: 'blur(5px) brightness(0.8)',
-          transform: 'scale(0.5)',
-          animation: 'float 20s ease-in-out infinite',
-          animationDelay: '5s',
-        }}
-      />
-      <Default>
+    <Parallax speed={-20} startScroll={0} disabled={mobile} style={{ overflow: 'visible' }}>
+      <div style={{
+        position: 'relative',
+        width: '100vw',
+        height: '100vh',
+      }}
+      >
         <img
-          src={robot2}
-          alt="robot"
+          src={sky}
+          alt="sky"
           style={{
             position: 'absolute',
-            width: '200px',
-            height: '200px',
-            top: '300px',
-            right: '30%',
+            width: 'max(100vw, 200vh)',
+            top: '0',
+            left: '0',
             zIndex: -1,
-            filter: 'blur(5px) brightness(0.8)',
-            transform: 'scale(0.5)',
-            animation: 'float 20s ease-in-out infinite',
-            animationDelay: '10s',
+            filter: 'brightness(0.5)',
+            maskImage: 'linear-gradient(to bottom, black 10%, transparent 90%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 90%)',
           }}
         />
-      </Default>
-      <img
-        src={robot1}
-        alt="robot"
-        style={{
-          position: 'absolute',
-          width: '200px',
-          height: '200px',
-          top: mobile ? '200px' : '100px',
-          right: mobile ? '40%' : '20%',
-          zIndex: -1,
-          animation: 'float 20s ease-in-out infinite',
-          ...(mobile && {
-            filter: 'brightness(0.8)',
-          }),
-        }}
-      />
-      <Default>
         <img
-          src={robot2}
-          alt="robot"
+          src={sky}
+          alt="sky"
           style={{
             position: 'absolute',
-            width: '200px',
-            height: '200px',
-            top: '250px',
-            right: '10%',
+            width: 'max(100vw, 200vh)',
+            top: 'calc(max(100vw, 200vh) / 7)',
+            left: '0',
             zIndex: -1,
-            animation: 'float 20s ease-in-out infinite',
-            animationDelay: '13s',
+            transform: 'scaleY(-1)',
+            filter: 'blur(calc(100vw / 1200)) brightness(0.5)',
+            maskImage: 'linear-gradient(to bottom, transparent 20%, #00000059 50%, transparent 70%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 20%, 00000059 50%, transparent 80%)',
           }}
         />
-      </Default>
-    </div>
+        <img
+          src={planet}
+          alt="planet"
+          style={{
+            position: 'absolute',
+            width: '75rem',
+            top: '-44rem',
+            left: 'calc(50% - 37.5rem)',
+            zIndex: -1,
+            filter: `${mobile ? 'brightness(0.5)' : 'brightness(1)'} hue-rotate(20deg) drop-shadow(0 0 4rem #0C0223) drop-shadow(-3rem -3rem 3rem #3570b55b)`,
+            animation: 'spin 360s linear infinite',
+          }}
+        />
+        <Box
+          component="img"
+          src={spaceStation}
+          alt="space station"
+          sx={{
+            position: 'absolute',
+            width: 'min(500px, 80vw)',
+            top: mobile ? '5rem' : '12rem',
+            left: '50%',
+            transform: `translateX(${mobile ? '-50%' : '20vw'})`,
+            zIndex: -1,
+            filter: `${mobile ? 'brightness(0.6)' : 'brightness(1)'} drop-shadow(0 0 .5rem #141619b0) drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
+          }}
+        />
+      </div>
+    </Parallax>
   );
 }

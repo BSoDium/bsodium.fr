@@ -8,8 +8,8 @@ import React, { useEffect, useState } from 'react';
 import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
 import { Link } from 'react-router-dom';
-import architectureLight from 'assets/architecture-light.webp';
-import architectureDark from 'assets/architecture-dark.webp';
+import architectureLight from 'assets/architecture_light.webp';
+import architectureDark from 'assets/architecture_dark.webp';
 import Title from 'components/Title';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import {

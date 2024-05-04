@@ -15,7 +15,7 @@ import { useMobileMode, Default } from 'components/Responsive';
 import OpenSource from 'components/OpenSource';
 import Divider from 'components/Divider';
 import Goals from 'components/Goals';
-import { Parallax, ParallaxProvider } from 'react-scroll-parallax';
+import { ParallaxProvider } from 'react-scroll-parallax';
 import Illustrations from 'components/Illustrations';
 
 export function ATypography({
@@ -98,9 +98,7 @@ export default function App() {
     <FixedMode mode="system" style={{ overflow: 'hidden' }}>
       <ParallaxProvider>
         <Title text="Elliot Négrel-Jerzy" />
-        <Parallax speed={-20} startScroll={0} disabled={mobile}>
-          <Illustrations />
-        </Parallax>
+        <Illustrations />
         <div
           style={{
             display: 'flex',

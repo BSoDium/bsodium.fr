@@ -4,7 +4,7 @@ import {
   Avatar, Stack, Typography,
 } from '@mui/joy';
 import React, { useMemo } from 'react';
-import vader from 'assets/vader.png';
+import vader from 'assets/vader.webp';
 import { RiOpenSourceLine } from 'react-icons/ri';
 import { Parallax } from 'react-scroll-parallax';
 import { Default, Mobile, useMobileMode } from './Responsive';

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable no-bitwise */
 import {
   Avatar,
@@ -11,7 +12,7 @@ import {
 import getProjects from 'utils/Api';
 import colors from 'assets/colors.json';
 import { Parallax } from 'react-scroll-parallax';
-import { FiExternalLink } from 'react-icons/fi';
+import { FiCode, FiExternalLink } from 'react-icons/fi';
 import { RiBracesLine } from 'react-icons/ri';
 import { Project } from 'assets/Projects';
 import { Default, Mobile, useMobileMode } from './Responsive';
@@ -48,7 +49,7 @@ function ProjectCard({
           paddingX: 1,
           paddingY: 0,
         }),
-        transition: 'all 0.3s ease',
+        transition: 'all ease .2s',
         '&:hover': mobile ? {} : {
           transform: 'translate(.6rem, -.6rem)',
           transformOrigin: 'bottom left',
@@ -73,35 +74,37 @@ function ProjectCard({
             width: '100%',
             height: '.6rem',
           },
+          '& .avatar': {
+            borderColor: theme.palette[color][600],
+            color: theme.palette[color][100],
+            backgroundColor: theme.palette[color][600],
+          },
         },
       })}
     >
-      <Stack gap={2}>
+      <Stack gap={1}>
         <Stack direction="row" alignItems="center" gap={2}>
           <Avatar
             alt={project.title}
-            color={color}
+            color="neutral"
             variant="outlined"
+            className="avatar"
+            sx={{ transition: 'all ease .2s', borderRadius: 'calc(var(--Card-radius) / 1.5)' }}
           >
             <BsJournalBookmark />
           </Avatar>
-          <Stack>
-            <Typography level="h5">
-              {beautify(project.title)}
-            </Typography>
-            <Typography
-              level="body2"
-              startDecorator={(
-                <FaCode style={{
-                  color: colors[project.language as keyof typeof colors]?.color || 'white',
-                }}
-                />
-              )}
-            >
-              {project.language}
-            </Typography>
-          </Stack>
+          <Typography level="h5">
+            {beautify(project.title)}
+          </Typography>
+
         </Stack>
+        <Typography
+          level="body3"
+          color="neutral"
+          startDecorator={(<FiCode />)}
+        >
+          {project.language}
+        </Typography>
         <Typography
           level="body2"
           sx={{
@@ -316,7 +319,23 @@ export default function Featured() {
           </Typography>
           )}
           {loading ? (
-            <CircularProgress color="info" />
+            <Stack
+              direction={mobile ? 'column' : 'row'}
+              justifyContent="center"
+              alignItems="center"
+              gap={mobile ? 3 : 5}
+              padding={mobile ? '2rem 3rem' : 5}
+            >
+              <CircularProgress size="md" variant="plain" color="info" />
+              <Stack direction="column" gap={0.5} maxWidth="25rem" textAlign={mobile ? 'center' : 'left'}>
+                <Typography level="h3" textColor="info.200">
+                  Loading projects
+                </Typography>
+                <Typography level="body2" textColor="info.300">
+                  Fetching the latest projects from GitHub, please wait.
+                </Typography>
+              </Stack>
+            </Stack>
           ) : (
             <>
               {projects.map((project, index) => (
