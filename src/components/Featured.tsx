@@ -366,14 +366,21 @@ export default function Featured() {
             alignItems: 'center',
             boxShadow: 'none',
             overflow: 'hidden',
-            background: 'transparent',
+            borderRadius: 0,
+            background: 'var(--joy-palette-background-body)',
+            border: '1px solid var(--joy-palette-divider)',
+            padding: '1rem 1.5rem',
           }}
         >
           <Stack>
-            <Typography level="h3" fontFamily={'"Kumar One Outline", system-ui'}>
-              There is more to see
+            <Typography level="h2" fontWeight="200">
+              Projects &
+              {' '}
+              <Typography fontFamily={'"Righteous", sans-serif'}>
+                Experiments
+              </Typography>
             </Typography>
-            <Typography level="body1" textColor="text.secondary">
+            <Typography level="body1" textColor="text.tertiary">
               Browse more projects in the dedicated explorer,
               a centralised hub for all my work and experiments.
             </Typography>
@@ -387,8 +394,24 @@ export default function Featured() {
             endDecorator={(
               <FiArrowRight />
             )}
+            sx={(theme) => ({
+              transition: 'all ease .2s',
+              background: 'var(--joy-palette-text-primary)',
+              color: 'var(--joy-palette-background-level1)',
+              borderColor: 'var(--joy-palette-text-primary)',
+              borderRadius: 0,
+              padding: '1 2',
+
+              '&:hover': {
+                background: 'var(--joy-palette-background-body)',
+                color: 'var(--joy-palette-text-primary)',
+              },
+              '&:active': {
+                transform: 'scale(.98)',
+              },
+            })}
           >
-            Explore
+            Explore projects
           </Button>
         </Card>
       </Parallax>
