@@ -7,14 +7,16 @@ import {
 import React, { useEffect, useState } from 'react';
 import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
 import {
-  FaCode, FaCodeBranch, FaGithub, FaStar,
+  FaCodeBranch, FaGithub, FaStar,
 } from 'react-icons/fa';
 import getProjects from 'utils/Api';
-import colors from 'assets/colors.json';
 import { Parallax } from 'react-scroll-parallax';
-import { FiCode, FiExternalLink } from 'react-icons/fi';
+import {
+  FiArrowLeft, FiArrowRight, FiCode, FiExternalLink,
+} from 'react-icons/fi';
 import { RiBracesLine } from 'react-icons/ri';
 import { Project } from 'assets/Projects';
+import { Link } from 'react-router-dom';
 import { Default, Mobile, useMobileMode } from './Responsive';
 
 /**
@@ -298,6 +300,11 @@ export default function Featured() {
         opacity={[0, 1]}
         easing="easeOutBack"
         disabled={mobile}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem',
+        }}
       >
         <Box
           component={Stack}
@@ -351,6 +358,39 @@ export default function Featured() {
             </>
           )}
         </Box>
+        <Card
+          sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: 'none',
+            overflow: 'hidden',
+            background: 'transparent',
+          }}
+        >
+          <Stack>
+            <Typography level="h3" fontFamily={'"Kumar One Outline", system-ui'}>
+              There is more to see
+            </Typography>
+            <Typography level="body1" textColor="text.secondary">
+              Browse more projects in the dedicated explorer,
+              a centralised hub for all my work and experiments.
+            </Typography>
+          </Stack>
+          <Button
+            component={Link}
+            to="/projects"
+            size="lg"
+            variant="outlined"
+            color="neutral"
+            endDecorator={(
+              <FiArrowRight />
+            )}
+          >
+            Explore
+          </Button>
+        </Card>
       </Parallax>
     </Stack>
   );
