@@ -295,8 +295,6 @@ export default function Featured() {
         </Mobile>
       </Stack>
       <Parallax
-        translateY={['50px', '0px']}
-        scale={[0.9, 1]}
         opacity={[0, 1]}
         easing="easeOutBack"
         disabled={mobile}
@@ -358,6 +356,7 @@ export default function Featured() {
             </>
           )}
         </Box>
+        <Divider />
         <Card
           sx={{
             display: 'flex',
@@ -370,7 +369,7 @@ export default function Featured() {
             overflow: 'hidden',
             borderRadius: 0,
             background: 'var(--joy-palette-background-body)',
-            padding: mobile ? '.5rem' : '1rem 1.5rem',
+            padding: mobile ? '.5rem' : '0',
           }}
         >
           <Stack gap={mobile ? 1 : 0.5} alignItems={mobile ? 'center' : 'start'}>
@@ -400,7 +399,6 @@ export default function Featured() {
               background: 'var(--joy-palette-text-primary)',
               color: 'var(--joy-palette-background-level1)',
               borderColor: 'var(--joy-palette-text-primary)',
-              borderRadius: 0,
               padding: '1 2',
               whiteSpace: 'nowrap',
               width: mobile ? '100%' : 'initial',
@@ -414,7 +412,7 @@ export default function Featured() {
               },
             }}
           >
-            Explore projects
+            Explore more projects
           </Button>
         </Card>
       </Parallax>
