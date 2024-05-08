@@ -12,7 +12,7 @@ import {
 import getProjects from 'utils/Api';
 import { Parallax } from 'react-scroll-parallax';
 import {
-  FiArrowLeft, FiArrowRight, FiCode, FiExternalLink,
+  FiArrowRight, FiCode, FiExternalLink,
 } from 'react-icons/fi';
 import { RiBracesLine } from 'react-icons/ri';
 import { Project } from 'assets/Projects';
@@ -363,8 +363,8 @@ export default function Featured() {
             flexDirection: 'row',
             justifyContent: 'space-between',
             flexWrap: mobile ? 'wrap' : 'nowrap',
-            gap: '1.5rem',
-            alignItems: 'center',
+            gap: mobile ? '2rem' : '1.5rem',
+            alignItems: mobile ? 'center' : 'start',
             boxShadow: 'none',
             overflow: 'hidden',
             borderRadius: 0,

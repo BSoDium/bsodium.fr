@@ -78,6 +78,8 @@ function ProjectCard({
   open: boolean;
   onClick: () => void;
 }) {
+  const [pressed, setPressed] = useState(false);
+
   const mobile = useMobileMode();
 
   const footer = useMemo(
@@ -96,7 +98,9 @@ function ProjectCard({
       padding={2}
       gap={2}
       onClick={() => onClick()}
-      className={open ? 'open' : ''}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      className={`${open ? 'open' : ''} ${pressed ? 'pressed' : ''}`}
       alignItems="stretch"
       flexWrap="wrap"
       sx={(theme) => ({
@@ -107,10 +111,7 @@ function ProjectCard({
         backgroundColor: theme.palette.background.body,
         border: '1px solid transparent',
         overflow: 'hidden',
-        '&.open': {
-          marginY: '1rem',
-        },
-        '&:hover, &.open': {
+        '&:hover, &.open, &.pressed': {
           zIndex: 1,
           border: `1px solid ${theme.palette.text.primary}`,
           filter: `drop-shadow(0 .4rem 0 ${theme.palette.text.primary})`,
@@ -136,6 +137,13 @@ function ProjectCard({
           '& + hr': {
             display: 'none',
           },
+        },
+        '&.open': {
+          marginY: '.8rem',
+        },
+        '&.pressed': {
+          filter: `drop-shadow(0 .2rem 0 ${theme.palette.text.primary})`,
+          transform: 'translateY(-.2rem)',
         },
       })}
     >
@@ -509,7 +517,8 @@ export default function Directory() {
         >
           {Object.entries(platformDetails).map(([key, item]) => {
             const selected = platform === key;
-            const occurrences = projects.filter((project) => project.platform === key).length;
+            const occurrences = filteredProjects
+              .filter((project) => project.platform === key).length;
             return (
               <Option
                 key={key}
@@ -590,7 +599,14 @@ export default function Directory() {
                 open={openProject === project.title}
                 onClick={() => (openProject === project.title ? setOpenProject('') : setOpenProject(project.title))}
               />
-              {index < filteredProjects.length - 1 && (<Divider />)}
+              {index < filteredProjects.length - 1 && (
+              <Divider sx={{
+                '&:has(& + .open)': {
+                  display: 'none',
+                },
+              }}
+              />
+              )}
             </React.Fragment>
           ))}
         {filteredProjects.length === 0 && !loading && debouncedSearch === search && (
