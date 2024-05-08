@@ -104,6 +104,7 @@ function ProjectCard({
       alignItems="stretch"
       flexWrap="wrap"
       sx={(theme) => ({
+        willChange: 'filter',
         transition: 'all ease .2s',
         position: 'relative',
         cursor: 'pointer',
