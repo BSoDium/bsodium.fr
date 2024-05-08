@@ -433,6 +433,13 @@ export default function Directory() {
           value={search}
           className={debouncedSearch !== search ? 'loading' : ''}
           onChange={(e) => setSearch(e.target.value)}
+          onFocus={(e) => {
+            // This is absolutely hideous but it works
+            e.target?.parentElement?.parentElement?.parentElement?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start',
+            });
+          }}
           startDecorator={debouncedSearch !== search ? (
             <CircularProgress
               size="sm"
@@ -464,6 +471,7 @@ export default function Directory() {
             outline: 'none',
             backgroundColor: theme.palette.background.body,
             '--Input-focusedHighlight': theme.palette.text.secondary,
+
             '&:before': {
               transition: 'all ease .2s',
             },
