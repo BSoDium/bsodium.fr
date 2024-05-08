@@ -400,14 +400,24 @@ export default function Directory() {
 
   // Pick a random project from the list and open it, then scroll to it
   const randomize = () => {
-    const randomIndex = Math.floor(Math.random() * projects.length);
-    const randomProject = projects[randomIndex];
+    const randomIndex = Math.floor(Math.random() * filteredProjects.length);
+    const randomProject = filteredProjects[randomIndex];
     setOpenProject(randomProject.title);
     document.getElementById(randomProject.title)?.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
-      inline: 'center',
     });
+  };
+
+  const focusInput = () => {
+    const inputElement = document.getElementById('search');
+    if (inputElement) {
+      const { top } = inputElement.getBoundingClientRect();
+      window.scrollTo({
+        top: top - 16,
+        behavior: 'smooth',
+      });
+    }
   };
 
   // When F is pressed, focus the search input
@@ -433,13 +443,7 @@ export default function Directory() {
           value={search}
           className={debouncedSearch !== search ? 'loading' : ''}
           onChange={(e) => setSearch(e.target.value)}
-          onFocus={(e) => {
-            // This is absolutely hideous but it works
-            e.target?.parentElement?.parentElement?.parentElement?.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start',
-            });
-          }}
+          onFocus={focusInput}
           startDecorator={debouncedSearch !== search ? (
             <CircularProgress
               size="sm"
