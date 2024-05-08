@@ -443,7 +443,7 @@ export default function Directory() {
           value={search}
           className={debouncedSearch !== search ? 'loading' : ''}
           onChange={(e) => setSearch(e.target.value)}
-          onFocus={focusInput}
+          onFocus={mobile ? focusInput : () => {}}
           startDecorator={debouncedSearch !== search ? (
             <CircularProgress
               size="sm"
