@@ -610,7 +610,7 @@ export default function Directory() {
               />
               {index < filteredProjects.length - 1 && (
               <Divider sx={{
-                '&:has(& + .open)': {
+                '&:has(+ .open)': {
                   display: 'none',
                 },
               }}
