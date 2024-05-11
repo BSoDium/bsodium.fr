@@ -56,7 +56,7 @@ export default function OpenSource() {
               sx={(theme) => ({
                 position: 'relative',
                 border: 'none',
-                outline: `1.5px solid ${theme.palette.success[400]}`,
+                outline: `2px solid ${theme.palette.success[400]}`,
                 boxShadow: `0 0 40px 5px ${theme.palette.success[700]}`,
                 overflow: 'visible',
                 marginTop: '3rem',
@@ -65,7 +65,7 @@ export default function OpenSource() {
                   position: 'absolute',
                   top: '-5rem',
                   height: '5rem',
-                  width: '1.5px',
+                  width: '2px',
                   background: `linear-gradient(to bottom, transparent, ${theme.palette.success[400]})`,
                 },
               })}
@@ -112,7 +112,7 @@ export default function OpenSource() {
                   right: '-50px',
                   transform: 'translateX(50%)',
                   border: 'none',
-                  outline: `1.5px solid ${theme.palette.success[400]}`,
+                  outline: `2px solid ${theme.palette.success[400]}`,
                   boxShadow: `0 0 40px 5px ${theme.palette.success[700]}`,
                 })}
               >

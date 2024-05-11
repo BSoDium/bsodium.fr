@@ -27,8 +27,8 @@ export default function Header() {
   const [visitor, setVisitor] = useState(visitors[0]);
   const [greetingLine, setGreetingLine] = useState(greeting());
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { colorScheme } = useColorScheme();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const dark = useMemo(() => colorScheme === 'dark', [colorScheme]);
 
   useEffect(() => {
@@ -57,8 +57,8 @@ export default function Header() {
           top: 'calc(70px + 33px)',
           left: '-50px',
           height: 'calc(100% + 80px - 70px - 33px)',
-          width: '1.5px',
-          background: `linear-gradient(to bottom, ${theme.palette.primary.outlinedBorder}, ${theme.palette.primary[400]})`,
+          width: '2px',
+          background: `linear-gradient(to bottom, ${theme.palette.primary.outlinedBorder}, ${theme.palette.primary[500]})`,
         },
       })}
     >
@@ -68,7 +68,7 @@ export default function Header() {
         variant="outlined"
         to="/resume"
         startDecorator={(
-          <Avatar size="lg" color="primary" sx={(theme) => ({ border: `1px solid ${theme.palette.primary.outlinedBorder}` })}>
+          <Avatar size="lg" color="primary" sx={(theme) => ({ border: `1px solid rgba(${theme.palette.primary.mainChannel} / 0.4)` })}>
             <IoReaderOutline />
           </Avatar>
           )}
@@ -77,7 +77,7 @@ export default function Header() {
           )}
         sx={(theme) => ({
           '&:not(:hover)': {
-            backgroundColor: dark ? '#08101ddd' : '#f5f5f5dd',
+            backgroundColor: `color-mix(in srgb, ${theme.palette.primary.softBg}, transparent 30%)`,
           },
           '&:hover, &:active': {
             boxShadow: `0 0 40px 5px rgba(${theme.vars.palette.primary.mainChannel} / 0.2)`,
@@ -93,6 +93,7 @@ export default function Header() {
             transition: 'all ease .2s',
           },
           position: 'relative',
+          borderWidth: '2px',
           borderRadius: '100px',
           width: 'fit-content',
           backdropFilter: 'blur(5px)',
@@ -107,8 +108,8 @@ export default function Header() {
             left: '-50px',
             width: '50px',
             height: '70px',
-            marginLeft: '-1px',
-            border: `1.5px solid ${theme.palette.primary.outlinedBorder}`,
+            marginLeft: '-2px',
+            border: `2px solid ${theme.palette.primary.outlinedBorder}`,
             borderBottom: 'none',
             borderRight: 'none',
             borderTopLeftRadius: '50px',
@@ -129,6 +130,7 @@ export default function Header() {
         fontWeight="md"
         display="flex"
         justifyContent={mobile ? 'center' : 'initial'}
+        textColor={dark ? 'text.primary' : '#0a151d'}
         textAlign={mobile ? 'center' : 'initial'}
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
@@ -141,7 +143,7 @@ export default function Header() {
       </Typography>
       <Typography
         level={mobile ? 'h5' : 'h4'}
-        textColor="text.tertiary"
+        textColor={dark ? 'text.tertiary' : '#50626f'}
         sx={{
           position: 'relative',
           padding: mobile ? '0 1rem' : 0,
@@ -150,7 +152,7 @@ export default function Header() {
       >
         The name&apos;s
         {' '}
-        <ATypography textColor="primary.400" href="https://www.linkedin.com/in/bsodium/">
+        <ATypography textColor="primary.plainColor" href="https://www.linkedin.com/in/bsodium/">
           Elliot Négrel-Jerzy
         </ATypography>
         {' '}

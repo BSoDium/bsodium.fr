@@ -118,7 +118,7 @@ export default function Terminal() {
           top: '0',
           left: '-50px',
           height: '100%',
-          width: '1.5px',
+          width: '2px',
           background: `linear-gradient(to bottom, ${theme.palette.primary[400]}, ${theme.palette.info[400]})`,
         },
       })}
@@ -129,8 +129,8 @@ export default function Terminal() {
           sx={(theme) => ({
             position: 'relative',
             border: 'none',
-            outline: `1.5px solid ${theme.palette.primary[400]}`,
-            boxShadow: `0 0 40px 5px ${theme.palette.primary[700]}`,
+            outline: `2px solid ${theme.palette.primary.outlinedBorder}`,
+            boxShadow: `0 0 40px 5px rgba(${theme.palette.primary.mainChannel} / 0.2)`,
             overflow: 'visible',
             marginTop: '3rem',
             '&::before': {
@@ -138,7 +138,7 @@ export default function Terminal() {
               position: 'absolute',
               top: '-5rem',
               height: '5rem',
-              width: '1.5px',
+              width: '2px',
               background: `linear-gradient(to bottom, transparent, ${theme.palette.primary[400]})`,
             },
           })}
@@ -160,8 +160,8 @@ export default function Terminal() {
               top: '0',
               transform: 'translateX(-50%)',
               border: 'none',
-              outline: `1.5px solid ${theme.palette.primary[400]}`,
-              boxShadow: `0 0 40px 5px ${theme.palette.primary[700]}`,
+              outline: `2px solid ${theme.palette.primary[500]}`,
+              boxShadow: `0 0 40px 5px rgba(${theme.palette.primary.mainChannel} / 0.4)`,
             })}
           >
             <RiUserLine />

@@ -139,7 +139,7 @@ export default function App() {
                     top: '-20px',
                     left: '-30px',
                     height: 'calc(100% + 20px)',
-                    width: '1.5px',
+                    width: '2px',
                     background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
                   },
                 })}
@@ -171,7 +171,7 @@ export default function App() {
                     top: '0',
                     right: '-30px',
                     height: '100%',
-                    width: '1.5px',
+                    width: '2px',
                     background: `linear-gradient(to bottom, ${theme.palette.success[400]} 30%, ${theme.palette.danger[400]})`,
                   },
                 })}
@@ -189,7 +189,7 @@ export default function App() {
                     top: '0',
                     right: '-30px',
                     height: '100%',
-                    width: '1.5px',
+                    width: '2px',
                     background: `linear-gradient(to bottom, ${theme.palette.danger[400]}, transparent)`,
                   },
                 })}

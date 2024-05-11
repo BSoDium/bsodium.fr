@@ -90,7 +90,7 @@ export default function Illustrations() {
               top: '0',
               left: '0',
               zIndex: -1,
-              background: 'linear-gradient(to bottom, #5594BC, transparent)',
+              background: 'linear-gradient(to bottom, #5594bc, transparent)',
             }}
             />
             <img

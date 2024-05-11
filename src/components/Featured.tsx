@@ -204,7 +204,7 @@ export default function Featured() {
             sx={(theme) => ({
               position: 'relative',
               border: 'none',
-              outline: `1.5px solid ${theme.palette.info[400]}`,
+              outline: `2px solid ${theme.palette.info[400]}`,
               boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
               overflow: 'visible',
               marginTop: '3rem',
@@ -214,7 +214,7 @@ export default function Featured() {
                 position: 'absolute',
                 top: '-5rem',
                 height: '5rem',
-                width: '1.5px',
+                width: '2px',
                 background: `linear-gradient(to bottom, transparent, ${theme.palette.info[400]})`,
               },
             })}
@@ -237,7 +237,7 @@ export default function Featured() {
                 top: '0',
                 transform: 'translateX(-50%)',
                 border: 'none',
-                outline: `1.5px solid ${theme.palette.info[400]}`,
+                outline: `2px solid ${theme.palette.info[400]}`,
                 boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
               })}
             >
