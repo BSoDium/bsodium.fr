@@ -55,8 +55,8 @@ export default function Contact() {
               top: '0',
               transform: 'translateX(-50%)',
               border: 'none',
-              outline: `2px solid ${theme.palette.warning[400]}`,
-              boxShadow: `0 0 40px 5px ${theme.palette.warning[700]}`,
+              outline: `2px solid ${theme.palette.warning[500]}`,
+              boxShadow: `0 0 40px 5px rgba(${theme.palette.warning.mainChannel} / 0.4)`,
             })}
           >
             <FiMail />
