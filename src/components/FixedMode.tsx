@@ -1,6 +1,7 @@
 import {
   CssBaseline, CssVarsProvider, extendTheme,
   useColorScheme,
+  useTheme,
 } from '@mui/joy';
 import React, { useEffect } from 'react';
 
@@ -37,11 +38,12 @@ export const appTheme = extendTheme({
 
 function Meta() {
   const { colorScheme } = useColorScheme();
+  const { palette } = useTheme();
 
   useEffect(() => {
     const meta = document.createElement('meta');
     meta.name = 'theme-color';
-    meta.content = colorScheme === 'dark' ? '#000000' : '#ffffff';
+    meta.content = colorScheme === 'dark' ? palette.common.black : palette.common.white;
     document.head.appendChild(meta);
     return () => {
       document.head.removeChild(meta);
