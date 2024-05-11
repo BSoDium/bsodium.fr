@@ -1,5 +1,6 @@
 import {
   CssBaseline, CssVarsProvider, extendTheme,
+  useColorScheme,
 } from '@mui/joy';
 import React, { useEffect } from 'react';
 
@@ -33,6 +34,22 @@ export const appTheme = extendTheme({
     },
   },
 });
+
+function Meta() {
+  const { colorScheme } = useColorScheme();
+
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    meta.content = colorScheme === 'dark' ? '#000000' : '#ffffff';
+    document.head.appendChild(meta);
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, [colorScheme]);
+
+  return null;
+}
 
 export default function FixedMode({
   children,
@@ -68,6 +85,7 @@ export default function FixedMode({
       defaultMode={mode === 'system' ? mode : undefined}
     >
       <CssBaseline disableColorScheme />
+      <Meta />
       <div data-joy-color-scheme={mode !== 'system' ? mode : undefined} className={className} style={style}>
         {children}
       </div>
