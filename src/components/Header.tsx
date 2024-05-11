@@ -131,7 +131,7 @@ export default function Header() {
         fontWeight="md"
         display="flex"
         justifyContent={mobile ? 'center' : 'initial'}
-        textColor={dark ? 'text.primary' : '#0a151d'}
+        textColor={dark ? 'text.primary' : '#051825'}
         textAlign={mobile ? 'center' : 'initial'}
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
@@ -144,7 +144,7 @@ export default function Header() {
       </Typography>
       <Typography
         level={mobile ? 'h5' : 'h4'}
-        textColor={dark ? 'text.tertiary' : '#50626f'}
+        textColor={dark ? 'text.tertiary' : '#3c617b'}
         sx={{
           position: 'relative',
           padding: mobile ? '0 1rem' : 0,

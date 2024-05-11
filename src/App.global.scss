@@ -10,12 +10,15 @@ main,
   height: 100%;
   margin: 0;
   padding: 0;
-  transition: background-color ease .2s, color ease .2s;
   -webkit-tap-highlight-color: transparent;
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+body {
+  transition: background-color ease .2s, color ease .2s;
 }
 
 @media print {

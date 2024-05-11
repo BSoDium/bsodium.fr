@@ -19,7 +19,7 @@ export default function Illustrations() {
 
   const skyTransRef = useSpringRef();
   const planetTransRef = useSpringRef();
-  const balloonTransRef = useSpringRef();
+  const accessoryTransRef = useSpringRef();
 
   const { colorScheme } = useColorScheme();
   const mobile = useMobileMode();
@@ -49,7 +49,7 @@ export default function Illustrations() {
       zIndex: 0,
     },
     leave: {
-      opacity: 0,
+      opacity: 1,
       top: '-100rem',
       scale: 0.7,
       zIndex: 0,
@@ -57,8 +57,8 @@ export default function Illustrations() {
     config: transitionConfig,
   });
 
-  const balloonTransition = useTransition(colorScheme, {
-    ref: balloonTransRef,
+  const accessoryTransition = useTransition(colorScheme, {
+    ref: accessoryTransRef,
     keys: null,
     from: {
       opacity: 0,
@@ -83,9 +83,16 @@ export default function Illustrations() {
 
   useEffect(() => {
     planetTransRef.start();
-    balloonTransRef.start();
+    accessoryTransRef.start();
     skyTransRef.start();
   }, [colorScheme]);
+
+  useEffect(() => {
+    document.body.style.transition = `background-color ${transitionConfig.duration / 1000}s ease, color ${transitionConfig.duration / 1000}s ease`;
+    return () => {
+      document.body.style.transition = '';
+    };
+  }, []);
 
   return (
     <Parallax speed={-20} startScroll={0} disabled={mobile} style={{ overflow: 'visible' }}>
@@ -200,7 +207,7 @@ export default function Illustrations() {
               return null;
           }
         })}
-        {balloonTransition((style, item) => {
+        {accessoryTransition((style, item) => {
           switch (item) {
             case 'light':
               return (
@@ -214,7 +221,6 @@ export default function Illustrations() {
                     left: mobile ? '50%' : '55%',
                     transform: `translateX(${mobile ? '-50%' : '20vw'})`,
                     animation: 'float 20s ease-in-out infinite',
-                    zIndex: 0,
                   }}
                 />
               );
@@ -229,7 +235,6 @@ export default function Illustrations() {
                     width: 'min(500px, 80vw)',
                     left: '50%',
                     transform: `translateX(${mobile ? '-50%' : '20vw'})`,
-                    zIndex: 0,
                     transformOrigin: '',
                     filter: `${mobile ? '' : 'drop-shadow(0 0 .5rem #141619b0)'} drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
                   }}
