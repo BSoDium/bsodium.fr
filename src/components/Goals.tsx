@@ -513,7 +513,8 @@ function Reach({ step } : {step: number}) {
             top: '-5rem',
             left: 'max(65%, 32rem)',
             height: '30rem',
-            filter: 'drop-shadow(0 -1rem 20px #feffee37) drop-shadow(2rem 3rem 40px #5074a33f)',
+            opacity: 0.8,
+            filter: 'drop-shadow(0 -1rem 20px #feffee37) drop-shadow(2rem 3rem 40px #5074a33f) contrast(1.2)',
           }}
         />
       </Default>
