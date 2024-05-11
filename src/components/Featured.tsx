@@ -52,6 +52,7 @@ function ProjectCard({
           paddingY: 0,
         }),
         transition: 'all ease .2s',
+        boxShadow: 'none',
         '&:hover': mobile ? {} : {
           transform: 'translateY(-.6rem)',
           filter: `drop-shadow(0 .6rem 0 ${theme.palette[color].solidBg})`,
@@ -59,7 +60,6 @@ function ProjectCard({
           color: theme.palette[color].softColor,
           borderColor: theme.palette[color].solidBg,
           backgroundColor: theme.palette[color].softBg,
-          boxShadow: 'none',
           zIndex: 1,
           '&:before': {
             content: '""',
@@ -206,7 +206,7 @@ export default function Featured() {
               position: 'relative',
               border: 'none',
               outline: `2px solid ${theme.palette.info[500]}`,
-              boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
+              boxShadow: `0 0 40px 5px rgba(${theme.palette.info.mainChannel} / 0.4)`,
               overflow: 'visible',
               marginTop: '3rem',
               marginBottom: '1rem',

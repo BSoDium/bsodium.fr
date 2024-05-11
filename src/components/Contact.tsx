@@ -27,8 +27,8 @@ export default function Contact() {
           sx={(theme) => ({
             position: 'relative',
             border: 'none',
-            outline: `2px solid ${theme.palette.warning[400]}`,
-            boxShadow: `0 0 40px 5px ${theme.palette.warning[700]}`,
+            outline: `2px solid ${theme.palette.warning[500]}`,
+            boxShadow: `0 0 40px 5px rgba(${theme.palette.warning.mainChannel} / 0.4)`,
             overflow: 'visible',
             marginTop: '3rem',
             '&::before': {
@@ -65,7 +65,7 @@ export default function Contact() {
         Get
         {' '}
         <Typography
-          textColor="warning.400"
+          color="warning"
           fontWeight="xl"
         >
           in touch

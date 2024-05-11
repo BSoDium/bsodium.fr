@@ -21,7 +21,7 @@ function getPalette(primaryColor: string, colorScheme: 'light' | 'dark' = 'dark'
   const hsl = color.hsl();
 
   return colorScheme === 'light' ? {
-    color: hsl.lightness(10).hex(),
+    color: hsl.lightness(5).hex(),
     backgroundColor: hsl.lightness(90).hex(),
     borderColor: hsl.lightness(80).hex(),
     shadow: {
