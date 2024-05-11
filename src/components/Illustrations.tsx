@@ -26,6 +26,7 @@ export default function Illustrations() {
 
   const skyTransition = useTransition(colorScheme, {
     ref: skyTransRef,
+    initial: null,
     keys: null,
     from: { opacity: 0, top: '0rem' },
     enter: { opacity: 1, top: '0vh' },
@@ -36,6 +37,7 @@ export default function Illustrations() {
   const planetTransition = useTransition(colorScheme, {
     ref: planetTransRef,
     keys: null,
+    initial: null,
     from: {
       opacity: 0,
       top: '0rem',
@@ -60,6 +62,7 @@ export default function Illustrations() {
   const accessoryTransition = useTransition(colorScheme, {
     ref: accessoryTransRef,
     keys: null,
+    initial: null,
     from: {
       opacity: 0,
       top: '20rem',
@@ -237,6 +240,7 @@ export default function Illustrations() {
                     transform: `translateX(${mobile ? '-50%' : '20vw'})`,
                     transformOrigin: '',
                     filter: `${mobile ? '' : 'drop-shadow(0 0 .5rem #141619b0)'} drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
+                    animation: 'float 20s ease-in-out infinite',
                   }}
                 />
               );

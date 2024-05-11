@@ -183,7 +183,7 @@ export default function Terminal() {
         </Typography>
       </Typography>
       <Parallax
-        translateY={['100px', '0px']}
+        translateY={['200px', '20px']}
         opacity={[0, 1]}
         disabled={mobile}
         easing="easeOutBack"
@@ -198,7 +198,7 @@ export default function Terminal() {
               border: 'none',
               boxShadow: 'none',
             } : {
-              backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, ${theme.palette.neutral.softBg} 70%)`,
+              backgroundColor: dark ? `color-mix(in srgb, ${theme.palette.background.body}, ${theme.palette.neutral.softBg} 40%)` : theme.palette.background.level1,
               border: `1px solid ${theme.palette.neutral.outlinedBorder}`,
               height: '550px',
               boxShadow: 'lg',
@@ -236,7 +236,8 @@ export default function Terminal() {
                       justifyContent: 'space-between',
                       flexDirection: 'row',
                       width: '250px',
-                      backgroundColor: theme.palette.background.level1,
+                      backgroundColor: dark
+                        ? theme.palette.background.level1 : theme.palette.background.level2,
                       borderBottomRightRadius: 0,
                       borderBottomLeftRadius: 0,
                       boxShadow: 'none',
@@ -252,7 +253,8 @@ export default function Terminal() {
                         width: '6px',
                         borderRadius: '0 0 6px 0',
                         backgroundColor: 'transparent',
-                        boxShadow: `0 6px 0px 0px ${theme.palette.background.level1}`,
+                        boxShadow: `0 6px 0px 0px ${dark
+                          ? theme.palette.background.level1 : theme.palette.background.level2}`,
                       },
                       '&:after': {
                         zIndex: 100,
@@ -264,7 +266,8 @@ export default function Terminal() {
                         width: '6px',
                         borderRadius: '0 0 0 6px',
                         backgroundColor: 'transparent',
-                        boxShadow: `0 6px 0px 0px ${theme.palette.background.level1}`,
+                        boxShadow: `0 6px 0px 0px ${dark
+                          ? theme.palette.background.level1 : theme.palette.background.level2}`,
                       },
                     })}
                   >
@@ -408,7 +411,8 @@ export default function Terminal() {
               ...(mobile ? {
                 backgroundColor: 'transparent',
               } : {
-                backgroundColor: `color-mix(in srgb, transparent, ${theme.palette.background.level1} 70%)`,
+                backgroundColor: `color-mix(in srgb, transparent, ${dark
+                  ? theme.palette.background.level1 : theme.palette.background.level2} 70%)`,
               }),
               position: 'relative',
               p: 2,
