@@ -29,6 +29,7 @@ export default function Header() {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { colorScheme } = useColorScheme();
+  const dark = useMemo(() => colorScheme === 'dark', [colorScheme]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -57,7 +58,7 @@ export default function Header() {
           left: '-50px',
           height: 'calc(100% + 80px - 70px - 33px)',
           width: '1.5px',
-          background: `linear-gradient(to bottom, ${theme.palette.primary[700]}, ${theme.palette.primary[400]})`,
+          background: `linear-gradient(to bottom, ${theme.palette.primary.outlinedBorder}, ${theme.palette.primary[400]})`,
         },
       })}
     >
@@ -67,7 +68,7 @@ export default function Header() {
         variant="outlined"
         to="/resume"
         startDecorator={(
-          <Avatar size="lg" color="primary" sx={(theme) => ({ border: `1px solid ${theme.palette.primary[700]}` })}>
+          <Avatar size="lg" color="primary" sx={(theme) => ({ border: `1px solid ${theme.palette.primary.outlinedBorder}` })}>
             <IoReaderOutline />
           </Avatar>
           )}
@@ -76,18 +77,17 @@ export default function Header() {
           )}
         sx={(theme) => ({
           '&:not(:hover)': {
-            backgroundColor: '#08101ddd',
+            backgroundColor: dark ? '#08101ddd' : '#f5f5f5dd',
           },
-          '&:hover': {
-            boxShadow: `0 0 40px 5px ${theme.palette.primary[900]}`,
+          '&:hover, &:active': {
+            boxShadow: `0 0 40px 5px rgba(${theme.vars.palette.primary.mainChannel} / 0.2)`,
             '& > span > svg': {
               transform: 'translateX(.6rem) scale(1.2)',
-              filter: `drop-shadow(-.3rem 0 0 ${theme.palette.primary[300]}) drop-shadow(-.3rem 0 0 ${theme.palette.primary[400]})`,
+              filter: `drop-shadow(-.3rem 0 0 rgba(${theme.vars.palette.primary.mainChannel} / 0.7)) drop-shadow(-.3rem 0 0 rgba(${theme.vars.palette.primary.mainChannel} / 0.7))`,
             },
           },
           '&:active > span > svg': {
             transform: 'translateX(.6rem) scale(1.1)',
-            filter: `drop-shadow(-.3rem 0 0 ${theme.palette.primary[200]}) drop-shadow(-.3rem 0 0 ${theme.palette.primary[200]})`,
           },
           '& > span > svg': {
             transition: 'all ease .2s',
@@ -108,7 +108,7 @@ export default function Header() {
             width: '50px',
             height: '70px',
             marginLeft: '-1px',
-            border: `1.5px solid ${theme.palette.primary[700]}`,
+            border: `1.5px solid ${theme.palette.primary.outlinedBorder}`,
             borderBottom: 'none',
             borderRight: 'none',
             borderTopLeftRadius: '50px',
