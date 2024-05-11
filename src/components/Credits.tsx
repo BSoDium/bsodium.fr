@@ -3,8 +3,8 @@ import {
   Box, Stack, Typography, useColorScheme,
 } from '@mui/joy';
 import { ATypography } from 'App';
-import mountainsDark from 'assets/mountains_dark.png';
-import mountainsLight from 'assets/mountains_light.png';
+import mountainsDark from 'assets/mountains_dark.webp';
+import mountainsLight from 'assets/mountains_light.webp';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import { transitionConfig } from './Illustrations';
 
