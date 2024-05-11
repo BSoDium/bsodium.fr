@@ -13,6 +13,7 @@ import {
   Tabs,
   Tooltip,
   Typography,
+  useColorScheme,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
 import {
@@ -80,6 +81,9 @@ export default function Terminal() {
   const [playing, setPlaying] = useState(true);
 
   const mobile = useMobileMode();
+  const { colorScheme } = useColorScheme();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const dark = colorScheme === 'dark';
 
   useEffect(() => {
     setLoadingTime(Math.floor(Math.random() * 300));
@@ -119,7 +123,7 @@ export default function Terminal() {
           left: '-50px',
           height: '100%',
           width: '2px',
-          background: `linear-gradient(to bottom, ${theme.palette.primary[400]}, ${theme.palette.info[400]})`,
+          background: `linear-gradient(to bottom, ${theme.palette.primary[500]}, ${theme.palette.info[500]})`,
         },
       })}
     >
@@ -171,7 +175,7 @@ export default function Terminal() {
         Profile
         {' '}
         <Typography
-          textColor="primary.400"
+          color="primary"
           alignItems="center"
           fontWeight="xl"
         >
@@ -188,21 +192,22 @@ export default function Terminal() {
         <Card
           variant="outlined"
           component={Stack}
-          sx={{
+          sx={(theme) => ({
             ...(mobile ? {
               backgroundColor: 'transparent',
               border: 'none',
+              boxShadow: 'none',
             } : {
-              backdropFilter: 'blur(40px)',
-              backgroundColor: 'rgba(53, 54, 58, 0.4)',
-              border: '1px solid rgb(83, 86, 93)',
+              backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, ${theme.palette.neutral.softBg} 70%)`,
+              border: `1px solid ${theme.palette.neutral.outlinedBorder}`,
               height: '550px',
+              boxShadow: 'lg',
             }),
             padding: 0,
             gap: 0,
             margin: mobile ? '-1rem' : '0',
             overflow: 'hidden',
-          }}
+          })}
         >
           {!mobile && (
           <Stack direction="row" justifyContent="space-between" p={0}>
@@ -225,13 +230,13 @@ export default function Terminal() {
                 {tabs.map((tab) => (
                   <Card
                     key={tab.name}
-                    sx={{
+                    sx={(theme) => ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       flexDirection: 'row',
                       width: '250px',
-                      backgroundColor: 'rgb(33, 37, 43)',
+                      backgroundColor: theme.palette.background.level1,
                       borderBottomRightRadius: 0,
                       borderBottomLeftRadius: 0,
                       boxShadow: 'none',
@@ -247,7 +252,7 @@ export default function Terminal() {
                         width: '6px',
                         borderRadius: '0 0 6px 0',
                         backgroundColor: 'transparent',
-                        boxShadow: '0 6px 0px 0px rgb(33, 37, 43)',
+                        boxShadow: `0 6px 0px 0px ${theme.palette.background.level1}`,
                       },
                       '&:after': {
                         zIndex: 100,
@@ -259,9 +264,9 @@ export default function Terminal() {
                         width: '6px',
                         borderRadius: '0 0 0 6px',
                         backgroundColor: 'transparent',
-                        boxShadow: '0 6px 0px 0px rgb(33, 37, 43)',
+                        boxShadow: `0 6px 0px 0px ${theme.palette.background.level1}`,
                       },
-                    }}
+                    })}
                   >
                     <Typography
                       level="body2"
@@ -359,13 +364,13 @@ export default function Terminal() {
                   setTooltipIndex={setTooltipIndex}
                   variant="plain"
                   color="neutral"
-                  sx={{
+                  sx={(theme) => ({
                     borderRadius: 0,
                     paddingX: 2,
                     '&:hover': {
-                      backgroundColor: 'rgb(255, 0, 0, 0.7)',
+                      backgroundColor: theme.palette.danger[500],
                     },
-                  }}
+                  })}
                 >
                   <VscChromeClose />
                 </FakeButton>
@@ -399,11 +404,11 @@ export default function Terminal() {
           <Sheet
             component={Stack}
             direction="column"
-            sx={{
+            sx={(theme) => ({
               ...(mobile ? {
                 backgroundColor: 'transparent',
               } : {
-                backgroundColor: 'rgba(33, 37, 43, 0.8)',
+                backgroundColor: `color-mix(in srgb, transparent, ${theme.palette.background.level1} 70%)`,
               }),
               position: 'relative',
               p: 2,
@@ -411,7 +416,7 @@ export default function Terminal() {
               flexGrow: 1,
               overflowY: 'auto',
               overflowX: 'hidden',
-            }}
+            })}
           >
             <Typography
               fontFamily="'Fira Code', monospace"
@@ -431,7 +436,7 @@ export default function Terminal() {
                 direction="row"
                 flexWrap="nowrap"
               >
-                <Typography textColor="primary.300">
+                <Typography color="primary">
                   root@bsodium:~$&nbsp;
                 </Typography>
                 <TypeWriter
@@ -461,10 +466,11 @@ export default function Terminal() {
                 padding: mobile ? '0 1rem' : 'initial',
               }}
             >
-              <TabList sx={{
-                backgroundColor: 'transparent',
-                gap: 0,
-              }}
+              <TabList
+                sx={{
+                  backgroundColor: 'transparent',
+                  gap: 0,
+                }}
               >
                 {categories.map((name) => {
                   const checked = selected === name;
@@ -479,8 +485,10 @@ export default function Terminal() {
                         fontFamily: "'Fira Code', monospace",
                         borderRadius: '6px',
                         ...(checked ? {
-                          backgroundColor: theme.palette.neutral[300],
-                          color: theme.palette.neutral[900],
+                          backgroundColor: dark
+                            ? theme.palette.neutral.solidColor : theme.palette.neutral.solidBg,
+                          color: dark
+                            ? theme.palette.neutral.solidBg : theme.palette.neutral.solidColor,
                         } : {
                         }),
                       })}
