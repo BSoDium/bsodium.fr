@@ -129,8 +129,8 @@ export default function Terminal() {
           sx={(theme) => ({
             position: 'relative',
             border: 'none',
-            outline: `2px solid ${theme.palette.primary.outlinedBorder}`,
-            boxShadow: `0 0 40px 5px rgba(${theme.palette.primary.mainChannel} / 0.2)`,
+            outline: `2px solid ${theme.palette.primary[500]}`,
+            boxShadow: `0 0 40px 5px rgba(${theme.palette.primary.mainChannel} / 0.4)`,
             overflow: 'visible',
             marginTop: '3rem',
             '&::before': {
@@ -139,7 +139,7 @@ export default function Terminal() {
               top: '-5rem',
               height: '5rem',
               width: '2px',
-              background: `linear-gradient(to bottom, transparent, ${theme.palette.primary[400]})`,
+              background: `linear-gradient(to bottom, transparent, ${theme.palette.primary[500]})`,
             },
           })}
         >
@@ -156,7 +156,7 @@ export default function Terminal() {
             color="primary"
             sx={(theme) => ({
               position: 'absolute',
-              left: '-50px',
+              left: '-49px',
               top: '0',
               transform: 'translateX(-50%)',
               border: 'none',

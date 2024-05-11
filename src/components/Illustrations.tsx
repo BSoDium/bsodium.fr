@@ -59,10 +59,10 @@ export default function Illustrations() {
               style={{
                 position: 'absolute',
                 width: '75rem',
-                top: '-44rem',
+                top: mobile ? '-50rem' : '-44rem',
                 left: 'calc(50% - 37.5rem)',
                 zIndex: -1,
-                filter: `${mobile ? 'brightness(0.5)' : 'brightness(1)'} hue-rotate(20deg) drop-shadow(0 0 4rem #0C0223) drop-shadow(-3rem -3rem 3rem #3570b55b)`,
+                filter: 'hue-rotate(20deg) drop-shadow(0 0 4rem #0C0223) drop-shadow(-3rem -3rem 3rem #3570b55b)',
                 animation: 'spin 360s linear infinite',
               }}
             />
@@ -77,7 +77,7 @@ export default function Illustrations() {
                 left: '50%',
                 transform: `translateX(${mobile ? '-50%' : '20vw'})`,
                 zIndex: -1,
-                filter: `${mobile ? 'brightness(0.6)' : 'brightness(1)'} drop-shadow(0 0 .5rem #141619b0) drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
+                filter: `${mobile ? '' : 'drop-shadow(0 0 .5rem #141619b0)'} drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
               }}
             />
           </>
@@ -114,7 +114,7 @@ export default function Illustrations() {
               style={{
                 position: 'absolute',
                 width: '75rem',
-                top: '-44rem',
+                top: mobile ? '-50rem' : '-44rem',
                 left: 'calc(50% - 37.5rem)',
                 zIndex: -1,
                 animation: 'spin 360s linear infinite',
@@ -126,9 +126,9 @@ export default function Illustrations() {
               alt="balloon"
               sx={{
                 position: 'absolute',
-                width: 'min(200px, 30vw)',
+                width: 'min(200px, 60vw)',
                 top: mobile ? '5rem' : '12rem',
-                left: '55%',
+                left: mobile ? '50%' : '55%',
                 transform: `translateX(${mobile ? '-50%' : '20vw'})`,
                 animation: 'float 20s ease-in-out infinite',
                 zIndex: -1,

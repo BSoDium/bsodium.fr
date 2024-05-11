@@ -233,12 +233,12 @@ export default function Featured() {
               color="info"
               sx={(theme) => ({
                 position: 'absolute',
-                left: '-50px',
+                left: '-49px',
                 top: '0',
                 transform: 'translateX(-50%)',
                 border: 'none',
-                outline: `2px solid ${theme.palette.info[400]}`,
-                boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
+                outline: `2px solid ${theme.palette.info[500]}`,
+                boxShadow: `0 0 40px 5px rgba(${theme.palette.info.mainChannel} / 0.4)`,
               })}
             >
               <BsJournalCode />

@@ -238,6 +238,7 @@ export default function Details({
   category: Category
 }) {
   const transRef = useSpringRef();
+  const container = React.createRef<HTMLDivElement>();
 
   const transitions = useTransition(category, {
     ref: transRef,
@@ -248,11 +249,14 @@ export default function Details({
   });
 
   useEffect(() => {
+    // scroll to top of the terminal
+    container.current?.parentElement?.scrollTo({ top: 0, behavior: 'smooth' });
+    // start the transition
     transRef.start();
   }, [category]);
 
   return (
-    <Stack direction="row">
+    <Stack direction="column" ref={container}>
       {transitions((style, item) => {
         switch (item) {
           case 'education':

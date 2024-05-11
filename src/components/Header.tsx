@@ -58,7 +58,7 @@ export default function Header() {
           left: '-50px',
           height: 'calc(100% + 80px - 70px - 33px)',
           width: '2px',
-          background: `linear-gradient(to bottom, ${theme.palette.primary.outlinedBorder}, ${theme.palette.primary[500]})`,
+          background: `linear-gradient(to bottom, ${theme.palette.primary.outlinedBorder}, ${theme.palette.primary[500]} 30%)`,
         },
       })}
     >
@@ -93,6 +93,7 @@ export default function Header() {
             transition: 'all ease .2s',
           },
           position: 'relative',
+          borderColor: theme.palette.primary.outlinedBorder,
           borderWidth: '2px',
           borderRadius: '100px',
           width: 'fit-content',
