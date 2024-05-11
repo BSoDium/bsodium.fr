@@ -198,7 +198,7 @@ export default function Terminal() {
               border: 'none',
               boxShadow: 'none',
             } : {
-              backgroundColor: dark ? `color-mix(in srgb, ${theme.palette.background.body}, ${theme.palette.neutral.softBg} 40%)` : theme.palette.background.level1,
+              backgroundColor: dark ? `color-mix(in srgb, ${theme.palette.background.body}, ${theme.palette.neutral.softBg} 40%)` : `color-mix(in srgb, ${theme.palette.background.level1}, transparent 70%)`,
               border: `1px solid ${theme.palette.neutral.outlinedBorder}`,
               height: '550px',
               boxShadow: 'lg',
@@ -211,176 +211,176 @@ export default function Terminal() {
           })}
         >
           {!mobile && (
-          <Stack direction="row" justifyContent="space-between" p={0}>
-            <Stack
-              direction="row"
-              gap={0}
-              sx={{
-                overflow: 'hidden',
-              }}
-            >
+            <Stack direction="row" justifyContent="space-between" p={0}>
               <Stack
                 direction="row"
+                gap={0}
                 sx={{
-                  p: 1,
-                  gap: 0.2,
-                  paddingBottom: 0,
-                  paddingRight: 0,
+                  overflow: 'hidden',
                 }}
               >
-                {tabs.map((tab) => (
-                  <Card
-                    key={tab.name}
-                    sx={(theme) => ({
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexDirection: 'row',
-                      width: '250px',
-                      backgroundColor: dark
-                        ? theme.palette.background.level1 : theme.palette.background.level2,
+                <Stack
+                  direction="row"
+                  sx={{
+                    p: 1,
+                    gap: 0.2,
+                    paddingBottom: 0,
+                    paddingRight: 0,
+                  }}
+                >
+                  {tabs.map((tab) => (
+                    <Card
+                      key={tab.name}
+                      sx={(theme) => ({
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexDirection: 'row',
+                        width: '250px',
+                        backgroundColor: dark
+                          ? theme.palette.background.level1 : theme.palette.background.level2,
+                        borderBottomRightRadius: 0,
+                        borderBottomLeftRadius: 0,
+                        boxShadow: 'none',
+                        position: 'relative',
+                        p: 0,
+                        '&:before': {
+                          zIndex: 100,
+                          content: '""',
+                          position: 'absolute',
+                          left: '-6px',
+                          top: '50%',
+                          height: '50%',
+                          width: '6px',
+                          borderRadius: '0 0 6px 0',
+                          backgroundColor: 'transparent',
+                          boxShadow: `0 6px 0px 0px ${dark
+                            ? theme.palette.background.level1 : theme.palette.background.level2}`,
+                        },
+                        '&:after': {
+                          zIndex: 100,
+                          content: '""',
+                          position: 'absolute',
+                          right: '-6px',
+                          top: '50%',
+                          height: '50%',
+                          width: '6px',
+                          borderRadius: '0 0 0 6px',
+                          backgroundColor: 'transparent',
+                          boxShadow: `0 6px 0px 0px ${dark
+                            ? theme.palette.background.level1 : theme.palette.background.level2}`,
+                        },
+                      })}
+                    >
+                      <Typography
+                        level="body2"
+                        textColor="text.primary"
+                        fontWeight="lg"
+                        startDecorator={tab.icon}
+                        sx={{
+                          marginLeft: 1,
+                          gap: 0.5,
+                          wordWrap: 'nowrap',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {tab.name}
+                      </Typography>
+                      <FakeButton
+                        tooltipIndex={tooltipIndex}
+                        setTooltipIndex={setTooltipIndex}
+                        size="sm"
+                        variant="plain"
+                        color="neutral"
+                        sx={{
+                          height: '25px',
+                          minHeight: '25px',
+                          marginRight: 0.5,
+                        }}
+                      >
+                        <VscChromeClose />
+                      </FakeButton>
+                    </Card>
+                  ))}
+                </Stack>
+                <Stack direction="row" p={0.5} paddingTop={1}>
+                  <FakeButton
+                    tooltipIndex={tooltipIndex}
+                    setTooltipIndex={setTooltipIndex}
+                    size="sm"
+                    variant="soft"
+                    color="neutral"
+                    sx={{
+                      borderRadius: '6px',
+                      borderTopRightRadius: 0,
                       borderBottomRightRadius: 0,
+                      minHeight: '25px',
+                    }}
+                  >
+                    <IoAddOutline />
+                  </FakeButton>
+                  <Divider orientation="vertical" />
+                  <FakeButton
+                    tooltipIndex={tooltipIndex}
+                    setTooltipIndex={setTooltipIndex}
+                    size="sm"
+                    variant="soft"
+                    color="neutral"
+                    sx={{
+                      borderRadius: '6px',
+                      borderTopLeftRadius: 0,
                       borderBottomLeftRadius: 0,
-                      boxShadow: 'none',
-                      position: 'relative',
-                      p: 0,
-                      '&:before': {
-                        zIndex: 100,
-                        content: '""',
-                        position: 'absolute',
-                        left: '-6px',
-                        top: '50%',
-                        height: '50%',
-                        width: '6px',
-                        borderRadius: '0 0 6px 0',
-                        backgroundColor: 'transparent',
-                        boxShadow: `0 6px 0px 0px ${dark
-                          ? theme.palette.background.level1 : theme.palette.background.level2}`,
-                      },
-                      '&:after': {
-                        zIndex: 100,
-                        content: '""',
-                        position: 'absolute',
-                        right: '-6px',
-                        top: '50%',
-                        height: '50%',
-                        width: '6px',
-                        borderRadius: '0 0 0 6px',
-                        backgroundColor: 'transparent',
-                        boxShadow: `0 6px 0px 0px ${dark
-                          ? theme.palette.background.level1 : theme.palette.background.level2}`,
+                      minHeight: '25px',
+                    }}
+                  >
+                    <HiChevronDown />
+                  </FakeButton>
+                </Stack>
+              </Stack>
+              <Default>
+                <Stack direction="row">
+                  <FakeButton
+                    tooltipIndex={tooltipIndex}
+                    setTooltipIndex={setTooltipIndex}
+                    variant="plain"
+                    color="neutral"
+                    sx={{
+                      borderRadius: 0,
+                      paddingX: 2,
+                    }}
+                  >
+                    <VscChromeMinimize />
+                  </FakeButton>
+                  <FakeButton
+                    tooltipIndex={tooltipIndex}
+                    setTooltipIndex={setTooltipIndex}
+                    variant="plain"
+                    color="neutral"
+                    sx={{
+                      borderRadius: 0,
+                      paddingX: 2,
+                    }}
+                  >
+                    <VscChromeMaximize />
+                  </FakeButton>
+                  <FakeButton
+                    tooltipIndex={tooltipIndex}
+                    setTooltipIndex={setTooltipIndex}
+                    variant="plain"
+                    color="neutral"
+                    sx={(theme) => ({
+                      borderRadius: 0,
+                      paddingX: 2,
+                      '&:hover': {
+                        backgroundColor: theme.palette.danger[500],
                       },
                     })}
                   >
-                    <Typography
-                      level="body2"
-                      textColor="text.primary"
-                      fontWeight="lg"
-                      startDecorator={tab.icon}
-                      sx={{
-                        marginLeft: 1,
-                        gap: 0.5,
-                        wordWrap: 'nowrap',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {tab.name}
-                    </Typography>
-                    <FakeButton
-                      tooltipIndex={tooltipIndex}
-                      setTooltipIndex={setTooltipIndex}
-                      size="sm"
-                      variant="plain"
-                      color="neutral"
-                      sx={{
-                        height: '25px',
-                        minHeight: '25px',
-                        marginRight: 0.5,
-                      }}
-                    >
-                      <VscChromeClose />
-                    </FakeButton>
-                  </Card>
-                ))}
-              </Stack>
-              <Stack direction="row" p={0.5} paddingTop={1}>
-                <FakeButton
-                  tooltipIndex={tooltipIndex}
-                  setTooltipIndex={setTooltipIndex}
-                  size="sm"
-                  variant="soft"
-                  color="neutral"
-                  sx={{
-                    borderRadius: '6px',
-                    borderTopRightRadius: 0,
-                    borderBottomRightRadius: 0,
-                    minHeight: '25px',
-                  }}
-                >
-                  <IoAddOutline />
-                </FakeButton>
-                <Divider orientation="vertical" />
-                <FakeButton
-                  tooltipIndex={tooltipIndex}
-                  setTooltipIndex={setTooltipIndex}
-                  size="sm"
-                  variant="soft"
-                  color="neutral"
-                  sx={{
-                    borderRadius: '6px',
-                    borderTopLeftRadius: 0,
-                    borderBottomLeftRadius: 0,
-                    minHeight: '25px',
-                  }}
-                >
-                  <HiChevronDown />
-                </FakeButton>
-              </Stack>
+                    <VscChromeClose />
+                  </FakeButton>
+                </Stack>
+              </Default>
             </Stack>
-            <Default>
-              <Stack direction="row">
-                <FakeButton
-                  tooltipIndex={tooltipIndex}
-                  setTooltipIndex={setTooltipIndex}
-                  variant="plain"
-                  color="neutral"
-                  sx={{
-                    borderRadius: 0,
-                    paddingX: 2,
-                  }}
-                >
-                  <VscChromeMinimize />
-                </FakeButton>
-                <FakeButton
-                  tooltipIndex={tooltipIndex}
-                  setTooltipIndex={setTooltipIndex}
-                  variant="plain"
-                  color="neutral"
-                  sx={{
-                    borderRadius: 0,
-                    paddingX: 2,
-                  }}
-                >
-                  <VscChromeMaximize />
-                </FakeButton>
-                <FakeButton
-                  tooltipIndex={tooltipIndex}
-                  setTooltipIndex={setTooltipIndex}
-                  variant="plain"
-                  color="neutral"
-                  sx={(theme) => ({
-                    borderRadius: 0,
-                    paddingX: 2,
-                    '&:hover': {
-                      backgroundColor: theme.palette.danger[500],
-                    },
-                  })}
-                >
-                  <VscChromeClose />
-                </FakeButton>
-              </Stack>
-            </Default>
-          </Stack>
           )}
           <Default>
             <Tooltip

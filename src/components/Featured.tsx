@@ -193,6 +193,7 @@ export default function Featured() {
   return (
     <Stack
       gap={3}
+      marginBottom={mobile ? '5rem' : 0}
     >
       <Stack
         gap={2}

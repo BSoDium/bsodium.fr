@@ -18,6 +18,7 @@ export default function Contact() {
   return (
     <Stack
       gap={3}
+      marginBottom={mobile ? '7rem' : 0}
       sx={{ zIndex: 1, textAlign: mobile ? 'center' : 'left', alignItems: mobile ? 'center' : undefined }}
     >
       <Mobile>

@@ -29,7 +29,8 @@ export default function OpenSource() {
   return (
     <Stack
       p="20px"
-      sx={{ position: 'relative', marginTop: mobile ? '3rem' : 0 }}
+      sx={{ position: 'relative' }}
+      marginBottom={mobile ? '5rem' : 0}
     >
       <Stack sx={{
         width: '100%',

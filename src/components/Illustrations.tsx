@@ -34,7 +34,7 @@ export default function Illustrations() {
     config: transitionConfig,
   });
 
-  const planetTransition = useTransition(colorScheme, {
+  const [planetTransition] = useTransition(colorScheme, {
     ref: planetTransRef,
     keys: null,
     initial: null,
@@ -57,9 +57,9 @@ export default function Illustrations() {
       zIndex: 0,
     },
     config: transitionConfig,
-  });
+  }, [colorScheme, mobile]);
 
-  const accessoryTransition = useTransition(colorScheme, {
+  const [accessoryTransition] = useTransition(colorScheme, {
     ref: accessoryTransRef,
     keys: null,
     initial: null,
@@ -82,13 +82,13 @@ export default function Illustrations() {
       zIndex: 0,
     },
     config: transitionConfig,
-  });
+  }, [colorScheme, mobile]);
 
   useEffect(() => {
     planetTransRef.start();
     accessoryTransRef.start();
     skyTransRef.start();
-  }, [colorScheme]);
+  }, [colorScheme, mobile]);
 
   useEffect(() => {
     document.body.style.transition = `background-color ease ${transitionConfig.duration / 1000}s, color ease ${transitionConfig.duration / 1000}s`;
