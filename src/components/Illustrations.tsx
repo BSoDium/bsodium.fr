@@ -11,12 +11,12 @@ import {
 } from '@react-spring/web';
 import { useMobileMode } from './Responsive';
 
-export default function Illustrations() {
-  const transitionConfig = {
-    duration: 1000,
-    easing: easings.easeInOutExpo,
-  };
+export const transitionConfig = {
+  duration: 1000,
+  easing: easings.easeInOutExpo,
+};
 
+export default function Illustrations() {
   const skyTransRef = useSpringRef();
   const planetTransRef = useSpringRef();
   const accessoryTransRef = useSpringRef();
@@ -88,7 +88,7 @@ export default function Illustrations() {
     planetTransRef.start();
     accessoryTransRef.start();
     skyTransRef.start();
-  }, [colorScheme, mobile]);
+  }, [colorScheme, mobile, planetTransRef, accessoryTransRef, skyTransRef]);
 
   useEffect(() => {
     document.body.style.transition = `background-color ease ${transitionConfig.duration / 1000}s, color ease ${transitionConfig.duration / 1000}s`;
