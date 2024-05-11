@@ -2,6 +2,7 @@
 /* eslint-disable react/no-unknown-property */
 import {
   Avatar, Stack, Typography,
+  useColorScheme,
 } from '@mui/joy';
 import React, { useMemo } from 'react';
 import vader from 'assets/vader.webp';
@@ -10,6 +11,9 @@ import { Parallax } from 'react-scroll-parallax';
 import { Default, Mobile, useMobileMode } from './Responsive';
 
 export default function OpenSource() {
+  const { colorScheme } = useColorScheme();
+  const dark = useMemo(() => colorScheme === 'dark', [colorScheme]);
+
   const mobile = useMobileMode();
 
   const flickerAnimation = useMemo(() => ({
@@ -25,7 +29,8 @@ export default function OpenSource() {
   return (
     <Stack
       p="20px"
-      sx={{ position: 'relative', marginTop: mobile ? '3rem' : 0 }}
+      sx={{ position: 'relative' }}
+      marginBottom={mobile ? '5rem' : 0}
     >
       <Stack sx={{
         width: '100%',
@@ -56,8 +61,8 @@ export default function OpenSource() {
               sx={(theme) => ({
                 position: 'relative',
                 border: 'none',
-                outline: `1.5px solid ${theme.palette.success[400]}`,
-                boxShadow: `0 0 40px 5px ${theme.palette.success[700]}`,
+                outline: `2px solid ${theme.palette.success[500]}`,
+                boxShadow: `0 0 40px 5px rgba(${theme.palette.success.mainChannel} / 0.4)`,
                 overflow: 'visible',
                 marginTop: '3rem',
                 '&::before': {
@@ -65,7 +70,7 @@ export default function OpenSource() {
                   position: 'absolute',
                   top: '-5rem',
                   height: '5rem',
-                  width: '1.5px',
+                  width: '2px',
                   background: `linear-gradient(to bottom, transparent, ${theme.palette.success[400]})`,
                 },
               })}
@@ -80,7 +85,7 @@ export default function OpenSource() {
             }}
           >
             <Typography
-              textColor="success.300"
+              color="success"
               fontWeight="xl"
             >
               Open-source.
@@ -88,18 +93,24 @@ export default function OpenSource() {
             {mobile ? <br /> : ' '}
             Join the
             {' '}
-            <Typography sx={{
+            <Typography sx={(theme) => ({
               ...flickerAnimation,
-              textShadow: '0 0 0.5rem #86fff1, 0 0 1rem #03fee9, 0 0 2rem #03fed8',
-              color: '#e4fffe',
-              animation: 'flicker 5s infinite',
-              animationDelay: `${Math.random() * 2}s`,
-              fontWeight: '300',
+              ...(dark ? {
+                textShadow: `0 0 1px ${theme.palette.text.primary}, 0 0 .5rem ${theme.palette.text.primary}, 0 0 3rem ${theme.palette.text.secondary}`,
+                color: 'white',
+                animation: 'flicker 5s infinite',
+                animationDelay: `${Math.random() * 2}s`,
+                fontWeight: '300',
+              } : {
+                color: theme.palette.text.primary,
+                fontWeight: '900',
+                fontFamily: '"Lobster", sans-serif',
+              }),
               padding: '3rem',
               margin: '-3rem',
-            }}
+            })}
             >
-              light side
+              {dark ? 'light side' : 'bold side'}
             </Typography>
             {' '}
             of the force.
@@ -112,8 +123,8 @@ export default function OpenSource() {
                   right: '-50px',
                   transform: 'translateX(50%)',
                   border: 'none',
-                  outline: `1.5px solid ${theme.palette.success[400]}`,
-                  boxShadow: `0 0 40px 5px ${theme.palette.success[700]}`,
+                  outline: `2px solid ${theme.palette.success[500]}`,
+                  boxShadow: `0 0 40px 5px rgba(${theme.palette.success.mainChannel} / 0.4)`,
                 })}
               >
                 <RiOpenSourceLine />
@@ -152,7 +163,7 @@ export default function OpenSource() {
         </Stack>
         <Parallax
           speed={10}
-          opacity={[0.2, 1]}
+          opacity={[0, 1]}
           easing="ease"
           disabled={mobile}
           style={mobile ? {
@@ -178,7 +189,7 @@ export default function OpenSource() {
               ...(mobile && {
                 height: '350px',
               }),
-              filter: 'drop-shadow(0 -20px 20px hsl(185, 94%, 10%)) drop-shadow(0 20px 20px hsl(356, 60%, 11%))',
+              filter: 'drop-shadow(0 -20px 20px hsla(185, 74%, 41%, 0.299)) drop-shadow(0 20px 20px hsla(7, 57%, 51%, 0.364))',
             }}
           />
         </Parallax>

@@ -18,6 +18,7 @@ export default function Contact() {
   return (
     <Stack
       gap={3}
+      marginBottom={mobile ? '7rem' : 0}
       sx={{ zIndex: 1, textAlign: mobile ? 'center' : 'left', alignItems: mobile ? 'center' : undefined }}
     >
       <Mobile>
@@ -27,8 +28,8 @@ export default function Contact() {
           sx={(theme) => ({
             position: 'relative',
             border: 'none',
-            outline: `1.5px solid ${theme.palette.warning[400]}`,
-            boxShadow: `0 0 40px 5px ${theme.palette.warning[700]}`,
+            outline: `2px solid ${theme.palette.warning[500]}`,
+            boxShadow: `0 0 40px 5px rgba(${theme.palette.warning.mainChannel} / 0.4)`,
             overflow: 'visible',
             marginTop: '3rem',
             '&::before': {
@@ -36,7 +37,7 @@ export default function Contact() {
               position: 'absolute',
               top: '-5rem',
               height: '5rem',
-              width: '1.5px',
+              width: '2px',
               background: `linear-gradient(to bottom, transparent, ${theme.palette.warning[400]})`,
             },
           })}
@@ -51,12 +52,12 @@ export default function Contact() {
             color="warning"
             sx={(theme) => ({
               position: 'absolute',
-              left: '-50px',
+              left: '-49px',
               top: '0',
               transform: 'translateX(-50%)',
               border: 'none',
-              outline: `1.5px solid ${theme.palette.warning[400]}`,
-              boxShadow: `0 0 40px 5px ${theme.palette.warning[700]}`,
+              outline: `2px solid ${theme.palette.warning[500]}`,
+              boxShadow: `0 0 40px 5px rgba(${theme.palette.warning.mainChannel} / 0.4)`,
             })}
           >
             <FiMail />
@@ -65,7 +66,7 @@ export default function Contact() {
         Get
         {' '}
         <Typography
-          textColor="warning.400"
+          color="warning"
           fontWeight="xl"
         >
           in touch

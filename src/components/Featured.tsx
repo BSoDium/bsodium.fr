@@ -5,7 +5,7 @@ import {
   Box, Button, Card, Chip, CircularProgress, ColorPaletteProp, Divider, Stack, Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
-import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
+import { BsJournalBookmarkFill, BsJournalCode } from 'react-icons/bs';
 import {
   FaCodeBranch, FaGithub, FaStar,
 } from 'react-icons/fa';
@@ -52,13 +52,14 @@ function ProjectCard({
           paddingY: 0,
         }),
         transition: 'all ease .2s',
+        boxShadow: 'none',
         '&:hover': mobile ? {} : {
-          transform: 'translate(.6rem, -.6rem)',
+          transform: 'translateY(-.6rem)',
+          filter: `drop-shadow(0 .6rem 0 ${theme.palette[color].solidBg})`,
           transformOrigin: 'bottom left',
-          filter: `drop-shadow(-.3rem .3rem 0 ${theme.palette[color][700]}) drop-shadow(-.3rem .3rem 0 ${theme.palette[color][800]})`,
-          borderColor: theme.palette[color][500],
-          backgroundColor: theme.palette[color][900],
-          boxShadow: 'none',
+          color: theme.palette[color].softColor,
+          borderColor: theme.palette[color].solidBg,
+          backgroundColor: theme.palette[color].softBg,
           zIndex: 1,
           '&:before': {
             content: '""',
@@ -77,9 +78,9 @@ function ProjectCard({
             height: '.6rem',
           },
           '& .avatar': {
-            borderColor: theme.palette[color][600],
-            color: theme.palette[color][100],
-            backgroundColor: theme.palette[color][600],
+            borderColor: theme.palette[color].outlinedBorder,
+            color: theme.palette[color].solidColor,
+            backgroundColor: theme.palette[color].solidBg,
           },
         },
       })}
@@ -93,9 +94,9 @@ function ProjectCard({
             className="avatar"
             sx={{ transition: 'all ease .2s', borderRadius: 'calc(var(--Card-radius) / 1.5)' }}
           >
-            <BsJournalBookmark />
+            <BsJournalBookmarkFill size="1.2rem" />
           </Avatar>
-          <Typography level="h5">
+          <Typography level="h5" textColor="inherit">
             {beautify(project.title)}
           </Typography>
 
@@ -192,6 +193,7 @@ export default function Featured() {
   return (
     <Stack
       gap={3}
+      marginBottom={mobile ? '5rem' : 0}
     >
       <Stack
         gap={2}
@@ -204,8 +206,8 @@ export default function Featured() {
             sx={(theme) => ({
               position: 'relative',
               border: 'none',
-              outline: `1.5px solid ${theme.palette.info[400]}`,
-              boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
+              outline: `2px solid ${theme.palette.info[500]}`,
+              boxShadow: `0 0 40px 5px rgba(${theme.palette.info.mainChannel} / 0.4)`,
               overflow: 'visible',
               marginTop: '3rem',
               marginBottom: '1rem',
@@ -214,8 +216,8 @@ export default function Featured() {
                 position: 'absolute',
                 top: '-5rem',
                 height: '5rem',
-                width: '1.5px',
-                background: `linear-gradient(to bottom, transparent, ${theme.palette.info[400]})`,
+                width: '2px',
+                background: `linear-gradient(to bottom, transparent, ${theme.palette.info[500]})`,
               },
             })}
           >
@@ -233,12 +235,12 @@ export default function Featured() {
               color="info"
               sx={(theme) => ({
                 position: 'absolute',
-                left: '-50px',
+                left: '-49px',
                 top: '0',
                 transform: 'translateX(-50%)',
                 border: 'none',
-                outline: `1.5px solid ${theme.palette.info[400]}`,
-                boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
+                outline: `2px solid ${theme.palette.info[500]}`,
+                boxShadow: `0 0 40px 5px rgba(${theme.palette.info.mainChannel} / 0.4)`,
               })}
             >
               <BsJournalCode />
@@ -247,7 +249,7 @@ export default function Featured() {
           Featured
           {' '}
           <Typography
-            textColor="info.400"
+            color="info"
             alignItems="center"
             fontWeight="xl"
             endDecorator={(
@@ -368,7 +370,7 @@ export default function Featured() {
             boxShadow: 'none',
             overflow: 'hidden',
             borderRadius: 0,
-            background: 'var(--joy-palette-background-body)',
+            background: 'transparent',
             padding: mobile ? '.5rem' : '0',
           }}
         >

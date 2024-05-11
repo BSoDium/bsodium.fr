@@ -23,15 +23,7 @@ function Grid({ sx }: {sx?: SxProps}) {
       backgroundColor: 'transparent',
       backgroundImage: 'linear-gradient(var(--joy-palette-divider) 1px, transparent 1px), linear-gradient(90deg, var(--joy-palette-divider) 1px, transparent 1px)',
       backgroundSize: '37px 37px, 37px 37px',
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        width: '100%',
-        height: '100%',
-        background: 'radial-gradient(circle, transparent 0%, var(--joy-palette-background-body) 100%), linear-gradient(0deg, var(--joy-palette-background-body) 0%, transparent 16%, transparent 84%, var(--joy-palette-background-body) 100%);',
-      },
+      maskImage: 'radial-gradient(circle, black 0%, transparent 80%)',
       ...sx,
     }}
     />
@@ -187,10 +179,14 @@ function Cursor({ step } : {step: number}) {
       <Stack
         className="wrapper"
         component={animated.div}
-        sx={{
+        sx={(theme) => ({
           position: 'absolute',
           transformOrigin: 'top right',
-        }}
+          '& svg': {
+            fill: `color-mix(in srgb, ${theme.palette.danger[500]}, ${theme.palette.background.body} 40%)`,
+            stroke: theme.palette.danger[500],
+          },
+        })}
         style={{
           rotate,
         }}
@@ -198,8 +194,7 @@ function Cursor({ step } : {step: number}) {
         <svg
           height="25"
           viewBox="0 0 17 18"
-          fill="var(--joy-palette-danger-600)"
-          stroke="var(--joy-palette-danger-500)"
+          fill="var(--joy-palette-danger-500)"
           filter="drop-shadow(0 0 10px var(--joy-palette-background-body))"
         >
           <path d="M15.5036 3.11002L12.5357 15.4055C12.2666 16.5204 10.7637 16.7146 10.22 15.7049L7.4763 10.6094L2.00376 8.65488C0.915938 8.26638 0.891983 6.73663 1.96711 6.31426L13.8314 1.65328C14.7729 1.28341 15.741 2.12672 15.5036 3.11002ZM7.56678 10.6417L7.56645 10.6416C7.56656 10.6416 7.56667 10.6416 7.56678 10.6417L7.65087 10.4062L7.56678 10.6417Z" strokeWidth="1.5" />
@@ -223,7 +218,7 @@ function Board({ step } : {step: number}) {
       }}
     >
       <Parallax
-        speed={-20}
+        speed={0}
         style={{
           position: 'absolute',
           top: '0',
@@ -234,39 +229,51 @@ function Board({ step } : {step: number}) {
       >
         <Grid />
       </Parallax>
-      <Card
-        variant="outlined"
-        sx={{
+      <Parallax
+        speed={10}
+        style={{
           position: 'absolute',
           top: '20%',
           left: '10%',
-          filter: 'drop-shadow(0 0 20px var(--joy-palette-background-body))',
         }}
       >
-        <Typography
-          level="h3"
+        <Card
+          variant="outlined"
+          sx={{
+            filter: 'drop-shadow(0 0 20px var(--joy-palette-background-body))',
+          }}
         >
           <Typography
-            textColor="text.tertiary"
+            level="h3"
           >
-            Design.
+            <Typography
+              textColor="text.tertiary"
+            >
+              Design.
+            </Typography>
+            <br />
+            <Typography
+              textColor="text.secondary"
+            >
+              Develop.
+            </Typography>
+            <br />
+            <Typography>
+              Deploy.
+            </Typography>
+            <br />
           </Typography>
-          <br />
-          <Typography
-            textColor="text.secondary"
-          >
-            Develop.
-          </Typography>
-          <br />
-          <Typography>
-            Deploy.
-          </Typography>
-          <br />
-        </Typography>
-      </Card>
+        </Card>
+      </Parallax>
       <Parallax
-        speed={10}
-        onProgressChange={(progress) => setCardScrollProgress(progress)}
+        speed={15}
+        onProgressChange={(progress) => {
+          if (progress < 0.7) {
+            setCardScrollProgress(progress);
+          } else {
+            setCardScrollProgress(0.7);
+          }
+        }}
         style={{
           position: 'absolute',
           top: '35%',
@@ -305,23 +312,24 @@ function Board({ step } : {step: number}) {
             variant="outlined"
             color={cardColor}
             className="indicator"
-            sx={{
+            sx={(theme) => ({
               position: 'absolute',
               padding: '0.2rem 1rem',
               width: 'max-content',
               top: '50%',
               left: 'calc(100% + 2rem)',
               transform: 'translateY(-50%)',
+              border: `1px dashed ${theme.palette[cardColor][500]}`,
               '&::before': {
                 content: '""',
                 position: 'absolute',
                 top: '50%',
-                right: '100%',
-                width: '2rem',
+                right: 'calc(100% + 1px)',
+                width: 'calc(2rem - 1px)',
                 height: '1rem',
-                borderTop: '1px dashed var(--joy-palette-neutral-700)',
+                borderTop: `1px dashed ${theme.palette[cardColor][500]}`,
               },
-            }}
+            })}
           >
             <code style={{ fontSize: '0.9rem' }}>
               {`+ ${(50 * cardScrollProgress).toFixed(2)} px`}
@@ -505,7 +513,7 @@ function Reach({ step } : {step: number}) {
             top: '-5rem',
             left: 'max(65%, 32rem)',
             height: '30rem',
-            filter: 'drop-shadow(0 -1rem 20px #feffee37) drop-shadow(3rem 5rem 40px var(--joy-palette-danger-900)) brightness(0.8)',
+            filter: 'drop-shadow(0 -1rem 20px #feffee37) drop-shadow(2rem 3rem 40px #5074a33f)',
           }}
         />
       </Default>
@@ -565,8 +573,8 @@ export default function Goals() {
               sx={(theme) => ({
                 position: 'relative',
                 border: 'none',
-                outline: `1.5px solid ${theme.palette.danger[400]}`,
-                boxShadow: `0 0 40px 5px ${theme.palette.danger[700]}`,
+                outline: `2px solid ${theme.palette.danger[500]}`,
+                boxShadow: `0 0 40px 5px rgba(${theme.palette.danger.mainChannel} / 0.4)`,
                 overflow: 'visible',
                 marginTop: '3rem',
                 marginBottom: '1rem',
@@ -575,7 +583,7 @@ export default function Goals() {
                   position: 'absolute',
                   top: '-5rem',
                   height: '5rem',
-                  width: '1.5px',
+                  width: '2px',
                   background: `linear-gradient(to bottom, transparent, ${theme.palette.danger[400]})`,
                 },
               })}
@@ -607,8 +615,8 @@ export default function Goals() {
                   right: '-50px',
                   transform: 'translateX(50%)',
                   border: 'none',
-                  outline: `1.5px solid ${theme.palette.danger[400]}`,
-                  boxShadow: `0 0 37px 5px ${theme.palette.danger[700]}`,
+                  outline: `2px solid ${theme.palette.danger[500]}`,
+                  boxShadow: `0 0 40px 5px rgba(${theme.palette.danger.mainChannel} / 0.4)`,
                 })}
               >
                 <TbHeartHandshake />

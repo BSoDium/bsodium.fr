@@ -1,12 +1,12 @@
 /* eslint-disable react/no-array-index-key */
 /* eslint-disable react/jsx-props-no-spreading */
 import {
-  Button, Stack, VariantProp,
+  Button, Stack, useColorScheme, VariantProp,
 } from '@mui/joy';
 import Color from 'color';
 import React, { useMemo } from 'react';
 
-function getPalette(primaryColor: string): {
+function getPalette(primaryColor: string, colorScheme: 'light' | 'dark' = 'dark'): {
   color: string,
   backgroundColor: string,
   borderColor: string
@@ -20,7 +20,17 @@ function getPalette(primaryColor: string): {
   const color = Color(primaryColor);
   const hsl = color.hsl();
 
-  return {
+  return colorScheme === 'light' ? {
+    color: hsl.lightness(5).hex(),
+    backgroundColor: hsl.lightness(90).hex(),
+    borderColor: hsl.lightness(80).hex(),
+    shadow: {
+      1: hsl.lightness(95).hex(),
+      2: hsl.lightness(90).hex(),
+      3: hsl.lightness(85).hex(),
+      4: hsl.lightness(80).hex(),
+    },
+  } : {
     color: hsl.lightness(90).hex(),
     backgroundColor: hsl.lightness(10).hex(),
     borderColor: hsl.lightness(20).hex(),
@@ -48,7 +58,9 @@ export function Link({
   color,
   variant,
 }: NonNullable<LinkProps>) {
-  const { shadow, ...css } = color ? getPalette(color) : { shadow: undefined };
+  const { colorScheme } = useColorScheme();
+
+  const { shadow, ...css } = color ? getPalette(color, colorScheme) : { shadow: undefined };
 
   return (
     <Button
@@ -121,27 +133,7 @@ export default function LinkCarousel({
         overflow: 'hidden',
         width: '100%',
         marginX: -5,
-        '&::before': {
-          position: 'absolute',
-          content: '""',
-          height: '100%',
-          top: 0,
-          width: '25%',
-          zIndex: 2,
-          pointerEvents: 'none',
-          backgroundImage: 'linear-gradient(to right, var(--joy-palette-background-body), transparent)',
-        },
-        '&::after': {
-          position: 'absolute',
-          content: '""',
-          height: '100%',
-          width: '25%',
-          top: 0,
-          right: 0,
-          zIndex: 2,
-          pointerEvents: 'none',
-          backgroundImage: 'linear-gradient(to left, var(--joy-palette-background-body), transparent)',
-        },
+        maskImage: 'linear-gradient(to right, transparent, black 20%, black 80%, transparent)',
         '& > *': {
           '@keyframes slide': {
             '0%': {

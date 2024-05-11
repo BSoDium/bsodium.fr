@@ -17,6 +17,7 @@ import Divider from 'components/Divider';
 import Goals from 'components/Goals';
 import { ParallaxProvider } from 'react-scroll-parallax';
 import Illustrations from 'components/Illustrations';
+import Credits from 'components/Credits';
 
 export function ATypography({
   children,
@@ -52,50 +53,10 @@ export function ATypography({
   );
 }
 
-function Credits() {
-  return (
-    <Stack
-      flexWrap="wrap"
-      direction="row"
-      gap={2}
-      justifyContent="space-between"
-      sx={{
-        '& > *': {
-          flex: 1,
-          minWidth: '200px',
-          textAlign: 'center',
-        },
-      }}
-    >
-      <Typography level="body2" textColor="text.tertiary">
-        ©
-        {' '}
-        {new Date().getFullYear()}
-        {' '}
-        Elliot Négrel-Jerzy. All rights reserved.
-      </Typography>
-      <Typography level="body2" textColor="text.tertiary">
-        Illustrations generated with
-        {' '}
-        <ATypography href="https://www.bing.com/create">
-          Bing Image Creator
-        </ATypography>
-        {' '}
-        powered by
-        {' '}
-        <ATypography href="https://openai.com/product/dall-e-2/">
-          DALL·E
-        </ATypography>
-        .
-      </Typography>
-    </Stack>
-  );
-}
-
 export default function App() {
   const mobile = useMobileMode();
   return (
-    <FixedMode mode="dark" style={{ overflow: 'hidden' }}>
+    <FixedMode mode="system" style={{ overflow: 'hidden' }}>
       <ParallaxProvider>
         <Title text="Elliot Négrel-Jerzy" />
         <Illustrations />
@@ -139,8 +100,8 @@ export default function App() {
                     top: '-20px',
                     left: '-30px',
                     height: 'calc(100% + 20px)',
-                    width: '1.5px',
-                    background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
+                    width: '2px',
+                    background: `linear-gradient(to bottom, ${theme.palette.info[500]} 10%, ${theme.palette.warning[500]} 70%)`,
                   },
                 })}
               >
@@ -171,8 +132,8 @@ export default function App() {
                     top: '0',
                     right: '-30px',
                     height: '100%',
-                    width: '1.5px',
-                    background: `linear-gradient(to bottom, ${theme.palette.success[400]} 30%, ${theme.palette.danger[400]})`,
+                    width: '2px',
+                    background: `linear-gradient(to bottom, ${theme.palette.success[500]} 30%, ${theme.palette.danger[500]})`,
                   },
                 })}
               >
@@ -189,8 +150,8 @@ export default function App() {
                     top: '0',
                     right: '-30px',
                     height: '100%',
-                    width: '1.5px',
-                    background: `linear-gradient(to bottom, ${theme.palette.danger[400]}, transparent)`,
+                    width: '2px',
+                    background: `linear-gradient(to bottom, ${theme.palette.danger[500]}, transparent)`,
                   },
                 })}
               >
