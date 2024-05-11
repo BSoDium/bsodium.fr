@@ -58,7 +58,7 @@ export default function Header() {
           left: '-50px',
           height: 'calc(100% + 80px - 70px - 33px)',
           width: '2px',
-          background: `linear-gradient(to bottom, color-mix(in srgb, ${theme.palette.primary[500]}, transparent 30%), ${theme.palette.primary[500]} 30%)`,
+          background: `linear-gradient(to bottom, color-mix(in srgb, ${theme.palette.primary[500]}, ${theme.palette.background.body} 40%), ${theme.palette.primary[500]} 30%)`,
         },
       })}
     >
@@ -93,7 +93,7 @@ export default function Header() {
             transition: 'all ease .2s',
           },
           position: 'relative',
-          borderColor: `color-mix(in srgb, ${theme.palette.primary[500]}, transparent 30%)`,
+          borderColor: `color-mix(in srgb, ${theme.palette.primary[500]}, ${theme.palette.background.body} 40%)`,
           borderWidth: '2px',
           borderRadius: '100px',
           width: 'fit-content',
@@ -110,7 +110,7 @@ export default function Header() {
             width: '50px',
             height: '70px',
             marginLeft: '-2px',
-            border: `2px solid color-mix(in srgb, ${theme.palette.primary[500]}, transparent 30%)`,
+            border: `2px solid color-mix(in srgb, ${theme.palette.primary[500]}, ${theme.palette.background.body} 40%)`,
             borderBottom: 'none',
             borderRight: 'none',
             borderTopLeftRadius: '50px',
