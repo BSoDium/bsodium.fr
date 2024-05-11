@@ -10,7 +10,7 @@ main,
   height: 100%;
   margin: 0;
   padding: 0;
-  transition: background-color ease .2s;
+  transition: background-color ease .2s, color ease .2s;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -54,10 +54,10 @@ html {
 
 @keyframes spin {
   0% {
-    transform: rotate(0deg);
+    rotate: 0;
   }
 
   100% {
-    transform: rotate(360deg);
+    rotate: 360deg;
   }
 }

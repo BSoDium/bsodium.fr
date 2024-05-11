@@ -240,7 +240,7 @@ export default function Details({
   const transRef = useSpringRef();
   const container = React.createRef<HTMLDivElement>();
 
-  const transitions = useTransition(category, {
+  const transition = useTransition(category, {
     ref: transRef,
     keys: null,
     from: { opacity: 0 },
@@ -257,7 +257,7 @@ export default function Details({
 
   return (
     <Stack direction="column" ref={container}>
-      {transitions((style, item) => {
+      {transition((style, item) => {
         switch (item) {
           case 'education':
             return (
