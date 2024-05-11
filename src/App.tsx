@@ -140,7 +140,7 @@ export default function App() {
                     left: '-30px',
                     height: 'calc(100% + 20px)',
                     width: '2px',
-                    background: `linear-gradient(to bottom, ${theme.palette.info[400]} 10%, ${theme.palette.warning[400]} 70%, ${theme.palette.warning[700]})`,
+                    background: `linear-gradient(to bottom, ${theme.palette.info[500]} 10%, ${theme.palette.warning[500]} 70%)`,
                   },
                 })}
               >
@@ -172,7 +172,7 @@ export default function App() {
                     right: '-30px',
                     height: '100%',
                     width: '2px',
-                    background: `linear-gradient(to bottom, ${theme.palette.success[400]} 30%, ${theme.palette.danger[400]})`,
+                    background: `linear-gradient(to bottom, ${theme.palette.success[500]} 30%, ${theme.palette.danger[500]})`,
                   },
                 })}
               >
@@ -190,7 +190,7 @@ export default function App() {
                     right: '-30px',
                     height: '100%',
                     width: '2px',
-                    background: `linear-gradient(to bottom, ${theme.palette.danger[400]}, transparent)`,
+                    background: `linear-gradient(to bottom, ${theme.palette.danger[500]}, transparent)`,
                   },
                 })}
               >

@@ -5,7 +5,7 @@ import {
   Box, Button, Card, Chip, CircularProgress, ColorPaletteProp, Divider, Stack, Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
-import { BsJournalBookmark, BsJournalCode } from 'react-icons/bs';
+import { BsJournalBookmarkFill, BsJournalCode } from 'react-icons/bs';
 import {
   FaCodeBranch, FaGithub, FaStar,
 } from 'react-icons/fa';
@@ -53,11 +53,12 @@ function ProjectCard({
         }),
         transition: 'all ease .2s',
         '&:hover': mobile ? {} : {
-          transform: 'translate(.6rem, -.6rem)',
+          transform: 'translateY(-.6rem)',
+          filter: `drop-shadow(0 .6rem 0 ${theme.palette[color].solidBg})`,
           transformOrigin: 'bottom left',
-          filter: `drop-shadow(-.3rem .3rem 0 ${theme.palette[color][700]}) drop-shadow(-.3rem .3rem 0 ${theme.palette[color][800]})`,
-          borderColor: theme.palette[color][500],
-          backgroundColor: theme.palette[color][900],
+          color: theme.palette[color].softColor,
+          borderColor: theme.palette[color].solidBg,
+          backgroundColor: theme.palette[color].softBg,
           boxShadow: 'none',
           zIndex: 1,
           '&:before': {
@@ -77,9 +78,9 @@ function ProjectCard({
             height: '.6rem',
           },
           '& .avatar': {
-            borderColor: theme.palette[color][600],
-            color: theme.palette[color][100],
-            backgroundColor: theme.palette[color][600],
+            borderColor: theme.palette[color].outlinedBorder,
+            color: theme.palette[color].solidColor,
+            backgroundColor: theme.palette[color].solidBg,
           },
         },
       })}
@@ -93,9 +94,9 @@ function ProjectCard({
             className="avatar"
             sx={{ transition: 'all ease .2s', borderRadius: 'calc(var(--Card-radius) / 1.5)' }}
           >
-            <BsJournalBookmark />
+            <BsJournalBookmarkFill size="1.2rem" />
           </Avatar>
-          <Typography level="h5">
+          <Typography level="h5" textColor="inherit">
             {beautify(project.title)}
           </Typography>
 
@@ -204,7 +205,7 @@ export default function Featured() {
             sx={(theme) => ({
               position: 'relative',
               border: 'none',
-              outline: `2px solid ${theme.palette.info[400]}`,
+              outline: `2px solid ${theme.palette.info[500]}`,
               boxShadow: `0 0 40px 5px ${theme.palette.info[700]}`,
               overflow: 'visible',
               marginTop: '3rem',
@@ -215,7 +216,7 @@ export default function Featured() {
                 top: '-5rem',
                 height: '5rem',
                 width: '2px',
-                background: `linear-gradient(to bottom, transparent, ${theme.palette.info[400]})`,
+                background: `linear-gradient(to bottom, transparent, ${theme.palette.info[500]})`,
               },
             })}
           >
@@ -247,7 +248,7 @@ export default function Featured() {
           Featured
           {' '}
           <Typography
-            textColor="info.400"
+            color="info"
             alignItems="center"
             fontWeight="xl"
             endDecorator={(
