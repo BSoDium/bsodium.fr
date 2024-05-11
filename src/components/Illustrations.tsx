@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import planetDark from 'assets/planet_dark.webp';
-import planetLight from 'assets/planet_light.png';
-import balloon from 'assets/balloon.png';
+import planetLight from 'assets/planet_light.webp';
+import balloon from 'assets/balloon.webp';
 import spaceStation from 'assets/space-station.webp';
 import sky from 'assets/sky.webp';
 import { Box, useColorScheme } from '@mui/joy';
