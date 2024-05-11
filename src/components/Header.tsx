@@ -58,7 +58,7 @@ export default function Header() {
           left: '-50px',
           height: 'calc(100% + 80px - 70px - 33px)',
           width: '2px',
-          background: `linear-gradient(to bottom, ${theme.palette.primary.outlinedBorder}, ${theme.palette.primary[500]} 30%)`,
+          background: `linear-gradient(to bottom, color-mix(in srgb, ${theme.palette.primary[500]}, transparent 30%), ${theme.palette.primary[500]} 30%)`,
         },
       })}
     >
@@ -77,7 +77,7 @@ export default function Header() {
           )}
         sx={(theme) => ({
           '&:not(:hover)': {
-            backgroundColor: `color-mix(in srgb, ${theme.palette.primary.softBg}, transparent 30%)`,
+            backgroundColor: `color-mix(in srgb, ${theme.palette.primary.softBg}, transparent 50%)`,
           },
           '&:hover, &:active': {
             boxShadow: `0 0 40px 5px rgba(${theme.vars.palette.primary.mainChannel} / 0.2)`,
@@ -93,7 +93,7 @@ export default function Header() {
             transition: 'all ease .2s',
           },
           position: 'relative',
-          borderColor: theme.palette.primary.outlinedBorder,
+          borderColor: `color-mix(in srgb, ${theme.palette.primary[500]}, transparent 30%)`,
           borderWidth: '2px',
           borderRadius: '100px',
           width: 'fit-content',
@@ -110,7 +110,7 @@ export default function Header() {
             width: '50px',
             height: '70px',
             marginLeft: '-2px',
-            border: `2px solid ${theme.palette.primary.outlinedBorder}`,
+            border: `2px solid color-mix(in srgb, ${theme.palette.primary[500]}, transparent 30%)`,
             borderBottom: 'none',
             borderRight: 'none',
             borderTopLeftRadius: '50px',
