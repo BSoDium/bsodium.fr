@@ -18,16 +18,16 @@ import {
 import Directory from './Directory';
 
 function ThemeSwitcherButton() {
-  const { mode, systemMode, setMode } = useColorScheme();
+  const { colorScheme, setMode } = useColorScheme();
 
   return (
     <IconButton
       variant="outlined"
       color="neutral"
       size="lg"
-      className={`state-${systemMode || mode}`}
+      className={`state-${colorScheme}`}
       onClick={() => {
-        setMode((systemMode || mode) === 'light' ? 'dark' : 'light');
+        setMode((colorScheme) === 'light' ? 'dark' : 'light');
       }}
       sx={(theme) => ({
         transition: 'all ease .2s',
@@ -87,12 +87,12 @@ function ThemeSwitcherButton() {
 }
 
 function ThemeAwareIllustration() {
-  const { mode, systemMode } = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const [loaded, setLoaded] = useState(false);
 
   const transRef = useSpringRef();
 
-  const transitions = useTransition((systemMode || mode), {
+  const transitions = useTransition((colorScheme), {
     ref: transRef,
     keys: null,
     from: { opacity: 0 },
@@ -102,7 +102,7 @@ function ThemeAwareIllustration() {
 
   useEffect(() => {
     if (loaded) { transRef.start(); }
-  }, [mode, systemMode, loaded]);
+  }, [colorScheme, loaded]);
 
   const imgSx = {
     position: 'relative',

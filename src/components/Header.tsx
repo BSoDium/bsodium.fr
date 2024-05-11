@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import {
   Avatar, Button, Stack, Typography,
+  useColorScheme,
 } from '@mui/joy';
 import { RiArrowRightSLine } from 'react-icons/ri';
 import { IoReaderOutline } from 'react-icons/io5';
@@ -25,6 +26,9 @@ export default function Header() {
   const mobile = useMobileMode();
   const [visitor, setVisitor] = useState(visitors[0]);
   const [greetingLine, setGreetingLine] = useState(greeting());
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { colorScheme } = useColorScheme();
 
   useEffect(() => {
     const interval = setInterval(() => {

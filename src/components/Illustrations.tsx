@@ -9,10 +9,10 @@ import { Parallax } from 'react-scroll-parallax';
 import { useMobileMode } from './Responsive';
 
 export default function Illustrations() {
-  const { mode, systemMode } = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const mobile = useMobileMode();
 
-  const dark = useMemo(() => (systemMode || mode) === 'dark', [mode, systemMode]);
+  const dark = useMemo(() => colorScheme === 'dark', [colorScheme]);
 
   return (
     <Parallax speed={-20} startScroll={0} disabled={mobile} style={{ overflow: 'visible' }}>
@@ -34,8 +34,8 @@ export default function Illustrations() {
                 left: '0',
                 zIndex: -1,
                 filter: 'brightness(0.5)',
-                maskImage: `url(${sky})`,
-                WebkitMaskImage: `url(${sky})`,
+                maskImage: 'linear-gradient(to bottom, black 10%, transparent 90%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 90%)',
               }}
             />
             <img
@@ -91,8 +91,22 @@ export default function Illustrations() {
               left: '0',
               zIndex: -1,
               background: 'linear-gradient(to bottom, #5594BC, transparent)',
-              maskImage: '',
             }}
+            />
+            <img
+              src={sky}
+              alt="sky"
+              style={{
+                position: 'absolute',
+                width: 'max(100vw, 200vh)',
+                top: '0',
+                left: '0',
+                zIndex: -1,
+                opacity: 0.5,
+                mixBlendMode: 'color-dodge',
+                maskImage: 'linear-gradient(to bottom, black, transparent 20%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 20%)',
+              }}
             />
             <img
               src={planetLight}
