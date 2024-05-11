@@ -4,7 +4,7 @@ import planetLight from 'assets/planet_light.png';
 import balloon from 'assets/balloon.png';
 import spaceStation from 'assets/space-station.webp';
 import sky from 'assets/sky.webp';
-import { useColorScheme } from '@mui/joy';
+import { Box, useColorScheme } from '@mui/joy';
 import { Parallax } from 'react-scroll-parallax';
 import {
   animated, easings, useSpringRef, useTransition,
@@ -99,11 +99,16 @@ export default function Illustrations() {
 
   return (
     <Parallax speed={-20} startScroll={0} disabled={mobile} style={{ overflow: 'visible' }}>
-      <div style={{
-        position: 'relative',
-        width: '100vw',
-        height: '100vh',
-      }}
+      <Box
+        component="div"
+        sx={{
+          position: 'relative',
+          width: '100vw',
+          height: '100vh',
+          '*': {
+            transition: `background-color ${transitionConfig.duration / 1000}s ease, color ${transitionConfig.duration / 1000}s ease`,
+          },
+        }}
       >
         {skyTransition((style, item) => {
           switch (item) {
@@ -248,7 +253,7 @@ export default function Illustrations() {
               return null;
           }
         })}
-      </div>
+      </Box>
     </Parallax>
   );
 }
