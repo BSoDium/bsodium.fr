@@ -26,17 +26,14 @@ html {
 
 @keyframes float {
   0% {
-    rotate: 0deg;
     translate: 0 0;
   }
 
   50% {
-    rotate: 5deg;
     translate: 0 -10%;
   }
 
   100% {
-    rotate: 0deg;
     translate: 0 0;
   }
 }

@@ -95,7 +95,7 @@ function Credits() {
 export default function App() {
   const mobile = useMobileMode();
   return (
-    <FixedMode mode="dark" style={{ overflow: 'hidden' }}>
+    <FixedMode mode="system" style={{ overflow: 'hidden' }}>
       <ParallaxProvider>
         <Title text="Elliot Négrel-Jerzy" />
         <Illustrations />
