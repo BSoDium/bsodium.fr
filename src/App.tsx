@@ -151,7 +151,7 @@ export default function App() {
                     right: '-30px',
                     height: '100%',
                     width: '2px',
-                    background: `linear-gradient(to bottom, ${theme.palette.danger[500]}, transparent)`,
+                    background: `linear-gradient(to bottom, ${theme.palette.danger[500]}, transparent 60%)`,
                   },
                 })}
               >
