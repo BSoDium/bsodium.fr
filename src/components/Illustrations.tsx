@@ -91,7 +91,7 @@ export default function Illustrations() {
   }, [colorScheme]);
 
   useEffect(() => {
-    document.body.style.transition = `background-color ${transitionConfig.duration / 1000}s ease, color ${transitionConfig.duration / 1000}s ease`;
+    document.body.style.transition = `background-color ease ${transitionConfig.duration / 1000}s, color ease ${transitionConfig.duration / 1000}s`;
     return () => {
       document.body.style.transition = '';
     };

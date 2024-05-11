@@ -127,7 +127,7 @@ export default function LinkCarousel({
   return (
     <Stack
       gap={1}
-      sx={{
+      sx={(theme) => ({
         position: 'relative',
         py: '.8rem',
         overflow: 'hidden',
@@ -141,7 +141,8 @@ export default function LinkCarousel({
           width: '25%',
           zIndex: 2,
           pointerEvents: 'none',
-          backgroundImage: 'linear-gradient(to right, var(--joy-palette-background-body), transparent)',
+          backgroundImage: `linear-gradient(to right, ${theme.palette.background.body}, transparent)`,
+          transition: 'inherit',
         },
         '&::after': {
           position: 'absolute',
@@ -152,7 +153,8 @@ export default function LinkCarousel({
           right: 0,
           zIndex: 2,
           pointerEvents: 'none',
-          backgroundImage: 'linear-gradient(to left, var(--joy-palette-background-body), transparent)',
+          backgroundImage: `linear-gradient(to left, ${theme.palette.background.body}, transparent)`,
+          transition: 'inherit',
         },
         '& > *': {
           '@keyframes slide': {
@@ -164,7 +166,7 @@ export default function LinkCarousel({
             },
           },
         },
-      }}
+      })}
     >
       {[repeatedLinks, repeatedLinks.slice().reverse()].map((_links, i) => (
         <Stack

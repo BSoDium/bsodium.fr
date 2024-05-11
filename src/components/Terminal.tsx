@@ -206,6 +206,7 @@ export default function Terminal() {
             padding: 0,
             gap: 0,
             margin: mobile ? '-1rem' : '0',
+            marginBottom: '3rem',
             overflow: 'hidden',
           })}
         >

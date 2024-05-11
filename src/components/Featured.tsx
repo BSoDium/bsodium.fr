@@ -369,7 +369,7 @@ export default function Featured() {
             boxShadow: 'none',
             overflow: 'hidden',
             borderRadius: 0,
-            background: 'var(--joy-palette-background-body)',
+            background: 'transparent',
             padding: mobile ? '.5rem' : '0',
           }}
         >
