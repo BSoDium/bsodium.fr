@@ -204,6 +204,9 @@ export function Experience() {
                           color="neutral"
                           size="sm"
                           key={skill}
+                          sx={(theme) => ({
+                            borderColor: theme.palette.divider,
+                          })}
                         >
                           {skill}
                         </Chip>

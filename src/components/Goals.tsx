@@ -1,18 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Avatar, Box, Button, Card, Chip,
-  Input, Sheet, Stack, Textarea, Typography,
+  Sheet, Stack, Typography,
 } from '@mui/joy';
-import robot from 'assets/robot_taking_notes.webp';
 import { TbHeartHandshake } from 'react-icons/tb';
 import { ColorPaletteProp, SxProps } from '@mui/joy/styles/types';
-import { MdOutlineRocketLaunch, MdSend } from 'react-icons/md';
+import { MdOutlineRocketLaunch } from 'react-icons/md';
 import { HiOutlineSparkles } from 'react-icons/hi2';
 import { Parallax } from 'react-scroll-parallax';
 import { animated, useSpringValue } from '@react-spring/web';
-import { FaFire } from 'react-icons/fa';
 import { Default, Mobile, useMobileMode } from './Responsive';
+import Reach from './Reach';
 
 function Grid({ sx }: {sx?: SxProps}) {
   return (
@@ -31,6 +29,8 @@ function Grid({ sx }: {sx?: SxProps}) {
 }
 
 function Comment({ step } : {step: number}) {
+  const mobile = useMobileMode();
+
   const opacity = useSpringValue(0);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ function Comment({ step } : {step: number}) {
       sx={{
         position: 'absolute',
         top: 'calc(1rem + 100%)',
-        left: '50%',
+        left: mobile ? '10%' : '50%',
         width: 'max-content',
         borderRadius: '1.5rem',
         borderTopLeftRadius: '0',
@@ -115,8 +115,8 @@ function Cursor({ step } : {step: number}) {
     rotate: '-90deg',
     opacity: '1',
   }, {
-    top: '76%',
-    left: '15%',
+    top: '75%',
+    left: '4%',
     rotate: '0deg',
     opacity: '1',
   }, {
@@ -205,6 +205,7 @@ function Cursor({ step } : {step: number}) {
 }
 
 function Board({ step } : {step: number}) {
+  const mobile = useMobileMode();
   const [cardScrollProgress, setCardScrollProgress] = useState(0);
   const cardColor = useMemo(() => ['danger', 'warning', 'success'][Math.floor(cardScrollProgress * 3)] as ColorPaletteProp, [cardScrollProgress]);
   return (
@@ -276,8 +277,9 @@ function Board({ step } : {step: number}) {
         }}
         style={{
           position: 'absolute',
-          top: '35%',
-          right: '25%',
+          top: mobile ? '40%' : '35%',
+          right: mobile ? undefined : '25%',
+          left: mobile ? '1rem' : undefined,
         }}
       >
         <Card
@@ -308,33 +310,66 @@ function Board({ step } : {step: number}) {
             {' '}
             at heart.
           </Typography>
-          <Card
-            variant="outlined"
-            color={cardColor}
-            className="indicator"
-            sx={(theme) => ({
-              position: 'absolute',
-              padding: '0.2rem 1rem',
-              width: 'max-content',
-              top: '50%',
-              left: 'calc(100% + 2rem)',
-              transform: 'translateY(-50%)',
-              border: `1px dashed ${theme.palette[cardColor][500]}`,
-              '&::before': {
-                content: '""',
+          <Default>
+            <Card
+              variant="outlined"
+              color={cardColor}
+              className="indicator"
+              sx={(theme) => ({
                 position: 'absolute',
+                padding: '0.2rem 1rem',
+                width: 'max-content',
                 top: '50%',
-                right: 'calc(100% + 1px)',
-                width: 'calc(2rem - 1px)',
-                height: '1rem',
-                borderTop: `1px dashed ${theme.palette[cardColor][500]}`,
-              },
-            })}
-          >
-            <code style={{ fontSize: '0.9rem' }}>
-              {`+ ${(50 * cardScrollProgress).toFixed(2)} px`}
-            </code>
-          </Card>
+                left: 'calc(100% + 2rem)',
+                transform: 'translateY(-50%)',
+                border: `1px dashed ${theme.palette[cardColor][500]}`,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '50%',
+                  right: 'calc(100% + 1px)',
+                  width: 'calc(2rem - 1px)',
+                  height: '1rem',
+                  borderTop: `1px dashed ${theme.palette[cardColor][500]}`,
+                },
+              })}
+            >
+              <code style={{ fontSize: '0.9rem' }}>
+                {`+ ${(50 * cardScrollProgress).toFixed(2)} px`}
+              </code>
+            </Card>
+          </Default>
+          <Mobile>
+            <Card
+              variant="outlined"
+              color={cardColor}
+              className="indicator"
+              sx={(theme) => ({
+                position: 'absolute',
+                padding: '0.2rem 1rem',
+                width: 'max-content',
+                top: 'calc(100% + 2rem)',
+                left: '50%',
+                transform: 'translateY(-50%)',
+                border: `1px dashed ${theme.palette[cardColor][500]}`,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-1rem',
+                  right: 'calc(100% + 1px)',
+                  width: 'calc(2rem - 1px)',
+                  height: '2rem',
+                  borderBottom: `1px dashed ${theme.palette[cardColor][500]}`,
+                  borderLeft: `1px dashed ${theme.palette[cardColor][500]}`,
+                  borderRadius: '0 0 0 1rem',
+                },
+              })}
+            >
+              <code style={{ fontSize: '0.9rem' }}>
+                {`+ ${(50 * cardScrollProgress).toFixed(2)} px`}
+              </code>
+            </Card>
+          </Mobile>
         </Card>
       </Parallax>
       <Card
@@ -342,9 +377,14 @@ function Board({ step } : {step: number}) {
         sx={{
           position: 'absolute',
           padding: 1,
-          top: '10%',
-          left: '60%',
           filter: 'drop-shadow(0 0 20px var(--joy-palette-background-body))',
+          ...(mobile ? {
+            top: '12%',
+            right: '1rem',
+          } : {
+            top: '10%',
+            left: '60%',
+          }),
         }}
       >
         <Stack direction="row" gap={1}>
@@ -406,131 +446,15 @@ function Board({ step } : {step: number}) {
   );
 }
 
-function Reach({ step } : {step: number}) {
-  const mobile = useMobileMode();
-
-  const opacity = useSpringValue(0);
-  const top = useSpringValue('80%');
-
-  useEffect(() => {
-    opacity.start(step >= 4 ? 1 : 0);
-    top.start(step >= 4 ? '67%' : '80%');
-  }, [step]);
-
-  return (
-    <Box
-      component={animated.form}
-      action="https://api.web3forms.com/submit"
-      method="POST"
-      onSubmit={() => {
-        opacity.start(0);
-        top.start('80%');
-      }}
-      sx={{
-        position: 'absolute',
-        left: 0,
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: mobile ? 'center' : 'flex-start',
-        paddingX: mobile ? '0' : '5%',
-        alignItems: 'center',
-        width: mobile ? 'calc(100% + 2rem)' : '100%',
-        maxHeight: '27rem',
-        marginX: mobile ? '-1rem' : 'auto',
-      }}
-      style={{
-        opacity,
-        top,
-      }}
-    >
-
-      <Stack sx={{
-        width: 'min(30rem, 90%)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 1,
-      }}
-      >
-        <input type="hidden" name="access_key" value="4e4e6aee-a458-4774-a6e3-a6df6c19abe5" />
-        <Typography level="h1">
-          Let&apos;s
-          {' '}
-          <Typography color="danger">
-            connect.
-          </Typography>
-        </Typography>
-        <Input
-          variant="plain"
-          placeholder="john@acme.co.uk"
-          type="email"
-          name="email"
-          required
-        />
-        <Input
-          variant="plain"
-          placeholder="John Doe"
-          type="text"
-          name="name"
-          required
-        />
-        <Textarea
-          variant="plain"
-          placeholder="Your message here..."
-          name="message"
-          required
-          minRows={4}
-        />
-        <Stack direction="row" justifyContent="end" gap={1}>
-          <Button
-            component="a"
-            color="danger"
-            variant="soft"
-            href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-            target="_blank"
-            startDecorator={(
-              <FaFire />
-        )}
-          >
-            Surprise me
-          </Button>
-          <Button
-            type="submit"
-            variant="soft"
-            startDecorator={(
-              <MdSend />
-          )}
-          >
-            Submit
-          </Button>
-        </Stack>
-      </Stack>
-      <Default>
-        <img
-          src={robot}
-          alt="robot taking notes"
-          style={{
-            position: 'absolute',
-            top: '-5rem',
-            left: 'max(65%, 32rem)',
-            height: '30rem',
-            opacity: 0.8,
-            filter: 'drop-shadow(0 -1rem 20px #feffee37) drop-shadow(2rem 3rem 40px #5074a33f) contrast(1.2)',
-          }}
-        />
-      </Default>
-    </Box>
-  );
-}
-
 export default function Goals() {
   const mobile = useMobileMode();
 
   const animationDelay = 0.2;
 
   const [scrollingProgress, setScrollingProgress] = useState(0);
-  const animationStep = useMemo(() => Math.round(
-    Math.max(0, scrollingProgress - animationDelay) * (5 / (1 - animationDelay)),
-  ), [scrollingProgress]);
+  const animationStep = useMemo(() => Math.min(Math.round(
+    Math.max(0, scrollingProgress - animationDelay) * (6 / (1 - animationDelay)),
+  ), 5), [scrollingProgress]);
 
   return (
     <Parallax
@@ -641,7 +565,6 @@ export default function Goals() {
             width: mobile ? '100vw' : '100%',
             height: '100%',
             margin: mobile ? '0 calc(-50vw + 50%)' : '0',
-            overflow: 'hidden',
           }}
         >
           <Board step={animationStep} />

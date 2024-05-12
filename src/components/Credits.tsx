@@ -7,11 +7,13 @@ import mountainsDark from 'assets/mountains_dark.webp';
 import mountainsLight from 'assets/mountains_light.webp';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import { transitionConfig } from './Illustrations';
+import { useMobileMode } from './Responsive';
 
 export default function Credits() {
   const mountainsTransRef = useSpringRef();
 
   const { colorScheme } = useColorScheme();
+  const mobile = useMobileMode();
 
   const mountainsTransition = useTransition(colorScheme, {
     ref: mountainsTransRef,
@@ -19,7 +21,6 @@ export default function Credits() {
     keys: null,
     from: { opacity: 0 },
     enter: { opacity: 0.7 },
-    leave: { opacity: 0, filter: 'blur(10px)', position: 'absolute' },
     config: transitionConfig,
   });
 
@@ -28,23 +29,27 @@ export default function Credits() {
   }, [mountainsTransRef, colorScheme]);
 
   return (
-    <>
+    <Stack position="relative">
       {mountainsTransition((style, item) => {
         switch (item) {
           case 'light':
             return (
               <animated.div style={{
                 ...style,
+                position: 'absolute',
+                bottom: 0,
+                width: '100%',
+                zIndex: -1,
               }}
               >
                 <div style={{
                   position: 'absolute',
                   height: '40rem',
                   width: 'calc(100vw + 20rem)',
-                  bottom: '0',
+                  bottom: '-7rem',
                   left: '50%',
-                  transform: 'translateX(50%)',
-                  background: 'linear-gradient(to top, #577fc0, #C4DEE7, transparent)',
+                  transform: 'translateX(-50%)',
+                  background: 'linear-gradient(to top, #577fc0 25%, #C4DEE7, transparent)',
                 }}
                 />
                 <Box
@@ -67,16 +72,20 @@ export default function Credits() {
             return (
               <animated.div style={{
                 ...style,
+                position: 'absolute',
+                bottom: 0,
+                width: '100%',
+                zIndex: -1,
               }}
               >
                 <div style={{
                   position: 'absolute',
                   height: '40rem',
                   width: 'calc(100vw + 20rem)',
-                  bottom: '0',
+                  bottom: '-7rem',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: 'linear-gradient(to top, #65798E, #232931 20%, #181011, transparent)',
+                  background: 'linear-gradient(to top, #130D0B 25%, #1B1C21 40%, #0F0A08 50%, transparent)',
                 }}
                 />
                 <Box
@@ -88,9 +97,8 @@ export default function Credits() {
                     height: '40rem',
                     left: '50%',
                     bottom: '0',
-                    overflow: 'visible',
-                    transform: 'translate(-50%, 10rem)',
-                    filter: 'contrast(1.1) hue-rotate(190deg)',
+                    transform: 'translate(-50%, 7rem)',
+                    filter: 'contrast(1.1) brightness(0.7) hue-rotate(200deg)',
                     maskImage: 'linear-gradient(to left, transparent, black 30%, black 70%, transparent)',
                   }}
                 />
@@ -109,7 +117,7 @@ export default function Credits() {
         justifyContent="space-between"
         sx={(theme) => ({
           position: 'relative',
-          paddingTop: '20rem',
+          paddingTop: mobile ? '17rem' : '23rem',
           '& > *': {
             flex: 1,
             minWidth: '200px',
@@ -120,7 +128,7 @@ export default function Credits() {
       >
         <Typography
           level="body2"
-          textColor="text.primary"
+          textColor={colorScheme === 'dark' ? '#6c7b97' : '#3d4b58'}
         >
           ©
           {' '}
@@ -130,22 +138,23 @@ export default function Credits() {
         </Typography>
         <Typography
           level="body2"
-          textColor="text.primary"
+          textColor={colorScheme === 'dark' ? '#6c7b97' : '#3d4b58'}
         >
-          Illustrations generated with
-          {' '}
+          {'Illustrations generated using '}
           <ATypography href="https://www.bing.com/create">
             Bing Image Creator
           </ATypography>
-          {' '}
-          powered by
-          {' '}
+          {' and '}
+          <ATypography href="https://openai.com/chatgpt/">
+            ChatGPT
+          </ATypography>
+          {' powered by '}
           <ATypography href="https://openai.com/product/dall-e-2/">
             DALL·E
           </ATypography>
           .
         </Typography>
       </Stack>
-    </>
+    </Stack>
   );
 }

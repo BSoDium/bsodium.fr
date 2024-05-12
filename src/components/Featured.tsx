@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable no-bitwise */
 import {
   Avatar,
   Box, Button, Card, Chip, CircularProgress, ColorPaletteProp, Divider, Stack, Typography,
 } from '@mui/joy';
 import React, { useEffect, useState } from 'react';
-import { BsJournalBookmarkFill, BsJournalCode } from 'react-icons/bs';
+import { BsJournalCode } from 'react-icons/bs';
 import {
   FaCodeBranch, FaGithub, FaStar,
 } from 'react-icons/fa';
@@ -94,7 +92,7 @@ function ProjectCard({
             className="avatar"
             sx={{ transition: 'all ease .2s', borderRadius: 'calc(var(--Card-radius) / 1.5)' }}
           >
-            <BsJournalBookmarkFill size="1.2rem" />
+            <FiCode />
           </Avatar>
           <Typography level="h5" textColor="inherit">
             {beautify(project.title)}
