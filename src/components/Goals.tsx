@@ -29,6 +29,8 @@ function Grid({ sx }: {sx?: SxProps}) {
 }
 
 function Comment({ step } : {step: number}) {
+  const mobile = useMobileMode();
+
   const opacity = useSpringValue(0);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ function Comment({ step } : {step: number}) {
       sx={{
         position: 'absolute',
         top: 'calc(1rem + 100%)',
-        left: '50%',
+        left: mobile ? '10%' : '50%',
         width: 'max-content',
         borderRadius: '1.5rem',
         borderTopLeftRadius: '0',
@@ -203,6 +205,7 @@ function Cursor({ step } : {step: number}) {
 }
 
 function Board({ step } : {step: number}) {
+  const mobile = useMobileMode();
   const [cardScrollProgress, setCardScrollProgress] = useState(0);
   const cardColor = useMemo(() => ['danger', 'warning', 'success'][Math.floor(cardScrollProgress * 3)] as ColorPaletteProp, [cardScrollProgress]);
   return (
@@ -274,8 +277,9 @@ function Board({ step } : {step: number}) {
         }}
         style={{
           position: 'absolute',
-          top: '35%',
-          right: '25%',
+          top: mobile ? '40%' : '35%',
+          right: mobile ? undefined : '25%',
+          left: mobile ? '1rem' : undefined,
         }}
       >
         <Card
@@ -306,33 +310,66 @@ function Board({ step } : {step: number}) {
             {' '}
             at heart.
           </Typography>
-          <Card
-            variant="outlined"
-            color={cardColor}
-            className="indicator"
-            sx={(theme) => ({
-              position: 'absolute',
-              padding: '0.2rem 1rem',
-              width: 'max-content',
-              top: '50%',
-              left: 'calc(100% + 2rem)',
-              transform: 'translateY(-50%)',
-              border: `1px dashed ${theme.palette[cardColor][500]}`,
-              '&::before': {
-                content: '""',
+          <Default>
+            <Card
+              variant="outlined"
+              color={cardColor}
+              className="indicator"
+              sx={(theme) => ({
                 position: 'absolute',
+                padding: '0.2rem 1rem',
+                width: 'max-content',
                 top: '50%',
-                right: 'calc(100% + 1px)',
-                width: 'calc(2rem - 1px)',
-                height: '1rem',
-                borderTop: `1px dashed ${theme.palette[cardColor][500]}`,
-              },
-            })}
-          >
-            <code style={{ fontSize: '0.9rem' }}>
-              {`+ ${(50 * cardScrollProgress).toFixed(2)} px`}
-            </code>
-          </Card>
+                left: 'calc(100% + 2rem)',
+                transform: 'translateY(-50%)',
+                border: `1px dashed ${theme.palette[cardColor][500]}`,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '50%',
+                  right: 'calc(100% + 1px)',
+                  width: 'calc(2rem - 1px)',
+                  height: '1rem',
+                  borderTop: `1px dashed ${theme.palette[cardColor][500]}`,
+                },
+              })}
+            >
+              <code style={{ fontSize: '0.9rem' }}>
+                {`+ ${(50 * cardScrollProgress).toFixed(2)} px`}
+              </code>
+            </Card>
+          </Default>
+          <Mobile>
+            <Card
+              variant="outlined"
+              color={cardColor}
+              className="indicator"
+              sx={(theme) => ({
+                position: 'absolute',
+                padding: '0.2rem 1rem',
+                width: 'max-content',
+                top: 'calc(100% + 2rem)',
+                left: '50%',
+                transform: 'translateY(-50%)',
+                border: `1px dashed ${theme.palette[cardColor][500]}`,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-1rem',
+                  right: 'calc(100% + 1px)',
+                  width: 'calc(2rem - 1px)',
+                  height: '2rem',
+                  borderBottom: `1px dashed ${theme.palette[cardColor][500]}`,
+                  borderLeft: `1px dashed ${theme.palette[cardColor][500]}`,
+                  borderRadius: '0 0 0 1rem',
+                },
+              })}
+            >
+              <code style={{ fontSize: '0.9rem' }}>
+                {`+ ${(50 * cardScrollProgress).toFixed(2)} px`}
+              </code>
+            </Card>
+          </Mobile>
         </Card>
       </Parallax>
       <Card
@@ -340,9 +377,14 @@ function Board({ step } : {step: number}) {
         sx={{
           position: 'absolute',
           padding: 1,
-          top: '10%',
-          left: '60%',
           filter: 'drop-shadow(0 0 20px var(--joy-palette-background-body))',
+          ...(mobile ? {
+            top: '12%',
+            right: '1rem',
+          } : {
+            top: '10%',
+            left: '60%',
+          }),
         }}
       >
         <Stack direction="row" gap={1}>
@@ -523,7 +565,6 @@ export default function Goals() {
             width: mobile ? '100vw' : '100%',
             height: '100%',
             margin: mobile ? '0 calc(-50vw + 50%)' : '0',
-            overflow: 'hidden',
           }}
         >
           <Board step={animationStep} />

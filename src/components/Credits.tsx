@@ -85,7 +85,7 @@ export default function Credits() {
                   bottom: '-7rem',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: 'linear-gradient(to top, #1D100D, #1B1C21 40%, #150C0B, transparent)',
+                  background: 'linear-gradient(to top, #130D0B 25%, #1B1C21 40%, #0F0A08 50%, transparent)',
                 }}
                 />
                 <Box
@@ -98,7 +98,7 @@ export default function Credits() {
                     left: '50%',
                     bottom: '0',
                     transform: 'translate(-50%, 7rem)',
-                    filter: 'contrast(1.1) hue-rotate(190deg)',
+                    filter: 'contrast(1.1) brightness(0.7) hue-rotate(200deg)',
                     maskImage: 'linear-gradient(to left, transparent, black 30%, black 70%, transparent)',
                   }}
                 />
@@ -117,7 +117,7 @@ export default function Credits() {
         justifyContent="space-between"
         sx={(theme) => ({
           position: 'relative',
-          paddingTop: mobile ? '10rem' : '23rem',
+          paddingTop: mobile ? '17rem' : '23rem',
           '& > *': {
             flex: 1,
             minWidth: '200px',
@@ -128,7 +128,7 @@ export default function Credits() {
       >
         <Typography
           level="body2"
-          textColor="text.tertiary"
+          textColor={colorScheme === 'dark' ? '#6c7b97' : '#3d4b58'}
         >
           ©
           {' '}
@@ -138,7 +138,7 @@ export default function Credits() {
         </Typography>
         <Typography
           level="body2"
-          textColor="text.tertiary"
+          textColor={colorScheme === 'dark' ? '#6c7b97' : '#3d4b58'}
         >
           {'Illustrations generated using '}
           <ATypography href="https://www.bing.com/create">

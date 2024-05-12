@@ -20,7 +20,6 @@ export const visitors = [
   'human',
   'visitor',
   'friend',
-  'foe',
 ];
 
 export default function Header() {

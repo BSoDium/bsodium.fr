@@ -1,8 +1,8 @@
 import {
   FiAtSign, FiUser,
 } from 'react-icons/fi';
-import satelliteDark from 'assets/satellite_dark.png';
-import satelliteLight from 'assets/satellite_light.png';
+import satelliteDark from 'assets/satellite_dark.webp';
+import satelliteLight from 'assets/satellite_light.webp';
 import React, { useEffect, useState } from 'react';
 import {
   animated, useSpringRef, useSpringValue, useTransition,
@@ -221,6 +221,7 @@ export default function Reach({ step } : {step: number}) {
                         top: '-1rem',
                         left: 'max(67%, 36rem)',
                         height: '20rem',
+                        rotate: opacity.to((o) => `${o * 15 - 15}deg`),
                         filter: 'drop-shadow(-1rem -1rem 1.5rem #f4e9d068) drop-shadow(1rem 1rem 1rem #326c8c4c) hue-rotate(15deg)',
                       }}
                     />
@@ -236,6 +237,7 @@ export default function Reach({ step } : {step: number}) {
                         top: '-2rem',
                         left: 'max(65%, 36rem)',
                         height: '20rem',
+                        rotate: opacity.to((o) => `${o * 15 - 15}deg`),
                         filter: 'drop-shadow(-1rem -1rem 1.5rem #dcedfa41) drop-shadow(1rem 1rem 1rem #01012563)',
                       }}
                     />
