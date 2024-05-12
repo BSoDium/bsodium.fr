@@ -7,11 +7,13 @@ import mountainsDark from 'assets/mountains_dark.webp';
 import mountainsLight from 'assets/mountains_light.webp';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import { transitionConfig } from './Illustrations';
+import { useMobileMode } from './Responsive';
 
 export default function Credits() {
   const mountainsTransRef = useSpringRef();
 
   const { colorScheme } = useColorScheme();
+  const mobile = useMobileMode();
 
   const mountainsTransition = useTransition(colorScheme, {
     ref: mountainsTransRef,
@@ -19,7 +21,10 @@ export default function Credits() {
     keys: null,
     from: { opacity: 0 },
     enter: { opacity: 0.7 },
-    leave: { opacity: 0, filter: 'blur(10px)', position: 'absolute' },
+    leave: {
+      opacity: 0,
+      filter: 'blur(10px)',
+    },
     config: transitionConfig,
   });
 
@@ -35,6 +40,7 @@ export default function Credits() {
             return (
               <animated.div style={{
                 ...style,
+                zIndex: -1,
               }}
               >
                 <div style={{
@@ -67,6 +73,7 @@ export default function Credits() {
             return (
               <animated.div style={{
                 ...style,
+                zIndex: -1,
               }}
               >
                 <div style={{
@@ -109,7 +116,7 @@ export default function Credits() {
         justifyContent="space-between"
         sx={(theme) => ({
           position: 'relative',
-          paddingTop: '20rem',
+          paddingTop: mobile ? '10rem' : '15rem',
           '& > *': {
             flex: 1,
             minWidth: '200px',
