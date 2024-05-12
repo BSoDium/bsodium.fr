@@ -16,10 +16,11 @@ import TypeWriter from './TypeWriter';
 export const visitors = [
   'stranger',
   'collaborator',
-  'fellow developer',
-  'fellow human',
+  'developer',
+  'human',
   'visitor',
   'friend',
+  'foe',
 ];
 
 export default function Header() {
@@ -135,6 +136,7 @@ export default function Header() {
         textAlign={mobile ? 'center' : 'initial'}
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
+        height={mobile ? '5.625rem' : 'auto'}
       >
         <TypeWriter
           typeInterval={20}
