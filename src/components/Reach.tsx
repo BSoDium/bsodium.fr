@@ -73,9 +73,9 @@ export default function Reach({ step } : {step: number}) {
     ref: satelliteTransitionRef,
     initial: null,
     keys: null,
-    from: { opacity: 0 },
-    enter: { opacity: 1 },
-    leave: { opacity: 0 },
+    from: { opacity: 0, scale: 0.7 },
+    enter: { opacity: 1, scale: 1 },
+    leave: { opacity: 0, scale: 0.7 },
   });
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function Reach({ step } : {step: number}) {
 
   useEffect(() => {
     if (submitted) {
-      opacity.start(0.3);
+      opacity.start(0.2);
       scale.start(0.9);
       submissionTextOpacity.start(1);
       submissionTextScale.start(1);
@@ -112,6 +112,7 @@ export default function Reach({ step } : {step: number}) {
           width: mobile ? 'calc(100% + 2rem)' : '100%',
           marginX: mobile ? '-1rem' : 'auto',
           maxHeight: '27rem',
+          pointerEvents: submitted ? 'none' : 'auto',
         }}
         style={{
           opacity,
@@ -270,16 +271,13 @@ export default function Reach({ step } : {step: number}) {
           <Typography
             level="h2"
           >
-            {'Thank '}
-            <Typography color="primary">
-              you.
-            </Typography>
+            Thank you for reaching out!
           </Typography>
           <Typography
-            level="h5"
+            level="h6"
             textColor="text.secondary"
           >
-            Your message has been sent.
+            Your message has been sent successfully.
           </Typography>
         </Stack>
       </Stack>
