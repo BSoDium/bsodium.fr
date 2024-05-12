@@ -1,16 +1,29 @@
-import { FiAtSign, FiUser } from 'react-icons/fi';
-import phone from 'assets/phone.webp';
-import React, { useEffect, useState } from 'react';
-import { animated, useSpringValue } from '@react-spring/web';
 import {
+  FiAtSign, FiUser,
+} from 'react-icons/fi';
+import satelliteDark from 'assets/satellite_dark.png';
+import satelliteLight from 'assets/satellite_light.png';
+import React, { useEffect, useState } from 'react';
+import {
+  animated, useSpringRef, useSpringValue, useTransition,
+} from '@react-spring/web';
+import {
+  Alert,
   Box, Button, Input, Stack, Textarea, Typography,
+  useColorScheme,
 } from '@mui/joy';
-import { MdSend } from 'react-icons/md';
+import { MdErrorOutline, MdSend } from 'react-icons/md';
 import { FaFire } from 'react-icons/fa';
 import { Default, useMobileMode } from './Responsive';
 
 export default function Reach({ step } : {step: number}) {
   const mobile = useMobileMode();
+  const { colorScheme } = useColorScheme();
+
+  const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string>();
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -18,6 +31,7 @@ export default function Reach({ step } : {step: number}) {
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setLoading(true);
     const response = await fetch('https://api.web3forms.com/submit', {
       method: 'POST',
       headers: {
@@ -32,10 +46,11 @@ export default function Reach({ step } : {step: number}) {
     });
     const result = await response.json();
     if (result.success) {
-      console.debug('Message sent successfully!');
+      setSubmitted(true);
     } else {
-      console.error('Failed to send message. Please try again later.');
+      setError(result.message);
     }
+    setLoading(false);
   };
 
   const opacity = useSpringValue(0);
@@ -46,14 +61,25 @@ export default function Reach({ step } : {step: number}) {
     top.start((step >= 4 || mobile) ? '67%' : '80%');
   }, [step]);
 
+  const satelliteTransitionRef = useSpringRef();
+
+  const satelliteTransition = useTransition(colorScheme, {
+    ref: satelliteTransitionRef,
+    initial: null,
+    keys: null,
+    from: { opacity: 0 },
+    enter: { opacity: 1 },
+    leave: { opacity: 0 },
+  });
+
+  useEffect(() => {
+    satelliteTransitionRef.start();
+  }, [satelliteTransitionRef, colorScheme]);
+
   return (
     <Box
       component={animated.form}
-      onSubmit={(event) => {
-        submit(event);
-        opacity.start(0);
-        top.start('80%');
-      }}
+      onSubmit={submit}
       sx={{
         position: 'absolute',
         left: 0,
@@ -71,7 +97,6 @@ export default function Reach({ step } : {step: number}) {
         top,
       }}
     >
-
       <Stack sx={{
         width: 'min(30rem, 90%)',
         display: 'flex',
@@ -80,79 +105,123 @@ export default function Reach({ step } : {step: number}) {
       }}
       >
         <input type="hidden" name="access_key" value="4e4e6aee-a458-4774-a6e3-a6df6c19abe5" />
-        <Typography level="h1">
-          Let&apos;s
-          {' '}
+        <Typography
+          level="h1"
+        >
+          {'Let\'s '}
           <Typography color="danger">
             connect.
           </Typography>
         </Typography>
-        <Input
-          variant="plain"
-          placeholder="Your email address"
-          type="email"
-          name="email"
-          startDecorator={(
-            <FiAtSign />
-          )}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
-        <Input
-          variant="plain"
-          placeholder="Your name"
-          type="text"
-          name="name"
-          startDecorator={(
-            <FiUser />
-          )}
-          onChange={(event) => setName(event.target.value)}
-          required
-        />
-        <Textarea
-          variant="plain"
-          placeholder="What's on your mind?"
-          name="message"
-          required
-          onChange={(event) => setMessage(event.target.value)}
-          minRows={4}
-        />
-        <Stack direction="row" justifyContent="end" gap={1}>
-          <Button
-            component="a"
-            color="danger"
-            variant="soft"
-            href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-            target="_blank"
+        <Stack
+          gap={1}
+        >
+          <Input
+            variant="plain"
+            placeholder="Your email address"
+            type="email"
+            name="email"
             startDecorator={(
-              <FaFire />
-        )}
-          >
-            Surprise me
-          </Button>
-          <Button
-            type="submit"
-            variant="soft"
-            startDecorator={(
-              <MdSend />
+              <FiAtSign />
           )}
-          >
-            Submit
-          </Button>
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+          <Input
+            variant="plain"
+            placeholder="Your name"
+            type="text"
+            name="name"
+            startDecorator={(
+              <FiUser />
+          )}
+            onChange={(event) => setName(event.target.value)}
+            required
+          />
+          <Textarea
+            variant="plain"
+            placeholder="What's on your mind?"
+            name="message"
+            required
+            onChange={(event) => setMessage(event.target.value)}
+            minRows={4}
+          />
+          {error && (
+            <Alert
+              color="warning"
+              startDecorator={(
+                <MdErrorOutline size="1.1rem" />
+              )}
+              sx={{ gap: 0.5 }}
+            >
+              {error || 'Something went wrong. Please try again.'}
+            </Alert>
+          )}
+          <Stack direction="row" justifyContent="end" gap={1}>
+            <Button
+              component="a"
+              color="danger"
+              variant="soft"
+              href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+              target="_blank"
+              startDecorator={(
+                <FaFire />
+            )}
+            >
+              Surprise me
+            </Button>
+            <Button
+              type="submit"
+              variant="soft"
+              loading={loading}
+              startDecorator={(
+                <MdSend />
+          )}
+            >
+              Submit
+            </Button>
+          </Stack>
         </Stack>
       </Stack>
       <Default>
-        <animated.img
-          src={phone}
-          alt="phone"
-          style={{
-            position: 'absolute',
-            top: '-3rem',
-            left: 'max(65%, 32rem)',
-            height: '30rem',
-            filter: 'drop-shadow(1rem 1rem 2rem #a7062e65) drop-shadow(-1rem -1rem 2rem #58e7f478)',
-          }}
-        />
+        <>
+          {satelliteTransition((style, item) => {
+            switch (item) {
+              case 'light':
+                return (
+                  <animated.img
+                    src={satelliteLight}
+                    alt="satellite"
+                    style={{
+                      ...style,
+                      position: 'absolute',
+                      top: '-1rem',
+                      left: 'max(67%, 32rem)',
+                      height: '20rem',
+                      filter: 'drop-shadow(-1rem -1rem 1.5rem #f4e9d068) drop-shadow(1rem 1rem 1rem #326c8c4c)',
+                    }}
+                  />
+                );
+              case 'dark':
+                return (
+                  <animated.img
+                    src={satelliteDark}
+                    alt="satellite"
+                    style={{
+                      ...style,
+                      position: 'absolute',
+                      top: '-2rem',
+                      left: 'max(65%, 32rem)',
+                      height: '20rem',
+                      filter: 'drop-shadow(-1rem -1rem 1.5rem #dcedfa41) drop-shadow(1rem 1rem 1rem #01012563)',
+                    }}
+                  />
+                );
+              default:
+                return null;
+            }
+          })}
+        </>
       </Default>
     </Box>
   );

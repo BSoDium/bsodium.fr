@@ -110,7 +110,7 @@ export default function OpenSource() {
               margin: '-3rem',
             })}
             >
-              {dark ? 'light side' : 'bold side'}
+              {dark ? 'dark side' : 'bold side'}
             </Typography>
             {' '}
             of the force.
