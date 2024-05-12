@@ -410,9 +410,13 @@ export default function Goals() {
   const animationDelay = 0.2;
 
   const [scrollingProgress, setScrollingProgress] = useState(0);
-  const animationStep = useMemo(() => Math.round(
-    Math.max(0, scrollingProgress - animationDelay) * (5 / (1 - animationDelay)),
-  ), [scrollingProgress]);
+  const animationStep = useMemo(() => Math.min(Math.round(
+    Math.max(0, scrollingProgress - animationDelay) * (6 / (1 - animationDelay)),
+  ), 5), [scrollingProgress]);
+
+  useEffect(() => {
+    console.log(scrollingProgress, animationStep);
+  }, [scrollingProgress, animationStep]);
 
   return (
     <Parallax
