@@ -414,10 +414,6 @@ export default function Goals() {
     Math.max(0, scrollingProgress - animationDelay) * (6 / (1 - animationDelay)),
   ), 5), [scrollingProgress]);
 
-  useEffect(() => {
-    console.log(scrollingProgress, animationStep);
-  }, [scrollingProgress, animationStep]);
-
   return (
     <Parallax
       shouldAlwaysCompleteAnimation
