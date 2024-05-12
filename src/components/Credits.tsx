@@ -29,13 +29,16 @@ export default function Credits() {
   }, [mountainsTransRef, colorScheme]);
 
   return (
-    <>
+    <Stack position="relative">
       {mountainsTransition((style, item) => {
         switch (item) {
           case 'light':
             return (
               <animated.div style={{
                 ...style,
+                position: 'absolute',
+                bottom: 0,
+                width: '100%',
                 zIndex: -1,
               }}
               >
@@ -43,10 +46,10 @@ export default function Credits() {
                   position: 'absolute',
                   height: '40rem',
                   width: 'calc(100vw + 20rem)',
-                  bottom: '0',
+                  bottom: '-7rem',
                   left: '50%',
-                  transform: 'translateX(50%)',
-                  background: 'linear-gradient(to top, #577fc0, #C4DEE7, transparent)',
+                  transform: 'translateX(-50%)',
+                  background: 'linear-gradient(to top, #577fc0 25%, #C4DEE7, transparent)',
                 }}
                 />
                 <Box
@@ -69,6 +72,9 @@ export default function Credits() {
             return (
               <animated.div style={{
                 ...style,
+                position: 'absolute',
+                bottom: 0,
+                width: '100%',
                 zIndex: -1,
               }}
               >
@@ -76,10 +82,10 @@ export default function Credits() {
                   position: 'absolute',
                   height: '40rem',
                   width: 'calc(100vw + 20rem)',
-                  bottom: '0',
+                  bottom: '-7rem',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: 'linear-gradient(to top, #1D100D, #1B1C21 35%, #150C0B, transparent)',
+                  background: 'linear-gradient(to top, #1D100D, #1B1C21 40%, #150C0B, transparent)',
                 }}
                 />
                 <Box
@@ -111,7 +117,7 @@ export default function Credits() {
         justifyContent="space-between"
         sx={(theme) => ({
           position: 'relative',
-          paddingTop: mobile ? '10rem' : '18rem',
+          paddingTop: mobile ? '10rem' : '23rem',
           '& > *': {
             flex: 1,
             minWidth: '200px',
@@ -122,7 +128,7 @@ export default function Credits() {
       >
         <Typography
           level="body2"
-          textColor="text.secondary"
+          textColor="text.tertiary"
         >
           ©
           {' '}
@@ -132,7 +138,7 @@ export default function Credits() {
         </Typography>
         <Typography
           level="body2"
-          textColor="text.secondary"
+          textColor="text.tertiary"
         >
           {'Illustrations generated using '}
           <ATypography href="https://www.bing.com/create">
@@ -149,6 +155,6 @@ export default function Credits() {
           .
         </Typography>
       </Stack>
-    </>
+    </Stack>
   );
 }
