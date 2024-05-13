@@ -99,6 +99,7 @@ export default function Reach({ step } : {step: number}) {
   return (
     <>
       <Box
+        id="connect"
         component={animated.form}
         onSubmit={submit}
         sx={{

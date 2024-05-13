@@ -26,15 +26,15 @@ root.render(
     <SpeedInsights />
     <StyledEngineProvider injectFirst>
       <ThemeLoader>
-        <NavigationBar>
-          <BrowserRouter>
+        <BrowserRouter>
+          <NavigationBar>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/resume" element={<Resume />} />
               <Route path="/projects" element={<Projects />} />
             </Routes>
-          </BrowserRouter>
-        </NavigationBar>
+          </NavigationBar>
+        </BrowserRouter>
       </ThemeLoader>
     </StyledEngineProvider>
   </React.StrictMode>,

@@ -4,95 +4,106 @@ import {
   useColorScheme,
 } from '@mui/joy';
 import React, { useMemo } from 'react';
-import { useLandScapeMode, useNonDesktopMode } from 'components/Responsive';
+import { useLandScapeMode, useMobileMode } from 'components/Responsive';
 import {
-  FiBookmark, FiHome, FiMail, FiUser,
+  FiBookmark, FiHome, FiUser,
 } from 'react-icons/fi';
 import { MdOutlineAutoAwesome } from 'react-icons/md';
 import { IoMdMoon, IoMdSunny } from 'react-icons/io';
+import { Link, useLocation } from 'react-router-dom';
 
 const modes = ['light', 'dark', 'system'] as const;
 
 function NavigationBarItem({
   icon,
   text,
-  selected,
+  to,
   layout = 'vertical',
+  selected,
 } : {
   icon: JSX.Element;
   text: string;
-  selected?: boolean;
+  to: string;
   layout?: 'vertical' | 'horizontal' ;
+  selected?: boolean;
 }) {
-  return layout === 'vertical' ? (
-    <Stack
-      alignItems="center"
-      gap={0.5}
-      sx={{
-        cursor: 'pointer',
-        borderRadius: '0.5rem',
-        fontSize: '1.3rem',
-        paddingX: '1rem',
-      }}
-    >
-      <Button
-        color="neutral"
-        variant={selected ? 'solid' : 'plain'}
+  return layout === 'vertical'
+    ? (
+      <Stack
+        alignItems="center"
+        gap={0.5}
         sx={{
-          transition: 'background 0.2s',
-          padding: '0.4rem 1.2rem',
-          borderRadius: '100vmax',
+          cursor: 'pointer',
+          borderRadius: '0.5rem',
+          fontSize: '1.3rem',
+          paddingX: '1rem',
+        }}
+      >
+        <Button
+          component={Link}
+          to={to}
+          color="neutral"
+          variant={selected ? 'solid' : 'plain'}
+          sx={{
+            transition: 'background 0.2s',
+            padding: '0.4rem 1.2rem',
+            borderRadius: '100vmax',
+            minHeight: 'fit-content',
+            fontSize: 'inherit',
+            '& > svg': {
+              transition: 'transform 0.2s',
+            },
+            '&:hover > svg': {
+              transform: 'scale(1.05)',
+            },
+          }}
+        >
+          {icon}
+        </Button>
+        <Typography
+          level="body3"
+          fontWeight="700"
+          textColor="text.primary"
+        >
+          {text}
+        </Typography>
+      </Stack>
+    )
+    : (
+      <Button
+        component={Link}
+        to={to}
+        color="neutral"
+        variant={selected ? 'outlined' : 'plain'}
+        sx={(theme) => ({
           minHeight: 'fit-content',
-          fontSize: 'inherit',
+          borderRadius: '100vmax',
+          padding: '.6rem 1rem',
+          transition: 'background 0.2s',
+          backgroundColor: selected ? theme.palette.background.body : 'transparent',
           '& > svg': {
             transition: 'transform 0.2s',
           },
           '&:hover > svg': {
             transform: 'scale(1.05)',
           },
-        }}
-      >
-        {icon}
-      </Button>
-      <Typography
-        level="body3"
-        fontWeight="700"
-        textColor="text.primary"
+        })}
+        startDecorator={icon}
       >
         {text}
-      </Typography>
-    </Stack>
-  ) : (
-    <Button
-      color="neutral"
-      variant={selected ? 'outlined' : 'plain'}
-      sx={(theme) => ({
-        minHeight: 'fit-content',
-        borderRadius: '100vmax',
-        padding: '.6rem 1rem',
-        transition: 'background 0.2s',
-        backgroundColor: selected ? theme.palette.background.body : 'transparent',
-        '& > svg': {
-          transition: 'transform 0.2s',
-        },
-        '&:hover > svg': {
-          transform: 'scale(1.05)',
-        },
-      })}
-      startDecorator={icon}
-    >
-      {text}
-    </Button>
-  );
+      </Button>
+    );
 }
 
 export default function NavigationBar({ children } : {children: JSX.Element | JSX.Element[]}) {
-  const bottom = useNonDesktopMode();
+  const bottom = useMobileMode();
   const landscape = useLandScapeMode();
 
   const horizontal = useMemo(() => !landscape && !bottom, [landscape, bottom]);
 
   const { mode, setMode } = useColorScheme();
+
+  const location = useLocation();
 
   return (
     <>
@@ -136,22 +147,22 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
             icon={<FiHome />}
             text="Home"
             layout={horizontal ? 'horizontal' : 'vertical'}
-            selected
+            to="/"
+            selected={location.pathname === '/'}
           />
           <NavigationBarItem
             icon={<FiBookmark />}
             text="Projects"
             layout={horizontal ? 'horizontal' : 'vertical'}
+            to="/projects"
+            selected={location.pathname === '/projects'}
           />
           <NavigationBarItem
             icon={<FiUser />}
             text="Resume"
             layout={horizontal ? 'horizontal' : 'vertical'}
-          />
-          <NavigationBarItem
-            icon={<FiMail />}
-            text="Contact"
-            layout={horizontal ? 'horizontal' : 'vertical'}
+            to="/resume"
+            selected={location.pathname === '/resume'}
           />
         </Stack>
         {horizontal ? (
