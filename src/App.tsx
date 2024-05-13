@@ -66,6 +66,7 @@ export default function App() {
           position: 'relative',
           marginTop: `calc(-100vh + ${mobile ? '350px' : '420px'})`,
           width: '100vw',
+          overflow: 'hidden',
         }}
       >
         <Stack
