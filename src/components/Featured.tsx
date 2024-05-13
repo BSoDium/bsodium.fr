@@ -267,9 +267,7 @@ export default function Featured() {
                     </Avatar>
                 )}
                 >
-                  {projects.length}
-                  {' '}
-                  repositories
+                  {`${projects.length > 0 ? projects.length : 'No'} repositor${projects.length === 1 ? 'y' : 'ies'}`}
                 </Chip>
               </Default>
           )}
@@ -322,14 +320,15 @@ export default function Featured() {
         >
           {error && (
           <Alert
-            color="danger"
+            color="info"
             startDecorator={(
               <MdErrorOutline size="1.1rem" />
           )}
             endDecorator={(
               <Button
+                size="sm"
                 variant="plain"
-                color="danger"
+                color="info"
                 component="a"
                 href="https://stats.uptimerobot.com/y3hLa5ZEeK"
                 target="_blank"
@@ -337,7 +336,7 @@ export default function Featured() {
                 Check API status
               </Button>
           )}
-            sx={{ gap: 0.5 }}
+            sx={{ gap: 0.5, padding: '.3rem .3rem .3rem 1rem' }}
           >
             {mobile ? 'Something went wrong' : error.message}
           </Alert>
