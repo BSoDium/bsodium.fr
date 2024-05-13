@@ -5,18 +5,18 @@ import {
   Stack, Typography, TypographyProps,
 } from '@mui/joy';
 import { SxProps, TextColor } from '@mui/joy/styles/types';
-import Featured from 'components/Featured';
-import Contact from 'components/Contact';
-import Terminal from 'components/Terminal';
+import Featured from 'components/sections/Featured';
+import Contact from 'components/sections/contact/Contact';
+import Terminal from 'components/sections/Terminal';
 import Title from 'components/Title';
-import Header from 'components/Header';
+import Header from 'components/sections/Header';
 import { useMobileMode, Default } from 'components/Responsive';
-import OpenSource from 'components/OpenSource';
-import Divider from 'components/Divider';
-import Goals from 'components/Goals';
+import OpenSource from 'components/sections/OpenSource';
+import Divider from 'components/sections/Divider';
+import Goals from 'components/sections/goals/Goals';
 import { ParallaxProvider } from 'react-scroll-parallax';
-import Illustrations from 'components/Illustrations';
-import Credits from 'components/Credits';
+import Illustrations from 'components/sections/Illustrations';
+import Credits from 'components/sections/Credits';
 
 export function ATypography({
   children,

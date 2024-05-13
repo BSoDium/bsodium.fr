@@ -10,8 +10,8 @@ import { Link } from 'react-router-dom';
 import greeting from 'utils/Greeting';
 import { ATypography } from 'App';
 import details from 'assets/Details';
-import { useMobileMode } from './Responsive';
-import TypeWriter from './TypeWriter';
+import { useMobileMode } from '../Responsive';
+import TypeWriter from '../TypeWriter';
 
 export const visitors = [
   'stranger',

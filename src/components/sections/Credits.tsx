@@ -7,7 +7,7 @@ import mountainsDark from 'assets/mountains_dark.webp';
 import mountainsLight from 'assets/mountains_light.webp';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import { transitionConfig } from './Illustrations';
-import { useMobileMode } from './Responsive';
+import { useMobileMode } from '../Responsive';
 
 export default function Credits() {
   const mountainsTransRef = useSpringRef();

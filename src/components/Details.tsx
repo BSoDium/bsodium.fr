@@ -11,7 +11,7 @@ import { TbCircleDashed } from 'react-icons/tb';
 import details from 'assets/Details';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import { IoSchoolOutline } from 'react-icons/io5';
-import { Category } from './Terminal';
+import { Category } from './sections/Terminal';
 
 export const skillIcons: {
   [key: string]: React.ReactNode;

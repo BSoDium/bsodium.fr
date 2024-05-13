@@ -9,7 +9,7 @@ import { Parallax } from 'react-scroll-parallax';
 import {
   animated, easings, useSpringRef, useTransition,
 } from '@react-spring/web';
-import { useMobileMode } from './Responsive';
+import { useMobileMode } from '../Responsive';
 
 export const transitionConfig = {
   duration: 1000,
