@@ -44,7 +44,7 @@ function NavigationBarItem({
           to={to}
           color="neutral"
           variant={selected ? 'solid' : 'plain'}
-          sx={{
+          sx={(theme) => ({
             transition: 'background 0.2s',
             padding: '0.4rem 1.2rem',
             borderRadius: '100vmax',
@@ -56,7 +56,15 @@ function NavigationBarItem({
             '&:hover > svg': {
               transform: 'scale(1.05)',
             },
-          }}
+            ...(selected ? {
+              backgroundColor: selected
+                ? theme.palette.neutral.solidColor : theme.palette.background.body,
+              color: selected ? theme.palette.background.body : theme.palette.text.primary,
+              '&:hover': {
+                color: theme.palette.neutral.solidColor,
+              },
+            } : {}),
+          })}
         >
           {icon}
         </Button>
@@ -74,7 +82,7 @@ function NavigationBarItem({
         component={Link}
         to={to}
         color="neutral"
-        variant={selected ? 'outlined' : 'plain'}
+        variant={selected ? 'solid' : 'plain'}
         sx={(theme) => ({
           minHeight: 'fit-content',
           borderRadius: '100vmax',
@@ -87,6 +95,14 @@ function NavigationBarItem({
           '&:hover > svg': {
             transform: 'scale(1.05)',
           },
+          ...(selected ? {
+            backgroundColor: selected
+              ? theme.palette.neutral.solidColor : theme.palette.background.body,
+            color: selected ? theme.palette.background.body : theme.palette.text.primary,
+            '&:hover': {
+              color: theme.palette.neutral.solidColor,
+            },
+          } : {}),
         })}
         startDecorator={icon}
       >
@@ -129,6 +145,9 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
             height: '100vh',
             width: 'fit-content',
             borderRight: `1px solid ${theme.palette.divider}`,
+            '& + *': {
+              paddingLeft: '5rem',
+            },
           } : {
             padding: bottom ? '.5rem' : '.5rem 2rem',
             width: '100vw',
