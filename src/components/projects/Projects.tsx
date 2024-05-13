@@ -12,7 +12,7 @@ import architectureDark from 'assets/architecture_dark.webp';
 import Title from 'components/Title';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import {
-  Desktop, Mobile, Tablet, useMobileMode,
+  Desktop, Mobile, Tablet, useLandScapeMode, useMobileMode,
 } from 'components/Responsive';
 import Directory from './Directory';
 
@@ -166,12 +166,24 @@ function ThemeAwareIllustration() {
 }
 
 export default function Projects() {
+  const landscape = useLandScapeMode();
   const mobile = useMobileMode();
   return (
-    <Stack width="100vw" position="relative" overflow="hidden">
+    <Stack
+      width="100vw"
+      position="relative"
+      overflow="hidden"
+      sx={{
+        paddingLeft: landscape ? '5rem' : undefined,
+      }}
+    >
       <Title text="Projects and experiments - Elliot Négrel-Jerzy" />
       <ThemeAwareIllustration />
-      <Stack padding={mobile ? '1rem' : '5rem'} gap={2} alignItems="start">
+      <Stack
+        padding={mobile ? '1rem' : '5rem'}
+        gap={2}
+        alignItems="start"
+      >
         <Desktop>
           <Stack>
             <Typography
