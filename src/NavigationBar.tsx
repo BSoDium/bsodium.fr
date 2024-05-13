@@ -8,7 +8,7 @@ import { useLandScapeMode, useMobileMode } from 'components/Responsive';
 import {
   FiBookmark, FiHome, FiUser,
 } from 'react-icons/fi';
-import { MdOutlineAutoAwesome } from 'react-icons/md';
+import { MdAutoMode } from 'react-icons/md';
 import { IoMdMoon, IoMdSunny } from 'react-icons/io';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -58,10 +58,10 @@ function NavigationBarItem({
             },
             ...(selected ? {
               backgroundColor: selected
-                ? theme.palette.neutral.solidColor : theme.palette.background.body,
+                ? theme.palette.text.primary : theme.palette.background.body,
               color: selected ? theme.palette.background.body : theme.palette.text.primary,
               '&:hover': {
-                color: theme.palette.neutral.solidColor,
+                color: theme.palette.background.body,
               },
             } : {}),
           })}
@@ -97,10 +97,10 @@ function NavigationBarItem({
           },
           ...(selected ? {
             backgroundColor: selected
-              ? theme.palette.neutral.solidColor : theme.palette.background.body,
+              ? theme.palette.text.primary : theme.palette.background.body,
             color: selected ? theme.palette.background.body : theme.palette.text.primary,
             '&:hover': {
-              color: theme.palette.neutral.solidColor,
+              color: theme.palette.background.body,
             },
           } : {}),
         })}
@@ -200,7 +200,7 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
               if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
             }}
             startDecorator={mode === 'system' ? (
-              <MdOutlineAutoAwesome />
+              <MdAutoMode />
             ) : mode === 'light' ? (
               <IoMdSunny />
             ) : (
@@ -225,7 +225,7 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
             title={mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'}
           >
             {mode === 'system' ? (
-              <MdOutlineAutoAwesome />
+              <MdAutoMode />
             ) : mode === 'light' ? (
               <IoMdSunny />
             ) : (
