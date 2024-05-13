@@ -3,7 +3,6 @@ import {
   Button, IconButton, Stack, Typography,
   useColorScheme,
 } from '@mui/joy';
-import FixedMode from 'components/FixedMode';
 import React, { useEffect, useState } from 'react';
 import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
@@ -169,7 +168,7 @@ function ThemeAwareIllustration() {
 export default function Projects() {
   const mobile = useMobileMode();
   return (
-    <FixedMode mode="system" style={{ overflow: 'hidden', position: 'relative' }}>
+    <Stack width="100vw" position="relative" overflow="hidden">
       <Title text="Projects and experiments - Elliot Négrel-Jerzy" />
       <ThemeAwareIllustration />
       <Stack padding={mobile ? '1rem' : '5rem'} gap={2} alignItems="start">
@@ -335,6 +334,6 @@ export default function Projects() {
         </Stack>
         <Directory />
       </Stack>
-    </FixedMode>
+    </Stack>
   );
 }

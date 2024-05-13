@@ -9,7 +9,6 @@ import {
 import { TbSchool } from 'react-icons/tb';
 import { IoLanguage } from 'react-icons/io5';
 import details from 'assets/Details';
-import FixedMode from 'components/FixedMode';
 import { Education, Experience } from 'components/Details';
 import Title from 'components/Title';
 import { useMobileMode } from 'components/Responsive';
@@ -70,7 +69,7 @@ export default function Resume() {
   );
 
   return (
-    <FixedMode mode="system">
+    <>
       <Title text="Curriculum Vitae - Elliot Négrel-Jerzy" />
       <Stack
         alignItems="center"
@@ -261,6 +260,6 @@ export default function Resume() {
           </Stack>
         </Box>
       </Stack>
-    </FixedMode>
+    </>
   );
 }
