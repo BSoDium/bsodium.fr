@@ -251,33 +251,37 @@ export default function Reach({ step } : {step: number}) {
 
       </Box>
       <Stack
-        direction="row"
-        gap={4}
+        direction={mobile ? 'column' : 'row'}
+        gap={mobile ? 2 : 4}
+        flexWrap="wrap"
         alignItems="center"
+        justifyContent="center"
         component={animated.div}
         sx={{
           position: 'absolute',
           bottom: '12rem',
-          left: '15rem',
-          transform: 'translate(-50%, -50%)',
+          left: '50%',
+          width: '95%',
         }}
         style={{
           opacity: submissionTextOpacity,
-          transform: submissionTextScale.to((s) => `scale(${s})`),
+          transform: submissionTextScale.to((s) => `scale(${s}) translateX(-50%)`),
         }}
       >
-        <BsSendCheck size="3rem" style={{ color: 'var(--joy-palette-neutral-softColor)' }} />
+        <BsSendCheck size="4rem" style={{ color: 'var(--joy-palette-neutral-softColor)' }} />
         <Stack
           direction="column"
         >
           <Typography
             level="h2"
+            textAlign={mobile ? 'center' : 'left'}
           >
-            Thank you for reaching out!
+            {mobile ? 'Thank you!' : 'Thanks for reaching out!'}
           </Typography>
           <Typography
             level="h6"
             textColor="text.secondary"
+            textAlign={mobile ? 'center' : 'left'}
           >
             Your message has been sent successfully.
           </Typography>

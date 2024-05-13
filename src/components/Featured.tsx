@@ -1,4 +1,5 @@
 import {
+  Alert,
   Avatar,
   Box, Button, Card, Chip, CircularProgress, ColorPaletteProp, Divider, Stack, Typography,
 } from '@mui/joy';
@@ -15,6 +16,7 @@ import {
 import { RiBracesLine } from 'react-icons/ri';
 import { Project } from 'assets/Projects';
 import { Link } from 'react-router-dom';
+import { MdErrorOutline } from 'react-icons/md';
 import { Default, Mobile, useMobileMode } from './Responsive';
 
 /**
@@ -319,9 +321,14 @@ export default function Featured() {
           }}
         >
           {error && (
-          <Typography level="body1" color="danger">
+          <Alert
+            color="danger"
+            startDecorator={(
+              <MdErrorOutline size="1.1rem" />
+          )}
+          >
             {error.message}
-          </Typography>
+          </Alert>
           )}
           {loading ? (
             <Stack

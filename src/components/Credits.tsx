@@ -85,7 +85,7 @@ export default function Credits() {
                   bottom: '-7rem',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: 'linear-gradient(to top, #130D0B 25%, #1B1C21 40%, #0F0A08 50%, transparent)',
+                  background: 'linear-gradient(to top, #130D0B 25%, #1B1C21 40%, #16161A 50%, transparent)',
                 }}
                 />
                 <Box
