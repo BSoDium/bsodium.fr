@@ -17,7 +17,7 @@ import { RiBracesLine } from 'react-icons/ri';
 import { Project } from 'assets/Projects';
 import { Link } from 'react-router-dom';
 import { MdErrorOutline } from 'react-icons/md';
-import { Default, Mobile, useMobileMode } from './Responsive';
+import { Default, Mobile, useMobileMode } from '../Responsive';
 
 /**
  * Beautifies a string

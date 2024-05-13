@@ -8,10 +8,10 @@ import { RiArrowRightSLine } from 'react-icons/ri';
 import { IoReaderOutline } from 'react-icons/io5';
 import { Link } from 'react-router-dom';
 import greeting from 'utils/Greeting';
-import { ATypography } from 'App';
+import { ATypography } from 'Landing';
 import details from 'assets/Details';
-import { useMobileMode } from './Responsive';
-import TypeWriter from './TypeWriter';
+import { useMobileMode } from '../Responsive';
+import TypeWriter from '../TypeWriter';
 
 export const visitors = [
   'stranger',

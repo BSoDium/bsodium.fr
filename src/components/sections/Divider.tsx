@@ -1,6 +1,6 @@
 import { Box } from '@mui/joy';
 import React from 'react';
-import { useMobileMode } from './Responsive';
+import { useMobileMode } from '../Responsive';
 
 export default function Divider() {
   const mobile = useMobileMode();

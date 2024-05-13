@@ -9,7 +9,7 @@ import { Parallax } from 'react-scroll-parallax';
 import {
   animated, easings, useSpringRef, useTransition,
 } from '@react-spring/web';
-import { useMobileMode } from './Responsive';
+import { useMobileMode } from '../Responsive';
 
 export const transitionConfig = {
   duration: 1000,
@@ -88,7 +88,20 @@ export default function Illustrations() {
     planetTransRef.start();
     accessoryTransRef.start();
     skyTransRef.start();
-  }, [colorScheme, mobile, planetTransRef, accessoryTransRef, skyTransRef]);
+  }, [colorScheme, planetTransRef, accessoryTransRef, skyTransRef]);
+
+  useEffect(() => {
+    planetTransRef.start({
+      to: {
+        top: mobile ? '-50rem' : '-44rem',
+      },
+    });
+    accessoryTransRef.start({
+      to: {
+        top: mobile ? '5rem' : '12rem',
+      },
+    });
+  }, [mobile, planetTransRef, accessoryTransRef]);
 
   useEffect(() => {
     document.body.style.transition = `background-color ease ${transitionConfig.duration / 1000}s, color ease ${transitionConfig.duration / 1000}s`;
@@ -98,13 +111,14 @@ export default function Illustrations() {
   }, []);
 
   return (
-    <Parallax speed={-20} startScroll={0} disabled={mobile} style={{ overflow: 'hidden' }}>
+    <Parallax speed={-20} startScroll={0} disabled={mobile}>
       <Box
         component="div"
         sx={{
           position: 'relative',
           width: '100vw',
           height: '100vh',
+          pointerEvents: 'none',
           '*': {
             transition: `background-color ${transitionConfig.duration / 1000}s ease, color ${transitionConfig.duration / 1000}s ease`,
           },

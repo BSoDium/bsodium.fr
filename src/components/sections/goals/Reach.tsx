@@ -15,7 +15,7 @@ import {
 import { MdErrorOutline, MdSend } from 'react-icons/md';
 import { FaFire } from 'react-icons/fa';
 import { BsSendCheck } from 'react-icons/bs';
-import { Default, useMobileMode } from './Responsive';
+import { Default, useMobileMode } from '../../Responsive';
 
 export default function Reach({ step } : {step: number}) {
   const mobile = useMobileMode();
@@ -99,6 +99,7 @@ export default function Reach({ step } : {step: number}) {
   return (
     <>
       <Box
+        id="connect"
         component={animated.form}
         onSubmit={submit}
         sx={{

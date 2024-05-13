@@ -29,9 +29,9 @@ import { FaPause, FaPlay } from 'react-icons/fa';
 import { RiUserLine } from 'react-icons/ri';
 import mockMessages from 'utils/Messages';
 import { Parallax } from 'react-scroll-parallax';
-import { Default, Mobile, useMobileMode } from './Responsive';
-import Details from './Details';
-import TypeWriter from './TypeWriter';
+import { Default, Mobile, useMobileMode } from '../Responsive';
+import Details from '../Details';
+import TypeWriter from '../TypeWriter';
 
 export const categories = ['experience', 'education'] as const;
 
@@ -52,6 +52,8 @@ export function FakeButton({
   tooltipIndex: number;
   setTooltipIndex: React.Dispatch<React.SetStateAction<number>>;
 } & IconButtonProps) {
+  const { sx, ...rest } = props;
+
   return (
     <Tooltip
       title={mockMessages[tooltipIndex]}
@@ -62,7 +64,15 @@ export function FakeButton({
         }
       }}
     >
-      <IconButton {...props}>{children}</IconButton>
+      <IconButton
+        {...rest}
+        sx={(theme) => ({
+          ...((typeof sx === 'function' ? sx(theme) : sx) as object),
+          transition: 'all ease .2s',
+        })}
+      >
+        {children}
+      </IconButton>
     </Tooltip>
   );
 }
@@ -372,7 +382,8 @@ export default function Terminal() {
                       borderRadius: 0,
                       paddingX: 2,
                       '&:hover': {
-                        backgroundColor: theme.palette.danger[500],
+                        backgroundColor: theme.palette.danger.solidBg,
+                        color: theme.palette.danger.solidColor,
                       },
                     })}
                   >

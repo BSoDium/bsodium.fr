@@ -11,7 +11,7 @@ import { IoLanguage } from 'react-icons/io5';
 import details from 'assets/Details';
 import { Education, Experience } from 'components/Details';
 import Title from 'components/Title';
-import { useMobileMode } from 'components/Responsive';
+import { useLandScapeMode, useMobileMode } from 'components/Responsive';
 import { marked } from 'marked';
 
 export function Languages() {
@@ -59,6 +59,7 @@ export function Languages() {
 }
 
 export default function Resume() {
+  const landscape = useLandScapeMode();
   const mobile = useMobileMode();
 
   const [descriptionEditable, setDescriptionEditable] = useState(false);
@@ -76,7 +77,7 @@ export default function Resume() {
         sx={{
           width: '100vw',
           height: '100vh',
-
+          paddingTop: !landscape && !mobile ? '3.5rem' : undefined,
         }}
       >
         <Box component="div" maxWidth="65em">
