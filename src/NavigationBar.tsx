@@ -8,8 +8,10 @@ import { useLandScapeMode, useNonDesktopMode } from 'components/Responsive';
 import {
   FiBookmark, FiHome, FiMail, FiUser,
 } from 'react-icons/fi';
-import { MdAutoMode } from 'react-icons/md';
+import { MdOutlineAutoAwesome } from 'react-icons/md';
 import { IoMdMoon, IoMdSunny } from 'react-icons/io';
+
+const modes = ['light', 'dark', 'system'] as const;
 
 function NavigationBarItem({
   icon,
@@ -103,7 +105,6 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
             borderTop: `1px solid ${theme.palette.divider}`,
           } : {
             top: 0,
-            borderBottom: `1px solid ${theme.palette.divider}`,
           }),
           left: 0,
           gap: 4,
@@ -118,9 +119,10 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
             width: 'fit-content',
             borderRight: `1px solid ${theme.palette.divider}`,
           } : {
-            padding: '.5rem 2rem ',
+            padding: bottom ? '.5rem' : '.5rem 2rem',
             width: '100vw',
             height: 'fit-content',
+            borderBottom: bottom ? undefined : `1px solid ${theme.palette.divider}`,
           }),
         })}
       >
@@ -165,17 +167,17 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
               fontSize: 'var(--joy-fontSize-sm)',
             }}
             onClick={() => {
-              setMode(mode === 'light' ? 'dark' : 'light');
+              if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
             }}
-            startDecorator={mode === undefined ? (
-              <MdAutoMode />
+            startDecorator={mode === 'system' ? (
+              <MdOutlineAutoAwesome />
             ) : mode === 'light' ? (
-              <IoMdMoon />
-            ) : (
               <IoMdSunny />
+            ) : (
+              <IoMdMoon />
             )}
           >
-            {mode === undefined ? 'Auto' : mode === 'light' ? 'Dark' : 'Light'}
+            {mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'}
           </Button>
         ) : (
           <IconButton
@@ -188,15 +190,16 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
               padding: 2,
             }}
             onClick={() => {
-              setMode(mode === 'light' ? 'dark' : 'light');
+              if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
             }}
+            title={mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'}
           >
-            {mode === undefined ? (
-              <MdAutoMode />
+            {mode === 'system' ? (
+              <MdOutlineAutoAwesome />
             ) : mode === 'light' ? (
-              <IoMdMoon />
-            ) : (
               <IoMdSunny />
+            ) : (
+              <IoMdMoon />
             )}
           </IconButton>
         )}
