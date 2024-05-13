@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import {
   Box, Stack, Typography, useColorScheme,
 } from '@mui/joy';
-import { ATypography } from 'App';
+import { ATypography } from 'Landing';
 import mountainsDark from 'assets/mountains_dark.webp';
 import mountainsLight from 'assets/mountains_light.webp';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';

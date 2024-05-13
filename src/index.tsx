@@ -7,12 +7,13 @@ import {
   BrowserRouter, Route, Routes,
 } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import App from 'App';
+import Landing from 'Landing';
 import Resume from 'Resume';
 import ReactGA from 'react-ga4';
 import 'App.global.scss';
 import Projects from 'components/projects/Projects';
 import ThemeLoader from 'components/ThemeLoader';
+import NavigationBar from 'NavigationBar';
 
 ReactGA.initialize('G-QETT923XKJ');
 
@@ -25,13 +26,15 @@ root.render(
     <SpeedInsights />
     <StyledEngineProvider injectFirst>
       <ThemeLoader>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<App />} />
-            <Route path="/resume" element={<Resume />} />
-            <Route path="/projects" element={<Projects />} />
-          </Routes>
-        </BrowserRouter>
+        <NavigationBar>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/resume" element={<Resume />} />
+              <Route path="/projects" element={<Projects />} />
+            </Routes>
+          </BrowserRouter>
+        </NavigationBar>
       </ThemeLoader>
     </StyledEngineProvider>
   </React.StrictMode>,
