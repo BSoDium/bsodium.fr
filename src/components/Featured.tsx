@@ -333,13 +333,13 @@ export default function Featured() {
                 component="a"
                 href="https://stats.uptimerobot.com/y3hLa5ZEeK"
                 target="_blank"
-                sx={{ margin: '-.3rem' }}
               >
-                Check status
+                Check API status
               </Button>
           )}
+            sx={{ gap: 0.5 }}
           >
-            {error.message}
+            {mobile ? 'Something went wrong' : error.message}
           </Alert>
           )}
           {loading ? (

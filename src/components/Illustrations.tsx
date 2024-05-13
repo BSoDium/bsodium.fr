@@ -98,7 +98,7 @@ export default function Illustrations() {
   }, []);
 
   return (
-    <Parallax speed={-20} startScroll={0} disabled={mobile} style={{ overflow: 'visible' }}>
+    <Parallax speed={-20} startScroll={0} disabled={mobile} style={{ overflow: 'hidden' }}>
       <Box
         component="div"
         sx={{
