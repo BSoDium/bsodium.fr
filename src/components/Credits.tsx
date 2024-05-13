@@ -129,6 +129,7 @@ export default function Credits() {
         <Typography
           level="body2"
           textColor={colorScheme === 'dark' ? '#6c7b97' : '#3d4b58'}
+          minWidth="min(100%, 15rem)"
         >
           ©
           {' '}
@@ -139,6 +140,7 @@ export default function Credits() {
         <Typography
           level="body2"
           textColor={colorScheme === 'dark' ? '#6c7b97' : '#3d4b58'}
+          minWidth="min(100%, 15rem)"
         >
           {'Illustrations generated using '}
           <ATypography href="https://www.bing.com/create">
