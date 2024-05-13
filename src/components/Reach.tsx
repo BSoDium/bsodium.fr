@@ -262,6 +262,7 @@ export default function Reach({ step } : {step: number}) {
           bottom: '12rem',
           left: '50%',
           width: '95%',
+          pointerEvents: submitted ? undefined : 'none',
         }}
         style={{
           opacity: submissionTextOpacity,
