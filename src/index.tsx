@@ -12,6 +12,7 @@ import Resume from 'Resume';
 import ReactGA from 'react-ga4';
 import 'App.global.scss';
 import Projects from 'components/projects/Projects';
+import ThemeLoader from 'components/ThemeLoader';
 
 ReactGA.initialize('G-QETT923XKJ');
 
@@ -23,13 +24,15 @@ root.render(
   <React.StrictMode>
     <SpeedInsights />
     <StyledEngineProvider injectFirst>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<App />} />
-          <Route path="/resume" element={<Resume />} />
-          <Route path="/projects" element={<Projects />} />
-        </Routes>
-      </BrowserRouter>
+      <ThemeLoader>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<App />} />
+            <Route path="/resume" element={<Resume />} />
+            <Route path="/projects" element={<Projects />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeLoader>
     </StyledEngineProvider>
   </React.StrictMode>,
 );

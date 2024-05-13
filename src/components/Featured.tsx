@@ -184,7 +184,7 @@ export default function Featured() {
     getProjects().then((data) => {
       setProjects(data.filter((project) => project.platform === 'github'));
     }).catch(() => {
-      setError(new Error('Failed to load projects, check your internet connection.'));
+      setError(new Error('Failed to load featured projects, our API was unreachable.'));
     }).finally(() => {
       setLoading(false);
     });
@@ -267,9 +267,7 @@ export default function Featured() {
                     </Avatar>
                 )}
                 >
-                  {projects.length}
-                  {' '}
-                  repositories
+                  {`${projects.length > 0 ? projects.length : 'No'} repositor${projects.length === 1 ? 'y' : 'ies'}`}
                 </Chip>
               </Default>
           )}
@@ -322,12 +320,25 @@ export default function Featured() {
         >
           {error && (
           <Alert
-            color="danger"
+            color="info"
             startDecorator={(
               <MdErrorOutline size="1.1rem" />
           )}
+            endDecorator={(
+              <Button
+                size="sm"
+                variant="plain"
+                color="info"
+                component="a"
+                href="https://stats.uptimerobot.com/y3hLa5ZEeK"
+                target="_blank"
+              >
+                Check API status
+              </Button>
+          )}
+            sx={{ gap: 0.5, padding: '.3rem .3rem .3rem 1rem' }}
           >
-            {error.message}
+            {mobile ? 'Something went wrong' : error.message}
           </Alert>
           )}
           {loading ? (

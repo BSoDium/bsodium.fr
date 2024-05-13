@@ -1,5 +1,6 @@
 import {
-  CssBaseline, CssVarsProvider, extendTheme,
+  CssBaseline,
+  CssVarsProvider, extendTheme,
   useColorScheme,
   useTheme,
 } from '@mui/joy';
@@ -53,44 +54,16 @@ function Meta() {
   return null;
 }
 
-export default function FixedMode({
+export default function ThemeLoader({
   children,
-  mode = 'system',
-  root = true,
-  className,
-  style,
 }: {
   children: React.ReactNode;
-  mode?: 'light' | 'dark' | 'system';
-  root?: boolean;
-  className?: string;
-  style?: React.CSSProperties;
 }) {
-  // Clear the localStorage on first load
-  useEffect(() => {
-    localStorage.clear();
-  }, []);
-
-  // If root, then set the data-joy-color-scheme attribute on the root element
-  useEffect(() => {
-    if (root && mode !== 'system') {
-      document.documentElement.setAttribute(
-        'data-joy-color-scheme',
-        mode,
-      );
-    }
-  }, [mode, root]);
-
   return (
-    <CssVarsProvider
-      theme={appTheme}
-      defaultMode={mode === 'system' ? mode : undefined}
-    >
-      <CssBaseline disableColorScheme />
+    <CssVarsProvider theme={appTheme} defaultMode="system">
+      <CssBaseline />
       <Meta />
-      <div data-joy-color-scheme={mode !== 'system' ? mode : undefined} className={className} style={style}>
-        {children}
-      </div>
+      {children}
     </CssVarsProvider>
   );
 }

@@ -10,7 +10,6 @@ import Contact from 'components/Contact';
 import Terminal from 'components/Terminal';
 import Title from 'components/Title';
 import Header from 'components/Header';
-import FixedMode from 'components/FixedMode';
 import { useMobileMode, Default } from 'components/Responsive';
 import OpenSource from 'components/OpenSource';
 import Divider from 'components/Divider';
@@ -56,112 +55,111 @@ export function ATypography({
 export default function App() {
   const mobile = useMobileMode();
   return (
-    <FixedMode mode="system" style={{ overflow: 'hidden' }}>
-      <ParallaxProvider>
-        <Title text="Elliot Négrel-Jerzy" />
-        <Illustrations />
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            position: 'relative',
-            marginTop: `calc(-100vh + ${mobile ? '350px' : '420px'})`,
-            width: '100vw',
+    <ParallaxProvider>
+      <Title text="Elliot Négrel-Jerzy" />
+      <Illustrations />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          position: 'relative',
+          marginTop: `calc(-100vh + ${mobile ? '350px' : '420px'})`,
+          width: '100vw',
+          overflow: 'hidden',
+        }}
+      >
+        <Stack
+          sx={{
+            width: 'min(100%, 1200px)',
+            height: 'fit-content',
           }}
         >
           <Stack
+            gap={mobile ? 3 : 0}
             sx={{
-              width: 'min(100%, 1200px)',
-              height: 'fit-content',
+              paddingLeft: mobile ? 0 : '70px',
             }}
           >
             <Stack
-              gap={mobile ? 3 : 0}
-              sx={{
-                paddingLeft: mobile ? 0 : '70px',
-              }}
+              p="20px"
+              gap="80px"
             >
-              <Stack
-                p="20px"
-                gap="80px"
-              >
-                <Header />
-                <Terminal />
-              </Stack>
-              <Stack
-                p="20px"
-                gap="80px"
-                sx={(theme) => ({
-                  position: 'relative',
-                  '&::before': mobile ? {} : {
-                    content: '""',
-                    position: 'absolute',
-                    top: '-20px',
-                    left: '-30px',
-                    height: 'calc(100% + 20px)',
-                    width: '2px',
-                    background: `linear-gradient(to bottom, ${theme.palette.info[500]} 10%, ${theme.palette.warning[500]} 70%)`,
-                  },
-                })}
-              >
-                <Featured />
-                <Contact />
-              </Stack>
+              <Header />
+              <Terminal />
             </Stack>
-            <Default>
-              <Stack sx={{
-                paddingX: mobile ? 0 : '70px',
-              }}
-              >
-                <Divider />
-              </Stack>
-            </Default>
-            <Stack sx={{
-              paddingRight: mobile ? 0 : '70px',
-            }}
+            <Stack
+              p="20px"
+              gap="80px"
+              sx={(theme) => ({
+                position: 'relative',
+                '&::before': mobile ? {} : {
+                  content: '""',
+                  position: 'absolute',
+                  top: '-20px',
+                  left: '-30px',
+                  height: 'calc(100% + 20px)',
+                  width: '2px',
+                  background: `linear-gradient(to bottom, ${theme.palette.info[500]} 10%, ${theme.palette.warning[500]} 70%)`,
+                },
+              })}
             >
-              <Stack
-                p="20px"
-                gap="80px"
-                sx={(theme) => ({
-                  position: 'relative',
-                  '&::before': mobile ? {} : {
-                    content: '""',
-                    position: 'absolute',
-                    top: '0',
-                    right: '-30px',
-                    height: '100%',
-                    width: '2px',
-                    background: `linear-gradient(to bottom, ${theme.palette.success[500]} 30%, ${theme.palette.danger[500]})`,
-                  },
-                })}
-              >
-                <OpenSource />
-              </Stack>
-              <Stack
-                p="20px"
-                gap="80px"
-                sx={(theme) => ({
-                  position: 'relative',
-                  '&::before': mobile ? {} : {
-                    content: '""',
-                    position: 'absolute',
-                    top: '0',
-                    right: '-30px',
-                    height: '100%',
-                    width: '2px',
-                    background: `linear-gradient(to bottom, ${theme.palette.danger[500]}, transparent 60%)`,
-                  },
-                })}
-              >
-                <Goals />
-                <Credits />
-              </Stack>
+              <Featured />
+              <Contact />
             </Stack>
           </Stack>
-        </div>
-      </ParallaxProvider>
-    </FixedMode>
+          <Default>
+            <Stack sx={{
+              paddingX: mobile ? 0 : '70px',
+            }}
+            >
+              <Divider />
+            </Stack>
+          </Default>
+          <Stack sx={{
+            paddingRight: mobile ? 0 : '70px',
+          }}
+          >
+            <Stack
+              p="20px"
+              gap="80px"
+              sx={(theme) => ({
+                position: 'relative',
+                '&::before': mobile ? {} : {
+                  content: '""',
+                  position: 'absolute',
+                  top: '0',
+                  right: '-30px',
+                  height: '100%',
+                  width: '2px',
+                  background: `linear-gradient(to bottom, ${theme.palette.success[500]} 30%, ${theme.palette.danger[500]})`,
+                },
+              })}
+            >
+              <OpenSource />
+            </Stack>
+            <Stack
+              p="20px"
+              gap="80px"
+              sx={(theme) => ({
+                position: 'relative',
+                '&::before': mobile ? {} : {
+                  content: '""',
+                  position: 'absolute',
+                  top: '0',
+                  right: '-30px',
+                  height: '100%',
+                  width: '2px',
+                  background: `linear-gradient(to bottom, ${theme.palette.danger[500]}, transparent 60%)`,
+                },
+              })}
+            >
+              <Goals />
+              <Credits />
+            </Stack>
+          </Stack>
+        </Stack>
+      </div>
+    </ParallaxProvider>
   );
 }
