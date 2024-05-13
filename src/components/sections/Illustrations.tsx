@@ -88,7 +88,20 @@ export default function Illustrations() {
     planetTransRef.start();
     accessoryTransRef.start();
     skyTransRef.start();
-  }, [colorScheme, mobile, planetTransRef, accessoryTransRef, skyTransRef]);
+  }, [colorScheme, planetTransRef, accessoryTransRef, skyTransRef]);
+
+  useEffect(() => {
+    planetTransRef.start({
+      to: {
+        top: mobile ? '-50rem' : '-44rem',
+      },
+    });
+    accessoryTransRef.start({
+      to: {
+        top: mobile ? '5rem' : '12rem',
+      },
+    });
+  }, [mobile, planetTransRef, accessoryTransRef]);
 
   useEffect(() => {
     document.body.style.transition = `background-color ease ${transitionConfig.duration / 1000}s, color ease ${transitionConfig.duration / 1000}s`;
