@@ -1,6 +1,6 @@
 /* eslint-disable no-nested-ternary */
 import {
-  Button, IconButton, Stack, Typography,
+  Button, IconButton, Stack, Tooltip, Typography,
   useColorScheme,
 } from '@mui/joy';
 import React, { useMemo } from 'react';
@@ -207,31 +207,36 @@ export default function NavigationBar({ children } : {children: JSX.Element | JS
               <IoMdMoon />
             )}
           >
-            {mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'}
+            {`${mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'} theme`}
           </Button>
         ) : (
-          <IconButton
-            variant="plain"
-            color="neutral"
-            size="lg"
-            sx={{
-              display: bottom ? 'none' : undefined,
-              borderRadius: '100vmax',
-              padding: 2,
-            }}
-            onClick={() => {
-              if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
-            }}
-            title={mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'}
+          <Tooltip
+            variant="soft"
+            placement="right"
+            title={`${mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'} theme`}
           >
-            {mode === 'system' ? (
-              <MdAutoMode />
-            ) : mode === 'light' ? (
-              <IoMdSunny />
-            ) : (
-              <IoMdMoon />
-            )}
-          </IconButton>
+            <IconButton
+              variant="plain"
+              color="neutral"
+              size="lg"
+              sx={{
+                display: bottom ? 'none' : undefined,
+                borderRadius: '100vmax',
+                padding: 2,
+              }}
+              onClick={() => {
+                if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
+              }}
+            >
+              {mode === 'system' ? (
+                <MdAutoMode />
+              ) : mode === 'light' ? (
+                <IoMdSunny />
+              ) : (
+                <IoMdMoon />
+              )}
+            </IconButton>
+          </Tooltip>
         )}
       </Stack>
       {children}
