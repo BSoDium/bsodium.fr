@@ -98,13 +98,14 @@ export default function Illustrations() {
   }, []);
 
   return (
-    <Parallax speed={-20} startScroll={0} disabled={mobile} style={{ overflow: 'hidden' }}>
+    <Parallax speed={-20} startScroll={0} disabled={mobile}>
       <Box
         component="div"
         sx={{
           position: 'relative',
           width: '100vw',
           height: '100vh',
+          pointerEvents: 'none',
           '*': {
             transition: `background-color ${transitionConfig.duration / 1000}s ease, color ${transitionConfig.duration / 1000}s ease`,
           },
