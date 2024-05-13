@@ -61,7 +61,8 @@ function NavigationBarItem({
                 ? theme.palette.text.primary : theme.palette.background.body,
               color: selected ? theme.palette.background.body : theme.palette.text.primary,
               '&:hover': {
-                color: theme.palette.background.body,
+                backgroundColor: theme.palette.background.level3,
+                color: theme.palette.text.primary,
               },
             } : {}),
           })}
@@ -100,7 +101,8 @@ function NavigationBarItem({
               ? theme.palette.text.primary : theme.palette.background.body,
             color: selected ? theme.palette.background.body : theme.palette.text.primary,
             '&:hover': {
-              color: theme.palette.background.body,
+              backgroundColor: theme.palette.background.level3,
+              color: theme.palette.text.primary,
             },
           } : {}),
         })}
