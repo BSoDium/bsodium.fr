@@ -76,8 +76,8 @@ export default function Resume() {
         alignItems="center"
         sx={{
           width: '100vw',
-          height: '100vh',
-          paddingTop: !landscape && !mobile ? '3.5rem' : undefined,
+          paddingTop: !landscape && !mobile ? '3rem' : undefined,
+          paddingBottom: mobile ? '4.5rem' : undefined,
         }}
       >
         <Box component="div" maxWidth="65em">

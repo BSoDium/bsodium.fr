@@ -174,7 +174,8 @@ export default function Projects() {
       position="relative"
       overflow="hidden"
       sx={{
-        paddingLeft: landscape ? '5rem' : undefined,
+        paddingLeft: landscape ? '5.5rem' : undefined,
+        paddingBottom: mobile ? '4.5rem' : undefined,
       }}
     >
       <Title text="Projects and experiments - Elliot Négrel-Jerzy" />
