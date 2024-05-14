@@ -117,7 +117,7 @@ export default function Credits() {
         justifyContent="space-between"
         sx={(theme) => ({
           position: 'relative',
-          paddingTop: mobile ? '17rem' : '23rem',
+          paddingTop: mobile ? '22rem' : '23rem',
           '& > *': {
             flex: 1,
             minWidth: '200px',

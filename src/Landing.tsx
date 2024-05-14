@@ -67,6 +67,7 @@ export default function Landing() {
             position: 'relative',
             marginTop: `calc(-100vh + ${mobile ? '350px' : '420px'})`,
             width: '100vw',
+            paddingBottom: mobile ? '4.5rem' : undefined,
           }}
         >
           <Stack
