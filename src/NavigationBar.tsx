@@ -16,13 +16,11 @@ import {
   BsJournalBookmark,
   BsJournalBookmarkFill,
   BsMoon,
-  BsPerson,
-  BsPersonFill,
-
-  BsShadows,
-
+  BsFilePerson,
+  BsFilePersonFill,
   BsSun,
 } from 'react-icons/bs';
+import { MdOutlineAutoMode } from 'react-icons/md';
 
 const modes = ['light', 'dark', 'system'] as const;
 
@@ -45,7 +43,7 @@ function NavigationBarItem({
   return layout === 'vertical' ? (
     <Stack
       alignItems="center"
-      gap={0.5}
+      gap={1}
       sx={{
         cursor: 'pointer',
         borderRadius: '0.5rem',
@@ -59,13 +57,13 @@ function NavigationBarItem({
         color="neutral"
         variant={selected ? 'solid' : 'plain'}
         sx={(theme) => ({
-          transition: 'background 0.2s',
-          padding: '0.4rem 1.2rem',
+          transition: 'all 0.2s',
+          padding: '0.3rem 1.1rem',
           borderRadius: '100vmax',
           minHeight: 'fit-content',
           fontSize: 'inherit',
           '& > svg': {
-            transition: 'transform 0.2s',
+            transition: 'all 0.2s',
           },
           '&:hover > svg': {
             transform: 'scale(1.05)',
@@ -102,9 +100,9 @@ function NavigationBarItem({
         minHeight: 'fit-content',
         borderRadius: '100vmax',
         padding: '.6rem 1rem',
-        transition: 'background 0.2s',
+        transition: 'all 0.2s',
         '& > svg': {
-          transition: 'transform 0.2s',
+          transition: 'all 0.2s',
         },
         '&:hover > svg': {
           transform: 'scale(1.05)',
@@ -206,8 +204,8 @@ export default function NavigationBar({
             selected={location.pathname === '/projects'}
           />
           <NavigationBarItem
-            icon={<BsPerson />}
-            selectedIcon={<BsPersonFill />}
+            icon={<BsFilePerson />}
+            selectedIcon={<BsFilePersonFill />}
             text="Resume"
             layout={horizontal ? 'horizontal' : 'vertical'}
             to="/resume"
@@ -223,7 +221,7 @@ export default function NavigationBar({
               minHeight: 'fit-content',
               borderRadius: '100vmax',
               padding: '.6rem 1rem',
-              transition: 'background 0.2s',
+              transition: 'all 0.2s',
               fontSize: 'var(--joy-fontSize-sm)',
             }}
             onClick={() => {
@@ -231,7 +229,7 @@ export default function NavigationBar({
             }}
             startDecorator={
               mode === 'system' ? (
-                <BsShadows />
+                <MdOutlineAutoMode />
               ) : mode === 'light' ? (
                 <BsSun />
               ) : (
@@ -256,6 +254,7 @@ export default function NavigationBar({
               color="neutral"
               size="lg"
               sx={{
+                transition: 'all 0.2s',
                 display: bottom ? 'none' : undefined,
                 borderRadius: '100vmax',
                 padding: 2,
@@ -265,7 +264,7 @@ export default function NavigationBar({
               }}
             >
               {mode === 'system' ? (
-                <BsShadows />
+                <MdOutlineAutoMode />
               ) : mode === 'light' ? (
                 <BsSun />
               ) : (
