@@ -181,8 +181,9 @@ export default function Illustrations() {
                       WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 90%)',
                     }}
                   />
-                  <img
+                  <ProgressiveImage
                     src={sky}
+                    placeholder={skyMin}
                     alt="sky"
                     style={{
                       position: 'absolute',

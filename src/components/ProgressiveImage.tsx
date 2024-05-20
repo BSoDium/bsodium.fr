@@ -14,6 +14,7 @@ export default function ProgressiveImage({
   animate?: boolean;
   style: ComponentProps<typeof animated.img>['style'];
 }) {
+  const [loading, setLoading] = useState(true);
   const [currentSrc, setCurrentSrc] = useState(placeholder);
 
   useEffect(() => {
@@ -21,6 +22,7 @@ export default function ProgressiveImage({
     imageToLoad.src = src;
     imageToLoad.onload = () => {
       setCurrentSrc(src);
+      setLoading(true);
     };
   }, [src]);
 
@@ -28,13 +30,13 @@ export default function ProgressiveImage({
     <animated.img
       src={currentSrc}
       alt={alt}
-      style={style}
+      style={{ ...style, ...(loading ? { filter: 'blur(20px)' } : {}) }}
     />
   ) : (
     <img
       src={currentSrc}
       alt={alt}
-      style={style as React.CSSProperties}
+      style={{ ...(style as React.CSSProperties), ...(loading ? { filter: 'blur(20px)' } : {}) }}
     />
   );
 }
