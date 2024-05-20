@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "author": "BSoDium",
-  "url": "https://github.com/bsodium",
+  "url": "https://www.bsodium.fr",
   "email": "negreljerzy.elliot@gmail.com",
   "private": false,
   "dependencies": {
@@ -31,8 +31,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test"
+    "build": "yarn minify-images && react-scripts build",
+    "test": "react-scripts test",
+    "minify-images": "tsx scripts/minify-images.ts"
   },
   "eslintConfig": {
     "extends": [
@@ -73,6 +74,8 @@
     "eslint-plugin-react-hooks": "^4.5.0",
     "sass": "^1.64.2",
     "sass-loader": "^13.3.2",
+    "sharp": "^0.33.4",
+    "tsx": "^4.10.5",
     "webpack": "^5.88.2"
   }
 }

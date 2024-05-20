@@ -25,3 +25,6 @@ yarn-error.log*
 # dotenv
 .env
 .vercel
+
+# minified images
+*.min.webp
