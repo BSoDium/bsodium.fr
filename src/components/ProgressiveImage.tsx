@@ -22,7 +22,7 @@ export default function ProgressiveImage({
     imageToLoad.src = src;
     imageToLoad.onload = () => {
       setCurrentSrc(src);
-      setLoading(true);
+      setLoading(false);
     };
   }, [src]);
 
