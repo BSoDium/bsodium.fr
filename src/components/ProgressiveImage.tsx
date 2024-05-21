@@ -18,7 +18,7 @@ export default function ProgressiveImage({
   placeholder: string;
   alt: string;
   animate?: boolean;
-  style: ComponentProps<typeof animated.img>['style'];
+  style?: ComponentProps<typeof animated.img>['style'];
 }) {
   const start = useMemo(() => Date.now(), []);
 
@@ -48,7 +48,7 @@ export default function ProgressiveImage({
       }}
       sx={{
         '&.loading': {
-          filter: `${style?.filter} blur(20px) !important`,
+          filter: `${style?.filter || ''} blur(20px) !important`,
         },
       }}
     />
@@ -60,11 +60,11 @@ export default function ProgressiveImage({
       alt={alt}
       style={{
         ...(style as React.CSSProperties),
-        transition: `filter ${Math.min(elapsed || 0, 100)}ms`,
+        transition: `filter ${Math.max((elapsed || 0) / 4, 100)}ms`,
       }}
       sx={{
         '&.loading': {
-          filter: `${style?.filter} blur(20px) !important`,
+          filter: `${style?.filter || ''} blur(20px) !important`,
         },
       }}
     />

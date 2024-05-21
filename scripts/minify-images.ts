@@ -54,7 +54,7 @@ async function minifyImages() {
         const width = metadata.width || 0;
         const height = metadata.height || 0;
         const averageSize = (width + height) / 2;
-        const scaleFactor = thresholdScale / averageSize;
+        const scaleFactor = Math.min(thresholdScale / averageSize, 0.1);
         const resizedWidth = Math.round(width * scaleFactor);
         const resizedHeight = Math.round(height * scaleFactor);
 

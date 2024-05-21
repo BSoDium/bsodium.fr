@@ -1,16 +1,17 @@
 import {
   Avatar, Chip, Stack, Typography,
 } from '@mui/joy';
+import { animated, useSpringRef, useTransition } from '@react-spring/web';
+import details from 'assets/Details';
+import ProgressiveImage from 'components/ProgressiveImage';
 import moment from 'moment';
 import React, { useEffect } from 'react';
 import { BsCode } from 'react-icons/bs';
 import { FiPackage } from 'react-icons/fi';
 import { GoOrganization } from 'react-icons/go';
+import { IoSchoolOutline } from 'react-icons/io5';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
-import details from 'assets/Details';
-import { animated, useSpringRef, useTransition } from '@react-spring/web';
-import { IoSchoolOutline } from 'react-icons/io5';
 import { Category } from './sections/Terminal';
 
 export const skillIcons: {
@@ -28,17 +29,25 @@ export function Education({ wrap } : {wrap?: boolean} = { wrap: false }) {
       {details.education.map((item) => (
         <Stack direction="row" gap={1.5} key={`${item.school}-${item.major}-${item.start}-${item.end}`}>
           <Avatar
-            alt={item.school}
             color="neutral"
             variant="soft"
             size="lg"
-            src={item.icon}
             sx={(theme) => ({
               borderRadius: theme.getCssVar('radius-md'),
               border: `1px solid ${theme.getCssVar('palette-divider')}`,
             })}
           >
-            <IoSchoolOutline />
+            {item.icon ? (
+              <ProgressiveImage
+                src={item.icon}
+                placeholder={item.iconMin}
+                alt={item.school}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            ) : (<IoSchoolOutline />)}
           </Avatar>
           <Stack>
             <Typography level="body1" display="flex" alignItems="baseline" flexWrap="wrap" gap={1}>
@@ -97,17 +106,25 @@ export function Experience() {
             key={`${items[0].company}-${Math.random()}}`}
           >
             <Avatar
-              alt={items[0].company}
               color="neutral"
               variant="soft"
               size="lg"
-              src={items[0].icon}
               sx={(theme) => ({
                 borderRadius: theme.getCssVar('radius-md'),
                 border: `1px solid ${theme.getCssVar('palette-divider')}`,
               })}
             >
-              <GoOrganization />
+              {items[0].icon ? (
+                <ProgressiveImage
+                  src={items[0].icon}
+                  placeholder={items[0].iconMin}
+                  alt={items[0].company}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                  }}
+                />
+              ) : (<GoOrganization />)}
             </Avatar>
             <Stack
               gap={2}
