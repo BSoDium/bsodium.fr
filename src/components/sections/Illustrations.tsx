@@ -1,20 +1,20 @@
-import React, { useEffect } from 'react';
-import planetDark from 'assets/planet_dark.webp';
-import planetDarkMin from 'assets/planet_dark.min.webp';
-import planetLight from 'assets/planet_light.webp';
-import planetLightMin from 'assets/planet_light.min.webp';
-import balloon from 'assets/balloon.webp';
-import balloonMin from 'assets/balloon.min.webp';
-import spaceStation from 'assets/space-station.webp';
-import spaceStationMin from 'assets/space-station.min.webp';
-import sky from 'assets/sky.webp';
-import skyMin from 'assets/sky.min.webp';
 import { Box, useColorScheme } from '@mui/joy';
-import { Parallax } from 'react-scroll-parallax';
 import {
   animated, easings, useSpringRef, useTransition,
 } from '@react-spring/web';
+import balloonMin from 'assets/balloon.min.webp';
+import balloon from 'assets/balloon.webp';
+import planetDarkMin from 'assets/planet_dark.min.webp';
+import planetDark from 'assets/planet_dark.webp';
+import planetLightMin from 'assets/planet_light.min.webp';
+import planetLight from 'assets/planet_light.webp';
+import skyMin from 'assets/sky.min.webp';
+import sky from 'assets/sky.webp';
+import spaceStationMin from 'assets/space-station.min.webp';
+import spaceStation from 'assets/space-station.webp';
 import ProgressiveImage from 'components/ProgressiveImage';
+import React, { useEffect } from 'react';
+import { Parallax } from 'react-scroll-parallax';
 import { useMobileMode } from '../Responsive';
 
 export const transitionConfig = {

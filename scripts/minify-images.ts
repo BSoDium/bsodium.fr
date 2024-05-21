@@ -8,31 +8,48 @@ const srcDir = 'src/assets';
 export const thresholdSize = 1024; // Threshold size in bytes
 export const thresholdScale = 50; // Threshold scale in pixels
 
+function getImages(directory: string): string[] {
+  const files = fs.readdirSync(directory);
+  const images: string[] = [];
+
+  files.forEach((file) => {
+    const filePath = path.join(directory, file);
+    const stats = fs.statSync(filePath);
+
+    if (stats.isFile()) {
+      const recognizedFormats = ['.jpg', '.jpeg', '.webp', '.png'];
+      const fileExtension = path.extname(file).toLowerCase();
+
+      if (recognizedFormats.includes(fileExtension)) {
+        images.push(filePath);
+      }
+    } else if (stats.isDirectory()) {
+      const subdirectoryImages = getImages(filePath);
+      images.push(...subdirectoryImages);
+    }
+  });
+
+  return images;
+}
+
 async function minifyImages() {
   try {
-    const files = fs.readdirSync(srcDir);
+    const files = getImages(srcDir);
 
     const promises = files.map(async (file) => {
-      const filePath = path.join(srcDir, file);
-      const stats = fs.statSync(filePath);
+      const stats = fs.statSync(file);
 
-      if (stats.isFile() && stats.size > thresholdSize) {
+      if (stats.size > thresholdSize) {
         const originalName = path.parse(file).name;
         const outputName = `${originalName}.min.webp`;
-        const outputPath = path.join(srcDir, outputName);
+        const outputPath = path.join(path.dirname(file), outputName);
 
         // Skip minified files
         if (originalName.includes('.min')) {
           return '';
         }
 
-        const recognizedFormats = ['.jpg', '.jpeg', '.webp', '.png'];
-        const fileExtension = path.extname(file).toLowerCase();
-        if (!recognizedFormats.includes(fileExtension)) {
-          return '';
-        }
-
-        const image = sharp(filePath);
+        const image = sharp(file);
         const metadata = await image.metadata();
         const width = metadata.width || 0;
         const height = metadata.height || 0;
@@ -42,7 +59,7 @@ async function minifyImages() {
         const resizedHeight = Math.round(height * scaleFactor);
 
         await image
-          .webp()
+          .webp({ quality: 60 })
           .resize(resizedWidth, resizedHeight)
           .toFile(outputPath);
 
