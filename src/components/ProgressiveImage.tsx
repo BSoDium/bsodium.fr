@@ -1,5 +1,11 @@
-import React, { useState, useEffect, ComponentProps } from 'react';
+import { Box } from '@mui/joy';
 import { animated } from '@react-spring/web';
+import React, {
+  ComponentProps,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 export default function ProgressiveImage({
   src,
@@ -14,8 +20,12 @@ export default function ProgressiveImage({
   animate?: boolean;
   style: ComponentProps<typeof animated.img>['style'];
 }) {
+  const start = useMemo(() => Date.now(), []);
+
   const [loading, setLoading] = useState(true);
   const [currentSrc, setCurrentSrc] = useState(placeholder);
+
+  const elapsed = useMemo(() => (loading ? null : Date.now() - start), [start, loading]);
 
   useEffect(() => {
     const imageToLoad = new Image();
@@ -27,16 +37,36 @@ export default function ProgressiveImage({
   }, [src]);
 
   return animate ? (
-    <animated.img
+    <Box
+      component={animated.img}
       src={currentSrc}
+      className={loading ? 'loading' : ''}
       alt={alt}
-      style={{ ...style, ...(loading ? { filter: 'blur(20px)' } : {}) }}
+      style={{
+        ...style,
+        transition: `filter ${Math.max((elapsed || 0) / 4, 100)}ms`,
+      }}
+      sx={{
+        '&.loading': {
+          filter: `${style?.filter} blur(20px) !important`,
+        },
+      }}
     />
   ) : (
-    <img
+    <Box
+      component="img"
       src={currentSrc}
+      className={loading ? 'loading' : ''}
       alt={alt}
-      style={{ ...(style as React.CSSProperties), ...(loading ? { filter: 'blur(20px)' } : {}) }}
+      style={{
+        ...(style as React.CSSProperties),
+        transition: `filter ${Math.min(elapsed || 0, 100)}ms`,
+      }}
+      sx={{
+        '&.loading': {
+          filter: `${style?.filter} blur(20px) !important`,
+        },
+      }}
     />
   );
 }

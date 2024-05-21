@@ -7,7 +7,7 @@
   "settings": {
     "conventionalCommits.scopes": [],
     "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": "explicit"
+      "source.organizeImports": "always"
     },
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {

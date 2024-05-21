@@ -1,10 +1,10 @@
-import escape from 'assets/icons/escape.png';
-import aau from 'assets/icons/aau.jpg';
-import akanthas from 'assets/icons/akanthas.png';
-import enseeiht from 'assets/icons/enseeiht.png';
-import kanop from 'assets/icons/kanop.png';
-import lfdc from 'assets/icons/lfdc.png';
-import supadm from 'assets/icons/supadm.png';
+import aau from 'assets/icons/aau.webp';
+import akanthas from 'assets/icons/akanthas.webp';
+import enseeiht from 'assets/icons/enseeiht.webp';
+import escape from 'assets/icons/escape.webp';
+import kanop from 'assets/icons/kanop.webp';
+import lfdc from 'assets/icons/lfdc.webp';
+import supadm from 'assets/icons/supadm.webp';
 
 const details = {
   education: [
