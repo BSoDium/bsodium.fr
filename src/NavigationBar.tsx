@@ -42,6 +42,8 @@ function NavigationBarItem({
   const mobile = useMobileMode();
   return layout === 'vertical' ? (
     <Stack
+      component={Link}
+      to={to}
       alignItems="center"
       gap={1}
       sx={{
@@ -49,11 +51,10 @@ function NavigationBarItem({
         borderRadius: '0.5rem',
         fontSize: '1.3rem',
         paddingX: '1rem',
+        textDecoration: 'none',
       }}
     >
       <Button
-        component={Link}
-        to={to}
         color="neutral"
         variant={selected ? 'solid' : 'plain'}
         sx={(theme) => ({
@@ -86,7 +87,11 @@ function NavigationBarItem({
       >
         {selected ? selectedIcon || icon : icon}
       </Button>
-      <Typography level="body3" fontWeight="700" textColor="text.primary">
+      <Typography
+        level="body3"
+        fontWeight="700"
+        textColor="text.primary"
+      >
         {text}
       </Typography>
     </Stack>
