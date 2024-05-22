@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
 import {
-  Box, Stack, Typography, useColorScheme,
+  Stack, Typography, useColorScheme,
 } from '@mui/joy';
 import { ATypography } from 'Landing';
 import mountainsDark from 'assets/mountains_dark.webp';
+import mountainsDarkMin from 'assets/mountains_dark.min.webp';
 import mountainsLight from 'assets/mountains_light.webp';
+import mountainsLightMin from 'assets/mountains_light.min.webp';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
+import ProgressiveImage from 'components/ProgressiveImage';
 import { transitionConfig } from './Illustrations';
 import { useMobileMode } from '../Responsive';
 
@@ -52,11 +55,11 @@ export default function Credits() {
                   background: 'linear-gradient(to top, #577fc0 25%, #C4DEE7, transparent)',
                 }}
                 />
-                <Box
-                  component="img"
+                <ProgressiveImage
                   src={mountainsLight}
+                  placeholder={mountainsLightMin}
                   alt="mountains"
-                  sx={{
+                  style={{
                     position: 'absolute',
                     height: '40rem',
                     left: '50%',
@@ -88,11 +91,11 @@ export default function Credits() {
                   background: 'linear-gradient(to top, #130D0B 25%, #1B1C21 40%, #16161A 50%, transparent)',
                 }}
                 />
-                <Box
-                  component="img"
+                <ProgressiveImage
                   src={mountainsDark}
+                  placeholder={mountainsDarkMin}
                   alt="mountains"
-                  sx={{
+                  style={{
                     position: 'absolute',
                     height: '40rem',
                     left: '50%',

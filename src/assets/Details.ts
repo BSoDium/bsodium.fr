@@ -1,10 +1,17 @@
-import escape from 'assets/icons/escape.png';
-import aau from 'assets/icons/aau.jpg';
-import akanthas from 'assets/icons/akanthas.png';
-import enseeiht from 'assets/icons/enseeiht.png';
-import kanop from 'assets/icons/kanop.png';
-import lfdc from 'assets/icons/lfdc.png';
-import supadm from 'assets/icons/supadm.png';
+import aauMin from 'assets/icons/aau.min.webp';
+import aau from 'assets/icons/aau.webp';
+import akanthasMin from 'assets/icons/akanthas.min.webp';
+import akanthas from 'assets/icons/akanthas.webp';
+import enseeihtMin from 'assets/icons/enseeiht.min.webp';
+import enseeiht from 'assets/icons/enseeiht.webp';
+import escapeMin from 'assets/icons/escape.min.webp';
+import escape from 'assets/icons/escape.webp';
+import kanopMin from 'assets/icons/kanop.min.webp';
+import kanop from 'assets/icons/kanop.webp';
+import lfdcMin from 'assets/icons/lfdc.min.webp';
+import lfdc from 'assets/icons/lfdc.webp';
+import supadmMin from 'assets/icons/supadm.min.webp';
+import supadm from 'assets/icons/supadm.webp';
 
 const details = {
   education: [
@@ -12,6 +19,7 @@ const details = {
       school: 'ENSEEIHT',
       url: 'https://www.enseeiht.fr/en/index.html',
       icon: enseeiht,
+      iconMin: enseeihtMin,
       location: 'Toulouse, France',
       degree: 'Master',
       major: 'Computer Science',
@@ -22,6 +30,7 @@ const details = {
       school: 'AAU Klagenfurt',
       url: 'https://www.aau.at/en/',
       icon: aau,
+      iconMin: aauMin,
       location: 'Klagenfurt, Austria',
       degree: 'Master',
       major: 'Computer Graphics and Vision',
@@ -43,6 +52,7 @@ const details = {
       company: 'Escape technologies',
       url: 'https://www.escape.tech/',
       icon: escape,
+      iconMin: escapeMin,
       location: 'Paris, France',
       contract: 'Full-time',
       position: 'Full-stack engineer',
@@ -66,6 +76,7 @@ const details = {
       company: 'Kanop',
       url: 'https://www.kanop.io/',
       icon: kanop,
+      iconMin: kanopMin,
       location: 'Paris, France',
       contract: 'Freelance & Internship',
       position: 'Front-end engineer',
@@ -89,6 +100,7 @@ const details = {
       company: 'La Fresque du Climat',
       url: 'https://fresqueduclimat.org/',
       icon: lfdc,
+      iconMin: lfdcMin,
       location: 'Toulouse, France',
       contract: 'Volunteering',
       position: 'Facilitator',
@@ -105,6 +117,7 @@ const details = {
       company: 'Akanthas',
       url: 'https://www.akanthas.fr/',
       icon: akanthas,
+      iconMin: akanthasMin,
       location: 'Toulouse, France',
       contract: 'Internship',
       position: 'Data Processing & Management architecture developer',
@@ -126,6 +139,7 @@ const details = {
       company: 'Sup admission',
       url: 'https://www.sup-admission.com/',
       icon: supadm,
+      iconMin: supadmMin,
       location: 'Toulouse, France',
       contract: 'Freelance',
       position: 'Lecturer & Tutor',

@@ -1,14 +1,20 @@
-import React, { useEffect } from 'react';
-import planetDark from 'assets/planet_dark.webp';
-import planetLight from 'assets/planet_light.webp';
-import balloon from 'assets/balloon.webp';
-import spaceStation from 'assets/space-station.webp';
-import sky from 'assets/sky.webp';
 import { Box, useColorScheme } from '@mui/joy';
-import { Parallax } from 'react-scroll-parallax';
 import {
   animated, easings, useSpringRef, useTransition,
 } from '@react-spring/web';
+import balloonMin from 'assets/balloon.min.webp';
+import balloon from 'assets/balloon.webp';
+import planetDarkMin from 'assets/planet_dark.min.webp';
+import planetDark from 'assets/planet_dark.webp';
+import planetLightMin from 'assets/planet_light.min.webp';
+import planetLight from 'assets/planet_light.webp';
+import skyMin from 'assets/sky.min.webp';
+import sky from 'assets/sky.webp';
+import spaceStationMin from 'assets/space-station.min.webp';
+import spaceStation from 'assets/space-station.webp';
+import ProgressiveImage from 'components/ProgressiveImage';
+import React, { useEffect } from 'react';
+import { Parallax } from 'react-scroll-parallax';
 import { useMobileMode } from '../Responsive';
 
 export const transitionConfig = {
@@ -140,8 +146,9 @@ export default function Illustrations() {
                       background: 'linear-gradient(to bottom, #5594bc, transparent)',
                     }}
                   />
-                  <img
+                  <ProgressiveImage
                     src={sky}
+                    placeholder={skyMin}
                     alt="sky"
                     style={{
                       position: 'absolute',
@@ -159,8 +166,9 @@ export default function Illustrations() {
             case 'dark':
               return (
                 <animated.div style={{ ...style, zIndex: -1, position: 'relative' }}>
-                  <img
+                  <ProgressiveImage
                     src={sky}
+                    placeholder={skyMin}
                     alt="sky"
                     style={{
                       position: 'absolute',
@@ -173,8 +181,9 @@ export default function Illustrations() {
                       WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 90%)',
                     }}
                   />
-                  <img
+                  <ProgressiveImage
                     src={sky}
+                    placeholder={skyMin}
                     alt="sky"
                     style={{
                       position: 'absolute',
@@ -198,9 +207,11 @@ export default function Illustrations() {
           switch (item) {
             case 'light':
               return (
-                <animated.img
+                <ProgressiveImage
                   src={planetLight}
+                  placeholder={planetLightMin}
                   alt="planet"
+                  animate
                   style={{
                     ...style,
                     position: 'absolute',
@@ -212,9 +223,11 @@ export default function Illustrations() {
               );
             case 'dark':
               return (
-                <animated.img
+                <ProgressiveImage
                   src={planetDark}
+                  placeholder={planetDarkMin}
                   alt="planet"
+                  animate
                   style={{
                     ...style,
                     position: 'absolute',
@@ -233,8 +246,10 @@ export default function Illustrations() {
           switch (item) {
             case 'light':
               return (
-                <animated.img
+                <ProgressiveImage
                   src={balloon}
+                  placeholder={balloonMin}
+                  animate
                   alt="balloon"
                   style={{
                     ...style,
@@ -248,8 +263,10 @@ export default function Illustrations() {
               );
             case 'dark':
               return (
-                <animated.img
+                <ProgressiveImage
                   src={spaceStation}
+                  placeholder={spaceStationMin}
+                  animate
                   alt="space station"
                   style={{
                     ...style,

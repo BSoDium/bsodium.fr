@@ -8,6 +8,10 @@
     "conventionalCommits.scopes": [],
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit"
+    },
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      "*.webp": "${capture}.min.webp"
     }
   },
   "launch": {

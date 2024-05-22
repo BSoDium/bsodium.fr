@@ -1,19 +1,21 @@
 import {
-  Box,
   Button, IconButton, Stack, Typography,
   useColorScheme,
 } from '@mui/joy';
+import { animated, useSpringRef, useTransition } from '@react-spring/web';
+import architectureDarkMin from 'assets/architecture_dark.min.webp';
+import architectureDark from 'assets/architecture_dark.webp';
+import architectureLightMin from 'assets/architecture_light.min.webp';
+import architectureLight from 'assets/architecture_light.webp';
+import ProgressiveImage from 'components/ProgressiveImage';
+import {
+  Desktop, Mobile, Tablet, useLandScapeMode, useMobileMode,
+} from 'components/Responsive';
+import Title from 'components/Title';
 import React, { useEffect, useState } from 'react';
 import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
 import { Link } from 'react-router-dom';
-import architectureLight from 'assets/architecture_light.webp';
-import architectureDark from 'assets/architecture_dark.webp';
-import Title from 'components/Title';
-import { animated, useSpringRef, useTransition } from '@react-spring/web';
-import {
-  Desktop, Mobile, Tablet, useLandScapeMode, useMobileMode,
-} from 'components/Responsive';
 import Directory from './Directory';
 
 function ThemeSwitcherButton() {
@@ -110,7 +112,7 @@ function ThemeAwareIllustration() {
     WebkitMaskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
     maskImage: 'linear-gradient(to left,black 10%,transparent 80%)',
     filter: 'grayscale(1)',
-  };
+  } as React.CSSProperties;
 
   return (
     <Stack sx={{
@@ -136,24 +138,24 @@ function ThemeAwareIllustration() {
           case 'light':
             return (
               <animated.div style={style}>
-                <Box
-                  component="img"
+                <ProgressiveImage
                   src={architectureLight}
+                  placeholder={architectureLightMin}
                   alt="Brutalist building by Arthur Swiffen"
-                  sx={imgSx}
                   onLoad={() => setLoaded(true)}
+                  style={imgSx}
                 />
               </animated.div>
             );
           case 'dark':
             return (
               <animated.div style={style}>
-                <Box
-                  component="img"
+                <ProgressiveImage
                   src={architectureDark}
+                  placeholder={architectureDarkMin}
                   alt="Red lamps in Subway in Hamburg by Travel with Lenses"
-                  sx={imgSx}
                   onLoad={() => setLoaded(true)}
+                  style={imgSx}
                 />
               </animated.div>
             );
