@@ -15,7 +15,7 @@ import Projects from 'components/projects/Projects';
 import ThemeLoader from 'components/ThemeLoader';
 import NavigationBar from 'NavigationBar';
 
-ReactGA.initialize('G-QETT923XKJ');
+ReactGA.initialize(process.env.REACT_APP_GA_MEASUREMENT_ID as string);
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,

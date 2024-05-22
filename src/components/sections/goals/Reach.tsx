@@ -41,7 +41,7 @@ export default function Reach({ step } : {step: number}) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        access_key: '4e4e6aee-a458-4774-a6e3-a6df6c19abe5',
+        access_key: process.env.REACT_APP_WEB3FORMS_ACCESS_KEY,
         email,
         name,
         message,
