@@ -33,7 +33,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "minify-images": "tsx scripts/minify-images.ts"
+    "build:assets": "tsx scripts/build-assets.ts"
   },
   "eslintConfig": {
     "extends": [

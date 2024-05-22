@@ -5,6 +5,7 @@ import path from 'path';
 import sharp from 'sharp';
 
 const srcDir = 'src/assets';
+const iconDir = 'src/assets/icons';
 export const thresholdSize = 1024; // Threshold size in bytes
 export const thresholdScale = 50; // Threshold scale in pixels
 
@@ -76,4 +77,45 @@ async function minifyImages() {
   }
 }
 
+async function resizeIcons() {
+  const iconFiles = getImages(iconDir);
+
+  const resizePromises = iconFiles.map(async (file) => {
+    // Skip minified files
+    if (file.includes('.min')) {
+      return '';
+    }
+
+    // Get the image original size
+    const metadata = await sharp(file).metadata();
+    const width = metadata.width || 0;
+    const height = metadata.height || 0;
+
+    const image = sharp(file);
+    const resizedWidth = Math.min(width, 200);
+    const resizedHeight = Math.min(height, 200);
+
+    await image
+      .resize(resizedWidth, resizedHeight)
+      .toBuffer()
+      .then((data) => {
+        // Save the buffer to the same file
+        fs.writeFile(file, data, (err) => {
+          if (err) {
+            console.error('Error writing the resized image:', err);
+          }
+        });
+      })
+      .catch((err) => {
+        console.error('Error resizing the image:', err);
+      });
+
+    return `Resized ${file}`;
+  });
+
+  const resizeResults = await Promise.all(resizePromises);
+  console.debug(resizeResults.filter(Boolean).join('\n'));
+}
+
+resizeIcons();
 minifyImages();
