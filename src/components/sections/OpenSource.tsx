@@ -6,8 +6,10 @@ import {
 } from '@mui/joy';
 import React, { useMemo } from 'react';
 import vader from 'assets/vader.webp';
+import vaderMin from 'assets/vader.min.webp';
 import { RiOpenSourceLine } from 'react-icons/ri';
 import { Parallax } from 'react-scroll-parallax';
+import ProgressiveImage from 'components/ProgressiveImage';
 import { Default, Mobile, useMobileMode } from '../Responsive';
 
 export default function OpenSource() {
@@ -182,12 +184,15 @@ export default function OpenSource() {
             animation: 'float 20s ease-in-out infinite',
           }}
         >
-          <img
+          <ProgressiveImage
             src={vader}
+            placeholder={vaderMin}
             alt="Darth vader"
             style={{
-              ...(mobile && {
+              ...(mobile ? {
                 height: '350px',
+              } : {
+                height: '500px',
               }),
               filter: 'drop-shadow(0 -20px 20px hsla(185, 74%, 41%, 0.299)) drop-shadow(0 20px 20px hsla(7, 57%, 51%, 0.364))',
             }}
