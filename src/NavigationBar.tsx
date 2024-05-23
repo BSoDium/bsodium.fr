@@ -7,7 +7,7 @@ import {
   Typography,
   useColorScheme,
 } from '@mui/joy';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useLandScapeMode, useMobileMode } from 'components/Responsive';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -147,6 +147,11 @@ export default function NavigationBar({
   const { mode, setMode } = useColorScheme();
 
   const location = useLocation();
+
+  useEffect(() => {
+    // set the --safe-area variable depending on the navigation bar position
+
+  }, []);
 
   return (
     <>
