@@ -3,8 +3,11 @@ import {
 } from '@mui/joy';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import React, { useEffect, useState } from 'react';
+import { useMobileMode } from './Responsive';
 
 export default function AnalyticsBanner() {
+  const mobile = useMobileMode();
+
   const [isDimissed, setIsDimissed] = useState(localStorage.getItem('analyticsBannerDismissed') === 'true');
 
   const transitionRef = useSpringRef();
@@ -17,14 +20,14 @@ export default function AnalyticsBanner() {
     leave: { opacity: 0, transform: 'translateY(2rem)' },
   });
 
+  useEffect(() => {
+    transitionRef.start();
+  }, [transitionRef, isDimissed]);
+
   const dismiss = () => {
     localStorage.setItem('analyticsBannerDismissed', 'true');
     setIsDimissed(true);
   };
-
-  useEffect(() => {
-    transitionRef.start();
-  }, [transitionRef, isDimissed]);
 
   return transition((style, item) => {
     if (item) {
@@ -36,7 +39,7 @@ export default function AnalyticsBanner() {
         variant="outlined"
         sx={(theme) => ({
           position: 'fixed',
-          bottom: '2rem',
+          bottom: mobile ? '5.5rem' : '2rem',
           left: '50%',
           backgroundColor: theme.palette.background.body,
           zIndex: 1000,
@@ -65,7 +68,8 @@ export default function AnalyticsBanner() {
               ads, and your data will still be kept private.
             </Typography>
           </Stack>
-          <Stack direction="row" gap={1} justifyContent="end">
+
+          <Stack direction="row" gap={1} justifyContent="flex-end">
             <Button
               size="sm"
               variant="outlined"
