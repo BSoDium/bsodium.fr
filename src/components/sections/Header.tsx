@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 
 import {
   Avatar, Button, Stack, Typography,
@@ -7,11 +7,10 @@ import {
 import { RiArrowRightSLine } from 'react-icons/ri';
 import { IoReaderOutline } from 'react-icons/io5';
 import { Link } from 'react-router-dom';
-import greeting from 'utils/Greeting';
+import greetingFactory from 'utils/Greeting';
 import { ATypography } from 'Landing';
 import details from 'assets/Details';
 import { useMobileMode } from '../Responsive';
-import TypeWriter from '../TypeWriter';
 
 export const visitors = [
   'stranger',
@@ -24,30 +23,19 @@ export const visitors = [
 
 export default function Header() {
   const mobile = useMobileMode();
-  const [visitor, setVisitor] = useState(visitors[0]);
-  const [greetingLine, setGreetingLine] = useState(greeting());
+
+  const visitor = useMemo(() => visitors[Math.floor(Math.random() * visitors.length)], []);
+  const greeting = useMemo(greetingFactory, []);
 
   const { colorScheme } = useColorScheme();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const dark = useMemo(() => colorScheme === 'dark', [colorScheme]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setVisitor((prev) => {
-        const nextIndex = (visitors.indexOf(prev) + 1) % visitors.length;
-        return visitors[nextIndex];
-      });
-      setGreetingLine(greeting());
-    }, 3000);
-    return () => { clearInterval(interval); };
-  }, [mobile]);
 
   const currentCompany = useMemo(() => details.experience.find((experience) => experience.end === 'Present') || undefined, []);
 
   return (
     <Stack
       gap="20px"
-      height={mobile ? '25rem' : '18rem'}
       alignItems={mobile ? 'center' : 'flex-start'}
       sx={(theme) => ({
         position: 'relative',
@@ -137,11 +125,7 @@ export default function Header() {
         flexWrap="wrap"
         height={mobile ? '5.625rem' : 'auto'}
       >
-        <TypeWriter
-          typeInterval={20}
-        >
-          {`${greetingLine} ${visitor}`}
-        </TypeWriter>
+        {`${greeting} ${visitor}`}
       </Typography>
       <Typography
         level={mobile ? 'h5' : 'h4'}
