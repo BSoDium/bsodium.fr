@@ -8,7 +8,7 @@ import { useLandScapeMode, useMobileMode } from './Responsive';
  *
  * **WARNING**: Removing this code violates the license agreement.
  * Any modifications to this code without proper attribution will
- * expose you to legal action.
+ * expose you to legal risks.
  *
  * If you have any doubts about the usage of this code, please
  * contact the author for clarification, by [filing an issue](https://github.com/BSoDium/bsodium.fr/issues/new).
