@@ -15,7 +15,7 @@ import { useLandScapeMode, useMobileMode } from './Responsive';
  *
  * *Don't be an asshole, give credit where it's due.*
  */
-export default function Credits() {
+export default function Copyright() {
   const mobile = useMobileMode();
   const landscape = useLandScapeMode();
 

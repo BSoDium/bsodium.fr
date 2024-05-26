@@ -15,7 +15,7 @@ import Projects from 'components/projects/Projects';
 import ThemeLoader from 'components/ThemeLoader';
 import NavigationBar from 'NavigationBar';
 import AnalyticsBanner from 'components/AnalyticsBanner';
-import Credits from 'components/Credits';
+import Copyright from 'components/Copyright';
 
 if (process.env.NODE_ENV !== 'development') ReactGA.initialize(process.env.REACT_APP_GA_MEASUREMENT_ID as string);
 
@@ -30,7 +30,7 @@ root.render(
       <ThemeLoader>
         <BrowserRouter>
           <AnalyticsBanner />
-          <Credits />
+          <Copyright />
           <NavigationBar>
             <Routes>
               <Route path="/" element={<Landing />} />
