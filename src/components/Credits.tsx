@@ -19,7 +19,7 @@ export default function Credits() {
   const mobile = useMobileMode();
   const landscape = useLandScapeMode();
 
-  const isAuthorDomain = window.location.hostname === 'bsodium.fr';
+  const isAuthorDomain = ['bsodium.fr', 'www.bsodium.fr'].includes(window.location.hostname);
 
   return isAuthorDomain ? null : (
     <Card
