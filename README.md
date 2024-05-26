@@ -1,8 +1,8 @@
 # bsodium.fr
 
-This repository contains the source code of my eportfolio, a react app which showcases my skills and projects. I used MUI Joy for UI components and DALL-E 3 for illustrations. You can visit the website at https://bsodium.fr.
+This repository contains the source code of my eportfolio, a React progressive web app which showcases my skills and projects. It is based on MUI Joy for UI components and DALL-E 2 and 3 for illustration generation. The latest production deployment is available at https://bsodium.fr.
 
-See the [License](#license) section for more information on how to use the code.
+See the [License](#license) section for more information on how to reuse the code.
 
 ## Installation
 
