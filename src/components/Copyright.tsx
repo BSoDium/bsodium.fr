@@ -24,17 +24,20 @@ export default function Copyright() {
   return isAuthorDomain ? null : (
     <Card
       component={animated.div}
-      sx={{
+      sx={(theme) => ({
         position: 'fixed',
         top: !landscape && !mobile ? '3rem' : '0',
         right: '0',
+        width: mobile ? '100vw' : undefined,
         zIndex: 1000,
         display: 'flex',
         flexDirection: 'row',
         borderRadius: 0,
-        borderBottomLeftRadius: '1rem',
+        borderBottomLeftRadius: mobile ? undefined : '1rem',
         padding: '0.5rem 1rem',
-      }}
+        backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 20%)`,
+        backdropFilter: 'blur(10px)',
+      })}
     >
       <Typography level="body2">
         Credit to
