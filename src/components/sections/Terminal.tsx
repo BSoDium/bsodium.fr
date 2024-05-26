@@ -193,7 +193,6 @@ export default function Terminal() {
         </Typography>
       </Typography>
       <Parallax
-        translateY={['200px', '20px']}
         opacity={[0, 1]}
         disabled={mobile}
         easing="easeOutBack"

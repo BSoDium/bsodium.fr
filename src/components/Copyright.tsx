@@ -46,7 +46,18 @@ export default function Copyright() {
           BSoDium
         </Link>
         {' '}
-        for the original design and code.
+        for the
+        {' '}
+        <Link href="https://www.bsodium.fr" target="_blank">
+          original design
+        </Link>
+        {' '}
+        and
+        {' '}
+        <Link href="https://github.com/BSoDium/bsodium.fr" target="_blank">
+          code
+        </Link>
+        .
       </Typography>
     </Card>
   );
