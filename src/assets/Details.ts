@@ -57,7 +57,7 @@ const details = {
       contract: 'Full-time',
       position: 'Full-stack engineer',
       start: 'Nov 2023',
-      end: 'Present',
+      end: 'May 2024',
       description: [
         'Designed and built a Svelte component library based on the latest Material UI guidelines, greatly increasing development speed and design consistency.',
         'Researched and implemented a contrast-aware palette generation algorithm which significantly improved aesthetics and accessibility.',
