@@ -20,3 +20,5 @@ The app will be available at http://localhost:3000.
 This project is licensed under the GNU General public license - see the [LICENSE](LICENSE) file for details. Any use of the code must include a reference to the original repository. Any components or UI elements reused in other projects must be credited in a visible way to the original authors.
 
 The removal of the credit banner which appears at the top right corner of the website is strictly prohibited and constitutes a violation of the license. It must be visible at all times and should not be covered by any other element. 
+
+This software is available for free and is provided "as is" without warranty of any kind. Please respect the work that has been put into this project and do not use it for commercial purposes without permission.
