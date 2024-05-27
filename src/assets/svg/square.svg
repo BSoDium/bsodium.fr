@@ -5,10 +5,10 @@
     fill="url(#paint0_linear_802_200)" fill-rule="evenodd"></path>
 
   <defs>
-    <linearGradient id="paint0_linear_802_200" x1="100" x2="100" y1="0" y2="200"
+    <linearGradient id="paint0_linear_802_200" x1="0" x2="300" y1="0" y2="300"
       gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ead9de"></stop>
-      <stop offset="1" stop-color="#e5f1ed"></stop>
+      <stop stop-color="var(--joy-palette-info-500)"></stop>
+      <stop offset="1" stop-color="var(--joy-palette-info-softColor)"></stop>
     </linearGradient>
   </defs>
 </svg>

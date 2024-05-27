@@ -4,11 +4,12 @@
       d="M50.714 0h-50v50c0 25.462 19.033 46.479 43.647 49.6C19.401 102.402 0 123.578 0 149.286v50h50c25.462 0 46.479-19.033 49.6-43.647 2.802 24.96 23.978 44.361 49.686 44.361h50v-50c0-25.462-19.033-46.479-43.647-49.6C180.599 97.598 200 76.422 200 50.714v-50h-50c-25.462 0-46.479 19.033-49.6 43.647C97.598 19.401 76.422 0 50.714 0Z"
       clip-rule="evenodd"></path>
   </g>
+
   <defs>
     <linearGradient id="paint0_linear_133_2" x1="27.5" x2="149" y1="19" y2="174.5"
       gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFD9A0"></stop>
-      <stop offset="1" stop-color="#FFF5F1"></stop>
+      <stop stop-color="var(--joy-palette-danger-500)"></stop>
+      <stop offset="1" stop-color="var(--joy-palette-danger-softColor)"></stop>
     </linearGradient>
     <clipPath id="clip0_133_2">
       <path fill="#fff" d="M0 0h200v200H0z"></path>

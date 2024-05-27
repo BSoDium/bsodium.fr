@@ -118,7 +118,7 @@ export default function NotFound() {
           fontSize="clamp(7rem, 20vw, 15rem)"
           textAlign={mobile ? 'center' : 'left'}
           lineHeight={0.9}
-          fontFamily='"Lobster", sans-serif'
+          fontFamily='"Fira Code", monospace'
         >
           404
         </Typography>
@@ -129,6 +129,7 @@ export default function NotFound() {
           fontSize="clamp(1rem, 7vw, 1.5rem)"
           fontWeight="300"
           width="min(90vw, 25rem)"
+          height="2em"
         >
           <TypeWriter
             typeInterval={20}
