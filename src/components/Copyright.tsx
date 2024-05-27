@@ -1,7 +1,7 @@
 import { Card, Link, Typography } from '@mui/joy';
 import React from 'react';
 import { animated } from '@react-spring/web';
-import { useLandScapeMode, useMobileMode } from './Responsive';
+import { useMobileMode } from './Responsive';
 
 /**
  * Component displaying credits for this website.
@@ -17,7 +17,6 @@ import { useLandScapeMode, useMobileMode } from './Responsive';
  */
 export default function Copyright() {
   const mobile = useMobileMode();
-  const landscape = useLandScapeMode();
 
   const isAuthorDomain = ['bsodium.fr', 'www.bsodium.fr'].includes(window.location.hostname);
 
@@ -26,7 +25,7 @@ export default function Copyright() {
       component={animated.div}
       sx={(theme) => ({
         position: 'fixed',
-        top: !landscape && !mobile ? '3rem' : '0',
+        top: 'var(--nav-safe-area-inset-top)',
         right: '0',
         width: mobile ? '100vw' : undefined,
         zIndex: 1000,
