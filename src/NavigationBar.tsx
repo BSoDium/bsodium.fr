@@ -155,7 +155,9 @@ export default function NavigationBar({
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
       entries.forEach((entry) => {
-        const { width: newWidth, height: newHeight } = entry.contentRect;
+        const [
+          { inlineSize: newWidth, blockSize: newHeight },
+        ] = entry.borderBoxSize;
         setWidth(newWidth);
         setHeight(newHeight);
       });
