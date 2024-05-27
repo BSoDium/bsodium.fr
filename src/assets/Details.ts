@@ -14,6 +14,11 @@ import supadmMin from 'assets/icons/supadm.min.webp';
 import supadm from 'assets/icons/supadm.webp';
 
 const details = {
+  name: {
+    first: 'Elliot',
+    last: 'Négrel-Jerzy',
+    nickname: 'BSoDium',
+  },
   education: [
     {
       school: 'ENSEEIHT',

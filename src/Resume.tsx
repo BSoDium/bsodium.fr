@@ -11,7 +11,7 @@ import { IoLanguage } from 'react-icons/io5';
 import details from 'assets/Details';
 import { Education, Experience } from 'components/Details';
 import Title from 'components/Title';
-import { useLandScapeMode, useMobileMode } from 'components/Responsive';
+import { useMobileMode } from 'components/Responsive';
 import { marked } from 'marked';
 
 export function Languages() {
@@ -59,7 +59,6 @@ export function Languages() {
 }
 
 export default function Resume() {
-  const landscape = useLandScapeMode();
   const mobile = useMobileMode();
 
   const [descriptionEditable, setDescriptionEditable] = useState(false);
@@ -71,13 +70,14 @@ export default function Resume() {
 
   return (
     <>
-      <Title text="Curriculum Vitae - Elliot Négrel-Jerzy" />
+      <Title text={`Curriculum Vitae - ${details.name.first} ${details.name.last}`} />
       <Stack
         alignItems="center"
         sx={{
           width: '100vw',
-          paddingTop: !landscape && !mobile ? '3rem' : undefined,
-          paddingBottom: mobile ? '4.5rem' : undefined,
+          paddingTop: 'var(--nav-safe-area-inset-top)',
+          paddingBottom: 'var(--nav-safe-area-inset-bottom)',
+          paddingLeft: 'var(--nav-safe-area-inset-left)',
         }}
       >
         <Box component="div" maxWidth="65em">
@@ -90,7 +90,7 @@ export default function Resume() {
           >
             <Stack component="header" gap={0}>
               <Typography level="h2" fontWeight="xl">
-                Elliot Négrel-Jerzy
+                {`${details.name.first} ${details.name.last}`}
               </Typography>
               <Typography level="h6" fontWeight="lg" textColor="text.secondary" marginBottom={0.5}>
                 Software Engineer

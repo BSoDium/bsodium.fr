@@ -9,13 +9,14 @@ import architectureLightMin from 'assets/architecture_light.min.webp';
 import architectureLight from 'assets/architecture_light.webp';
 import ProgressiveImage from 'components/ProgressiveImage';
 import {
-  Desktop, Mobile, Tablet, useLandScapeMode, useMobileMode,
+  Desktop, Mobile, Tablet, useMobileMode,
 } from 'components/Responsive';
 import Title from 'components/Title';
 import React, { useEffect, useState } from 'react';
 import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
 import { Link } from 'react-router-dom';
+import details from 'assets/Details';
 import Directory from './Directory';
 
 function ThemeSwitcherButton() {
@@ -121,6 +122,7 @@ function ThemeAwareIllustration() {
       width: '100rem',
       height: 'min(100%, 31rem)',
       overflow: 'hidden',
+      paddingTop: 'var(--nav-safe-area-inset-top)',
       '&:after': {
         content: '""',
         position: 'absolute',
@@ -168,7 +170,6 @@ function ThemeAwareIllustration() {
 }
 
 export default function Projects() {
-  const landscape = useLandScapeMode();
   const mobile = useMobileMode();
   return (
     <Stack
@@ -176,11 +177,11 @@ export default function Projects() {
       position="relative"
       overflow="hidden"
       sx={{
-        paddingLeft: landscape ? '5.5rem' : undefined,
-        paddingBottom: mobile ? '4.5rem' : undefined,
+        paddingLeft: 'var(--nav-safe-area-inset-left)',
+        paddingBottom: 'var(--nav-safe-area-inset-bottom)',
       }}
     >
-      <Title text="Projects and experiments - Elliot Négrel-Jerzy" />
+      <Title text={`Projects and experiments - ${details.name.first} ${details.name.last}`} />
       <ThemeAwareIllustration />
       <Stack
         padding={mobile ? '1rem' : '5rem'}

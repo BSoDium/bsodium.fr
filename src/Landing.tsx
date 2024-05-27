@@ -17,6 +17,7 @@ import Goals from 'components/sections/goals/Goals';
 import { ParallaxProvider } from 'react-scroll-parallax';
 import Illustrations from 'components/sections/Illustrations';
 import Credits from 'components/sections/Credits';
+import details from 'assets/Details';
 
 export function ATypography({
   children,
@@ -56,7 +57,7 @@ export default function Landing() {
   const mobile = useMobileMode();
   return (
     <ParallaxProvider>
-      <Title text="Elliot Négrel-Jerzy" />
+      <Title text={`${details.name.first} ${details.name.last}`} />
       <Stack overflow="hidden">
         <Illustrations />
         <div
@@ -67,7 +68,9 @@ export default function Landing() {
             position: 'relative',
             marginTop: `calc(-100vh + ${mobile ? '350px' : '420px'})`,
             width: '100vw',
-            paddingBottom: mobile ? '4.5rem' : undefined,
+            paddingTop: 'var(--nav-safe-area-inset-top)',
+            paddingBottom: 'var(--nav-safe-area-inset-bottom)',
+            paddingLeft: 'var(--nav-safe-area-inset-left)',
           }}
         >
           <Stack

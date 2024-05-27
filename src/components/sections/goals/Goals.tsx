@@ -9,6 +9,7 @@ import { MdOutlineRocketLaunch } from 'react-icons/md';
 import { HiOutlineSparkles } from 'react-icons/hi2';
 import { Parallax } from 'react-scroll-parallax';
 import { animated, useSpringValue } from '@react-spring/web';
+import details from 'assets/Details';
 import { Default, Mobile, useMobileMode } from '../../Responsive';
 import Reach from './Reach';
 
@@ -174,7 +175,7 @@ function Cursor({ step } : {step: number}) {
           transform: labelTransform,
         }}
       >
-        Elliot
+        {details.name.first}
       </Chip>
       <Stack
         className="wrapper"

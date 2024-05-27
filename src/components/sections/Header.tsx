@@ -138,14 +138,14 @@ export default function Header() {
       >
         The name&apos;s
         {' '}
-        <ATypography textColor="primary.plainColor" href="https://www.linkedin.com/in/bsodium/">
-          Elliot Négrel-Jerzy
+        <ATypography textColor="primary.plainColor" href={details.contact.linkedin}>
+          {`${details.name.first} ${details.name.last}`}
         </ATypography>
         {' '}
         , but you can call me
         {' '}
-        <ATypography href="https://github.com/BSoDium">
-          BSoDium
+        <ATypography href={details.contact.github}>
+          {details.name.nickname}
         </ATypography>
         . I&apos;m a
         {' '}

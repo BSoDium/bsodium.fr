@@ -9,6 +9,7 @@ import mountainsLight from 'assets/mountains_light.webp';
 import mountainsLightMin from 'assets/mountains_light.min.webp';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import ProgressiveImage from 'components/ProgressiveImage';
+import details from 'assets/Details';
 import { transitionConfig } from './Illustrations';
 import { useMobileMode } from '../Responsive';
 
@@ -138,7 +139,7 @@ export default function Credits() {
           {' '}
           {new Date().getFullYear()}
           {' '}
-          Elliot Négrel-Jerzy. All rights reserved.
+          {`${details.name.first} ${details.name.last}. All rights reserved.`}
         </Typography>
         <Typography
           level="body2"
