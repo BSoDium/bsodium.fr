@@ -7,7 +7,7 @@ import {
   Typography,
   useColorScheme,
 } from '@mui/joy';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLandScapeMode, useMobileMode } from 'components/Responsive';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -139,27 +139,50 @@ export default function NavigationBar({
 }: {
   children: JSX.Element | JSX.Element[];
 }) {
-  const bottom = useMobileMode();
-  const landscape = useLandScapeMode();
-
-  const horizontal = useMemo(() => !landscape && !bottom, [landscape, bottom]);
-
+  const location = useLocation();
   const { mode, setMode } = useColorScheme();
 
-  const location = useLocation();
+  const bottom = useMobileMode();
+  const landscape = useLandScapeMode();
+  const horizontal = useMemo(() => !landscape && !bottom, [landscape, bottom]);
 
+  const [width, setWidth] = useState<number>();
+  const [height, setHeight] = useState<number>();
+
+  const navigationRef = React.createRef<HTMLDivElement>();
+
+  // Resize observer
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      entries.forEach((entry) => {
+        const { width: newWidth, height: newHeight } = entry.contentRect;
+        setWidth(newWidth);
+        setHeight(newHeight);
+      });
+    });
+
+    if (navigationRef.current) {
+      resizeObserver.observe(navigationRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [navigationRef]);
+
+  // Safe area insets
   useEffect(() => {
     document.documentElement.style.setProperty(
       '--nav-safe-area-inset-top',
-      (landscape || bottom) ? 'initial' : '3rem',
+      (landscape || bottom) ? 'initial' : (height ? `${height}px` : '3rem'),
     );
     document.documentElement.style.setProperty(
       '--nav-safe-area-inset-bottom',
-      bottom ? '4.5rem' : 'initial',
+      bottom ? (height ? `${height}px` : '4.5rem') : 'initial',
     );
     document.documentElement.style.setProperty(
       '--nav-safe-area-inset-left',
-      landscape ? '5.5rem' : 'initial',
+      landscape ? (width ? `${width}px` : '5.5rem') : 'initial',
     );
 
     return () => {
@@ -167,11 +190,12 @@ export default function NavigationBar({
       document.documentElement.style.removeProperty('--nav-safe-area-inset-bottom');
       document.documentElement.style.removeProperty('--nav-safe-area-inset-left');
     };
-  }, [landscape, bottom]);
+  }, [landscape, bottom, width, height]);
 
   return (
     <>
       <Stack
+        ref={navigationRef}
         direction={landscape ? 'column' : 'row'}
         sx={(theme) => ({
           position: 'fixed',
