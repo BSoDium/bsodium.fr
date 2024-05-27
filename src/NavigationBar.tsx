@@ -149,9 +149,25 @@ export default function NavigationBar({
   const location = useLocation();
 
   useEffect(() => {
-    // set the --safe-area variable depending on the navigation bar position
+    document.documentElement.style.setProperty(
+      '--nav-safe-area-inset-top',
+      (landscape || bottom) ? 'initial' : '3rem',
+    );
+    document.documentElement.style.setProperty(
+      '--nav-safe-area-inset-bottom',
+      bottom ? '4.5rem' : 'initial',
+    );
+    document.documentElement.style.setProperty(
+      '--nav-safe-area-inset-left',
+      landscape ? '5.5rem' : 'initial',
+    );
 
-  }, []);
+    return () => {
+      document.documentElement.style.removeProperty('--nav-safe-area-inset-top');
+      document.documentElement.style.removeProperty('--nav-safe-area-inset-bottom');
+      document.documentElement.style.removeProperty('--nav-safe-area-inset-left');
+    };
+  }, [landscape, bottom]);
 
   return (
     <>

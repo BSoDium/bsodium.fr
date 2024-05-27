@@ -4,7 +4,7 @@ import {
   StyledEngineProvider,
 } from '@mui/joy';
 import {
-  BrowserRouter, Route, Routes,
+  BrowserRouter, Outlet, Route, Routes,
 } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import Landing from 'Landing';
@@ -16,6 +16,7 @@ import ThemeLoader from 'components/ThemeLoader';
 import NavigationBar from 'NavigationBar';
 import AnalyticsBanner from 'components/AnalyticsBanner';
 import Copyright from 'components/Copyright';
+import NotFound from 'NotFound';
 
 if (process.env.NODE_ENV !== 'development') ReactGA.initialize(process.env.REACT_APP_GA_MEASUREMENT_ID as string);
 
@@ -31,13 +32,19 @@ root.render(
         <BrowserRouter>
           <AnalyticsBanner />
           <Copyright />
-          <NavigationBar>
-            <Routes>
+          <Routes>
+            <Route element={(
+              <NavigationBar>
+                <Outlet />
+              </NavigationBar>
+              )}
+            >
               <Route path="/" element={<Landing />} />
               <Route path="/resume" element={<Resume />} />
               <Route path="/projects" element={<Projects />} />
-            </Routes>
-          </NavigationBar>
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </ThemeLoader>
     </StyledEngineProvider>
