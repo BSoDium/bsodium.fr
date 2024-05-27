@@ -1,4 +1,4 @@
-import { Stack, Typography } from '@mui/joy';
+import { Button, Stack, Typography } from '@mui/joy';
 import React, { CSSProperties, useEffect, useState } from 'react';
 import { ReactComponent as Sparkle } from 'assets/svg/sparkle.svg';
 import { ReactComponent as SparkleThin } from 'assets/svg/sparkle-thin.svg';
@@ -6,7 +6,8 @@ import { ReactComponent as Square } from 'assets/svg/square.svg';
 import { ReactComponent as Flower } from 'assets/svg/flower.svg';
 import TypeWriter from 'components/TypeWriter';
 import { animated, useSpringValue } from '@react-spring/web';
-import { useMobileMode } from 'components/Responsive';
+import { useNonDesktopMode } from 'components/Responsive';
+import { Link } from 'react-router-dom';
 
 function getRandomRotation(prev = 0) {
   const random = Math.random();
@@ -19,7 +20,7 @@ function getRandomRotation(prev = 0) {
 }
 
 export default function NotFound() {
-  const mobile = useMobileMode();
+  const nonDesktop = useNonDesktopMode();
 
   const [rotations, setRotations] = useState({
     sparkle: 0,
@@ -61,7 +62,7 @@ export default function NotFound() {
   };
 
   return (
-    <Stack direction="row" flexWrap="wrap" columnGap={10} rowGap={0} justifyContent="center" alignItems="center" width="100%" height="100%">
+    <Stack direction={nonDesktop ? 'column' : 'row'} gap={10} justifyContent="center" alignItems="center" width="100%" height="100%">
       <Stack
         gap={1}
         sx={{
@@ -112,24 +113,24 @@ export default function NotFound() {
           </animated.div>
         </Stack>
       </Stack>
-      <Stack gap={5}>
+      <Stack gap={5} alignItems={nonDesktop ? 'center' : 'left'}>
         <Typography
           level="display1"
           fontSize="clamp(7rem, 20vw, 15rem)"
-          textAlign={mobile ? 'center' : 'left'}
-          lineHeight={0.9}
+          textAlign={nonDesktop ? 'center' : 'left'}
+          lineHeight={0.8}
           fontFamily='"Fira Code", monospace'
         >
           404
         </Typography>
         <Typography
-          textAlign={mobile ? 'center' : 'left'}
+          textAlign={nonDesktop ? 'center' : 'left'}
           level="h4"
           fontFamily='"Fira Code", monospace'
           fontSize="clamp(1rem, 7vw, 1.5rem)"
           fontWeight="300"
           width="min(90vw, 25rem)"
-          height="2em"
+          minHeight="3em"
         >
           <TypeWriter
             typeInterval={20}
@@ -137,6 +138,35 @@ export default function NotFound() {
             We could not find the page you&apos;re looking for.
           </TypeWriter>
         </Typography>
+        <Stack direction="row" gap={2} alignSelf="stretch" flexWrap="wrap" padding={nonDesktop ? 1 : 0}>
+          <Button
+            component={Link}
+            to="https://github.com/BSoDium/bsodium.fr/issues/new"
+            target="_blank"
+            size="lg"
+            variant="outlined"
+            color="neutral"
+            sx={{
+              flex: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            File a bug report
+          </Button>
+          <Button
+            component={Link}
+            to="/"
+            size="lg"
+            variant="solid"
+            color="success"
+            sx={{
+              flex: 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Go back home
+          </Button>
+        </Stack>
       </Stack>
     </Stack>
   );

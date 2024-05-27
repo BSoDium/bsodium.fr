@@ -38,7 +38,12 @@ export default function Copyright() {
         backdropFilter: 'blur(10px)',
       })}
     >
-      <Typography level="body2">
+      <Typography
+        level="body2"
+        sx={{
+          whiteSpace: 'nowrap', overflow: 'auto',
+        }}
+      >
         Credit to
         {' '}
         <Link href="https://github.com/BSoDium" target="_blank">
