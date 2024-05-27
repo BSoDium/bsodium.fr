@@ -6,6 +6,7 @@ import { ReactComponent as Square } from 'assets/svg/square.svg';
 import { ReactComponent as Flower } from 'assets/svg/flower.svg';
 import TypeWriter from 'components/TypeWriter';
 import { animated, useSpringValue } from '@react-spring/web';
+import { useMobileMode } from 'components/Responsive';
 
 function getRandomRotation(prev = 0) {
   const random = Math.random();
@@ -18,6 +19,8 @@ function getRandomRotation(prev = 0) {
 }
 
 export default function NotFound() {
+  const mobile = useMobileMode();
+
   const [rotations, setRotations] = useState({
     sparkle: 0,
     square: 0,
@@ -110,13 +113,22 @@ export default function NotFound() {
         </Stack>
       </Stack>
       <Stack gap={5}>
-        <Typography level="display1" fontSize="clamp(7rem, 20vw, 15rem)" lineHeight={0.9} fontFamily='"Lobster", sans-serif'>404</Typography>
         <Typography
+          level="display1"
+          fontSize="clamp(7rem, 20vw, 15rem)"
+          textAlign={mobile ? 'center' : 'left'}
+          lineHeight={0.9}
+          fontFamily='"Lobster", sans-serif'
+        >
+          404
+        </Typography>
+        <Typography
+          textAlign={mobile ? 'center' : 'left'}
           level="h4"
           fontFamily='"Fira Code", monospace'
-          fontSize="clamp(0.5rem, 5vw, 1.5rem)"
+          fontSize="clamp(1rem, 7vw, 1.5rem)"
           fontWeight="300"
-          width="25rem"
+          width="min(90vw, 25rem)"
         >
           <TypeWriter
             typeInterval={20}
