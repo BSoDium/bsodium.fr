@@ -3,11 +3,8 @@ import {
 } from '@mui/joy';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
 import React, { useEffect, useState } from 'react';
-import { useMobileMode } from './Responsive';
 
 export default function AnalyticsBanner() {
-  const mobile = useMobileMode();
-
   const [isDimissed, setIsDimissed] = useState(localStorage.getItem('analyticsBannerDismissed') === 'true');
 
   const transitionRef = useSpringRef();
@@ -39,7 +36,8 @@ export default function AnalyticsBanner() {
         variant="outlined"
         sx={(theme) => ({
           position: 'fixed',
-          bottom: mobile ? '5.5rem' : '2rem',
+          bottom: 'var(--nav-safe-area-inset-bottom, 0)',
+          marginBottom: '2rem',
           left: '50%',
           backgroundColor: theme.palette.background.body,
           zIndex: 1000,

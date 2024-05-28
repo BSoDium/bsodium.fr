@@ -176,15 +176,15 @@ export default function NavigationBar({
   useEffect(() => {
     document.documentElement.style.setProperty(
       '--nav-safe-area-inset-top',
-      (landscape || bottom) ? 'initial' : (height ? `${height}px` : '3rem'),
+      (landscape || bottom) ? '0' : (height ? `${height}px` : '3rem'),
     );
     document.documentElement.style.setProperty(
       '--nav-safe-area-inset-bottom',
-      bottom ? (height ? `${height}px` : '4.5rem') : 'initial',
+      bottom ? (height ? `${height}px` : '4.5rem') : '0',
     );
     document.documentElement.style.setProperty(
       '--nav-safe-area-inset-left',
-      landscape ? (width ? `${width}px` : '5.5rem') : 'initial',
+      landscape ? (width ? `${width}px` : '5.5rem') : '0',
     );
 
     return () => {
