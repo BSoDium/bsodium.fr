@@ -18,8 +18,7 @@ import AnalyticsBanner from 'components/AnalyticsBanner';
 import Copyright from 'components/Copyright';
 import NotFound from 'NotFound';
 
-if (process.env.NODE_ENV !== 'development'
-&& process.env.REACT_APP_GA_MEASUREMENT_ID !== undefined) {
+if (process.env.REACT_APP_GA_MEASUREMENT_ID) {
   ReactGA.initialize(process.env.REACT_APP_GA_MEASUREMENT_ID as string);
 }
 

@@ -18,6 +18,7 @@ import { MdErrorOutline, MdSend } from 'react-icons/md';
 import { FaFire } from 'react-icons/fa';
 import { BsSendCheck } from 'react-icons/bs';
 import ProgressiveImage from 'components/ProgressiveImage';
+import ReactGA from 'react-ga4';
 import { Default, useMobileMode } from '../../Responsive';
 
 export default function Reach({ step } : {step: number}) {
@@ -49,8 +50,18 @@ export default function Reach({ step } : {step: number}) {
     });
     const result = await response.json();
     if (result.success) {
+      ReactGA.event({
+        category: 'Form',
+        action: 'Submit',
+        label: 'Contact',
+      });
       setSubmitted(true);
     } else {
+      ReactGA.event({
+        category: 'Form',
+        action: 'Error',
+        label: 'Contact',
+      });
       setError(result.message);
     }
     setLoading(false);
