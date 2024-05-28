@@ -13,12 +13,15 @@ import ReactGA from 'react-ga4';
 import 'App.global.scss';
 import Projects from 'components/projects/Projects';
 import ThemeLoader from 'components/ThemeLoader';
-import NavigationBar from 'NavigationBar';
+import NavigationBar from 'navigation/NavigationBar';
 import AnalyticsBanner from 'components/AnalyticsBanner';
 import Copyright from 'components/Copyright';
 import NotFound from 'NotFound';
 
-if (process.env.NODE_ENV !== 'development') ReactGA.initialize(process.env.REACT_APP_GA_MEASUREMENT_ID as string);
+if (process.env.NODE_ENV !== 'development'
+&& process.env.REACT_APP_GA_MEASUREMENT_ID !== undefined) {
+  ReactGA.initialize(process.env.REACT_APP_GA_MEASUREMENT_ID as string);
+}
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement,

@@ -10,7 +10,7 @@ import { TbSchool } from 'react-icons/tb';
 import { IoLanguage } from 'react-icons/io5';
 import details from 'assets/Details';
 import { Education, Experience } from 'components/Details';
-import Title from 'components/Title';
+import Meta from 'components/Meta';
 import { useMobileMode } from 'components/Responsive';
 import { marked } from 'marked';
 
@@ -70,7 +70,7 @@ export default function Resume() {
 
   return (
     <>
-      <Title text={`Curriculum Vitae - ${details.name.first} ${details.name.last}`} />
+      <Meta title={`Curriculum Vitae - ${details.name.first} ${details.name.last}`} />
       <Stack
         alignItems="center"
         sx={{

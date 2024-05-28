@@ -8,7 +8,7 @@ import { SxProps, TextColor } from '@mui/joy/styles/types';
 import Featured from 'components/sections/Featured';
 import Contact from 'components/sections/contact/Contact';
 import Terminal from 'components/sections/Terminal';
-import Title from 'components/Title';
+import Meta from 'components/Meta';
 import Header from 'components/sections/Header';
 import { useMobileMode, Default } from 'components/Responsive';
 import OpenSource from 'components/sections/OpenSource';
@@ -57,7 +57,7 @@ export default function Landing() {
   const mobile = useMobileMode();
   return (
     <ParallaxProvider>
-      <Title text={`${details.name.first} ${details.name.last}`} />
+      <Meta title={`${details.name.first} ${details.name.last}`} />
       <Stack overflow="hidden">
         <Illustrations />
         <div

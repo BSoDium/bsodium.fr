@@ -4,7 +4,6 @@
   "license": "MIT",
   "author": "BSoDium",
   "url": "https://www.bsodium.fr",
-  "email": "negreljerzy.elliot@gmail.com",
   "private": false,
   "dependencies": {
     "@emotion/react": "^11.11.1",

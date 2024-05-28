@@ -29,6 +29,7 @@ import { FaPause, FaPlay } from 'react-icons/fa';
 import { RiUserLine } from 'react-icons/ri';
 import mockMessages from 'utils/Messages';
 import { Parallax } from 'react-scroll-parallax';
+import details from 'assets/Details';
 import { Default, Mobile, useMobileMode } from '../Responsive';
 import Details from '../Details';
 import TypeWriter from '../TypeWriter';
@@ -80,7 +81,7 @@ export function FakeButton({
 export default function Terminal() {
   const [tabs] = useState<Tab[]>([
     {
-      name: 'pwsh in bsodium',
+      name: `pwsh in ${details.name.nickname.toLowerCase()}`,
       icon: <VscTerminalPowershell />,
     },
   ]);
@@ -452,7 +453,9 @@ export default function Terminal() {
                 flexWrap="nowrap"
               >
                 <Typography color="primary">
-                  root@bsodium:~$&nbsp;
+                  root@
+                  {details.name.nickname.toLowerCase()}
+                  :~$&nbsp;
                 </Typography>
                 <TypeWriter
                   onTransitionEnd={() => {
@@ -461,7 +464,7 @@ export default function Terminal() {
                   typeInterval={20}
                   sx={{ whiteSpace: 'nowrap' }}
                 >
-                  {`bsodium.exe --${displayed}`}
+                  {`${details.name.nickname.toLowerCase()}.exe --${displayed}`}
                 </TypeWriter>
               </Stack>
             </Typography>

@@ -8,6 +8,7 @@ import TypeWriter from 'components/TypeWriter';
 import { animated, useSpringValue } from '@react-spring/web';
 import { useNonDesktopMode } from 'components/Responsive';
 import { Link } from 'react-router-dom';
+import Meta from 'components/Meta';
 
 function getRandomRotation(prev = 0) {
   const random = Math.random();
@@ -62,112 +63,115 @@ export default function NotFound() {
   };
 
   return (
-    <Stack direction={nonDesktop ? 'column' : 'row'} gap={10} justifyContent="center" alignItems="center" width="100%" height="100%">
-      <Stack
-        gap={1}
-        sx={{
-          maxWidth: '90vw',
-          maxHeight: '90vw',
-        }}
-      >
+    <>
+      <Meta title="Page not found" />
+      <Stack direction={nonDesktop ? 'column' : 'row'} gap={10} justifyContent="center" alignItems="center" width="100%" height="100%">
         <Stack
           gap={1}
-          direction="row"
           sx={{
-            width: '100%',
-            height: 'min(45vw, 200px)',
+            maxWidth: '90vw',
+            maxHeight: '90vw',
           }}
         >
-          <animated.div style={{
-            rotate: sparkleRotation.to((deg) => `${deg}deg`),
-          }}
-          >
-            <Sparkle style={svgStyle} />
-          </animated.div>
-          <animated.div style={{
-            rotate: squareRotation.to((deg) => `${deg}deg`),
-          }}
-          >
-            <Square style={svgStyle} />
-          </animated.div>
-        </Stack>
-        <Stack
-          gap={1}
-          direction="row"
-          sx={{
-            width: '100%',
-            height: 'min(45vw, 200px)',
-          }}
-        >
-          <animated.div style={{
-            rotate: flowerRotation.to((deg) => `${deg}deg`),
-          }}
-          >
-            <Flower style={svgStyle} />
-          </animated.div>
-          <animated.div style={{
-            rotate: sparkleThinRotation.to((deg) => `${deg}deg`),
-          }}
-          >
-            <SparkleThin style={svgStyle} />
-          </animated.div>
-        </Stack>
-      </Stack>
-      <Stack gap={5} alignItems={nonDesktop ? 'center' : 'left'}>
-        <Typography
-          level="display1"
-          fontSize="clamp(7rem, 20vw, 15rem)"
-          textAlign={nonDesktop ? 'center' : 'left'}
-          lineHeight={0.8}
-          fontFamily='"Fira Code", monospace'
-        >
-          404
-        </Typography>
-        <Typography
-          textAlign={nonDesktop ? 'center' : 'left'}
-          level="h4"
-          fontFamily='"Fira Code", monospace'
-          fontSize="clamp(1rem, 7vw, 1.5rem)"
-          fontWeight="300"
-          width="min(90vw, 25rem)"
-          minHeight="3em"
-        >
-          <TypeWriter
-            typeInterval={20}
-          >
-            We could not find the page you&apos;re looking for.
-          </TypeWriter>
-        </Typography>
-        <Stack direction="row" gap={2} alignSelf="stretch" flexWrap="wrap" padding={nonDesktop ? 1 : 0}>
-          <Button
-            component={Link}
-            to="https://github.com/BSoDium/bsodium.fr/issues/new"
-            target="_blank"
-            size="lg"
-            variant="outlined"
-            color="neutral"
+          <Stack
+            gap={1}
+            direction="row"
             sx={{
-              flex: 1,
-              whiteSpace: 'nowrap',
+              width: '100%',
+              height: 'min(45vw, 200px)',
             }}
           >
-            File a bug report
-          </Button>
-          <Button
-            component={Link}
-            to="/"
-            size="lg"
-            variant="solid"
-            color="success"
+            <animated.div style={{
+              rotate: sparkleRotation.to((deg) => `${deg}deg`),
+            }}
+            >
+              <Sparkle style={svgStyle} />
+            </animated.div>
+            <animated.div style={{
+              rotate: squareRotation.to((deg) => `${deg}deg`),
+            }}
+            >
+              <Square style={svgStyle} />
+            </animated.div>
+          </Stack>
+          <Stack
+            gap={1}
+            direction="row"
             sx={{
-              flex: 1,
-              whiteSpace: 'nowrap',
+              width: '100%',
+              height: 'min(45vw, 200px)',
             }}
           >
-            Go back home
-          </Button>
+            <animated.div style={{
+              rotate: flowerRotation.to((deg) => `${deg}deg`),
+            }}
+            >
+              <Flower style={svgStyle} />
+            </animated.div>
+            <animated.div style={{
+              rotate: sparkleThinRotation.to((deg) => `${deg}deg`),
+            }}
+            >
+              <SparkleThin style={svgStyle} />
+            </animated.div>
+          </Stack>
+        </Stack>
+        <Stack gap={5} alignItems={nonDesktop ? 'center' : 'left'}>
+          <Typography
+            level="display1"
+            fontSize="clamp(7rem, 20vw, 15rem)"
+            textAlign={nonDesktop ? 'center' : 'left'}
+            lineHeight={0.8}
+            fontFamily='"Fira Code", monospace'
+          >
+            404
+          </Typography>
+          <Typography
+            textAlign={nonDesktop ? 'center' : 'left'}
+            level="h4"
+            fontFamily='"Fira Code", monospace'
+            fontSize="clamp(1rem, 7vw, 1.5rem)"
+            fontWeight="300"
+            width="min(90vw, 25rem)"
+            minHeight="3em"
+          >
+            <TypeWriter
+              typeInterval={20}
+            >
+              We could not find the page you&apos;re looking for.
+            </TypeWriter>
+          </Typography>
+          <Stack direction="row" gap={2} alignSelf="stretch" flexWrap="wrap" padding={nonDesktop ? 1 : 0}>
+            <Button
+              component={Link}
+              to="https://github.com/BSoDium/bsodium.fr/issues/new"
+              target="_blank"
+              size="lg"
+              variant="outlined"
+              color="neutral"
+              sx={{
+                flex: 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              File a bug report
+            </Button>
+            <Button
+              component={Link}
+              to="/"
+              size="lg"
+              variant="solid"
+              color="success"
+              sx={{
+                flex: 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Go back home
+            </Button>
+          </Stack>
         </Stack>
       </Stack>
-    </Stack>
+    </>
   );
 }

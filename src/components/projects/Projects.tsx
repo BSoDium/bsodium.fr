@@ -11,7 +11,7 @@ import ProgressiveImage from 'components/ProgressiveImage';
 import {
   Desktop, Mobile, Tablet, useMobileMode,
 } from 'components/Responsive';
-import Title from 'components/Title';
+import Meta from 'components/Meta';
 import React, { useEffect, useState } from 'react';
 import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
@@ -181,7 +181,7 @@ export default function Projects() {
         paddingBottom: 'var(--nav-safe-area-inset-bottom)',
       }}
     >
-      <Title text={`Projects and experiments - ${details.name.first} ${details.name.last}`} />
+      <Meta title={`Projects and experiments - ${details.name.first} ${details.name.last}`} />
       <ThemeAwareIllustration />
       <Stack
         padding={mobile ? '1rem' : '5rem'}
