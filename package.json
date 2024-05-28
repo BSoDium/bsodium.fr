@@ -1,7 +1,7 @@
 {
   "name": "bsodium.fr",
   "version": "1.0.0",
-  "license": "MIT",
+  "license": "GPL-2.0-only",
   "author": "BSoDium",
   "url": "https://www.bsodium.fr",
   "private": false,
