@@ -109,7 +109,16 @@ export default function Header() {
           <Typography level="body1" textColor="inherit" fontWeight="lg" lineHeight="1.2em">
             Access online resume
           </Typography>
-          <Typography level="body2" textColor="inherit" fontWeight="sm" sx={{ opacity: 0.8 }}>
+          <Typography
+            level="body2"
+            textColor="inherit"
+            fontWeight="sm"
+            sx={{
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
+              opacity: 0.8,
+            }}
+          >
             Dynamic, interactive, and up-to-date
           </Typography>
         </Stack>
