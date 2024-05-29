@@ -13,9 +13,22 @@ export default function TypeWriter({
   },
   sx,
 }: {
+  /**
+   * The text to be typed out by the typewriter effect.
+   */
   children: string
+  /**
+   * The interval (in milliseconds) between typing each character.
+   * Default: 50
+   */
   typeInterval?: number
+  /**
+   * A callback function that is called when the typing animation ends.
+   */
   onTransitionEnd?: () => void
+  /**
+   * The style props for the Typography component.
+   */
   sx?: SxProps
 }) {
   // Text that is currently displayed

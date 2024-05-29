@@ -1,4 +1,6 @@
-import { Button, Stack, Typography } from '@mui/joy';
+import {
+  Button, Stack, Tooltip, Typography,
+} from '@mui/joy';
 import React, { CSSProperties, useEffect, useState } from 'react';
 import { ReactComponent as Sparkle } from 'assets/svg/sparkle.svg';
 import { ReactComponent as SparkleThin } from 'assets/svg/sparkle-thin.svg';
@@ -65,7 +67,15 @@ export default function NotFound() {
   return (
     <>
       <Meta title="Page not found" />
-      <Stack direction={nonDesktop ? 'column' : 'row'} gap={10} justifyContent="center" alignItems="center" width="100%" height="100%">
+      <Stack
+        direction={nonDesktop ? 'column' : 'row'}
+        gap={10}
+        justifyContent="center"
+        alignItems="center"
+        width="100%"
+        height="100%"
+        overflow="hidden"
+      >
         <Stack
           gap={1}
           sx={{
@@ -116,7 +126,10 @@ export default function NotFound() {
             </animated.div>
           </Stack>
         </Stack>
-        <Stack gap={5} alignItems={nonDesktop ? 'center' : 'left'}>
+        <Stack
+          gap={5}
+          alignItems={nonDesktop ? 'center' : 'left'}
+        >
           <Typography
             level="display1"
             fontSize="clamp(7rem, 20vw, 15rem)"
@@ -156,19 +169,21 @@ export default function NotFound() {
             >
               File a bug report
             </Button>
-            <Button
-              component={Link}
-              to="/"
-              size="lg"
-              variant="solid"
-              color="success"
-              sx={{
-                flex: 1,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Go back home
-            </Button>
+            <Tooltip title="🎸 Country roads 🎙️" variant="soft">
+              <Button
+                component={Link}
+                to="/"
+                size="lg"
+                variant="solid"
+                color="success"
+                sx={{
+                  flex: 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Take me home
+              </Button>
+            </Tooltip>
           </Stack>
         </Stack>
       </Stack>
