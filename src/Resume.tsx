@@ -82,8 +82,8 @@ export default function Resume() {
       >
         <Box component="div" maxWidth="65em">
           <Stack
-            paddingX={mobile ? 4 : 12}
-            paddingY={mobile ? 4 : 6}
+            paddingX={mobile ? 3 : 12}
+            paddingY={mobile ? 5 : 6}
             gap={3}
             width="100%"
             height="100%"

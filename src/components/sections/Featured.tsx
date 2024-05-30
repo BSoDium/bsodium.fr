@@ -336,9 +336,31 @@ export default function Featured() {
                 Check API status
               </Button>
           )}
-            sx={{ gap: 0.5, padding: '.3rem .3rem .3rem 1rem' }}
+            sx={{
+              gap: 0.5,
+              padding: '.3rem .3rem .3rem 1rem',
+              maxWidth: '100%',
+            }}
           >
-            {mobile ? 'Something went wrong' : error.message}
+            <span style={{
+              flex: '1 1 100%',
+              minWidth: 0,
+            }}
+            >
+              <Typography
+                textColor="inherit"
+                fontSize="inherit"
+                fontWeight="inherit"
+                sx={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%',
+                }}
+              >
+                {error.message}
+              </Typography>
+            </span>
           </Alert>
           )}
           {loading ? (
