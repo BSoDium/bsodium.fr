@@ -27,7 +27,7 @@ import getProjects from 'utils/Api';
 import moment from 'moment';
 import { FiCode, FiFile, FiPlay } from 'react-icons/fi';
 import { CiSearch, CiWifiOff } from 'react-icons/ci';
-import { useMobileMode } from 'components/Responsive';
+import { useMobileMode, useTabletMode } from 'components/Responsive';
 import { GoDownload } from 'react-icons/go';
 import { useSearchParams } from 'react-router-dom';
 
@@ -53,12 +53,16 @@ function Message({
       sx={mobile ? (theme) => ({
         background: theme.palette.background.body,
         width: '100vw',
+        marginX: '-1rem',
         zIndex: 1,
       }) : undefined}
     >
       {children}
       <Stack direction="column" gap={0.5} maxWidth="25rem" textAlign={mobile ? 'center' : 'left'}>
-        <Typography level="h3">
+        <Typography
+          level="h3"
+          fontSize="clamp(1.2rem, 5vw, 1.875rem)"
+        >
           {title}
         </Typography>
         <Typography level="body2">
@@ -346,6 +350,7 @@ export default function Directory() {
   const [openProject, setOpenProject] = useState('');
 
   const mobile = useMobileMode();
+  const tablet = useTabletMode();
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -469,7 +474,7 @@ export default function Directory() {
           )}
           sx={(theme) => ({
             transition: 'all ease .2s',
-            width: mobile ? '100%' : 'min(100%, 30rem)',
+            width: (mobile || tablet) ? '100%' : 'min(100%, 30rem)',
             cursor: 'pointer',
             borderRadius: '0',
             outline: 'none',
@@ -481,7 +486,7 @@ export default function Directory() {
             },
 
             '&:has(:focus), &.loading': {
-              borderRadius: mobile ? '100vmax' : '100vmax 0 0 100vmax',
+              borderRadius: (mobile || tablet) ? '100vmax' : '100vmax 0 0 100vmax',
             },
           })}
         />
@@ -492,7 +497,7 @@ export default function Directory() {
           sx={(theme) => ({
             transition: 'all ease .2s',
             borderRadius: '0',
-            flex: mobile ? 1 : 'initial',
+            flex: (mobile || tablet) ? 1 : 'initial',
             backgroundColor: theme.palette.background.body,
             width: '12rem',
             '& + ul': {
