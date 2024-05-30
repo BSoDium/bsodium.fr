@@ -135,7 +135,6 @@ export default function Header() {
         textAlign={mobile ? 'center' : 'initial'}
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
-        height={mobile ? '5.625rem' : 'auto'}
       >
         {`${greeting} ${visitor}`}
       </Typography>
