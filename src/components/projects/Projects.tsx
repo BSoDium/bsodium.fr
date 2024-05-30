@@ -9,7 +9,7 @@ import architectureLightMin from 'assets/architecture_light.min.webp';
 import architectureLight from 'assets/architecture_light.webp';
 import ProgressiveImage from 'components/ProgressiveImage';
 import {
-  Desktop, Mobile, Tablet, useMobileMode,
+  useMobileMode,
 } from 'components/Responsive';
 import Meta from 'components/Meta';
 import React, { useEffect, useState } from 'react';
@@ -188,113 +188,39 @@ export default function Projects() {
         gap={2}
         alignItems="start"
       >
-        <Desktop>
-          <Stack>
+        <Stack marginBottom="min(10vw, 3rem)" marginTop={mobile ? '10vw' : 0}>
+          <Typography
+            level="display1"
+            fontSize="clamp(3rem, 15vw, 10rem)"
+            fontWeight={200}
+            lineHeight={1}
+            sx={{ position: 'relative', marginLeft: '.25em', marginBottom: '.05em' }}
+          >
             <Typography
-              level="display1"
-              fontSize="10rem"
-              fontWeight={200}
-              lineHeight={1}
-              sx={{ position: 'relative', marginLeft: '2.72rem' }}
+              level="h2"
+              sx={{
+                position: 'absolute',
+                left: '-.6em',
+                bottom: '1.7em',
+                transform: 'translateX(-50%) rotate(-90deg)',
+                fontSize: 'clamp(.5rem, 3vw, 2rem)',
+              }}
             >
-              <Typography
-                level="h2"
-                sx={{
-                  position: 'absolute',
-                  left: '-1.3rem',
-                  bottom: '66px',
-                  transform: 'translateX(-50%) rotate(-90deg)',
-                }}
-              >
-                Featured
-              </Typography>
-              Projects &
+              Featured
             </Typography>
-            <Typography
-              level="display1"
-              fontSize="10rem"
-              fontWeight={300}
-              lineHeight={0.6}
-              marginBottom="3rem"
-              zIndex={1}
-              fontFamily={'"Righteous", sans-serif'}
-            >
-              Experiments
-            </Typography>
-          </Stack>
-        </Desktop>
-        <Tablet>
-          <Stack>
-            <Typography
-              level="display1"
-              fontSize="6rem"
-              fontWeight={200}
-              lineHeight={1}
-              sx={{ position: 'relative', marginLeft: '1.25rem' }}
-            >
-              <Typography
-                level="h2"
-                fontSize="1rem"
-                sx={{
-                  position: 'absolute',
-                  left: '-0.5rem',
-                  bottom: '34px',
-                  transform: 'translateX(-50%) rotate(-90deg)',
-                }}
-              >
-                Featured
-              </Typography>
-              Projects &
-            </Typography>
-            <Typography
-              level="display1"
-              fontSize="6rem"
-              fontWeight={300}
-              lineHeight={0.6}
-              marginBottom="3rem"
-              zIndex={1}
-              fontFamily={'"Righteous", sans-serif'}
-            >
-              Experiments
-            </Typography>
-          </Stack>
-        </Tablet>
-        <Mobile>
-          <Stack paddingTop={5} paddingX={1} width="100%" alignItems="center">
-            <Typography
-              level="display1"
-              fontSize="4rem"
-              fontWeight={200}
-              lineHeight={1}
-              sx={{ position: 'relative', marginLeft: '1.1rem' }}
-            >
-              <Typography
-                level="h2"
-                fontSize="1rem"
-                sx={{
-                  position: 'absolute',
-                  left: '-0.5rem',
-                  bottom: '30px',
-                  transform: 'translateX(-50%) rotate(-90deg)',
-                }}
-              >
-                Featured
-              </Typography>
-              Projects &
-            </Typography>
-            <Typography
-              level="display1"
-              fontSize="4rem"
-              fontWeight={300}
-              lineHeight={0.6}
-              marginBottom="3rem"
-              zIndex={1}
-              fontFamily={'"Righteous", sans-serif'}
-            >
-              Experiments
-            </Typography>
-          </Stack>
-        </Mobile>
+            Projects &
+          </Typography>
+          <Typography
+            level="display1"
+            fontSize="clamp(3rem, 15vw, 10rem)"
+            fontWeight={300}
+            lineHeight={0.6}
+            zIndex={1}
+            fontFamily={'"Righteous", sans-serif'}
+          >
+            Experiments
+          </Typography>
+        </Stack>
         <Stack
           direction="row"
           gap={1}

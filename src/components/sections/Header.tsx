@@ -85,6 +85,7 @@ export default function Header() {
           borderWidth: '2px',
           borderRadius: '100px',
           width: 'fit-content',
+          maxWidth: '100%',
           backdropFilter: 'blur(5px)',
           transition: 'all ease .2s',
           flexShrink: 0,
@@ -105,7 +106,7 @@ export default function Header() {
           },
         })}
       >
-        <Stack alignItems="flex-start" sx={{ textAlign: 'left' }}>
+        <Stack alignItems="flex-start" sx={{ textAlign: 'left', minWidth: 0, flex: '1 1 100%' }}>
           <Typography level="body1" textColor="inherit" fontWeight="lg" lineHeight="1.2em">
             Access online resume
           </Typography>
@@ -114,8 +115,10 @@ export default function Header() {
             textColor="inherit"
             fontWeight="sm"
             sx={{
+              overflow: 'hidden',
               whiteSpace: 'nowrap',
               textOverflow: 'ellipsis',
+              maxWidth: '100%',
               opacity: 0.8,
             }}
           >
@@ -132,7 +135,6 @@ export default function Header() {
         textAlign={mobile ? 'center' : 'initial'}
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
-        height={mobile ? '5.625rem' : 'auto'}
       >
         {`${greeting} ${visitor}`}
       </Typography>
@@ -141,7 +143,6 @@ export default function Header() {
         textColor={dark ? 'text.tertiary' : '#3c617b'}
         sx={{
           position: 'relative',
-          padding: mobile ? '0 1rem' : 0,
           textAlign: mobile ? 'center' : 'left',
         }}
       >

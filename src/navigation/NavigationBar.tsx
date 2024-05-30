@@ -75,10 +75,8 @@ function NavigationBarItem({
               color: selected
                 ? theme.palette.background.body
                 : theme.palette.text.primary,
-              '&:hover': {
-                backgroundColor: mobile
-                  ? undefined
-                  : theme.palette.text.secondary,
+              '&:hover, &:active': {
+                backgroundColor: mobile ? theme.palette.text.primary : theme.palette.text.secondary,
                 color: theme.palette.background.body,
               },
             }

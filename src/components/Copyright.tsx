@@ -36,12 +36,13 @@ export default function Copyright() {
         padding: '0.5rem 1rem',
         backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 20%)`,
         backdropFilter: 'blur(10px)',
+        overflow: 'auto',
       })}
     >
       <Typography
         level="body2"
         sx={{
-          whiteSpace: 'nowrap', overflow: 'auto',
+          whiteSpace: 'nowrap',
         }}
       >
         Credit to

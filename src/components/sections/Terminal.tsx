@@ -207,15 +207,17 @@ export default function Terminal() {
               backgroundColor: 'transparent',
               border: 'none',
               boxShadow: 'none',
+              margin: '-1rem',
+              marginTop: '1rem',
             } : {
               backgroundColor: dark ? `color-mix(in srgb, ${theme.palette.background.body}, ${theme.palette.neutral.softBg} 40%)` : `color-mix(in srgb, ${theme.palette.background.level1}, transparent 70%)`,
               border: `1px solid ${theme.palette.neutral.outlinedBorder}`,
               height: '550px',
               boxShadow: 'lg',
+              margin: 0,
             }),
             padding: 0,
             gap: 0,
-            margin: mobile ? '-1rem' : '0',
             marginBottom: '3rem',
             overflow: 'hidden',
           })}
@@ -438,7 +440,6 @@ export default function Terminal() {
               fontFamily="'Fira Code', monospace"
               fontSize="0.875rem"
               component="span"
-              padding={mobile ? '0 1rem' : 'initial'}
             >
               <Typography textColor="text.secondary">
                 Powershell 7.3.4
@@ -448,25 +449,21 @@ export default function Terminal() {
                 ms.
               </Typography>
               <br />
-              <Stack
-                direction="row"
-                flexWrap="nowrap"
+              <Typography color="primary">
+                root@
+                {details.name.nickname.toLowerCase()}
+                :~$&nbsp;
+              </Typography>
+              <TypeWriter
+                onTransitionEnd={() => {
+                  setSelected(displayed);
+                }}
+                typeInterval={20}
+                sx={{
+                }}
               >
-                <Typography color="primary">
-                  root@
-                  {details.name.nickname.toLowerCase()}
-                  :~$&nbsp;
-                </Typography>
-                <TypeWriter
-                  onTransitionEnd={() => {
-                    setSelected(displayed);
-                  }}
-                  typeInterval={20}
-                  sx={{ whiteSpace: 'nowrap' }}
-                >
-                  {`${details.name.nickname.toLowerCase()}.exe --${displayed}`}
-                </TypeWriter>
-              </Stack>
+                {`${details.name.nickname.toLowerCase()}.exe ‑‑${displayed}`}
+              </TypeWriter>
             </Typography>
             <Tabs
               aria-label="terminal options"
@@ -481,7 +478,6 @@ export default function Terminal() {
               sx={{
                 width: 'fit-content',
                 backgroundColor: 'transparent',
-                padding: mobile ? '0 1rem' : 'initial',
               }}
             >
               <TabList
