@@ -7,6 +7,18 @@ import React, {
   useState,
 } from 'react';
 
+function isCached(src: string) {
+  const image = new Image();
+  image.src = src;
+  if (image.complete) {
+    // Image is cached
+    return true;
+  }
+  // Cancel the image request
+  image.src = '';
+  return false;
+}
+
 export default function ProgressiveImage({
   src,
   placeholder,
@@ -24,17 +36,22 @@ export default function ProgressiveImage({
 }) {
   const start = useMemo(() => Date.now(), []);
 
-  const [loading, setLoading] = useState(true);
-  const [elapsed, setElapsed] = useState<number>();
-  const [currentSrc, setCurrentSrc] = useState(placeholder);
+  /** Whether the image is cached */
+  const hasCache = isCached(src);
+
+  const [loading, setLoading] = useState(!hasCache);
+  const [elapsed, setElapsed] = useState<number | undefined>(hasCache ? 0 : undefined);
+  const [currentSrc, setCurrentSrc] = useState(hasCache ? src : placeholder);
 
   useEffect(() => {
-    const imageToLoad = new Image();
-    imageToLoad.src = src;
-    imageToLoad.onload = () => {
-      setElapsed(Date.now() - start);
-      setCurrentSrc(src);
-    };
+    if (loading) {
+      const imageToLoad = new Image();
+      imageToLoad.src = src;
+      imageToLoad.onload = () => {
+        setElapsed(Date.now() - start);
+        setCurrentSrc(src);
+      };
+    }
   }, [src]);
 
   return animate ? (
@@ -44,12 +61,12 @@ export default function ProgressiveImage({
       className={loading ? 'loading' : ''}
       alt={alt}
       style={style}
-      sx={{
+      sx={loading ? {
         transition: `filter ${Math.round((elapsed || 0) / 4)}ms`,
         '&.loading': {
           filter: `${style?.filter || ''} blur(20px) !important`,
         },
-      }}
+      } : {}}
       onLoad={() => {
         onLoad?.();
         if (currentSrc === src) {
@@ -64,12 +81,12 @@ export default function ProgressiveImage({
       className={loading ? 'loading' : ''}
       alt={alt}
       style={style as React.CSSProperties}
-      sx={{
+      sx={loading ? {
         transition: `filter ${Math.round((elapsed || 0) / 4)}ms`,
         '&.loading': {
           filter: `${style?.filter || ''} blur(20px) !important`,
         },
-      }}
+      } : {}}
       onLoad={() => {
         onLoad?.();
         if (currentSrc === src) {
