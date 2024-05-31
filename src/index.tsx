@@ -8,7 +8,7 @@ import {
 } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import Landing from 'Landing';
-import Resume from 'Resume';
+import Resume from 'resume/Resume';
 import ReactGA from 'react-ga4';
 import 'App.global.scss';
 import Projects from 'components/projects/Projects';

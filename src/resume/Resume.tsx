@@ -13,6 +13,7 @@ import { Education, Experience } from 'components/Details';
 import Meta from 'components/Meta';
 import { useMobileMode } from 'components/Responsive';
 import { marked } from 'marked';
+import Download from './Download';
 
 export function Languages() {
   const color = (level: string): ColorPaletteProp => {
@@ -71,6 +72,7 @@ export default function Resume() {
   return (
     <>
       <Meta title={`Curriculum Vitae - ${details.name.first} ${details.name.last}`} />
+      <Download />
       <Stack
         alignItems="center"
         sx={{
