@@ -1,6 +1,7 @@
 import { Card, Link, Typography } from '@mui/joy';
 import React from 'react';
 import { animated } from '@react-spring/web';
+import useOverlayQueryParam from 'navigation/useOverlayQueryParam';
 import { useMobileMode } from './Responsive';
 
 /**
@@ -18,6 +19,8 @@ import { useMobileMode } from './Responsive';
 export default function Copyright() {
   const mobile = useMobileMode();
 
+  const hidden = useOverlayQueryParam();
+
   const isAuthorDomain = ['bsodium.fr', 'www.bsodium.fr'].includes(window.location.hostname);
 
   return isAuthorDomain ? null : (
@@ -29,7 +32,7 @@ export default function Copyright() {
         right: '0',
         width: mobile ? '100vw' : undefined,
         zIndex: 1000,
-        display: 'flex',
+        display: hidden ? 'none' : 'flex',
         flexDirection: 'row',
         borderRadius: 0,
         borderBottomLeftRadius: mobile ? undefined : '1rem',

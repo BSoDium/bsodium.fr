@@ -1,22 +1,39 @@
 import {
   Button, Card, IconButton, Stack, Tooltip, Typography,
+  useColorScheme,
 } from '@mui/joy';
 import details from 'assets/Details';
 import { useMobileMode } from 'components/Responsive';
 import jsPDF from 'jspdf';
+import useOverlayQueryParam from 'navigation/useOverlayQueryParam';
 import React, { createRef } from 'react';
 import { FaRegFilePdf } from 'react-icons/fa';
 import { FiDownload, FiPrinter } from 'react-icons/fi';
 
 export default function Download() {
   const mobile = useMobileMode();
+  const { mode, setMode } = useColorScheme();
+
+  const hidden = useOverlayQueryParam();
 
   const container = createRef<HTMLDivElement>();
 
   const fileName = `Resume_${details.name.first}_${details.name.last}.pdf`;
 
   const print = () => {
-    window.print();
+    const url = new URL(window.location.href);
+    url.searchParams.set('overlay', 'false');
+    const printWindow = window.open(url.toString(), '_blank');
+    if (printWindow) {
+      const savedMode = mode;
+      setMode('light');
+      printWindow.onafterprint = () => {
+        setMode(savedMode || 'system');
+      };
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
   };
 
   const download = () => {
@@ -34,6 +51,7 @@ export default function Download() {
       justifyContent="center"
       alignItems="center"
       sx={{
+        display: hidden ? 'none' : 'flex',
         position: 'fixed',
         bottom: 'var(--nav-safe-area-inset-bottom, 0)',
         width: '100%',
