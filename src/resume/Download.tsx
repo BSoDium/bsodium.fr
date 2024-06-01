@@ -3,6 +3,7 @@ import {
 } from '@mui/joy';
 import details from 'assets/Details';
 import { useMobileMode } from 'components/Responsive';
+import jsPDF from 'jspdf';
 import React, { createRef } from 'react';
 import { FaRegFilePdf } from 'react-icons/fa';
 import { FiDownload, FiPrinter } from 'react-icons/fi';
@@ -15,11 +16,15 @@ export default function Download() {
   const fileName = `Resume_${details.name.first}_${details.name.last}.pdf`;
 
   const print = () => {
-    // noop
+    window.print();
   };
 
   const download = () => {
-    // noop
+    // eslint-disable-next-line new-cap
+    const doc = new jsPDF();
+    const source = window.document.getElementById('resume') as HTMLElement;
+    doc.html(source);
+    doc.save(fileName);
   };
 
   return (
@@ -37,11 +42,10 @@ export default function Download() {
       }}
     >
       <Card
-        variant={mobile ? 'plain' : 'outlined'}
+        variant="outlined"
         sx={(theme) => ({
-          borderRadius: mobile ? 0 : undefined,
-          width: mobile ? '100%' : '30rem',
-          marginBottom: mobile ? 0 : '1rem',
+          width: mobile ? 'calc(100% - 1rem)' : '30rem',
+          margin: mobile ? '.5rem' : '0 0 1rem 0',
           backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 30%)`,
           backdropFilter: 'blur(10px)',
           webkitBackdropFilter: 'blur(10px)',

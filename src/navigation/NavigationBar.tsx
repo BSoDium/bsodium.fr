@@ -251,7 +251,7 @@ export default function NavigationBar({
             text="Projects"
             layout={horizontal ? 'horizontal' : 'vertical'}
             to="/projects"
-            selected={location.pathname === '/projects'}
+            selected={location.pathname.startsWith('/projects')}
           />
           <NavigationBarItem
             icon={<BsFilePerson />}
@@ -259,7 +259,7 @@ export default function NavigationBar({
             text="Resume"
             layout={horizontal ? 'horizontal' : 'vertical'}
             to="/resume"
-            selected={location.pathname === '/resume'}
+            selected={location.pathname.startsWith('/resume')}
           />
         </Stack>
         {horizontal ? (
