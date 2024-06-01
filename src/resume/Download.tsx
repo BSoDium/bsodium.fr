@@ -27,8 +27,15 @@ export default function Download() {
     if (printWindow) {
       const savedMode = mode;
       setMode('light');
+
       printWindow.onafterprint = () => {
         setMode(savedMode || 'system');
+        printWindow.close();
+        return null;
+      };
+      printWindow.onbeforeunload = () => {
+        setMode(savedMode || 'system');
+        return null;
       };
       printWindow.onload = () => {
         printWindow.print();
@@ -40,8 +47,11 @@ export default function Download() {
     // eslint-disable-next-line new-cap
     const doc = new jsPDF();
     const source = window.document.getElementById('resume') as HTMLElement;
-    doc.html(source);
-    doc.save(fileName);
+    doc.html(source, {
+      callback(d) {
+        d.save(fileName);
+      },
+    });
   };
 
   return (
