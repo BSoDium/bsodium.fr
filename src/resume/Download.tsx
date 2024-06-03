@@ -1,20 +1,21 @@
 import {
-  Button, Card, IconButton, Stack, Tooltip, Typography,
+  Button, Card, CircularProgress, IconButton, Stack, Tooltip, Typography,
   useColorScheme,
 } from '@mui/joy';
 import details from 'assets/Details';
 import { useMobileMode } from 'components/Responsive';
 import jsPDF from 'jspdf';
 import useOverlayQueryParam from 'navigation/useOverlayQueryParam';
-import React, { createRef } from 'react';
+import React, { createRef, useState } from 'react';
 import { FaRegFilePdf } from 'react-icons/fa';
 import { FiDownload, FiPrinter } from 'react-icons/fi';
 
 export default function Download() {
   const mobile = useMobileMode();
   const { mode, setMode } = useColorScheme();
-
   const hidden = useOverlayQueryParam();
+
+  const [downloadLoading, setDownloadLoading] = useState(false);
 
   const container = createRef<HTMLDivElement>();
 
@@ -44,14 +45,48 @@ export default function Download() {
   };
 
   const download = () => {
+    setDownloadLoading(true);
     // eslint-disable-next-line new-cap
-    const doc = new jsPDF();
-    const source = window.document.getElementById('resume') as HTMLElement;
-    doc.html(source, {
-      callback(d) {
-        d.save(fileName);
-      },
+    const doc = new jsPDF({
+      orientation: 'p',
+      format: 'a4',
+      unit: 'px',
+      hotfixes: ['px_scaling'],
     });
+    const source = document.body;
+
+    // Get the HTML content dimensions
+    const sourceWidth = source.offsetWidth;
+    const sourceHeight = source.offsetHeight;
+
+    // Define the margins and PDF page dimensions
+    const margin = 5;
+    const pdfWidth = doc.internal.pageSize.getWidth() - 2 * margin;
+    const pdfHeight = doc.internal.pageSize.getHeight() - 2 * margin;
+
+    // Calculate the scale factor to fit the HTML content within the PDF page
+    const scale = Math.min(pdfWidth / sourceWidth, pdfHeight / sourceHeight);
+
+    // Adjust width and windowWidth to fit the scale
+    const adjustedWidth = sourceWidth * scale;
+    // const adjustedHeight = sourceHeight * scale;
+    const windowWidth = sourceWidth; // This can be set to the actual HTML width
+
+    try {
+      doc.html(source, {
+        callback(d) {
+          d.save(fileName);
+          setDownloadLoading(false);
+        },
+        x: margin,
+        y: margin,
+        autoPaging: 'text',
+        width: adjustedWidth,
+        windowWidth,
+      });
+    } finally {
+      setDownloadLoading(false);
+    }
   };
 
   return (
@@ -134,13 +169,22 @@ export default function Download() {
                 <IconButton
                   variant="solid"
                   onClick={download}
+                  disabled={downloadLoading}
                 >
-                  <FiDownload />
+                  {downloadLoading ? (
+                    <CircularProgress
+                      size="sm"
+                    />
+                  ) : (
+                    <FiDownload />
+                  )}
                 </IconButton>
               </Tooltip>
             ) : (
               <Button
                 onClick={download}
+                loading={downloadLoading}
+                loadingPosition="start"
                 startDecorator={(
                   <FiDownload />
           )}
