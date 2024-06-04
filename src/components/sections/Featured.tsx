@@ -14,7 +14,7 @@ import {
   FiArrowRight, FiCode, FiExternalLink,
 } from 'react-icons/fi';
 import { RiBracesLine } from 'react-icons/ri';
-import { Project } from 'assets/Projects';
+import { Project, rank } from 'assets/Projects';
 import { Link } from 'react-router-dom';
 import { MdErrorOutline } from 'react-icons/md';
 import { Default, Mobile, useMobileMode } from '../Responsive';
@@ -123,7 +123,7 @@ function ProjectCard({
             level="body2"
             startDecorator={
               <FaStar />
-                }
+            }
           >
             {project.interactions?.stars}
           </Typography>
@@ -153,18 +153,18 @@ function ProjectCard({
             Code
           </Button>
           {project.demo && (
-          <Button
-            component="a"
-            color={color}
-            variant="solid"
-            href={project.demo}
-            target="_blank"
-            startDecorator={
-              <FiExternalLink />
-            }
-          >
-            Website
-          </Button>
+            <Button
+              component="a"
+              color={color}
+              variant="solid"
+              href={project.demo}
+              target="_blank"
+              startDecorator={
+                <FiExternalLink />
+              }
+            >
+              Website
+            </Button>
           )}
         </Stack>
       </Stack>
@@ -265,12 +265,12 @@ export default function Featured() {
                     >
                       <FaGithub size="1rem" />
                     </Avatar>
-                )}
+                  )}
                 >
                   {`${projects.length > 0 ? projects.length : 'No'} repositor${projects.length === 1 ? 'y' : 'ies'}`}
                 </Chip>
               </Default>
-          )}
+            )}
           >
             Projects
           </Typography>
@@ -287,7 +287,8 @@ export default function Featured() {
               >
                 <FaGithub size="1rem" />
               </Avatar>
-        )}>
+            )}
+          >
             {projects.length}
             {' '}
             repositories
@@ -318,50 +319,50 @@ export default function Featured() {
             },
           }}
         >
-          {error && (
-          <Alert
-            color="info"
-            startDecorator={(
-              <MdErrorOutline size="1.1rem" />
-          )}
-            endDecorator={(
-              <Button
-                size="sm"
-                variant="plain"
-                color="info"
-                component="a"
-                href="https://stats.uptimerobot.com/y3hLa5ZEeK"
-                target="_blank"
-              >
-                Check API status
-              </Button>
-          )}
-            sx={{
-              gap: 0.5,
-              padding: '.3rem .3rem .3rem 1rem',
-              maxWidth: '100%',
-            }}
-          >
-            <span style={{
-              flex: '1 1 100%',
-              minWidth: 0,
-            }}
+          {error && !loading && (
+            <Alert
+              color="info"
+              startDecorator={(
+                <MdErrorOutline size="1.1rem" />
+              )}
+              endDecorator={(
+                <Button
+                  size="sm"
+                  variant="plain"
+                  color="info"
+                  component="a"
+                  href="https://stats.uptimerobot.com/y3hLa5ZEeK"
+                  target="_blank"
+                >
+                  Check API status
+                </Button>
+              )}
+              sx={{
+                gap: 0.5,
+                padding: '.3rem .3rem .3rem 1rem',
+                maxWidth: '100%',
+              }}
             >
-              <Typography
-                textColor="inherit"
-                fontSize="inherit"
-                fontWeight="inherit"
-                sx={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  maxWidth: '100%',
-                }}
+              <span style={{
+                flex: '1 1 100%',
+                minWidth: 0,
+              }}
               >
-                {error.message}
-              </Typography>
-            </span>
-          </Alert>
+                <Typography
+                  textColor="inherit"
+                  fontSize="inherit"
+                  fontWeight="inherit"
+                  sx={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '100%',
+                  }}
+                >
+                  {error.message}
+                </Typography>
+              </span>
+            </Alert>
           )}
           {loading ? (
             <Stack
@@ -383,16 +384,19 @@ export default function Featured() {
             </Stack>
           ) : (
             <>
-              {projects.map((project, index) => (
-                <React.Fragment
-                  key={project.title}
-                >
-                  <ProjectCard
-                    project={project}
-                  />
-                  {mobile && index < projects.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
+              {projects
+                .sort((a, b) => rank(b, projects) - rank(a, projects))
+                .slice(0, 6)
+                .map((project, index) => (
+                  <React.Fragment
+                    key={project.title}
+                  >
+                    <ProjectCard
+                      project={project}
+                    />
+                    {mobile && index < projects.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
             </>
           )}
         </Box>
