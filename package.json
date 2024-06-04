@@ -58,7 +58,7 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@testing-library/jest-dom": "^5.17.0",
-    "@testing-library/react": "^14.0.0",
+    "@testing-library/react": "^15.0.7",
     "@testing-library/user-event": "^14.2.0",
     "@types/jest": "^29.5.3",
     "@types/moment": "^2.13.0",
