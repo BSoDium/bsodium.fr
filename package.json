@@ -75,7 +75,7 @@
     "eslint-plugin-react": "^7.33.1",
     "eslint-plugin-react-hooks": "^4.5.0",
     "sass": "^1.64.2",
-    "sass-loader": "^13.3.2",
+    "sass-loader": "^14.2.1",
     "sharp": "^0.33.4",
     "tsx": "^4.10.5",
     "webpack": "^5.88.2"
