@@ -183,7 +183,7 @@ const details = {
   ],
   contact: {
     address: 'Barcelona, España',
-    email: 'negreljerzy.elliot@gmail.com',
+    email: 'contact@bsodium.fr',
     phone: '+33 7 83 79 29 25',
     website: 'https://www.bsodium.fr',
     linkedin: 'https://www.linkedin.com/in/bsodium/',

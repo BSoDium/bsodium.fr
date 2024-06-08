@@ -34,6 +34,5 @@
   "exclude": [
     "node_modules",
     "build",
-    "storybook-static"
   ]
 }
