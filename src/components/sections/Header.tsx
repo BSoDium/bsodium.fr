@@ -136,7 +136,7 @@ export default function Header() {
         fontFamily="'Fira Code', monospace"
         flexWrap="wrap"
       >
-        {`${greeting} ${visitor}`}
+        {`${greeting}, ${visitor}`}
       </Typography>
       <Typography
         level={mobile ? 'h5' : 'h4'}
