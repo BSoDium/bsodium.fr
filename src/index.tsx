@@ -8,7 +8,7 @@ import {
 } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import Landing from 'Landing';
-import Resume from 'Resume';
+import Resume from 'resume/Resume';
 import ReactGA from 'react-ga4';
 import 'App.global.scss';
 import Projects from 'components/projects/Projects';
@@ -17,6 +17,7 @@ import NavigationBar from 'navigation/NavigationBar';
 import AnalyticsBanner from 'components/AnalyticsBanner';
 import Copyright from 'components/Copyright';
 import NotFound from 'NotFound';
+import Download from 'resume/Download';
 
 if (process.env.REACT_APP_GA_MEASUREMENT_ID) {
   ReactGA.initialize(process.env.REACT_APP_GA_MEASUREMENT_ID as string);
@@ -32,20 +33,35 @@ root.render(
     <StyledEngineProvider injectFirst>
       <ThemeLoader>
         <BrowserRouter>
-          <AnalyticsBanner />
-          <Copyright />
           <Routes>
             <Route element={(
-              <NavigationBar>
+              <>
+                <AnalyticsBanner />
+                <Copyright />
                 <Outlet />
-              </NavigationBar>
-              )}
+              </>
+            )}
             >
-              <Route path="/" element={<Landing />} />
-              <Route path="/resume" element={<Resume />} />
-              <Route path="/projects" element={<Projects />} />
+              <Route element={(
+                <NavigationBar>
+                  <Outlet />
+                </NavigationBar>
+              )}
+              >
+                <Route index element={<Landing />} />
+                <Route
+                  path="/resume"
+                  element={(
+                    <>
+                      <Download />
+                      <Resume />
+                    </>
+              )}
+                />
+                <Route path="/projects" element={<Projects />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
             </Route>
-            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </ThemeLoader>

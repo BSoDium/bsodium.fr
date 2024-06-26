@@ -72,6 +72,7 @@ export default function Resume() {
     <>
       <Meta title={`Curriculum Vitae - ${details.name.first} ${details.name.last}`} />
       <Stack
+        id="resume"
         alignItems="center"
         sx={{
           width: '100vw',
