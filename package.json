@@ -24,7 +24,7 @@
     "react-ga4": "^2.1.0",
     "react-i18next": "^14.1.2",
     "react-icons": "^4.10.1",
-    "react-responsive": "^9.0.2",
+    "react-responsive": "^10.0.0",
     "react-router-dom": "^6.24.0",
     "react-scripts": "5.0.1",
     "react-scroll-parallax": "^3.4.5",
