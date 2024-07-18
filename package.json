@@ -16,7 +16,7 @@
     "@vercel/speed-insights": "^1.0.12",
     "axios": "^1.6.5",
     "color": "^4.2.3",
-    "i18next": "^23.11.5",
+    "i18next": "^23.12.1",
     "marked": "^13.0.2",
     "moment": "^2.29.4",
     "react": "^18.3.1",
