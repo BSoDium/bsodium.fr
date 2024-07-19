@@ -6,6 +6,8 @@ import enseeihtMin from 'assets/icons/enseeiht.min.webp';
 import enseeiht from 'assets/icons/enseeiht.webp';
 import escapeMin from 'assets/icons/escape.min.webp';
 import escape from 'assets/icons/escape.webp';
+import talentyouMin from 'assets/icons/talentyou.min.webp';
+import talentyou from 'assets/icons/talentyou.webp';
 import kanopMin from 'assets/icons/kanop.min.webp';
 import kanop from 'assets/icons/kanop.webp';
 import lfdcMin from 'assets/icons/lfdc.min.webp';
@@ -53,6 +55,27 @@ const details = {
     },
   ],
   experience: [
+    {
+      company: 'TalentYou.ai',
+      url: 'https://talentyou.ai/',
+      icon: talentyou,
+      iconMin: talentyouMin,
+      location: 'Barcelona, Spain',
+      contract: 'Full-time',
+      position: 'Full-stack engineer',
+      start: 'Jul 2024',
+      end: 'Present',
+      description: [
+      ],
+      skills: [
+        'React',
+        'REST',
+        'Docker',
+        'Django',
+        'Redux',
+        'i18n',
+      ],
+    },
     {
       company: 'Escape technologies',
       url: 'https://www.escape.tech/',
