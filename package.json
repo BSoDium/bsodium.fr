@@ -27,7 +27,7 @@
     "react-router-dom": "^6.24.1",
     "react-scripts": "5.0.1",
     "react-scroll-parallax": "^3.4.5",
-    "typescript": "^5.5.2",
+    "typescript": "^5.5.4",
     "web-vitals": "^4.2.1"
   },
   "scripts": {
