@@ -6,7 +6,7 @@
   "url": "https://www.bsodium.fr",
   "dependencies": {
     "@emotion/react": "^11.11.4",
-    "@emotion/styled": "^11.11.0",
+    "@emotion/styled": "^11.13.0",
     "@mui/joy": "5.0.0-alpha.85",
     "@react-hook/size": "^2.1.2",
     "@react-spring/web": "^9.7.3",
