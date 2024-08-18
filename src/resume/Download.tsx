@@ -1,14 +1,20 @@
 import {
-  Button, Card, CircularProgress, IconButton, Stack, Tooltip, Typography,
+  Button,
+  Card,
+  CircularProgress,
+  IconButton,
+  Stack,
+  Tooltip,
+  Typography,
   useColorScheme,
-} from '@mui/joy';
-import details from 'assets/Details';
-import { useMobileMode } from 'components/Responsive';
-import jsPDF from 'jspdf';
-import useOverlayQueryParam from 'navigation/useOverlayQueryParam';
-import React, { createRef, useState } from 'react';
-import { FaRegFilePdf } from 'react-icons/fa';
-import { FiDownload, FiPrinter } from 'react-icons/fi';
+} from "@mui/joy";
+import details from "@/assets/Details";
+import { useMobileMode } from "@/components/Responsive";
+import jsPDF from "jspdf";
+import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
+import { createRef, useState } from "react";
+import { FaRegFilePdf } from "react-icons/fa";
+import { FiDownload, FiPrinter } from "react-icons/fi";
 
 export default function Download() {
   const mobile = useMobileMode();
@@ -23,19 +29,19 @@ export default function Download() {
 
   const print = () => {
     const url = new URL(window.location.href);
-    url.searchParams.set('overlay', 'false');
-    const printWindow = window.open(url.toString(), '_blank');
+    url.searchParams.set("overlay", "false");
+    const printWindow = window.open(url.toString(), "_blank");
     if (printWindow) {
       const savedMode = mode;
-      setMode('light');
+      setMode("light");
 
       printWindow.onafterprint = () => {
-        setMode(savedMode || 'system');
+        setMode(savedMode || "system");
         printWindow.close();
         return null;
       };
       printWindow.onbeforeunload = () => {
-        setMode(savedMode || 'system');
+        setMode(savedMode || "system");
         return null;
       };
       printWindow.onload = () => {
@@ -46,12 +52,12 @@ export default function Download() {
 
   const download = () => {
     setDownloadLoading(true);
-    // eslint-disable-next-line new-cap
+
     const doc = new jsPDF({
-      orientation: 'p',
-      format: 'a4',
-      unit: 'px',
-      hotfixes: ['px_scaling'],
+      orientation: "p",
+      format: "a4",
+      unit: "px",
+      hotfixes: ["px_scaling"],
     });
     const source = document.body;
 
@@ -80,7 +86,7 @@ export default function Download() {
         },
         x: margin,
         y: margin,
-        autoPaging: 'text',
+        autoPaging: "text",
         width: adjustedWidth,
         windowWidth,
       });
@@ -96,47 +102,50 @@ export default function Download() {
       justifyContent="center"
       alignItems="center"
       sx={{
-        display: hidden ? 'none' : 'flex',
-        position: 'fixed',
-        bottom: 'var(--nav-safe-area-inset-bottom, 0)',
-        width: '100%',
-        paddingLeft: 'var(--nav-safe-area-inset-left, 0)',
+        display: hidden ? "none" : "flex",
+        position: "fixed",
+        bottom: "var(--nav-safe-area-inset-bottom, 0)",
+        width: "100%",
+        paddingLeft: "var(--nav-safe-area-inset-left, 0)",
         zIndex: 2,
       }}
     >
       <Card
         variant="outlined"
         sx={(theme) => ({
-          width: mobile ? 'calc(100% - 1rem)' : '30rem',
-          margin: mobile ? '.5rem' : '0 0 1rem 0',
+          width: mobile ? "calc(100% - 1rem)" : "30rem",
+          margin: mobile ? ".5rem" : "0 0 1rem 0",
           backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 30%)`,
-          backdropFilter: 'blur(10px)',
-          webkitBackdropFilter: 'blur(10px)',
-          padding: '.5rem',
-          boxShadow: 'lg',
+          backdropFilter: "blur(10px)",
+          webkitBackdropFilter: "blur(10px)",
+          padding: ".5rem",
+          boxShadow: "lg",
         })}
       >
-        <Stack direction="row" gap={1} alignItems="center" justifyContent="space-between">
-
+        <Stack
+          direction="row"
+          gap={1}
+          alignItems="center"
+          justifyContent="space-between"
+        >
           <Typography
             level="body2"
             fontWeight={500}
             marginLeft={0.7}
-            startDecorator={(
-              <FaRegFilePdf size="1.2rem" />
-          )}
+            startDecorator={<FaRegFilePdf size="1.2rem" />}
             sx={{
               gap: 0.5,
-              flex: '1 1 100%',
+              flex: "1 1 100%",
               minWidth: 0,
             }}
           >
-            <span style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: '100%',
-            }}
+            <span
+              style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: "100%",
+              }}
             >
               {fileName}
             </span>
@@ -144,11 +153,7 @@ export default function Download() {
           <Stack direction="row" gap={1}>
             {mobile ? (
               <Tooltip placement="top" variant="outlined" title="Print">
-                <IconButton
-                  color="neutral"
-                  variant="plain"
-                  onClick={print}
-                >
+                <IconButton color="neutral" variant="plain" onClick={print}>
                   <FiPrinter />
                 </IconButton>
               </Tooltip>
@@ -157,9 +162,7 @@ export default function Download() {
                 color="neutral"
                 variant="plain"
                 onClick={print}
-                startDecorator={(
-                  <FiPrinter />
-          )}
+                startDecorator={<FiPrinter />}
               >
                 Print
               </Button>
@@ -172,9 +175,7 @@ export default function Download() {
                   disabled={downloadLoading}
                 >
                   {downloadLoading ? (
-                    <CircularProgress
-                      size="sm"
-                    />
+                    <CircularProgress size="sm" />
                   ) : (
                     <FiDownload />
                   )}
@@ -185,9 +186,7 @@ export default function Download() {
                 onClick={download}
                 loading={downloadLoading}
                 loadingPosition="start"
-                startDecorator={(
-                  <FiDownload />
-          )}
+                startDecorator={<FiDownload />}
               >
                 Download
               </Button>
