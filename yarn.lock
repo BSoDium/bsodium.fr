@@ -1671,12 +1671,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^20.14.10":
-  version: 20.16.0
-  resolution: "@types/node@npm:20.16.0"
+"@types/node@npm:^22.4.0":
+  version: 22.4.0
+  resolution: "@types/node@npm:22.4.0"
   dependencies:
     undici-types: "npm:~6.19.2"
-  checksum: 10c0/ad8e11e654af99b3556397c87a495cf3cf5d3e8e8bfa1f60e14d255763e9cde7e703d7309fb7c39e89c1191281f2759cb8314f36dee2ae0bf8779123fc85d90c
+  checksum: 10c0/84cd094b19a27e0db425f1d02614e4f7ac59b5eb3b21e288c8f8d4d0a4c9ad370107bc1a649d4c2b4e810cd133feea26e0bbf7e7c617f93e9e139d6d2568cf50
   languageName: node
   linkType: hard
 
@@ -2287,7 +2287,7 @@ __metadata:
     "@mui/joy": "npm:5.0.0-alpha.85"
     "@react-spring/web": "npm:^9.7.3"
     "@types/color": "npm:^3.0.3"
-    "@types/node": "npm:^20.14.10"
+    "@types/node": "npm:^22.4.0"
     "@types/react": "npm:^18.3.3"
     "@types/react-dom": "npm:^18.3.0"
     "@typescript-eslint/eslint-plugin": "npm:^7.15.0"
