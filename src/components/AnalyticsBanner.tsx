@@ -1,20 +1,20 @@
-import {
-  Button, Card, Stack, Typography,
-} from '@mui/joy';
-import { animated, useSpringRef, useTransition } from '@react-spring/web';
-import React, { useEffect, useState } from 'react';
+import { Button, Card, Stack, Typography } from "@mui/joy";
+import { animated, useSpringRef, useTransition } from "@react-spring/web";
+import { useEffect, useState } from "react";
 
 export default function AnalyticsBanner() {
-  const [isDimissed, setIsDimissed] = useState(localStorage.getItem('analyticsBannerDismissed') === 'true');
+  const [isDimissed, setIsDimissed] = useState(
+    localStorage.getItem("analyticsBannerDismissed") === "true"
+  );
 
   const transitionRef = useSpringRef();
 
   const transition = useTransition(isDimissed, {
     ref: transitionRef,
     keys: null,
-    from: { opacity: 0, transform: 'translateY(2rem)' },
-    enter: { opacity: 1, transform: 'translateY(0rem)' },
-    leave: { opacity: 0, transform: 'translateY(2rem)' },
+    from: { opacity: 0, transform: "translateY(2rem)" },
+    enter: { opacity: 1, transform: "translateY(0rem)" },
+    leave: { opacity: 0, transform: "translateY(2rem)" },
   });
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function AnalyticsBanner() {
   }, [transitionRef, isDimissed]);
 
   const dismiss = () => {
-    localStorage.setItem('analyticsBannerDismissed', 'true');
+    localStorage.setItem("analyticsBannerDismissed", "true");
     setIsDimissed(true);
   };
 
@@ -35,14 +35,14 @@ export default function AnalyticsBanner() {
         component={animated.div}
         variant="outlined"
         sx={(theme) => ({
-          position: 'fixed',
-          bottom: 'var(--nav-safe-area-inset-bottom, 0)',
-          marginBottom: '1rem',
-          left: '50%',
+          position: "fixed",
+          bottom: "var(--nav-safe-area-inset-bottom, 0)",
+          marginBottom: "1rem",
+          left: "50%",
           backgroundColor: theme.palette.background.body,
           zIndex: 1000,
-          width: 'min(100% - 2rem, 45rem)',
-          boxShadow: 'xl',
+          width: "min(100% - 2rem, 45rem)",
+          boxShadow: "xl",
         })}
         style={{
           ...style,
@@ -55,15 +55,10 @@ export default function AnalyticsBanner() {
               Hey there mate 👋
             </Typography>
             <Typography level="body2" textColor="text.primary">
-              I gather analytics to understand how you
-              {' '}
-              use this site and to improve your experience.
-              {' '}
-              Adding this page to your ad blocker whitelist
-              {' '}
-              would mean a lot. You won&apos;t see any
-              {' '}
-              ads, and your data will still be kept private.
+              I gather analytics to understand how you use this site and to
+              improve your experience. Adding this page to your ad blocker
+              whitelist would mean a lot. You won&apos;t see any ads, and your
+              data will still be kept private.
             </Typography>
           </Stack>
 
@@ -80,13 +75,13 @@ export default function AnalyticsBanner() {
               size="sm"
               color="neutral"
               sx={(theme) => ({
-                transition: 'all 0.2s',
+                transition: "all 0.2s",
                 backgroundColor: theme.palette.text.primary,
                 color: theme.palette.background.body,
-                '&:hover': {
+                "&:hover": {
                   backgroundColor: theme.palette.text.secondary,
                 },
-                '&:active': {
+                "&:active": {
                   backgroundColor: theme.palette.text.tertiary,
                 },
               })}

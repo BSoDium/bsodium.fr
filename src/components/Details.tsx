@@ -2,8 +2,8 @@ import {
   Avatar, Chip, Stack, Typography,
 } from '@mui/joy';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
-import details from 'assets/Details';
-import ProgressiveImage from 'components/ProgressiveImage';
+import details from '@/assets/Details';
+import ProgressiveImage from '@/components/ProgressiveImage';
 import moment from 'moment';
 import React, { useEffect } from 'react';
 import { BsCode } from 'react-icons/bs';

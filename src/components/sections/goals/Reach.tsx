@@ -1,10 +1,10 @@
 import {
   FiAtSign, FiUser,
 } from 'react-icons/fi';
-import satelliteDark from 'assets/satellite_dark.webp';
-import satelliteDarkMin from 'assets/satellite_dark.min.webp';
-import satelliteLight from 'assets/satellite_light.webp';
-import satelliteLightMin from 'assets/satellite_light.min.webp';
+import satelliteDark from '@/assets/satellite_dark.webp';
+import satelliteDarkMin from '@/assets/satellite_dark.min.webp';
+import satelliteLight from '@/assets/satellite_light.webp';
+import satelliteLightMin from '@/assets/satellite_light.min.webp';
 import React, { useEffect, useState } from 'react';
 import {
   animated, useSpringRef, useSpringValue, useTransition,
@@ -17,7 +17,7 @@ import {
 import { MdErrorOutline, MdSend } from 'react-icons/md';
 import { FaFire } from 'react-icons/fa';
 import { BsSendCheck } from 'react-icons/bs';
-import ProgressiveImage from 'components/ProgressiveImage';
+import ProgressiveImage from '@/components/ProgressiveImage';
 import { Default, useMobileMode } from '../../Responsive';
 
 export default function Reach({ step } : {step: number}) {
@@ -41,7 +41,7 @@ export default function Reach({ step } : {step: number}) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        access_key: process.env.REACT_APP_WEB3FORMS_ACCESS_KEY,
+        access_key: import.meta.env.REACT_APP_WEB3FORMS_ACCESS_KEY,
         email,
         name,
         message,

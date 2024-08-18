@@ -3,20 +3,20 @@ import {
   useColorScheme,
 } from '@mui/joy';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
-import architectureDarkMin from 'assets/architecture_dark.min.webp';
-import architectureDark from 'assets/architecture_dark.webp';
-import architectureLightMin from 'assets/architecture_light.min.webp';
-import architectureLight from 'assets/architecture_light.webp';
-import ProgressiveImage from 'components/ProgressiveImage';
+import architectureDarkMin from '@/assets/architecture_dark.min.webp';
+import architectureDark from '@/assets/architecture_dark.webp';
+import architectureLightMin from '@/assets/architecture_light.min.webp';
+import architectureLight from '@/assets/architecture_light.webp';
+import ProgressiveImage from '@/components/ProgressiveImage';
 import {
   useMobileMode,
-} from 'components/Responsive';
-import Meta from 'components/Meta';
+} from '@/components/Responsive';
+import Meta from '@/components/Meta';
 import React, { useEffect, useState } from 'react';
 import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
 import { Link } from 'react-router-dom';
-import details from 'assets/Details';
+import details from '@/assets/Details';
 import Directory from './Directory';
 
 function ThemeSwitcherButton() {
