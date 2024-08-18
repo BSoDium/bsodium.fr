@@ -4,6 +4,14 @@
   "license": "GPL-2.0-only",
   "author": "BSoDium",
   "url": "https://www.bsodium.fr",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "lint": "eslint src",
+    "build": "tsc -b && yarn lint && vite build",
+    "preview": "vite preview",
+    "build:assets": "tsx scripts/build-assets.ts"
+  },
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.13.0",
@@ -14,70 +22,39 @@
     "@types/marked": "^6.0.0",
     "@vercel/speed-insights": "^1.0.12",
     "axios": "^1.6.5",
-    "color": "^4.2.3",
-    "i18next": "^23.12.1",
     "marked": "^13.0.2",
     "moment": "^2.29.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-ga4": "^2.1.0",
-    "react-i18next": "^15.0.0",
     "react-icons": "^5.2.1",
     "react-responsive": "^10.0.0",
     "react-router-dom": "^6.24.1",
-    "react-scripts": "5.0.1",
     "react-scroll-parallax": "^3.4.5",
-    "typescript": "^5.5.4",
-    "web-vitals": "^4.2.1"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "build:assets": "tsx scripts/build-assets.ts"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "typescript": "^5.5.4"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "@testing-library/jest-dom": "^6.4.7",
-    "@testing-library/react": "^15.0.7",
-    "@testing-library/user-event": "^14.2.0",
-    "@types/jest": "^29.5.12",
+    "@eslint/js": "^9.7.0",
     "@types/moment": "^2.13.0",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^6.21.0",
-    "eslint": "^8.57.0",
-    "eslint-config-airbnb": "^19.0.4",
-    "eslint-import-resolver-typescript": "^3.5.5",
-    "eslint-plugin-import": "^2.28.0",
-    "eslint-plugin-jsx-a11y": "^6.9.0",
-    "eslint-plugin-react": "^7.34.4",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^9.7.0",
+    "eslint-plugin-react": "^7.35.0",
     "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.7",
+    "eslint-plugin-storybook": "^0.8.0",
+    "globals": "^15.9.0",
     "sass": "^1.64.2",
     "sass-loader": "^14.2.1",
     "sharp": "^0.33.4",
     "tsx": "^4.16.0",
-    "webpack": "^5.88.2"
+    "typescript-eslint": "^7.17.0",
+    "vite": "^5.3.4",
+    "vite-plugin-svgr": "^4.2.0"
   },
   "packageManager": "yarn@4.3.1"
 }
