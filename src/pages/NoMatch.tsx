@@ -21,7 +21,7 @@ function getRandomRotation(prev = 0) {
   return 0;
 }
 
-export default function NotFound() {
+export default function NoMatch() {
   const nonDesktop = useNonDesktopMode();
 
   const [rotations, setRotations] = useState({
