@@ -15,9 +15,9 @@ This project is available for free as a proof of concept and source of inspirati
 This app uses several environment variables to configure the API url, Google Analytics tracking ID and Web3forms access key. You can create a `.env.local` file in the root directory with the following content:
 
 ```shell
-REACT_APP_API_URL=https://localhost:3001 # The URL of the backend
-REACT_APP_GOOGLE_ANALYTICS_ID=UA-XXXXXXXXX-X # Your google Analytics tracking ID
-REACT_APP_WEB3FORMS_KEY=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX # Your web3forms access key
+VITE_API_URL=https://localhost:3001 # The URL of the backend
+VITE_GOOGLE_ANALYTICS_ID=UA-XXXXXXXXX-X # Your google Analytics tracking ID
+VITE_WEB3FORMS_KEY=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX # Your web3forms access key
 ```
 
 To run the app locally, you need to have Node.js and yarn installed on your machine. Clone this repository and run the following commands in the root directory:
@@ -33,7 +33,7 @@ In its default configuration, the app should be available at http://localhost:30
 
 For detailed documentation on how to run the backend, please refer to the [api.bsodium.fr](https://github.com/BSoDium/api.bsodium.fr) repository.
 
-By default, the backend is expected to run on `http://localhost:3001`. If you decide to change this, you should also modify the `REACT_APP_API_URL` environment variable in the `.env.local` file accordingly.
+By default, the backend is expected to run on `http://localhost:3001`. If you decide to change this, you should also modify the `VITE_API_URL` environment variable in the `.env.local` file accordingly.
 
 ## License
 
