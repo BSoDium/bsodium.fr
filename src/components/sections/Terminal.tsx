@@ -1,4 +1,3 @@
-/* eslint-disable react/jsx-props-no-spreading */
 import {
   Avatar,
   Card,
@@ -14,27 +13,27 @@ import {
   Tooltip,
   Typography,
   useColorScheme,
-} from '@mui/joy';
-import React, { useEffect, useState } from 'react';
+} from "@mui/joy";
+import React, { useEffect, useState } from "react";
 import {
   VscChromeClose,
   VscChromeMaximize,
   VscChromeMinimize,
   VscTerminalPowershell,
-} from 'react-icons/vsc';
+} from "react-icons/vsc";
 
-import { IoAddOutline } from 'react-icons/io5';
-import { HiChevronDown } from 'react-icons/hi';
-import { FaPause, FaPlay } from 'react-icons/fa';
-import { RiUserLine } from 'react-icons/ri';
-import mockMessages from 'utils/Messages';
-import { Parallax } from 'react-scroll-parallax';
-import details from 'assets/Details';
-import { Default, Mobile, useMobileMode } from '../Responsive';
-import Details from '../Details';
-import TypeWriter from '../TypeWriter';
+import { IoAddOutline } from "react-icons/io5";
+import { HiChevronDown } from "react-icons/hi";
+import { FaPause, FaPlay } from "react-icons/fa";
+import { RiUserLine } from "react-icons/ri";
+import mockMessages from "@/utils/Messages";
+import { Parallax } from "react-scroll-parallax";
+import details from "@/assets/Details";
+import { Default, Mobile, useMobileMode } from "@/components/Responsive";
+import Details from "@/components/Details";
+import TypeWriter from "@/components/TypeWriter";
 
-export const categories = ['experience', 'education'] as const;
+export const categories = ["experience", "education"] as const;
 
 export type Category = (typeof categories)[number];
 
@@ -68,8 +67,8 @@ export function FakeButton({
       <IconButton
         {...rest}
         sx={(theme) => ({
-          ...((typeof sx === 'function' ? sx(theme) : sx) as object),
-          transition: 'all ease .2s',
+          ...((typeof sx === "function" ? sx(theme) : sx) as object),
+          transition: "all ease .2s",
         })}
       >
         {children}
@@ -93,8 +92,8 @@ export default function Terminal() {
 
   const mobile = useMobileMode();
   const { colorScheme } = useColorScheme();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const dark = colorScheme === 'dark';
+   
+  const dark = colorScheme === "dark";
 
   useEffect(() => {
     setLoadingTime(Math.floor(Math.random() * 300));
@@ -124,36 +123,38 @@ export default function Terminal() {
   return (
     <Stack
       gap={3}
-      alignItems={mobile ? 'center' : 'flex-start'}
+      alignItems={mobile ? "center" : "flex-start"}
       sx={(theme) => ({
-        position: 'relative',
-        '&::before': mobile ? {} : {
-          content: '""',
-          position: 'absolute',
-          top: '0',
-          left: '-50px',
-          height: '100%',
-          width: '2px',
-          background: `linear-gradient(to bottom, ${theme.palette.primary[500]}, ${theme.palette.info[500]})`,
-        },
+        position: "relative",
+        "&::before": mobile
+          ? {}
+          : {
+              content: '""',
+              position: "absolute",
+              top: "0",
+              left: "-50px",
+              height: "100%",
+              width: "2px",
+              background: `linear-gradient(to bottom, ${theme.palette.primary[500]}, ${theme.palette.info[500]})`,
+            },
       })}
     >
       <Mobile>
         <Avatar
           color="primary"
           sx={(theme) => ({
-            position: 'relative',
-            border: 'none',
+            position: "relative",
+            border: "none",
             outline: `2px solid ${theme.palette.primary[500]}`,
             boxShadow: `0 0 40px 5px rgba(${theme.palette.primary.mainChannel} / 0.4)`,
-            overflow: 'visible',
-            marginTop: '3rem',
-            '&::before': {
+            overflow: "visible",
+            marginTop: "3rem",
+            "&::before": {
               content: '""',
-              position: 'absolute',
-              top: '-5rem',
-              height: '5rem',
-              width: '2px',
+              position: "absolute",
+              top: "-5rem",
+              height: "5rem",
+              width: "2px",
               background: `linear-gradient(to bottom, transparent, ${theme.palette.primary[500]})`,
             },
           })}
@@ -163,18 +164,18 @@ export default function Terminal() {
       </Mobile>
       <Typography
         level="h2"
-        sx={{ position: 'relative', textAlign: mobile ? 'center' : 'left' }}
+        sx={{ position: "relative", textAlign: mobile ? "center" : "left" }}
         id="profile"
       >
         <Default>
           <Avatar
             color="primary"
             sx={(theme) => ({
-              position: 'absolute',
-              left: '-49px',
-              top: '0',
-              transform: 'translateX(-50%)',
-              border: 'none',
+              position: "absolute",
+              left: "-49px",
+              top: "0",
+              transform: "translateX(-50%)",
+              border: "none",
               outline: `2px solid ${theme.palette.primary[500]}`,
               boxShadow: `0 0 40px 5px rgba(${theme.palette.primary.mainChannel} / 0.4)`,
             })}
@@ -182,14 +183,8 @@ export default function Terminal() {
             <RiUserLine />
           </Avatar>
         </Default>
-
-        Profile
-        {' '}
-        <Typography
-          color="primary"
-          alignItems="center"
-          fontWeight="xl"
-        >
+        Profile{" "}
+        <Typography color="primary" alignItems="center" fontWeight="xl">
           Overview
         </Typography>
       </Typography>
@@ -197,29 +192,33 @@ export default function Terminal() {
         opacity={[0, 1]}
         disabled={mobile}
         easing="easeOutBack"
-        style={{ width: '100%' }}
+        style={{ width: "100%" }}
       >
         <Card
           variant="outlined"
           component={Stack}
           sx={(theme) => ({
-            ...(mobile ? {
-              backgroundColor: 'transparent',
-              border: 'none',
-              boxShadow: 'none',
-              margin: '-1rem',
-              marginTop: '1rem',
-            } : {
-              backgroundColor: dark ? `color-mix(in srgb, ${theme.palette.background.body}, ${theme.palette.neutral.softBg} 40%)` : `color-mix(in srgb, ${theme.palette.background.level1}, transparent 70%)`,
-              border: `1px solid ${theme.palette.neutral.outlinedBorder}`,
-              height: '550px',
-              boxShadow: 'lg',
-              margin: 0,
-            }),
+            ...(mobile
+              ? {
+                  backgroundColor: "transparent",
+                  border: "none",
+                  boxShadow: "none",
+                  margin: "-1rem",
+                  marginTop: "1rem",
+                }
+              : {
+                  backgroundColor: dark
+                    ? `color-mix(in srgb, ${theme.palette.background.body}, ${theme.palette.neutral.softBg} 40%)`
+                    : `color-mix(in srgb, ${theme.palette.background.level1}, transparent 70%)`,
+                  border: `1px solid ${theme.palette.neutral.outlinedBorder}`,
+                  height: "550px",
+                  boxShadow: "lg",
+                  margin: 0,
+                }),
             padding: 0,
             gap: 0,
-            marginBottom: '3rem',
-            overflow: 'hidden',
+            marginBottom: "3rem",
+            overflow: "hidden",
           })}
         >
           {!mobile && (
@@ -228,7 +227,7 @@ export default function Terminal() {
                 direction="row"
                 gap={0}
                 sx={{
-                  overflow: 'hidden',
+                  overflow: "hidden",
                 }}
               >
                 <Stack
@@ -244,43 +243,50 @@ export default function Terminal() {
                     <Card
                       key={tab.name}
                       sx={(theme) => ({
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexDirection: 'row',
-                        width: '250px',
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexDirection: "row",
+                        width: "250px",
                         backgroundColor: dark
-                          ? theme.palette.background.level1 : theme.palette.background.level2,
+                          ? theme.palette.background.level1
+                          : theme.palette.background.level2,
                         borderBottomRightRadius: 0,
                         borderBottomLeftRadius: 0,
-                        boxShadow: 'none',
-                        position: 'relative',
+                        boxShadow: "none",
+                        position: "relative",
                         p: 0,
-                        '&:before': {
+                        "&:before": {
                           zIndex: 100,
                           content: '""',
-                          position: 'absolute',
-                          left: '-6px',
-                          top: '50%',
-                          height: '50%',
-                          width: '6px',
-                          borderRadius: '0 0 6px 0',
-                          backgroundColor: 'transparent',
-                          boxShadow: `0 6px 0px 0px ${dark
-                            ? theme.palette.background.level1 : theme.palette.background.level2}`,
+                          position: "absolute",
+                          left: "-6px",
+                          top: "50%",
+                          height: "50%",
+                          width: "6px",
+                          borderRadius: "0 0 6px 0",
+                          backgroundColor: "transparent",
+                          boxShadow: `0 6px 0px 0px ${
+                            dark
+                              ? theme.palette.background.level1
+                              : theme.palette.background.level2
+                          }`,
                         },
-                        '&:after': {
+                        "&:after": {
                           zIndex: 100,
                           content: '""',
-                          position: 'absolute',
-                          right: '-6px',
-                          top: '50%',
-                          height: '50%',
-                          width: '6px',
-                          borderRadius: '0 0 0 6px',
-                          backgroundColor: 'transparent',
-                          boxShadow: `0 6px 0px 0px ${dark
-                            ? theme.palette.background.level1 : theme.palette.background.level2}`,
+                          position: "absolute",
+                          right: "-6px",
+                          top: "50%",
+                          height: "50%",
+                          width: "6px",
+                          borderRadius: "0 0 0 6px",
+                          backgroundColor: "transparent",
+                          boxShadow: `0 6px 0px 0px ${
+                            dark
+                              ? theme.palette.background.level1
+                              : theme.palette.background.level2
+                          }`,
                         },
                       })}
                     >
@@ -292,8 +298,8 @@ export default function Terminal() {
                         sx={{
                           marginLeft: 1,
                           gap: 0.5,
-                          wordWrap: 'nowrap',
-                          textOverflow: 'ellipsis',
+                          wordWrap: "nowrap",
+                          textOverflow: "ellipsis",
                         }}
                       >
                         {tab.name}
@@ -305,8 +311,8 @@ export default function Terminal() {
                         variant="plain"
                         color="neutral"
                         sx={{
-                          height: '25px',
-                          minHeight: '25px',
+                          height: "25px",
+                          minHeight: "25px",
                           marginRight: 0.5,
                         }}
                       >
@@ -323,10 +329,10 @@ export default function Terminal() {
                     variant="soft"
                     color="neutral"
                     sx={{
-                      borderRadius: '6px',
+                      borderRadius: "6px",
                       borderTopRightRadius: 0,
                       borderBottomRightRadius: 0,
-                      minHeight: '25px',
+                      minHeight: "25px",
                     }}
                   >
                     <IoAddOutline />
@@ -339,10 +345,10 @@ export default function Terminal() {
                     variant="soft"
                     color="neutral"
                     sx={{
-                      borderRadius: '6px',
+                      borderRadius: "6px",
                       borderTopLeftRadius: 0,
                       borderBottomLeftRadius: 0,
-                      minHeight: '25px',
+                      minHeight: "25px",
                     }}
                   >
                     <HiChevronDown />
@@ -383,7 +389,7 @@ export default function Terminal() {
                     sx={(theme) => ({
                       borderRadius: 0,
                       paddingX: 2,
-                      '&:hover': {
+                      "&:hover": {
                         backgroundColor: theme.palette.danger.solidBg,
                         color: theme.palette.danger.solidColor,
                       },
@@ -398,16 +404,16 @@ export default function Terminal() {
           <Default>
             <Tooltip
               variant="outlined"
-              title={`${playing ? 'Pause' : 'Resume'} auto-play`}
+              title={`${playing ? "Pause" : "Resume"} auto-play`}
             >
               <IconButton
                 size="sm"
                 variant="plain"
                 color="neutral"
                 sx={{
-                  position: 'absolute',
-                  bottom: '10px',
-                  right: '15px',
+                  position: "absolute",
+                  bottom: "10px",
+                  right: "15px",
                   zIndex: 1,
                 }}
                 onClick={() => {
@@ -422,18 +428,23 @@ export default function Terminal() {
             component={Stack}
             direction="column"
             sx={(theme) => ({
-              ...(mobile ? {
-                backgroundColor: 'transparent',
-              } : {
-                backgroundColor: `color-mix(in srgb, transparent, ${dark
-                  ? theme.palette.background.level1 : theme.palette.background.level2} 70%)`,
-              }),
-              position: 'relative',
+              ...(mobile
+                ? {
+                    backgroundColor: "transparent",
+                  }
+                : {
+                    backgroundColor: `color-mix(in srgb, transparent, ${
+                      dark
+                        ? theme.palette.background.level1
+                        : theme.palette.background.level2
+                    } 70%)`,
+                  }),
+              position: "relative",
               p: 2,
               gap: 1,
               flexGrow: 1,
-              overflowY: 'auto',
-              overflowX: 'hidden',
+              overflowY: "auto",
+              overflowX: "hidden",
             })}
           >
             <Typography
@@ -459,8 +470,7 @@ export default function Terminal() {
                   setSelected(displayed);
                 }}
                 typeInterval={20}
-                sx={{
-                }}
+                sx={{}}
               >
                 {`${details.name.nickname.toLowerCase()}.exe ‑‑${displayed}`}
               </TypeWriter>
@@ -468,21 +478,19 @@ export default function Terminal() {
             <Tabs
               aria-label="terminal options"
               value={selected}
-              onChange={
-            (_, newValue) => {
-              setSelected(newValue as Category);
-              setDisplayed(newValue as Category);
-              setPlaying(false);
-            }
-            }
+              onChange={(_, newValue) => {
+                setSelected(newValue as Category);
+                setDisplayed(newValue as Category);
+                setPlaying(false);
+              }}
               sx={{
-                width: 'fit-content',
-                backgroundColor: 'transparent',
+                width: "fit-content",
+                backgroundColor: "transparent",
               }}
             >
               <TabList
                 sx={{
-                  backgroundColor: 'transparent',
+                  backgroundColor: "transparent",
                   gap: 0,
                 }}
               >
@@ -493,18 +501,21 @@ export default function Terminal() {
                       component={Tab}
                       key={name}
                       value={name}
-                      variant={checked ? 'solid' : 'plain'}
+                      variant={checked ? "solid" : "plain"}
                       color="neutral"
                       sx={(theme) => ({
                         fontFamily: "'Fira Code', monospace",
-                        borderRadius: '6px',
-                        ...(checked ? {
-                          backgroundColor: dark
-                            ? theme.palette.neutral.solidColor : theme.palette.neutral.solidBg,
-                          color: dark
-                            ? theme.palette.neutral.solidBg : theme.palette.neutral.solidColor,
-                        } : {
-                        }),
+                        borderRadius: "6px",
+                        ...(checked
+                          ? {
+                              backgroundColor: dark
+                                ? theme.palette.neutral.solidColor
+                                : theme.palette.neutral.solidBg,
+                              color: dark
+                                ? theme.palette.neutral.solidBg
+                                : theme.palette.neutral.solidColor,
+                            }
+                          : {}),
                       })}
                     >
                       {name}

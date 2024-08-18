@@ -2,8 +2,8 @@ import {
   Avatar, Chip, Stack, Typography,
 } from '@mui/joy';
 import { animated, useSpringRef, useTransition } from '@react-spring/web';
-import details from 'assets/Details';
-import ProgressiveImage from 'components/ProgressiveImage';
+import details from '@/assets/Details';
+import ProgressiveImage from '@/components/ProgressiveImage';
 import moment from 'moment';
 import React, { useEffect } from 'react';
 import { BsCode } from 'react-icons/bs';
@@ -12,7 +12,7 @@ import { GoOrganization } from 'react-icons/go';
 import { IoSchoolOutline } from 'react-icons/io5';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
-import { Category } from './sections/Terminal';
+import { Category } from '@/components/sections/Terminal';
 
 export const skillIcons: {
   [key: string]: React.ReactNode;

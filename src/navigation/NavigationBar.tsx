@@ -1,4 +1,3 @@
-/* eslint-disable no-nested-ternary */
 import {
   Button,
   IconButton,
@@ -6,10 +5,10 @@ import {
   Tooltip,
   Typography,
   useColorScheme,
-} from '@mui/joy';
-import React, { useEffect, useMemo, useState } from 'react';
-import { useLandScapeMode, useMobileMode } from 'components/Responsive';
-import { Link, useLocation } from 'react-router-dom';
+} from "@mui/joy";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLandScapeMode, useMobileMode } from "@/components/Responsive";
+import { Link, useLocation } from "react-router-dom";
 import {
   BsHouse,
   BsHouseFill,
@@ -19,78 +18,76 @@ import {
   BsFilePerson,
   BsFilePersonFill,
   BsSun,
-} from 'react-icons/bs';
-import { MdOutlineAutoMode } from 'react-icons/md';
-import useOverlayQueryParam from './useOverlayQueryParam';
+} from "react-icons/bs";
+import { MdOutlineAutoMode } from "react-icons/md";
+import useOverlayQueryParam from '@/navigation/useOverlayQueryParam';
 
-const modes = ['light', 'dark', 'system'] as const;
+const modes = ["light", "dark", "system"] as const;
 
 function NavigationBarItem({
   icon,
   text,
   to,
   selectedIcon,
-  layout = 'vertical',
+  layout = "vertical",
   selected,
 }: {
   icon: JSX.Element;
   text: string;
   to: string;
   selectedIcon?: JSX.Element;
-  layout?: 'vertical' | 'horizontal';
+  layout?: "vertical" | "horizontal";
   selected?: boolean;
 }) {
   const mobile = useMobileMode();
-  return layout === 'vertical' ? (
+  return layout === "vertical" ? (
     <Stack
       component={Link}
       to={to}
       alignItems="center"
       gap={1}
       sx={{
-        cursor: 'pointer',
-        borderRadius: '0.5rem',
-        fontSize: '1.3rem',
-        paddingX: '1rem',
-        textDecoration: 'none',
+        cursor: "pointer",
+        borderRadius: "0.5rem",
+        fontSize: "1.3rem",
+        paddingX: "1rem",
+        textDecoration: "none",
       }}
     >
       <Button
         color="neutral"
-        variant={selected ? 'solid' : 'plain'}
+        variant={selected ? "solid" : "plain"}
         sx={(theme) => ({
-          transition: 'all 0.2s',
-          padding: '0.3rem 1.1rem',
-          borderRadius: '100vmax',
-          minHeight: 'fit-content',
-          fontSize: 'inherit',
-          '& > svg': {
-            transition: 'all 0.2s',
+          transition: "all 0.2s",
+          padding: "0.3rem 1.1rem",
+          borderRadius: "100vmax",
+          minHeight: "fit-content",
+          fontSize: "inherit",
+          "& > svg": {
+            transition: "all 0.2s",
           },
-          '&:hover > svg': {
-            transform: 'scale(1.05)',
+          "&:hover > svg": {
+            transform: "scale(1.05)",
           },
           ...(selected
             ? {
-              backgroundColor: theme.palette.text.primary,
-              color: selected
-                ? theme.palette.background.body
-                : theme.palette.text.primary,
-              '&:hover, &:active': {
-                backgroundColor: mobile ? theme.palette.text.primary : theme.palette.text.secondary,
-                color: theme.palette.background.body,
-              },
-            }
+                backgroundColor: theme.palette.text.primary,
+                color: selected
+                  ? theme.palette.background.body
+                  : theme.palette.text.primary,
+                "&:hover, &:active": {
+                  backgroundColor: mobile
+                    ? theme.palette.text.primary
+                    : theme.palette.text.secondary,
+                  color: theme.palette.background.body,
+                },
+              }
             : {}),
         })}
       >
         {selected ? selectedIcon || icon : icon}
       </Button>
-      <Typography
-        level="body3"
-        fontWeight="700"
-        textColor="text.primary"
-      >
+      <Typography level="body3" fontWeight="700" textColor="text.primary">
         {text}
       </Typography>
     </Stack>
@@ -99,31 +96,31 @@ function NavigationBarItem({
       component={Link}
       to={to}
       color="neutral"
-      variant={selected ? 'solid' : 'plain'}
+      variant={selected ? "solid" : "plain"}
       sx={(theme) => ({
-        minHeight: 'fit-content',
-        borderRadius: '100vmax',
-        padding: '.6rem 1rem',
-        transition: 'all 0.2s',
-        '& > svg': {
-          transition: 'all 0.2s',
+        minHeight: "fit-content",
+        borderRadius: "100vmax",
+        padding: ".6rem 1rem",
+        transition: "all 0.2s",
+        "& > svg": {
+          transition: "all 0.2s",
         },
-        '&:hover > svg': {
-          transform: 'scale(1.05)',
+        "&:hover > svg": {
+          transform: "scale(1.05)",
         },
         ...(selected
           ? {
-            backgroundColor: theme.palette.text.primary,
-            color: selected
-              ? theme.palette.background.body
-              : theme.palette.text.primary,
-            '&:hover': {
-              backgroundColor: mobile
-                ? undefined
-                : theme.palette.text.secondary,
-              color: theme.palette.background.body,
-            },
-          }
+              backgroundColor: theme.palette.text.primary,
+              color: selected
+                ? theme.palette.background.body
+                : theme.palette.text.primary,
+              "&:hover": {
+                backgroundColor: mobile
+                  ? undefined
+                  : theme.palette.text.secondary,
+                color: theme.palette.background.body,
+              },
+            }
           : {}),
       })}
       startDecorator={selected ? selectedIcon || icon : icon}
@@ -156,9 +153,8 @@ export default function NavigationBar({
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
       entries.forEach((entry) => {
-        const [
-          { inlineSize: newWidth, blockSize: newHeight },
-        ] = entry.borderBoxSize;
+        const [{ inlineSize: newWidth, blockSize: newHeight }] =
+          entry.borderBoxSize;
         setWidth(newWidth);
         setHeight(newHeight);
       });
@@ -189,9 +185,15 @@ export default function NavigationBar({
     );
 
     return () => {
-      document.documentElement.style.removeProperty('--nav-safe-area-inset-top');
-      document.documentElement.style.removeProperty('--nav-safe-area-inset-bottom');
-      document.documentElement.style.removeProperty('--nav-safe-area-inset-left');
+      document.documentElement.style.removeProperty(
+        "--nav-safe-area-inset-top"
+      );
+      document.documentElement.style.removeProperty(
+        "--nav-safe-area-inset-bottom"
+      );
+      document.documentElement.style.removeProperty(
+        "--nav-safe-area-inset-left"
+      );
     };
   }, [landscape, bottom, width, height]);
 
@@ -199,61 +201,61 @@ export default function NavigationBar({
     <>
       <Stack
         ref={navigationRef}
-        direction={landscape ? 'column' : 'row'}
+        direction={landscape ? "column" : "row"}
         sx={(theme) => ({
-          position: 'fixed',
+          position: "fixed",
           ...(bottom
             ? {
-              bottom: 0,
-              borderTop: `1px solid ${theme.palette.divider}`,
-            }
+                bottom: 0,
+                borderTop: `1px solid ${theme.palette.divider}`,
+              }
             : {
-              top: 0,
-            }),
+                top: 0,
+              }),
           left: 0,
           gap: 4,
           display: hidden ? 'none' : 'flex',
           alignItems: 'center',
           backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 50%)`,
-          backdropFilter: 'blur(10px)',
-          webkitBackdropFilter: 'blur(10px)',
+          backdropFilter: "blur(10px)",
+          webkitBackdropFilter: "blur(10px)",
           zIndex: 1000,
           ...(landscape
             ? {
-              paddingY: '1.5rem',
-              height: '100vh',
-              width: 'fit-content',
-              borderRight: `1px solid ${theme.palette.divider}`,
-            }
+                paddingY: "1.5rem",
+                height: "100vh",
+                width: "fit-content",
+                borderRight: `1px solid ${theme.palette.divider}`,
+              }
             : {
-              padding: bottom ? '.5rem' : '.5rem 2rem',
-              width: '100vw',
-              height: 'fit-content',
-              borderBottom: bottom
-                ? undefined
-                : `1px solid ${theme.palette.divider}`,
-            }),
+                padding: bottom ? ".5rem" : ".5rem 2rem",
+                width: "100vw",
+                height: "fit-content",
+                borderBottom: bottom
+                  ? undefined
+                  : `1px solid ${theme.palette.divider}`,
+              }),
         })}
       >
         <Stack
           flex={1}
-          justifyContent={bottom ? 'space-evenly' : 'flex-start'}
-          direction={landscape ? 'column' : 'row'}
+          justifyContent={bottom ? "space-evenly" : "flex-start"}
+          direction={landscape ? "column" : "row"}
           gap={1}
         >
           <NavigationBarItem
             icon={<BsHouse />}
             selectedIcon={<BsHouseFill />}
             text="Home"
-            layout={horizontal ? 'horizontal' : 'vertical'}
+            layout={horizontal ? "horizontal" : "vertical"}
             to="/"
-            selected={location.pathname === '/'}
+            selected={location.pathname === "/"}
           />
           <NavigationBarItem
             icon={<BsJournalBookmark />}
             selectedIcon={<BsJournalBookmarkFill />}
             text="Projects"
-            layout={horizontal ? 'horizontal' : 'vertical'}
+            layout={horizontal ? "horizontal" : "vertical"}
             to="/projects"
             selected={location.pathname.startsWith('/projects')}
           />
@@ -261,9 +263,9 @@ export default function NavigationBar({
             icon={<BsFilePerson />}
             selectedIcon={<BsFilePersonFill />}
             text="Resume"
-            layout={horizontal ? 'horizontal' : 'vertical'}
+            layout={horizontal ? "horizontal" : "vertical"}
             to="/resume"
-            selected={location.pathname.startsWith('/resume')}
+            selected={location.pathname === "/resume"}
           />
         </Stack>
         {horizontal ? (
@@ -272,19 +274,20 @@ export default function NavigationBar({
             color="neutral"
             size="lg"
             sx={{
-              minHeight: 'fit-content',
-              borderRadius: '100vmax',
-              padding: '.6rem 1rem',
-              transition: 'all 0.2s',
-              fontSize: 'var(--joy-fontSize-sm)',
+              minHeight: "fit-content",
+              borderRadius: "100vmax",
+              padding: ".6rem 1rem",
+              transition: "all 0.2s",
+              fontSize: "var(--joy-fontSize-sm)",
             }}
             onClick={() => {
-              if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
+              if (mode)
+                setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
             }}
             startDecorator={
-              mode === 'system' ? (
+              mode === "system" ? (
                 <MdOutlineAutoMode />
-              ) : mode === 'light' ? (
+              ) : mode === "light" ? (
                 <BsSun />
               ) : (
                 <BsMoon />
@@ -292,7 +295,7 @@ export default function NavigationBar({
             }
           >
             {`${
-              mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'
+              mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"
             } theme`}
           </Button>
         ) : (
@@ -300,7 +303,7 @@ export default function NavigationBar({
             variant="soft"
             placement="right"
             title={`${
-              mode === 'system' ? 'System' : mode === 'light' ? 'Light' : 'Dark'
+              mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"
             } theme`}
           >
             <IconButton
@@ -308,18 +311,19 @@ export default function NavigationBar({
               color="neutral"
               size="lg"
               sx={{
-                transition: 'all 0.2s',
-                display: bottom ? 'none' : undefined,
-                borderRadius: '100vmax',
+                transition: "all 0.2s",
+                display: bottom ? "none" : undefined,
+                borderRadius: "100vmax",
                 padding: 2,
               }}
               onClick={() => {
-                if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
+                if (mode)
+                  setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
               }}
             >
-              {mode === 'system' ? (
+              {mode === "system" ? (
                 <MdOutlineAutoMode />
-              ) : mode === 'light' ? (
+              ) : mode === "light" ? (
                 <BsSun />
               ) : (
                 <BsMoon />

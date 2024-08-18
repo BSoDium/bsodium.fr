@@ -54,7 +54,7 @@ function Meta() {
   return null;
 }
 
-export default function ThemeLoader({
+export default function ThemeProvider({
   children,
 }: {
   children: React.ReactNode;

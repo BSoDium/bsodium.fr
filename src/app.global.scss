@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Lobster&family=Righteous&display=swap');
+
+html,
+body,
+main,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  transition: background-color ease .2s, color ease .2s;
+}
+
+@media print {
+  .pagebreak {
+    page-break-before: always;
+  }
+}
+
+@keyframes float {
+  0% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -10%;
+  }
+
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  0% {
+    rotate: 0;
+  }
+
+  100% {
+    rotate: 360deg;
+  }
+}
