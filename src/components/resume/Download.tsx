@@ -16,6 +16,9 @@ import { createRef, useState } from "react";
 import { FaRegFilePdf } from "react-icons/fa";
 import { FiDownload, FiPrinter } from "react-icons/fi";
 
+/**
+ * A component that allows the user to download the resume as a PDF.
+ */
 export default function Download() {
   const mobile = useMobileMode();
   const { mode, setMode } = useColorScheme();
@@ -35,18 +38,18 @@ export default function Download() {
       const savedMode = mode;
       setMode("light");
 
-      printWindow.onafterprint = () => {
+      printWindow.addEventListener("afterprint", () => {
         setMode(savedMode || "system");
         printWindow.close();
         return null;
-      };
-      printWindow.onbeforeunload = () => {
+      });
+      printWindow.addEventListener("beforeunload", () => {
         setMode(savedMode || "system");
         return null;
-      };
-      printWindow.onload = () => {
+      });
+      printWindow.addEventListener("load", () => {
         printWindow.print();
-      };
+      });
     }
   };
 
@@ -102,8 +105,8 @@ export default function Download() {
       justifyContent="center"
       alignItems="center"
       sx={{
-        display: hidden ? "none" : "flex",
         position: "fixed",
+        display: hidden ? "none" : "flex",
         bottom: "var(--nav-safe-area-inset-bottom, 0)",
         width: "100%",
         paddingLeft: "var(--nav-safe-area-inset-left, 0)",
