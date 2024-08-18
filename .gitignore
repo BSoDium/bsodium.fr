@@ -30,3 +30,6 @@ yarn-error.log*
 # dotenv
 .env
 .vercel
+
+# VS Code
+.vscode/
