@@ -18,7 +18,7 @@ import spaceStation from "@/assets/space-station.webp";
 import ProgressiveImage from "@/components/ProgressiveImage";
 import { useEffect } from "react";
 import { Parallax } from "react-scroll-parallax";
-import { useMobileMode } from "../Responsive";
+import { useMobileMode } from "@/components/Responsive";
 
 export const transitionConfig = {
   duration: 1000,

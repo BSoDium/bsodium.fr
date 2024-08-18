@@ -29,9 +29,9 @@ import { RiUserLine } from "react-icons/ri";
 import mockMessages from "@/utils/Messages";
 import { Parallax } from "react-scroll-parallax";
 import details from "@/assets/Details";
-import { Default, Mobile, useMobileMode } from "../Responsive";
-import Details from "../Details";
-import TypeWriter from "../TypeWriter";
+import { Default, Mobile, useMobileMode } from "@/components/Responsive";
+import Details from "@/components/Details";
+import TypeWriter from "@/components/TypeWriter";
 
 export const categories = ["experience", "education"] as const;
 

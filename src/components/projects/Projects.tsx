@@ -17,7 +17,7 @@ import { GoMoon, GoSun } from 'react-icons/go';
 import { IoIosReturnLeft } from 'react-icons/io';
 import { Link } from 'react-router-dom';
 import details from '@/assets/Details';
-import Directory from './Directory';
+import Directory from '@/components/projects/Directory';
 
 function ThemeSwitcherButton() {
   const { colorScheme, setMode } = useColorScheme();

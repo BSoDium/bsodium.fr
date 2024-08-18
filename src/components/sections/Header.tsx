@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import greetingFactory from "@/utils/Greeting";
 import { ATypography } from "@/pages/Landing";
 import details from "@/assets/Details";
-import { useMobileMode } from "../Responsive";
+import { useMobileMode } from "@/components/Responsive";
 
 export const visitors = [
   "stranger",

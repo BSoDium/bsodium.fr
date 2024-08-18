@@ -3,6 +3,7 @@ import ReactGA from "react-ga4";
 import Providers from "@/Providers";
 import { RouterProvider } from "react-router-dom";
 import router from "@/router";
+
 import "@/app.global.scss";
 
 if (import.meta.env.REACT_APP_GA_MEASUREMENT_ID) {

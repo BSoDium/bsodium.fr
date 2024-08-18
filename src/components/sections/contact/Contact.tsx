@@ -4,7 +4,7 @@ import { FiMail, FiPhone } from "react-icons/fi";
 import { SiResearchgate } from "react-icons/si";
 import details from "@/assets/Details";
 import LinkCarousel from "./LinkCarousel";
-import { Default, Mobile, useMobileMode } from "../../Responsive";
+import { Default, Mobile, useMobileMode } from "@/components/Responsive";
 
 export default function Contact() {
   const mobile = useMobileMode();

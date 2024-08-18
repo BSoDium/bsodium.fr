@@ -1,6 +1,6 @@
 import { Card, Link, Typography } from "@mui/joy";
 import { animated } from "@react-spring/web";
-import { useMobileMode } from "./Responsive";
+import { useMobileMode } from "@/components/Responsive";
 
 /**
  * Component displaying credits for this website.

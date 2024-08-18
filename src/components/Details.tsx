@@ -12,7 +12,7 @@ import { GoOrganization } from 'react-icons/go';
 import { IoSchoolOutline } from 'react-icons/io5';
 import { SlWrench } from 'react-icons/sl';
 import { TbCircleDashed } from 'react-icons/tb';
-import { Category } from './sections/Terminal';
+import { Category } from '@/components/sections/Terminal';
 
 export const skillIcons: {
   [key: string]: React.ReactNode;

@@ -8,8 +8,8 @@ import mountainsLightMin from "@/assets/mountains_light.min.webp";
 import { animated, useSpringRef, useTransition } from "@react-spring/web";
 import ProgressiveImage from "@/components/ProgressiveImage";
 import details from "@/assets/Details";
-import { transitionConfig } from "./Illustrations";
-import { useMobileMode } from "../Responsive";
+import { transitionConfig } from "@/components/sections/Illustrations";
+import { useMobileMode } from "@/components/Responsive";
 
 export default function Credits() {
   const mountainsTransRef = useSpringRef();

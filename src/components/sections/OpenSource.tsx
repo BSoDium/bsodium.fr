@@ -5,7 +5,7 @@ import vaderMin from "@/assets/vader.min.webp";
 import { RiOpenSourceLine } from "react-icons/ri";
 import { Parallax } from "react-scroll-parallax";
 import ProgressiveImage from "@/components/ProgressiveImage";
-import { Default, Mobile, useMobileMode } from "../Responsive";
+import { Default, Mobile, useMobileMode } from "@/components/Responsive";
 
 export default function OpenSource() {
   const { colorScheme } = useColorScheme();

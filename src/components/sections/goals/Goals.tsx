@@ -16,7 +16,7 @@ import { HiOutlineSparkles } from "react-icons/hi2";
 import { Parallax } from "react-scroll-parallax";
 import { animated, useSpringValue } from "@react-spring/web";
 import details from "@/assets/Details";
-import { Default, Mobile, useMobileMode } from "../../Responsive";
+import { Default, Mobile, useMobileMode } from "@/components/Responsive";
 import Reach from "./Reach";
 
 function Grid({ sx }: { sx?: SxProps }) {
