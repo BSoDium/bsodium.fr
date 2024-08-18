@@ -2,9 +2,6 @@ import { createBrowserRouter, Outlet, RouteObject } from "react-router-dom";
 import AnalyticsBanner from "@/components/AnalyticsBanner";
 import Copyright from "@/components/Copyright";
 import NavigationBar from "@/navigation/NavigationBar";
-import Landing from "@/pages/Landing";
-import Resume from "@/pages/Resume";
-import Projects from "@/components/projects/Projects";
 
 /**
  * The architecture of the application routes.
@@ -22,15 +19,26 @@ export const architecture: RouteObject[] = [
     ),
     children: [
       {
-        element: <Landing />,
+        async lazy() {
+          const { default: Landing } = await import("@/pages/Landing");
+          return { Component: Landing };
+        },
         index: true,
       },
       {
-        element: <Resume />,
+        async lazy() {
+          const { default: Resume } = await import("@/pages/Resume");
+          return { Component: Resume };
+        },
         path: "resume",
       },
       {
-        element: <Projects />,
+        async lazy() {
+          const { default: Projects } = await import(
+            "@/components/projects/Projects"
+          );
+          return { Component: Projects };
+        },
         path: "projects",
       },
     ],

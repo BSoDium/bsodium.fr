@@ -5,8 +5,8 @@ import { RouterProvider } from "react-router-dom";
 import router from "@/router";
 import "@/app.global.scss";
 
-if (process.env.REACT_APP_GA_MEASUREMENT_ID) {
-  ReactGA.initialize(process.env.REACT_APP_GA_MEASUREMENT_ID as string);
+if (import.meta.env.REACT_APP_GA_MEASUREMENT_ID) {
+  ReactGA.initialize(import.meta.env.REACT_APP_GA_MEASUREMENT_ID as string);
 }
 
 const root = document.getElementById("root");
