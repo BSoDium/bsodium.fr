@@ -1,11 +1,14 @@
 import { Button, Card, Stack, Typography } from "@mui/joy";
 import { animated, useSpringRef, useTransition } from "@react-spring/web";
+import useOverlayQueryParam from '@/navigation/useOverlayQueryParam';
 import { useEffect, useState } from "react";
 
 export default function AnalyticsBanner() {
   const [isDimissed, setIsDimissed] = useState(
     localStorage.getItem("analyticsBannerDismissed") === "true"
   );
+
+  const hidden = useOverlayQueryParam();
 
   const transitionRef = useSpringRef();
 
@@ -35,10 +38,11 @@ export default function AnalyticsBanner() {
         component={animated.div}
         variant="outlined"
         sx={(theme) => ({
-          position: "fixed",
-          bottom: "var(--nav-safe-area-inset-bottom, 0)",
-          marginBottom: "1rem",
-          left: "50%",
+          display: hidden ? 'none' : 'flex',
+          position: 'fixed',
+          bottom: 'var(--nav-safe-area-inset-bottom, 0)',
+          marginBottom: '1rem',
+          left: '50%',
           backgroundColor: theme.palette.background.body,
           zIndex: 1000,
           width: "min(100% - 2rem, 45rem)",

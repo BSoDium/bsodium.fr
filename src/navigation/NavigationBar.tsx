@@ -20,6 +20,7 @@ import {
   BsSun,
 } from "react-icons/bs";
 import { MdOutlineAutoMode } from "react-icons/md";
+import useOverlayQueryParam from '@/navigation/useOverlayQueryParam';
 
 const modes = ["light", "dark", "system"] as const;
 
@@ -137,6 +138,8 @@ export default function NavigationBar({
   const location = useLocation();
   const { mode, setMode } = useColorScheme();
 
+  const hidden = useOverlayQueryParam();
+
   const bottom = useMobileMode();
   const landscape = useLandScapeMode();
   const horizontal = useMemo(() => !landscape && !bottom, [landscape, bottom]);
@@ -169,16 +172,16 @@ export default function NavigationBar({
   // Safe area insets
   useEffect(() => {
     document.documentElement.style.setProperty(
-      "--nav-safe-area-inset-top",
-      landscape || bottom ? "0" : height ? `${height}px` : "3rem"
+      '--nav-safe-area-inset-top',
+      (landscape || bottom || hidden) ? '0' : (height ? `${height}px` : '3rem'),
     );
     document.documentElement.style.setProperty(
-      "--nav-safe-area-inset-bottom",
-      bottom ? (height ? `${height}px` : "4.5rem") : "0"
+      '--nav-safe-area-inset-bottom',
+      (bottom && !hidden) ? (height ? `${height}px` : '4.5rem') : '0',
     );
     document.documentElement.style.setProperty(
-      "--nav-safe-area-inset-left",
-      landscape ? (width ? `${width}px` : "5.5rem") : "0"
+      '--nav-safe-area-inset-left',
+      (landscape && !hidden) ? (width ? `${width}px` : '5.5rem') : '0',
     );
 
     return () => {
@@ -211,7 +214,8 @@ export default function NavigationBar({
               }),
           left: 0,
           gap: 4,
-          alignItems: "center",
+          display: hidden ? 'none' : 'flex',
+          alignItems: 'center',
           backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 50%)`,
           backdropFilter: "blur(10px)",
           webkitBackdropFilter: "blur(10px)",
@@ -253,7 +257,7 @@ export default function NavigationBar({
             text="Projects"
             layout={horizontal ? "horizontal" : "vertical"}
             to="/projects"
-            selected={location.pathname === "/projects"}
+            selected={location.pathname.startsWith('/projects')}
           />
           <NavigationBarItem
             icon={<BsFilePerson />}
