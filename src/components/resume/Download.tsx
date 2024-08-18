@@ -172,11 +172,7 @@ export default function Download() {
             )}
             {mobile ? (
               <Tooltip placement="top" variant="outlined" title="Download">
-                <IconButton
-                  variant="solid"
-                  onClick={download}
-                  disabled={downloadLoading}
-                >
+                <IconButton variant="solid" onClick={download} disabled>
                   {downloadLoading ? (
                     <CircularProgress size="sm" />
                   ) : (
@@ -186,6 +182,7 @@ export default function Download() {
               </Tooltip>
             ) : (
               <Button
+                disabled
                 onClick={download}
                 loading={downloadLoading}
                 loadingPosition="start"
