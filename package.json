@@ -49,7 +49,7 @@
     "sass": "^1.64.2",
     "sharp": "^0.33.4",
     "tsx": "^4.16.0",
-    "typescript-eslint": "^7.17.0",
+    "typescript-eslint": "^8.4.0",
     "vite": "^5.3.4",
     "vite-plugin-svgr": "^4.2.0"
   },
