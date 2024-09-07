@@ -2464,7 +2464,7 @@ __metadata:
     eslint-plugin-storybook: "npm:^0.8.0"
     globals: "npm:^15.9.0"
     jspdf: "npm:^2.5.1"
-    marked: "npm:^13.0.2"
+    marked: "npm:^14.1.0"
     moment: "npm:^2.29.4"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
@@ -4545,12 +4545,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"marked@npm:^13.0.2":
-  version: 13.0.3
-  resolution: "marked@npm:13.0.3"
+"marked@npm:^14.1.0":
+  version: 14.1.0
+  resolution: "marked@npm:14.1.0"
   bin:
     marked: bin/marked.js
-  checksum: 10c0/b1121f420f815206ae5ae109b9b0eb6c21f84d8d459cbe38ffa00543652e091f36a55c2c96ff1414821d8752682af8c0de3f44f0a2a5bd9c8612a4ef520e9b3d
+  checksum: 10c0/85bb74e5514975093b2772e6844503b373f422edd4e8a5382549b7c06808c5fb7422d3314846f48d30acffdc2f935196ab8f44b47c24ce0d18a62b0376e6e3f0
   languageName: node
   linkType: hard
 
