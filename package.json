@@ -46,7 +46,7 @@
     "eslint-plugin-react-refresh": "^0.4.7",
     "eslint-plugin-storybook": "^0.8.0",
     "globals": "^15.9.0",
-    "sass": "^1.64.2",
+    "sass": "^1.79.3",
     "sharp": "^0.33.4",
     "tsx": "^4.16.0",
     "typescript-eslint": "^8.4.0",
