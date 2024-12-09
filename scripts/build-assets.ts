@@ -1,5 +1,3 @@
-/* eslint-disable import/no-extraneous-dependencies */
-/* eslint-disable no-console */
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
