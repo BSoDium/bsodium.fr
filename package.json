@@ -28,7 +28,7 @@
     "react-ga4": "^2.1.0",
     "react-icons": "^5.2.1",
     "react-responsive": "^10.0.0",
-    "react-router-dom": "^6.24.1",
+    "react-router-dom": "^7.0.2",
     "react-scroll-parallax": "^3.4.5",
     "typescript": "^5.5.4"
   },
