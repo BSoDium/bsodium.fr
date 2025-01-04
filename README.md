@@ -16,8 +16,8 @@ This app uses several environment variables to configure the API url, Google Ana
 
 ```shell
 VITE_API_URL=https://localhost:3001 # The URL of the backend
-VITE_GOOGLE_ANALYTICS_ID=UA-XXXXXXXXX-X # Your google Analytics tracking ID
-VITE_WEB3FORMS_KEY=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX # Your web3forms access key
+VITE_GA_MEASUREMENT_ID=UA-XXXXXXXXX-X # Your google Analytics tracking ID
+VITE_WEB3FORMS_ACCESS_KEY=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX # Your web3forms access key
 ```
 
 To run the app locally, you need to have Node.js and yarn installed on your machine. Clone this repository and run the following commands in the root directory:
