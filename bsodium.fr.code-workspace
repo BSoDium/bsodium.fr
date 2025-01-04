@@ -14,20 +14,41 @@
       "*.webp": "${capture}.min.webp"
     }
   },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+    {
+      "label": "Install dependencies",
+      "type": "shell",
+      "command": "yarn install",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "icon": {
+        "id": "package"
+      }
+    }
+  ],
+  },
   "launch": {
     "configurations": [
       {
-        "name": "Debug app",
-        "type": "node",
-        "request": "launch",
-        "cwd": "${workspaceRoot}",
-        "args": ["start"],
-        "runtimeExecutable": "yarn",
-        "resolveSourceMapLocations": [
-          "${workspaceFolder}/",
-          "!/node_modules/**"
-        ]
-      }
+				"type": "node",
+				"request": "launch",
+				"name": "Start frontend",
+				"skipFiles": [
+					"<node_internals>/**"
+				],
+				"runtimeExecutable": "yarn",
+				"runtimeArgs": [
+					"dev"
+				],
+				"cwd": "${workspaceFolder}",
+			},
     ],
     "compounds": []
   }
