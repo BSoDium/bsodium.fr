@@ -44,7 +44,7 @@
     "eslint-plugin-react": "^7.35.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
-    "eslint-plugin-storybook": "^0.8.0",
+    "eslint-plugin-storybook": "^0.11.2",
     "globals": "^15.9.0",
     "sass": "^1.80.3",
     "sharp": "^0.33.4",
