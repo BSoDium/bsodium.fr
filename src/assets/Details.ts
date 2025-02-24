@@ -1,7 +1,5 @@
 import aauMin from "@/assets/icons/aau.min.webp";
 import aau from "@/assets/icons/aau.webp";
-import akanthasMin from "@/assets/icons/akanthas.min.webp";
-import akanthas from "@/assets/icons/akanthas.webp";
 import enseeihtMin from "@/assets/icons/enseeiht.min.webp";
 import enseeiht from "@/assets/icons/enseeiht.webp";
 import escapeMin from "@/assets/icons/escape.min.webp";
@@ -12,8 +10,6 @@ import kanopMin from "@/assets/icons/kanop.min.webp";
 import kanop from "@/assets/icons/kanop.webp";
 import lfdcMin from "@/assets/icons/lfdc.min.webp";
 import lfdc from "@/assets/icons/lfdc.webp";
-import supadmMin from "@/assets/icons/supadm.min.webp";
-import supadm from "@/assets/icons/supadm.webp";
 
 const details = {
   name: {
@@ -56,6 +52,25 @@ const details = {
   ],
   experience: [
     {
+      company: "Kanop",
+      url: "https://www.kanop.io/",
+      icon: kanop,
+      iconMin: kanopMin,
+      location: "Barcelona, Spain",
+      contract: "Full-time",
+      position: "Front-end engineer",
+      start: "Feb 2025",
+      end: "Present",
+      description: "Implementing high-performance cartography and data visualization tools for the Kanop SaaS platform.",
+      skills: [
+        "React",
+        "GCP",
+        "Framer Motion",
+        "Gitlab CI/CD",
+        "Agentic AI UI/UX",
+      ],
+    },
+    {
       company: "TalentYou.ai",
       url: "https://talentyou.ai/",
       icon: talentyou,
@@ -64,7 +79,7 @@ const details = {
       contract: "Full-time",
       position: "Full-stack engineer",
       start: "Jul 2024",
-      end: "Present",
+      end: "Feb 2025",
       description: [
         "Rewrote the entire front-end of the TalentYou platform using React, Redux, and i18n, greatly improving performance and user experience.",
         "Containerized the back-end services using Docker and VS Code Dev Containers, reducing the onboarding time for new developers by up to 70%.",
@@ -120,47 +135,11 @@ const details = {
       location: "Toulouse, France",
       contract: "Volunteering",
       position: "Facilitator",
-      start: "Feb 2022",
+      start: "Sept 2021",
       end: "Jun 2022",
       description:
         "Facilitated workshops on climate change awareness in high schools and universities.",
       skills: ["Public speaking", "Climate change awareness", "Teamwork"],
-    },
-    {
-      company: "Akanthas",
-      url: "https://www.akanthas.fr/",
-      icon: akanthas,
-      iconMin: akanthasMin,
-      location: "Toulouse, France",
-      contract: "Internship",
-      position: "Data Processing & Management architecture developer",
-      start: "Jun 2021",
-      end: "Jul 2021",
-      description:
-        "Enhanced continuous integration/deployment infrastructure to streamline operations, implemented enhancements to a Node.js web application, and successfully retrieved image data from Arlo autonomous cameras using a public API.",
-      skills: [
-        "Node JS",
-        "Docker",
-        "GitHub CI/CD",
-        "React",
-        "Bootstrap",
-        "Python",
-        "OpenCV",
-      ],
-    },
-    {
-      company: "Sup admission",
-      url: "https://www.sup-admission.com/",
-      icon: supadm,
-      iconMin: supadmMin,
-      location: "Toulouse, France",
-      contract: "Freelance",
-      position: "Lecturer & Tutor",
-      start: "Sep 2021",
-      end: "Nov 2021",
-      description:
-        "Lectures and tutoring for students preparing for the competitive entrance exams to French engineering schools.",
-      skills: ["Teaching", "Client relations"],
     },
   ],
   languages: [
