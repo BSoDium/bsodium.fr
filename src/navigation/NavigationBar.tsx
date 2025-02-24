@@ -241,7 +241,7 @@ export default function NavigationBar({
           flex={1}
           justifyContent={bottom ? "space-evenly" : "flex-start"}
           direction={landscape ? "column" : "row"}
-          gap={1}
+          gap={landscape ? 1.5 : 1}
         >
           <NavigationBarItem
             icon={<BsHouse />}
