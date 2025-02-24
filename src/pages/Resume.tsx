@@ -179,7 +179,7 @@ export default function Resume() {
             >
               <Stack direction="row" flexWrap="wrap" columnGap={2} rowGap={1}>
                 {[
-                  { key: "address", label: "Address" },
+                  { key: "location", label: "Location" },
                   { key: "email", label: "Email" },
                   { key: "phone", label: "Phone" },
                   { key: "website", label: "Website" },

@@ -187,37 +187,66 @@ export function Experience({ truncate = false }: { truncate?: boolean }) {
                   return (
                     <Stack
                       key={`${item.company}-${item.position}-${item.start}-${item.end}`}
-                      gap={0.5}
+                      gap={0.75}
                     >
-                      <Typography
-                        level="body1"
-                        display="flex"
-                        alignItems="baseline"
-                        flexWrap="wrap"
-                        columnGap={1}
-                        rowGap={0.3}
-                      >
-                        {subIndex === 0 &&
-                          (item.url ? (
-                            <Typography
-                              component="a"
-                              href={item.url}
-                              textColor="inherit"
-                              target="_blank"
-                              sx={{
-                                textDecoration: "none",
-                                "&:hover": {
-                                  textDecoration: "underline",
-                                },
-                              }}
-                            >
-                              {item.company}
-                            </Typography>
-                          ) : (
-                            item.company
-                          ))}
-                        {items.length === 1 && (
-                          <>
+                      <Stack gap={0.25}>
+                        <Typography
+                          level="body1"
+                          display="flex"
+                          alignItems="baseline"
+                          flexWrap="wrap"
+                          columnGap={1}
+                          rowGap={0.3}
+                        >
+                          {subIndex === 0 &&
+                            (item.url ? (
+                              <Typography
+                                component="a"
+                                href={item.url}
+                                textColor="inherit"
+                                target="_blank"
+                                sx={{
+                                  textDecoration: "none",
+                                  "&:hover": {
+                                    textDecoration: "underline",
+                                  },
+                                }}
+                              >
+                                {item.company}
+                              </Typography>
+                            ) : (
+                              item.company
+                            ))}
+                          {items.length === 1 && (
+                            <>
+                              <Typography
+                                level="body2"
+                                component="span"
+                                textColor="text.secondary"
+                              >
+                                {item.start} - {item.end}
+                              </Typography>
+                              <Typography
+                                level="body2"
+                                textColor="text.tertiary"
+                              >
+                                {` (${duration})`}
+                              </Typography>
+                            </>
+                          )}
+                        </Typography>
+                        <Typography
+                          level="body2"
+                          display="flex"
+                          alignItems="baseline"
+                          flexWrap="wrap"
+                          columnGap={1}
+                          rowGap={0.3}
+                        >
+                          <Typography fontWeight="lg" textColor="text.primary">
+                            {item.position}
+                          </Typography>
+                          {items.length > 1 ? (
                             <Typography
                               level="body2"
                               component="span"
@@ -225,88 +254,66 @@ export function Experience({ truncate = false }: { truncate?: boolean }) {
                             >
                               {item.start} - {item.end}
                             </Typography>
-                            <Typography level="body2" textColor="text.tertiary">
-                              {` (${duration})`}
+                          ) : (
+                            <Typography
+                              level="body2"
+                              component="span"
+                              textColor="text.secondary"
+                            >
+                              {" "}
+                              {item.contract} - {item.location}
                             </Typography>
-                          </>
-                        )}
-                      </Typography>
-                      <Typography
-                        level="body2"
-                        display="flex"
-                        alignItems="baseline"
-                        flexWrap="wrap"
-                        columnGap={1}
-                        rowGap={0.3}
-                      >
-                        <Typography fontWeight="lg" textColor="text.primary">
-                          {item.position}
+                          )}
                         </Typography>
-                        {items.length > 1 ? (
+                      </Stack>
+                      <Stack gap={0.25}>
+                        {items.length > 1 && (
                           <Typography
                             level="body2"
-                            component="span"
                             textColor="text.secondary"
+                            fontWeight="md"
                           >
-                            {item.start} - {item.end}
-                          </Typography>
-                        ) : (
-                          <Typography
-                            level="body2"
-                            component="span"
-                            textColor="text.secondary"
-                          >
-                            {" "}
                             {item.contract} - {item.location}
                           </Typography>
                         )}
-                      </Typography>
-                      {items.length > 1 && (
-                        <Typography
-                          level="body2"
-                          textColor="text.secondary"
-                          fontWeight="md"
+                        <Stack
+                          direction="row"
+                          alignItems="start"
+                          flexWrap="wrap"
+                          gap={1}
+                          paddingY={0.5}
                         >
-                          {item.contract} - {item.location}
+                          {item.skills.map((skill) => (
+                            <Chip
+                              variant="outlined"
+                              color="neutral"
+                              size="sm"
+                              key={skill}
+                              sx={(theme) => ({
+                                borderColor: theme.palette.divider,
+                              })}
+                            >
+                              {skill}
+                            </Chip>
+                          ))}
+                        </Stack>
+                        <Typography
+                          level="body3"
+                          textColor="text.tertiary"
+                          component="div"
+                        >
+                          {typeof item.description === "string"
+                            ? item.description
+                            : null}
+                          {typeof item.description === "object" ? (
+                            <Stack>
+                              {item.description.map((chunk) => (
+                                <Typography key={chunk}>- {chunk}</Typography>
+                              ))}
+                            </Stack>
+                          ) : null}
                         </Typography>
-                      )}
-                      <Stack
-                        direction="row"
-                        alignItems="start"
-                        flexWrap="wrap"
-                        gap={1}
-                        paddingY={0.5}
-                      >
-                        {item.skills.map((skill) => (
-                          <Chip
-                            variant="outlined"
-                            color="neutral"
-                            size="sm"
-                            key={skill}
-                            sx={(theme) => ({
-                              borderColor: theme.palette.divider,
-                            })}
-                          >
-                            {skill}
-                          </Chip>
-                        ))}
                       </Stack>
-                      <Typography
-                        level="body3"
-                        textColor="text.tertiary"
-                        component="div"
-                      >
-                        {typeof item.description === "string"
-                          ? item.description
-                          : null}
-                        {typeof item.description === "object" ? (
-                          <Stack>
-                            {item.description.map((chunk) => (
-                              <Typography key={chunk}>- {chunk}</Typography>
-                            ))}
-                          </Stack>
-                        ) : null}
-                      </Typography>
                     </Stack>
                   );
                 })}

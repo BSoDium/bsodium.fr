@@ -166,7 +166,7 @@ const details = {
     },
   ],
   contact: {
-    address: "Barcelona, España",
+    location: "Barcelona, España",
     email: "contact@bsodium.fr",
     phone: "+33 7 83 79 29 25",
     website: "https://www.bsodium.fr",
