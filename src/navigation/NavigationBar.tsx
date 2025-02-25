@@ -178,11 +178,11 @@ export default function NavigationBar({
     );
     document.documentElement.style.setProperty(
       "--nav-safe-area-inset-bottom",
-      bottom && !hidden ? (height ? `${height}px` : "4.5rem") : "0"
+      bottom && !hidden ? (height ? `${height}px` : "4.5rem") : "0px"
     );
     document.documentElement.style.setProperty(
       "--nav-safe-area-inset-left",
-      landscape && !hidden ? (width ? `${width}px` : "5.5rem") : "0"
+      landscape && !hidden ? (width ? `${width}px` : "5.5rem") : "0px"
     );
 
     return () => {

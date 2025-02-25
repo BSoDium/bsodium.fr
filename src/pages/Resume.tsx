@@ -83,7 +83,7 @@ export default function Resume() {
         sx={{
           width: "100vw",
           paddingTop: "var(--nav-safe-area-inset-top)",
-          paddingBottom: mobile ? "calc(var(--nav-safe-area-inset-bottom) + 5rem)" : "var(--nav-safe-area-inset-bottom)",
+          paddingBottom: `calc(var(--nav-safe-area-inset-bottom) + 4rem)`,
           paddingLeft: "var(--nav-safe-area-inset-left)",
         }}
       >
