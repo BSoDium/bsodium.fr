@@ -8,9 +8,7 @@ import {
   Typography,
 } from "@mui/joy";
 import { useMemo } from "react";
-import { RiBriefcaseLine } from "react-icons/ri";
-import { TbSchool } from "react-icons/tb";
-import { IoLanguage } from "react-icons/io5";
+import { TbBriefcase, TbLanguage, TbSchool } from "react-icons/tb";
 import details from "@/assets/Details";
 import { Education, Experience } from "@/components/Details";
 import Meta from "@/components/Meta";
@@ -191,10 +189,11 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={
-                    <Avatar size="sm" alt="Work experience">
-                      <RiBriefcaseLine />
+                    <Avatar size="sm" alt="Work experience" sx={{borderRadius: ".5rem", height: "1.75rem", width: "1.75rem"}}>
+                      <TbBriefcase />
                     </Avatar>
                   }
+                  slotProps={{ startDecorator: { sx:{ marginRight: 1}}}}
                 >
                   Work experience
                 </Typography>
@@ -207,10 +206,11 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={
-                    <Avatar size="sm" alt="Education">
+                    <Avatar size="sm" alt="Education" sx={{borderRadius: ".5rem", height: "1.75rem", width: "1.75rem"}}>
                       <TbSchool />
                     </Avatar>
                   }
+                  slotProps={{ startDecorator: { sx:{ marginRight: 1}}}}
                 >
                   Education
                 </Typography>
@@ -225,10 +225,11 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={
-                    <Avatar size="sm" alt="Languages">
-                      <IoLanguage />
+                    <Avatar size="sm" alt="Languages" sx={{borderRadius: ".5rem", height: "1.75rem", width: "1.75rem"}}>
+                      <TbLanguage />
                     </Avatar>
                   }
+                  slotProps={{ startDecorator: { sx:{ marginRight: 1}}}}
                 >
                   Languages
                 </Typography>
