@@ -21,6 +21,7 @@ import {
 } from "react-icons/bs";
 import { MdOutlineAutoMode } from "react-icons/md";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
+import FloatingActionButton from "./FloatingActionButton";
 
 const modes = ["light", "dark", "system"] as const;
 
@@ -331,6 +332,33 @@ export default function NavigationBar({
           </Tooltip>
         )}
       </Stack>
+      {bottom && (
+        <Tooltip
+          variant="soft"
+          placement="left"
+          title={`${
+            mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"
+          } theme`}
+        >
+          <FloatingActionButton
+            size="lg"
+            color="neutral"
+            variant="outlined"
+            onClick={() => {
+              if (mode)
+                setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
+            }}
+          >
+            {mode === "system" ? (
+              <MdOutlineAutoMode />
+            ) : mode === "light" ? (
+              <BsSun />
+            ) : (
+              <BsMoon />
+            )}
+          </FloatingActionButton>
+        </Tooltip>
+      )}
       {children}
     </>
   );
