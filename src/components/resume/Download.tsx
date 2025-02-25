@@ -116,8 +116,10 @@ export default function Download() {
       <Card
         variant="outlined"
         sx={(theme) => ({
-          width: mobile ? "calc(100% - 1rem)" : "30rem",
-          margin: mobile ? ".5rem" : "0 0 1rem 0",
+          width: mobile ? "calc(100% - 6rem)" : "30rem",
+          margin: mobile ? "1rem" : "0 0 1rem 0",
+          marginRight: mobile ? "5rem" : "0",
+          borderRadius: "0.75rem 1rem 1rem 0.75rem",
           backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 30%)`,
           backdropFilter: "blur(10px)",
           webkitBackdropFilter: "blur(10px)",

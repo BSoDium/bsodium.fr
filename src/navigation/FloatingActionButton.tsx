@@ -2,7 +2,7 @@ import { IconButton } from "@mui/joy";
 import { ComponentProps } from "react";
 
 export type FloatingActionButtonProps = {} & ComponentProps<typeof IconButton>;
-export default ({ color, variant, ...rest }: FloatingActionButtonProps) => {
+export default ({ color, variant, sx, ...rest }: FloatingActionButtonProps) => {
   return (
     <IconButton
       color={color}
@@ -10,9 +10,7 @@ export default ({ color, variant, ...rest }: FloatingActionButtonProps) => {
       {...rest}
       sx={{
         position: "fixed",
-        borderRadius: "30%",
         boxShadow: "lg",
-        padding: "calc(var(--IconButton-size) / 2.25)",
         backgroundColor: `var(--joy-palette-${color}-${variant}Bg, var(--joy-palette-background-body))`,
         bottom: "calc(1rem + var(--nav-safe-area-inset-bottom))",
         right: "1rem",
@@ -21,6 +19,7 @@ export default ({ color, variant, ...rest }: FloatingActionButtonProps) => {
         "&:active": {
           transform: "scale(0.95)",
         },
+        ...sx,
       }}
     />
   );

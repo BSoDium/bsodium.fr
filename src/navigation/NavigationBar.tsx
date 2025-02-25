@@ -348,6 +348,11 @@ export default function NavigationBar({
               if (mode)
                 setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
             }}
+            sx={{
+              height: "58px",
+              width: "58px",
+              borderRadius: "1rem",
+            }}
           >
             {mode === "system" ? (
               <MdOutlineAutoMode />
