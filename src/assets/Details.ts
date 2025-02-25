@@ -17,6 +17,8 @@ const details = {
     last: "Négrel-Jerzy",
     nickname: "BSoDium",
   },
+  title: "Software Engineer",
+  biography: "Skilled **full-stack developer** with expertise in diverse programming languages and frameworks. Proven ability to deliver impactful projects on GitHub, fostering a **collaborative environment**. Adept at tackling **complex challenges** and thriving in team settings. Seeking to leverage skills in a dynamic role.",
   education: [
     {
       school: "ENSEEIHT",

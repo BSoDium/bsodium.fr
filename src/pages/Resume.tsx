@@ -1,15 +1,13 @@
 import {
   Avatar,
   Box,
-  Button,
   Chip,
   ColorPaletteProp,
   Divider,
   Stack,
-  Textarea,
   Typography,
 } from "@mui/joy";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { RiBriefcaseLine } from "react-icons/ri";
 import { TbSchool } from "react-icons/tb";
 import { IoLanguage } from "react-icons/io5";
@@ -67,16 +65,13 @@ export function Languages() {
 export default function Resume() {
   const mobile = useMobileMode();
 
-  const [descriptionEditable, setDescriptionEditable] = useState(false);
-  const [descriptionContent, setDescriptionContent] = useState(
-    "Skilled **full-stack developer** with expertise in diverse programming languages and frameworks. Proven ability to deliver impactful projects on GitHub, fostering a **collaborative environment**. Adept at tackling **complex challenges** and thriving in team settings. Seeking to leverage skills in a dynamic role."
-  );
-  const parsedDescriptionContent = useMemo(
+  /** Parsed HTML content of the biography */
+  const parsedBiographyContent = useMemo(
     () =>
-      (marked.parse(descriptionContent) as string)
+      (marked.parse(details.biography) as string)
         .replace(/<p>/g, "")
         .replace(/<\/p>/g, ""),
-    [descriptionContent]
+    []
   );
 
   return (
@@ -114,60 +109,25 @@ export default function Resume() {
               >
                 Software Engineer
               </Typography>
-              {descriptionEditable ? (
-                <Stack gap={1.5}>
-                  <Textarea
-                    value={descriptionContent}
-                    onChange={(event) => {
-                      setDescriptionContent(event.target.value);
-                    }}
-                    sx={{
-                      padding: ".2rem .5rem",
-                      margin: "-.2rem -.5rem",
-                      marginTop: ".2rem",
-                      fontSize: "var(--joy-fontSize-sm)",
-                    }}
-                  />
-                  <Stack direction="row" justifyContent="end">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setDescriptionEditable(false);
-                      }}
-                    >
-                      Save changes
-                    </Button>
-                  </Stack>
-                </Stack>
-              ) : (
-                <Typography
-                  component="div"
-                  role="textbox"
-                  onClick={() => {
-                    setDescriptionEditable(true);
+              <Typography
+                component="div"
+                role="textbox"
+                level="body2"
+                sx={{
+                  position: "relative",
+                  borderRadius: ".5rem",
+                  marginTop: ".4rem",
+                  outline: "1px solid transparent",
+                  transition: "all ease .2s",
+                  cursor: "pointer",
+                }}
+              >
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: parsedBiographyContent,
                   }}
-                  level="body2"
-                  sx={{
-                    position: "relative",
-                    borderRadius: ".5rem",
-                    padding: ".2rem .5rem",
-                    margin: "-.2rem -.5rem",
-                    marginTop: ".2rem",
-                    outline: "1px solid transparent",
-                    transition: "all ease .2s",
-                    cursor: "pointer",
-                    "&:hover": {
-                      outlineColor: "var(--joy-palette-divider)",
-                    },
-                  }}
-                >
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: parsedDescriptionContent,
-                    }}
-                  />
-                </Typography>
-              )}
+                />
+              </Typography>
             </Stack>
             <Box
               component="section"
