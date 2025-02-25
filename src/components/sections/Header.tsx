@@ -20,16 +20,14 @@ export const visitors = [
 
 export default function Header() {
   const mobile = useMobileMode();
+  const { colorScheme } = useColorScheme();
 
+  const greeting = useMemo(greetingFactory, []);
+  const dark = useMemo(() => colorScheme === "dark", [colorScheme]);
   const visitor = useMemo(
     () => visitors[Math.floor(Math.random() * visitors.length)],
     []
   );
-  const greeting = useMemo(greetingFactory, []);
-
-  const { colorScheme } = useColorScheme();
-
-  const dark = useMemo(() => colorScheme === "dark", [colorScheme]);
 
   const currentCompany = useMemo(
     () =>

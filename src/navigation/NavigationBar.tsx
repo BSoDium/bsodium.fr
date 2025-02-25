@@ -20,7 +20,7 @@ import {
   BsSun,
 } from "react-icons/bs";
 import { MdOutlineAutoMode } from "react-icons/md";
-import useOverlayQueryParam from '@/navigation/useOverlayQueryParam';
+import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
 
 const modes = ["light", "dark", "system"] as const;
 
@@ -45,7 +45,7 @@ function NavigationBarItem({
       component={Link}
       to={to}
       alignItems="center"
-      gap={1}
+      gap={0.5}
       sx={{
         cursor: "pointer",
         borderRadius: "0.5rem",
@@ -172,16 +172,16 @@ export default function NavigationBar({
   // Safe area insets
   useEffect(() => {
     document.documentElement.style.setProperty(
-      '--nav-safe-area-inset-top',
-      (landscape || bottom || hidden) ? '0' : (height ? `${height}px` : '3rem'),
+      "--nav-safe-area-inset-top",
+      landscape || bottom || hidden ? "0" : height ? `${height}px` : "3rem"
     );
     document.documentElement.style.setProperty(
-      '--nav-safe-area-inset-bottom',
-      (bottom && !hidden) ? (height ? `${height}px` : '4.5rem') : '0',
+      "--nav-safe-area-inset-bottom",
+      bottom && !hidden ? (height ? `${height}px` : "4.5rem") : "0"
     );
     document.documentElement.style.setProperty(
-      '--nav-safe-area-inset-left',
-      (landscape && !hidden) ? (width ? `${width}px` : '5.5rem') : '0',
+      "--nav-safe-area-inset-left",
+      landscape && !hidden ? (width ? `${width}px` : "5.5rem") : "0"
     );
 
     return () => {
@@ -214,20 +214,19 @@ export default function NavigationBar({
               }),
           left: 0,
           gap: 4,
-          display: hidden ? 'none' : 'flex',
-          alignItems: 'center',
+          display: hidden ? "none" : "flex",
+          alignItems: "center",
           backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 50%)`,
-          backdropFilter: "blur(10px)",
-          webkitBackdropFilter: "blur(10px)",
           zIndex: 1000,
           ...(landscape
             ? {
-                paddingY: "1.5rem",
+                paddingTop: "2rem",
+                paddingBottom: "1.5rem",
                 height: "100vh",
                 width: "fit-content",
-                borderRight: `1px solid ${theme.palette.divider}`,
               }
             : {
+                backdropFilter: "blur(10px)",
                 padding: bottom ? ".5rem" : ".5rem 2rem",
                 width: "100vw",
                 height: "fit-content",
@@ -241,7 +240,7 @@ export default function NavigationBar({
           flex={1}
           justifyContent={bottom ? "space-evenly" : "flex-start"}
           direction={landscape ? "column" : "row"}
-          gap={landscape ? 1.5 : 1}
+          gap={landscape ? 2.5 : 1}
         >
           <NavigationBarItem
             icon={<BsHouse />}
@@ -257,7 +256,7 @@ export default function NavigationBar({
             text="Projects"
             layout={horizontal ? "horizontal" : "vertical"}
             to="/projects"
-            selected={location.pathname.startsWith('/projects')}
+            selected={location.pathname.startsWith("/projects")}
           />
           <NavigationBarItem
             icon={<BsFilePerson />}
