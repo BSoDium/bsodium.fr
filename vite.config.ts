@@ -17,4 +17,11 @@ export default defineConfig({
       { find: "@public", replacement: "/public" },
     ],
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern'
+      }
+    }
+  }
 });
