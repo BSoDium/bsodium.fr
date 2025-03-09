@@ -98,7 +98,7 @@ async function resizeIcons() {
       .toBuffer()
       .then((data) => {
         // Save the buffer to the same file
-        fs.writeFile(file, data, (err) => {
+        fs.writeFile(file, new Uint8Array(data), (err) => {
           if (err) {
             console.error('Error writing the resized image:', err);
           }

@@ -1,106 +1,24 @@
-import {
-  Button,
-  Card,
-  CircularProgress,
-  IconButton,
-  Stack,
-  Tooltip,
-  Typography,
-  useColorScheme,
-} from "@mui/joy";
+import { Button, Card, IconButton, Stack, Tooltip, Typography } from "@mui/joy";
 import details from "@/assets/Details";
 import { useMobileMode } from "@/components/Responsive";
-import jsPDF from "jspdf";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
-import { createRef, useState } from "react";
 import { FaRegFilePdf } from "react-icons/fa";
-import { FiDownload, FiPrinter } from "react-icons/fi";
+import { FiDownload } from "react-icons/fi";
+import pdf from "@/assets/pdf/resume.pdf";
+import { useMediaQuery } from "react-responsive";
 
 /**
  * A component that allows the user to download the resume as a PDF.
  */
 export default function Download() {
   const mobile = useMobileMode();
-  const { mode, setMode } = useColorScheme();
+  const narrowScreen = useMediaQuery({ maxWidth: 450 });
   const hidden = useOverlayQueryParam();
-
-  const [downloadLoading, setDownloadLoading] = useState(false);
-
-  const container = createRef<HTMLDivElement>();
 
   const fileName = `Resume_${details.name.first}_${details.name.last}.pdf`;
 
-  const print = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("overlay", "false");
-    const printWindow = window.open(url.toString(), "_blank");
-    if (printWindow) {
-      const savedMode = mode;
-      setMode("light");
-
-      printWindow.addEventListener("afterprint", () => {
-        setMode(savedMode || "system");
-        printWindow.close();
-        return null;
-      });
-      printWindow.addEventListener("beforeunload", () => {
-        setMode(savedMode || "system");
-        return null;
-      });
-      printWindow.addEventListener("load", () => {
-        printWindow.print();
-      });
-    }
-  };
-
-  const download = () => {
-    setDownloadLoading(true);
-
-    const doc = new jsPDF({
-      orientation: "p",
-      format: "a4",
-      unit: "px",
-      hotfixes: ["px_scaling"],
-    });
-    const source = document.body;
-
-    // Get the HTML content dimensions
-    const sourceWidth = source.offsetWidth;
-    const sourceHeight = source.offsetHeight;
-
-    // Define the margins and PDF page dimensions
-    const margin = 5;
-    const pdfWidth = doc.internal.pageSize.getWidth() - 2 * margin;
-    const pdfHeight = doc.internal.pageSize.getHeight() - 2 * margin;
-
-    // Calculate the scale factor to fit the HTML content within the PDF page
-    const scale = Math.min(pdfWidth / sourceWidth, pdfHeight / sourceHeight);
-
-    // Adjust width and windowWidth to fit the scale
-    const adjustedWidth = sourceWidth * scale;
-    // const adjustedHeight = sourceHeight * scale;
-    const windowWidth = sourceWidth; // This can be set to the actual HTML width
-
-    try {
-      doc.html(source, {
-        callback(d) {
-          d.save(fileName);
-          setDownloadLoading(false);
-        },
-        x: margin,
-        y: margin,
-        autoPaging: "text",
-        width: adjustedWidth,
-        windowWidth,
-      });
-    } finally {
-      setDownloadLoading(false);
-    }
-  };
-
   return (
     <Stack
-      ref={container}
       direction="row"
       justifyContent="center"
       alignItems="center"
@@ -155,45 +73,29 @@ export default function Download() {
               {fileName}
             </span>
           </Typography>
-          <Stack direction="row" gap={1}>
-            {mobile ? (
-              <Tooltip placement="top" variant="outlined" title="Print">
-                <IconButton color="neutral" variant="plain" onClick={print}>
-                  <FiPrinter />
-                </IconButton>
-              </Tooltip>
-            ) : (
-              <Button
-                color="neutral"
-                variant="plain"
-                onClick={print}
-                startDecorator={<FiPrinter />}
+          {narrowScreen ? (
+            <Tooltip placement="top" variant="outlined" title="Download PDF">
+              <IconButton
+                component="a"
+                href={pdf}
+                download={fileName}
+                variant="solid"
               >
-                Print
-              </Button>
-            )}
-            {mobile ? (
-              <Tooltip placement="top" variant="outlined" title="Download">
-                <IconButton variant="solid" onClick={download} disabled>
-                  {downloadLoading ? (
-                    <CircularProgress size="sm" />
-                  ) : (
-                    <FiDownload />
-                  )}
-                </IconButton>
-              </Tooltip>
-            ) : (
-              <Button
-                disabled
-                onClick={download}
-                loading={downloadLoading}
-                loadingPosition="start"
-                startDecorator={<FiDownload />}
-              >
-                Download
-              </Button>
-            )}
-          </Stack>
+                <FiDownload />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Button
+              component="a"
+              variant="solid"
+              href={pdf}
+              download={fileName}
+              startDecorator={<FiDownload />}
+              sx={{ whiteSpace: "nowrap" }}
+            >
+              Download
+            </Button>
+          )}
         </Stack>
       </Card>
     </Stack>
