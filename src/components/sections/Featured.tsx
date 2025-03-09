@@ -178,7 +178,7 @@ export default function Featured() {
     setLoading(true);
     getProjects()
       .then((data) => {
-        setProjects(data.filter((project) => project.platform === "github"));
+        setProjects(data?.filter((project) => project.platform === "github") || []);
       })
       .catch(() => {
         setError(
