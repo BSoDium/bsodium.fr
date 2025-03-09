@@ -7,9 +7,7 @@ export default defineConfig({
     react({
       jsxImportSource: "@emotion/react",
     }),
-    svgr({
-      svgrOptions: {},
-    }),
+    svgr(),
   ],
   resolve: {
     alias: [
@@ -20,8 +18,8 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        api: 'modern'
-      }
-    }
-  }
+        api: "modern",
+      },
+    },
+  },
 });

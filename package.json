@@ -10,7 +10,8 @@
     "lint": "eslint src",
     "build": "tsc -b && yarn lint && vite build",
     "preview": "vite preview",
-    "build:assets": "tsx scripts/build-assets.ts"
+    "build-assets": "tsx scripts/build-assets.ts",
+    "build-resume": "tsx scripts/build-resume.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -20,7 +21,6 @@
     "@types/color": "^3.0.3",
     "@vercel/speed-insights": "^1.0.12",
     "axios": "^1.6.5",
-    "jspdf": "^2.5.1",
     "marked": "^14.1.3",
     "moment": "^2.29.4",
     "react": "^18.3.1",
@@ -46,6 +46,7 @@
     "eslint-plugin-react-refresh": "^0.4.7",
     "eslint-plugin-storybook": "^0.11.3",
     "globals": "^15.9.0",
+    "puppeteer": "^24.4.0",
     "sass": "^1.85.0",
     "sharp": "^0.33.4",
     "tsx": "^4.16.0",
