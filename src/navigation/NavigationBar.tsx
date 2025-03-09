@@ -332,7 +332,7 @@ export default function NavigationBar({
           </Tooltip>
         )}
       </Stack>
-      {bottom && (
+      {bottom && !hidden && (
         <Tooltip
           variant="soft"
           placement="left"
