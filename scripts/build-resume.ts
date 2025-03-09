@@ -12,12 +12,22 @@ async function generatePDF() {
   // Start the Vite development server
   const vite = spawn("yarn", ["dev"], {
     cwd: path.resolve(__dirname, ".."),
-    stdio: "inherit",
+    stdio: "pipe",
     detached: true,
   });
 
   // Wait for the server to start
-  await new Promise((resolve) => setTimeout(resolve, 5000));
+  await new Promise<void>((resolve, reject) => {
+    vite.stdout?.on("data", (data) => {
+      if (data.toString().includes("ready in")) {
+        resolve();
+      }
+    });
+
+    vite.stderr?.on("data", (data) => {
+      reject(data.toString());
+    });
+  });
 
   // Navigate to the resume page
   await page.goto("http://localhost:5173/resume?overlay=false", {
