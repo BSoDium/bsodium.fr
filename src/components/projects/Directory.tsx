@@ -374,13 +374,13 @@ export default function Directory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error>();
 
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState([] as Project[]);
 
   useEffect(() => {
     setLoading(true);
     getProjects()
       .then((data) => {
-        setProjects(data);
+        setProjects(data || []);
       })
       .catch(() => {
         setError(

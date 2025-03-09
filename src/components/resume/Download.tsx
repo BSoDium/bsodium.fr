@@ -2,17 +2,14 @@ import { Button, Card, IconButton, Stack, Tooltip, Typography } from "@mui/joy";
 import details from "@/assets/Details";
 import { useMobileMode } from "@/components/Responsive";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
-import { FaRegFilePdf } from "react-icons/fa";
-import { FiDownload } from "react-icons/fi";
 import pdf from "@/assets/pdf/resume.pdf";
-import { useMediaQuery } from "react-responsive";
+import { LuDownload,  LuFileText, LuGlasses } from "react-icons/lu";
 
 /**
  * A component that allows the user to download the resume as a PDF.
  */
 export default function Download() {
   const mobile = useMobileMode();
-  const narrowScreen = useMediaQuery({ maxWidth: 450 });
   const hidden = useOverlayQueryParam();
 
   const fileName = `Resume_${details.name.first}_${details.name.last}.pdf`;
@@ -55,7 +52,7 @@ export default function Download() {
             level="body2"
             fontWeight={500}
             marginLeft={0.7}
-            startDecorator={<FaRegFilePdf size="1.2rem" />}
+            startDecorator={<LuFileText size="1.2rem" />}
             sx={{
               gap: 0.5,
               flex: "1 1 100%",
@@ -73,7 +70,33 @@ export default function Download() {
               {fileName}
             </span>
           </Typography>
-          {narrowScreen ? (
+          {mobile ? (
+            <Tooltip placement="top" variant="outlined" title="View PDF">
+              <IconButton
+                component="a"
+                href={pdf}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="plain"
+                color="neutral"
+              >
+                <LuGlasses />
+              </IconButton>
+            </Tooltip>
+          ) : (
+            <Button
+              component="a"
+              color="neutral"
+              variant="plain"
+              href={pdf}
+              target="_blank"
+              rel="noopener noreferrer"
+              startDecorator={<LuGlasses />}
+            >
+              View
+            </Button>
+          )}
+          {mobile ? (
             <Tooltip placement="top" variant="outlined" title="Download PDF">
               <IconButton
                 component="a"
@@ -81,7 +104,7 @@ export default function Download() {
                 download={fileName}
                 variant="solid"
               >
-                <FiDownload />
+                <LuDownload />
               </IconButton>
             </Tooltip>
           ) : (
@@ -90,7 +113,7 @@ export default function Download() {
               variant="solid"
               href={pdf}
               download={fileName}
-              startDecorator={<FiDownload />}
+              startDecorator={<LuDownload />}
               sx={{ whiteSpace: "nowrap" }}
             >
               Download
