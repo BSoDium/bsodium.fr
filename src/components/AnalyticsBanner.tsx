@@ -4,7 +4,7 @@ import useOverlayQueryParam from '@/navigation/useOverlayQueryParam';
 import { useEffect, useState } from "react";
 
 export default function AnalyticsBanner() {
-  const [isDimissed, setIsDimissed] = useState(
+  const [isDismissed, setIsDismissed] = useState(
     localStorage.getItem("analyticsBannerDismissed") === "true"
   );
 
@@ -12,7 +12,7 @@ export default function AnalyticsBanner() {
 
   const transitionRef = useSpringRef();
 
-  const transition = useTransition(isDimissed, {
+  const transition = useTransition(isDismissed, {
     ref: transitionRef,
     keys: null,
     from: { opacity: 0, transform: "translateY(2rem)" },
@@ -22,11 +22,11 @@ export default function AnalyticsBanner() {
 
   useEffect(() => {
     transitionRef.start();
-  }, [transitionRef, isDimissed]);
+  }, [transitionRef, isDismissed]);
 
   const dismiss = () => {
     localStorage.setItem("analyticsBannerDismissed", "true");
-    setIsDimissed(true);
+    setIsDismissed(true);
   };
 
   return transition((style, item) => {
