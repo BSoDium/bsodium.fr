@@ -4,8 +4,8 @@ import enseeihtMin from "@/assets/icons/enseeiht.min.webp";
 import enseeiht from "@/assets/icons/enseeiht.webp";
 import escapeMin from "@/assets/icons/escape.min.webp";
 import escape from "@/assets/icons/escape.webp";
-import talentyouMin from "@/assets/icons/talentyou.min.webp";
-import talentyou from "@/assets/icons/talentyou.webp";
+import tauniqoMin from "@/assets/icons/tauniqo.min.webp";
+import tauniqo from "@/assets/icons/tauniqo.webp";
 import kanopMin from "@/assets/icons/kanop.min.webp";
 import kanop from "@/assets/icons/kanop.webp";
 import lfdcMin from "@/assets/icons/lfdc.min.webp";
@@ -73,10 +73,10 @@ const details = {
       ],
     },
     {
-      company: "TalentYou.ai",
-      url: "https://talentyou.ai/",
-      icon: talentyou,
-      iconMin: talentyouMin,
+      company: "Tauniqo.ai",
+      url: "https://tauniqo.ai/",
+      icon: tauniqo,
+      iconMin: tauniqoMin,
       location: "Barcelona, Spain",
       contract: "Full-time",
       position: "Full-stack engineer",
