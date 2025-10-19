@@ -48,6 +48,23 @@ async function minifyImages() {
           return '';
         }
 
+        // If any associated .min.* file exists (any extension), skip processing
+        const dirFiles = fs.readdirSync(path.dirname(file));
+        const baseName = path.parse(file).name; // no extension
+        const hasAssociatedMin = dirFiles.some((f) => {
+          const parsed = path.parse(f).name; // filename without extension
+          // Match files like <basename>.min or <basename>.min.*
+          return (
+            parsed === `${baseName}.min` ||
+            parsed.startsWith(`${baseName}.min.`) ||
+            f === `${baseName}.min.webp` // keep explicit check for common case
+          );
+        });
+
+        if (hasAssociatedMin) {
+          return `Skipped ${file} because an associated .min file exists`;
+        }
+
         const image = sharp(file);
         const metadata = await image.metadata();
         const width = metadata.width || 0;

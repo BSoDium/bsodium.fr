@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "vite",
     "lint": "eslint src",
-    "build": "tsc -b && yarn lint && vite build",
     "preview": "vite preview",
+    "build": "tsc -b && yarn lint && vite build",
     "build-assets": "tsx scripts/build-assets.ts",
     "build-resume": "tsx scripts/build-resume.ts"
   },

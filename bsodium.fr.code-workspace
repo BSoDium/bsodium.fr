@@ -12,7 +12,10 @@
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
       "*.webp": "${capture}.min.webp"
-    }
+    },
+    "cSpell.words": [
+      "bsodium"
+    ]
   },
   "tasks": {
     "version": "2.0.0",
