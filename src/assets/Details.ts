@@ -158,7 +158,7 @@ const details = {
     },
     {
       name: "English",
-      level: "C2",
+      level: "C1",
     },
     {
       name: "Spanish",

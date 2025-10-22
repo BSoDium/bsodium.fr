@@ -38,7 +38,6 @@ export function Languages() {
       flexWrap="wrap"
       gap={3}
       p={1}
-      justifyContent="space-between"
     >
       {details.languages.map((language, index) => (
         <Stack
