@@ -16,6 +16,8 @@ export const languageProficiencyLevels = [
   "C1",
   "C2",
 ] as const;
+export type LanguageProficiencyLevel =
+  (typeof languageProficiencyLevels)[number];
 
 export const languageProficiencyLabels: Record<
   (typeof languageProficiencyLevels)[number],
@@ -40,7 +42,7 @@ export function Languages() {
     >
       {details.languages.map((language, index) => (
         <Stack
-          key={language.name + index}
+          key={`${language.name}-${index}`}
           direction="row"
           gap={1.5}
           alignItems="center"
@@ -63,9 +65,7 @@ export function Languages() {
             <Typography level="body3">
               {language.native
                 ? "Native Speaker"
-                : languageProficiencyLabels[
-                    language.level as keyof typeof languageProficiencyLabels
-                  ]}
+                : languageProficiencyLabels[language.level as LanguageProficiencyLevel]}
             </Typography>
           </Stack>
         </Stack>
