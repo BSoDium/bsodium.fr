@@ -49,7 +49,7 @@ export function Education({ wrap }: { wrap?: boolean } = { wrap: false }) {
               <ProgressiveImage
                 src={item.icon}
                 placeholder={item.iconMin}
-                alt={item.school}
+                alt={`${item.school} logo`}
                 style={{
                   width: "100%",
                   height: "100%",
@@ -122,13 +122,13 @@ export function Experience({ truncate = false }: { truncate?: boolean }) {
           }
           return [...acc, [item]];
         }, [] as (typeof details.experience)[number][][])
-        .map((items, index) => {
-          const isLast = index === details.experience.length - 1;
+        .map((items, index, array) => {
+          const isLast = index === array.length - 1;
           return (
             <Stack
               direction="row"
               gap={1.5}
-              key={`${items[0].company}-${Math.random()}}`}
+              key={`${items[0].company}-${items[0].start}-${items[0].end}`}
             >
               <Avatar
                 color="neutral"
@@ -143,7 +143,7 @@ export function Experience({ truncate = false }: { truncate?: boolean }) {
                   <ProgressiveImage
                     src={items[0].icon}
                     placeholder={items[0].iconMin}
-                    alt={items[0].company}
+                    alt={`${items[0].company} logo`}
                     style={{
                       width: "100%",
                       height: "100%",
