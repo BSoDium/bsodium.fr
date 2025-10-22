@@ -2,6 +2,8 @@ import aauMin from "@/assets/icons/aau.min.webp";
 import aau from "@/assets/icons/aau.webp";
 import enseeihtMin from "@/assets/icons/enseeiht.min.webp";
 import enseeiht from "@/assets/icons/enseeiht.webp";
+import deaudatMin from "@/assets/icons/deaudat.min.webp";
+import deaudat from "@/assets/icons/deaudat.webp";
 import escapeMin from "@/assets/icons/escape.min.webp";
 import escape from "@/assets/icons/escape.webp";
 import tauniqoMin from "@/assets/icons/tauniqo.min.webp";
@@ -18,7 +20,8 @@ const details = {
     nickname: "BSoDium",
   },
   title: "Software Engineer",
-  biography: "Skilled **full-stack developer** with expertise in diverse programming languages and frameworks. Proven ability to deliver impactful projects on GitHub, fostering a **collaborative environment**. Adept at tackling **complex challenges** and thriving in team settings. Seeking to leverage skills in a dynamic role.",
+  biography:
+    "Full-stack web developer blending **design** intuition with **technical** precision. From smooth **interfaces** to well-architected **APIs**, I love turning ideas into **tools people actually enjoy using**. I am active on GitHub, curious about new frameworks, and always chasing that sweet spot where **code meets creativity**.",
   education: [
     {
       school: "ENSEEIHT",
@@ -45,6 +48,8 @@ const details = {
     {
       school: "CPGE Lycée Déodat de Séverac",
       url: "https://dossier.parcoursup.fr/Candidats/public/fiches/afficherFicheFormation?g_ta_cod=4052",
+      icon: deaudat,
+      iconMin: deaudatMin,
       location: "Toulouse, France",
       degree: "PTSI/PSI* (Bachelor equivalent)",
       major: "Mathematics and Physics",
@@ -63,7 +68,8 @@ const details = {
       position: "Front-end engineer",
       start: "Feb 2025",
       end: "Present",
-      description: "Implementing high-performance cartography and data visualization tools for the Kanop SaaS platform.",
+      description:
+        "Implementing high-performance cartography and data visualization tools for the Kanop SaaS platform.",
       skills: [
         "React",
         "GCP",
@@ -152,7 +158,7 @@ const details = {
     },
     {
       name: "English",
-      level: "C1",
+      level: "C2",
     },
     {
       name: "Spanish",
@@ -168,7 +174,7 @@ const details = {
     },
   ],
   contact: {
-    location: "Barcelona, España",
+    location: "Paris, France",
     email: "contact@bsodium.fr",
     phone: "+33 7 83 79 29 25",
     website: "https://www.bsodium.fr",

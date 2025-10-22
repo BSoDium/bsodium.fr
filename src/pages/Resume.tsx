@@ -1,60 +1,74 @@
-import {
-  Avatar,
-  Box,
-  Chip,
-  ColorPaletteProp,
-  Divider,
-  Stack,
-  Typography,
-} from "@mui/joy";
-import { useMemo } from "react";
-import { TbBriefcase, TbLanguage, TbSchool } from "react-icons/tb";
 import details from "@/assets/Details";
 import { Education, Experience } from "@/components/Details";
 import Meta from "@/components/Meta";
 import { useMobileMode } from "@/components/Responsive";
-import { marked } from "marked";
 import Download from "@/components/resume/Download";
+import { Avatar, Box, Divider, Stack, Typography } from "@mui/joy";
+import { marked } from "marked";
+import { useMemo } from "react";
+import { TbBriefcase, TbLanguage, TbSchool } from "react-icons/tb";
+
+export const languageProficiencyLevels = [
+  "A1",
+  "A2",
+  "B1",
+  "B2",
+  "C1",
+  "C2",
+] as const;
+export type LanguageProficiencyLevel =
+  (typeof languageProficiencyLevels)[number];
+
+export const languageProficiencyLabels: Record<
+  (typeof languageProficiencyLevels)[number],
+  string
+> = {
+  A1: "Beginner",
+  A2: "Elementary",
+  B1: "Intermediate",
+  B2: "Upper Intermediate",
+  C1: "Advanced",
+  C2: "Proficient",
+};
 
 export function Languages() {
-  const color = (level: string): ColorPaletteProp => {
-    switch (level) {
-      case "A1":
-      case "A2":
-      case "B1":
-        return "neutral";
-      case "B2":
-        return "info";
-      case "C1":
-        return "primary";
-      case "C2":
-        return "success";
-      default:
-        return "info";
-    }
-  };
-
   return (
-    <Stack direction="row" flexWrap="wrap" gap={2} p={1}>
-      {details.languages.map((language) => (
-        <Chip
-          size="lg"
-          key={language.name}
-          color={color(language.level)}
-          variant="outlined"
-          startDecorator={
-            <Avatar
-              alt={language.name}
-              color={color(language.level)}
-              variant="solid"
-              size="sm"
-            >
-              {language.level}
-            </Avatar>
-          }
+    <Stack
+      direction="row"
+      flexWrap="wrap"
+      gap={3}
+      p={1}
+      justifyContent="space-between"
+    >
+      {details.languages.map((language, index) => (
+        <Stack
+          key={`${language.name}-${index}`}
+          direction="row"
+          gap={1.5}
+          alignItems="center"
         >
-          {`${language.name}${language.native ? " (native)" : ""}`}
-        </Chip>
+          <Avatar
+            alt={language.name}
+            color="danger"
+            variant="plain"
+            size="md"
+            sx={{
+              borderRadius: ".5rem",
+              fontFamily: '"Rock Salt", cursive',
+              color: "rgba(var(--joy-palette-danger-mainChannel))",
+            }}
+          >
+            {language.level}
+          </Avatar>
+          <Stack>
+            <Typography>{language.name}</Typography>
+            <Typography level="body3">
+              {language.native
+                ? "Native Speaker"
+                : languageProficiencyLabels[language.level as LanguageProficiencyLevel]}
+            </Typography>
+          </Stack>
+        </Stack>
       ))}
     </Stack>
   );
@@ -115,9 +129,6 @@ export default function Resume() {
                   position: "relative",
                   borderRadius: ".5rem",
                   marginTop: ".4rem",
-                  outline: "1px solid transparent",
-                  transition: "all ease .2s",
-                  cursor: "pointer",
                 }}
               >
                 <div
@@ -189,15 +200,28 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={
-                    <Avatar size="sm" alt="Work experience" sx={{borderRadius: ".5rem", height: "1.75rem", width: "1.75rem"}}>
+                    <Avatar
+                      size="sm"
+                      alt="Work experience"
+                      sx={{
+                        borderRadius: ".5rem",
+                        height: "1.75rem",
+                        width: "1.75rem",
+                      }}
+                    >
                       <TbBriefcase />
                     </Avatar>
                   }
-                  slotProps={{ startDecorator: { sx:{ marginRight: 1}}}}
+                  slotProps={{ startDecorator: { sx: { marginRight: 1 } } }}
                 >
                   Work experience
                 </Typography>
-                <Divider />
+                <Divider
+                  sx={{
+                    background:
+                      "linear-gradient(to right, var(--joy-palette-divider), transparent)",
+                  }}
+                />
                 <Experience truncate />
               </Stack>
 
@@ -206,15 +230,28 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={
-                    <Avatar size="sm" alt="Education" sx={{borderRadius: ".5rem", height: "1.75rem", width: "1.75rem"}}>
+                    <Avatar
+                      size="sm"
+                      alt="Education"
+                      sx={{
+                        borderRadius: ".5rem",
+                        height: "1.75rem",
+                        width: "1.75rem",
+                      }}
+                    >
                       <TbSchool />
                     </Avatar>
                   }
-                  slotProps={{ startDecorator: { sx:{ marginRight: 1}}}}
+                  slotProps={{ startDecorator: { sx: { marginRight: 1 } } }}
                 >
                   Education
                 </Typography>
-                <Divider />
+                <Divider
+                  sx={{
+                    background:
+                      "linear-gradient(to right, var(--joy-palette-divider), transparent)",
+                  }}
+                />
                 <Stack gap={1}>
                   <Education wrap />
                 </Stack>
@@ -225,15 +262,28 @@ export default function Resume() {
                   level="h6"
                   fontWeight="lg"
                   startDecorator={
-                    <Avatar size="sm" alt="Languages" sx={{borderRadius: ".5rem", height: "1.75rem", width: "1.75rem"}}>
+                    <Avatar
+                      size="sm"
+                      alt="Languages"
+                      sx={{
+                        borderRadius: ".5rem",
+                        height: "1.75rem",
+                        width: "1.75rem",
+                      }}
+                    >
                       <TbLanguage />
                     </Avatar>
                   }
-                  slotProps={{ startDecorator: { sx:{ marginRight: 1}}}}
+                  slotProps={{ startDecorator: { sx: { marginRight: 1 } } }}
                 >
                   Languages
                 </Typography>
-                <Divider />
+                <Divider
+                  sx={{
+                    background:
+                      "linear-gradient(to right, var(--joy-palette-divider), transparent)",
+                  }}
+                />
                 <Stack gap={1}>
                   <Languages />
                 </Stack>
