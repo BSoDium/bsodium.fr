@@ -39,6 +39,7 @@ export default function Header() {
   return (
     <Stack
       gap="20px"
+      paddingX={mobile ? "3vw" : 0}
       alignItems={mobile ? "center" : "flex-start"}
       sx={(theme) => ({
         position: "relative",
@@ -173,11 +174,13 @@ export default function Header() {
           {`${details.name.first} ${details.name.last}`}
         </ATypography>{" "}
         , but you can call me{" "}
-        <ATypography href={details.contact.github}>
+        <ATypography textColor="text.primary" href={details.contact.github}>
           {details.name.nickname}
         </ATypography>
         . I&apos;m a{" "}
-        <Typography textColor="text.primary">Software engineer</Typography>
+        <Typography textColor="text.primary">
+          {details.title.toLowerCase()}
+        </Typography>
         &nbsp;
         {currentCompany ? (
           <>
@@ -188,8 +191,7 @@ export default function Header() {
             &nbsp;
           </>
         ) : null}
-        and an <Typography textColor="text.primary">Open-source</Typography>{" "}
-        enthusiast.
+        and an this is my playground for all things web development.
       </Typography>
     </Stack>
   );

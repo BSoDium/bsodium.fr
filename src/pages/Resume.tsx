@@ -115,6 +115,7 @@ export default function Resume() {
                 fontWeight="lg"
                 textColor="text.secondary"
                 marginBottom={0.5}
+                textTransform="capitalize"
               >
                 {details.title}
               </Typography>
