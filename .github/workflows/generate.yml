@@ -1,4 +1,4 @@
-name: Rebuild resume download asset
+name: Generate download assets
 env:
   APP_ID: ${{ vars.BSODIUM_APP_ID }}
   APP_PRIVATE_KEY: ${{ secrets.BSODIUM_APP_PRIVATE_KEY }}
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  rebuild-resume:
+  generate-resume:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/create-github-app-token@v1
@@ -25,25 +25,6 @@ jobs:
 
       - name: Enable Corepack
         run: corepack enable
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libnss3 \
-            libnspr4 \
-            libatk1.0-0 \
-            libatk-bridge2.0-0 \
-            libcups2 \
-            libdrm2 \
-            libxkbcommon0 \
-            libxcomposite1 \
-            libxdamage1 \
-            libxfixes3 \
-            libxrandr2 \
-            libgbm1 \
-            libasound2
-          yarn
 
       - name: Build resume download asset
         run: |
