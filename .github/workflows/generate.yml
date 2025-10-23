@@ -26,6 +26,9 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
+      - name: Install dependencies
+        run: yarn
+
       - name: Build resume download asset
         run: |
           yarn build-resume
