@@ -38,13 +38,14 @@ export default function Copyright() {
         borderRadius: 0,
         borderBottomLeftRadius: mobile ? undefined : "1rem",
         padding: "0.5rem 1rem",
-        backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 20%)`,
+        backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 50%)`,
         backdropFilter: "blur(10px)",
         overflow: "auto",
       })}
     >
       <Typography
         level="body2"
+        textColor="text.primary"
         sx={{
           whiteSpace: "nowrap",
         }}

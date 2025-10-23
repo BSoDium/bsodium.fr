@@ -3,6 +3,7 @@ import { Education, Experience } from "@/components/Details";
 import Meta from "@/components/Meta";
 import { useMobileMode } from "@/components/Responsive";
 import Download from "@/components/resume/Download";
+import { getMapProvider } from "@/utils/OS";
 import { Avatar, Box, Divider, Stack, Typography } from "@mui/joy";
 import { marked } from "marked";
 import { useMemo } from "react";
@@ -33,12 +34,7 @@ export const languageProficiencyLabels: Record<
 
 export function Languages() {
   return (
-    <Stack
-      direction="row"
-      flexWrap="wrap"
-      gap={3}
-      p={1}
-    >
+    <Stack direction="row" flexWrap="wrap" gap={3} p={1}>
       {details.languages.map((language, index) => (
         <Stack
           key={`${language.name}-${index}`}
@@ -64,7 +60,9 @@ export function Languages() {
             <Typography level="body3">
               {language.native
                 ? "Native Speaker"
-                : languageProficiencyLabels[language.level as LanguageProficiencyLevel]}
+                : languageProficiencyLabels[
+                    language.level as LanguageProficiencyLevel
+                  ]}
             </Typography>
           </Stack>
         </Stack>
@@ -118,7 +116,7 @@ export default function Resume() {
                 textColor="text.secondary"
                 marginBottom={0.5}
               >
-                Software Engineer
+                {details.title}
               </Typography>
               <Typography
                 component="div"
@@ -147,14 +145,30 @@ export default function Resume() {
             >
               <Stack direction="row" flexWrap="wrap" columnGap={2} rowGap={1}>
                 {[
-                  { key: "location", label: "Location" },
-                  { key: "email", label: "Email" },
-                  { key: "phone", label: "Phone" },
-                  { key: "website", label: "Website" },
-                ].map(({ key, label }) => {
+                  {
+                    key: "location",
+                    label: "Location",
+                    linkFactory: (content: string) =>
+                      `http://maps.${getMapProvider()}.com/?q=${content}`,
+                  },
+                  {
+                    key: "email",
+                    label: "Email",
+                    linkFactory: (content: string) => `mailto:${content}`,
+                  },
+                  {
+                    key: "phone",
+                    label: "Phone",
+                    linkFactory: (content: string) => `tel:${content}`,
+                  },
+                  {
+                    key: "website",
+                    label: "Website",
+                    linkFactory: (content: string) => content,
+                  },
+                ].map(({ key, label, linkFactory }) => {
                   const value =
                     details.contact[key as keyof typeof details.contact];
-                  const isUrl = value.startsWith("http");
                   return (
                     <Stack key={key}>
                       <Typography
@@ -164,11 +178,11 @@ export default function Resume() {
                       >
                         {label}
                       </Typography>
-                      {isUrl ? (
+                      {linkFactory ? (
                         <Typography
                           component="a"
                           level="body2"
-                          href={value}
+                          href={linkFactory(value)}
                           target="_blank"
                           sx={{
                             wordBreak: "break-word",
