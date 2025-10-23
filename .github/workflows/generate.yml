@@ -37,4 +37,4 @@ jobs:
         with:
           commit_message: "chore: rebuild resume download asset"
           commit_user_name: "BSoDium"
-          commit_user_email: contact+github@bsodium.fr
+          commit_user_email: contact@bsodium.fr
