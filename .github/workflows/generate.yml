@@ -1,4 +1,4 @@
-name: Rebuild resume download asset
+name: Generate download assets
 env:
   APP_ID: ${{ vars.BSODIUM_APP_ID }}
   APP_PRIVATE_KEY: ${{ secrets.BSODIUM_APP_PRIVATE_KEY }}
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  rebuild-resume:
+  generate-resume:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/create-github-app-token@v1
