@@ -51,7 +51,7 @@ const details = {
       icon: deaudat,
       iconMin: deaudatMin,
       location: "Toulouse, France",
-      degree: "PTSI/PSI* (Bachelor equivalent)",
+      degree: "PCSI/PSI* (Bachelor equivalent)",
       major: "Mathematics and Physics",
       start: "Sep 2018",
       end: "Jul 2020",
@@ -158,7 +158,7 @@ const details = {
     },
     {
       name: "English",
-      level: "C2",
+      level: "C1",
     },
     {
       name: "Spanish",
