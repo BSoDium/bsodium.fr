@@ -150,7 +150,7 @@ export default function Resume() {
                     key: "location",
                     label: "Location",
                     linkFactory: (content: string) =>
-                      `http://maps.${getMapProvider()}.com/?q=${encodeURIComponent(content)}`,
+                      `https://maps.${getMapProvider()}.com/?q=${encodeURIComponent(content)}`,
                   },
                   {
                     key: "email",
