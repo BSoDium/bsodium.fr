@@ -1,6 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
+import { imagetools } from "vite-imagetools";
 
 export default defineConfig({
   plugins: [
@@ -8,6 +9,18 @@ export default defineConfig({
       jsxImportSource: "@emotion/react",
     }),
     svgr(),
+    imagetools({
+      defaultDirectives: (url) => {
+        if (url.searchParams.has('progressive')) {
+          return new URLSearchParams({
+            w: '20;400;800;1200',
+            format: 'webp;png',
+            as: 'metadata',
+          })
+        }
+        return new URLSearchParams()
+      },
+    }),
   ],
   resolve: {
     alias: [

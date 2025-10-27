@@ -45,10 +45,9 @@ export function Education({ wrap }: { wrap?: boolean } = { wrap: false }) {
               border: `1px solid ${theme.getCssVar("palette-divider")}`,
             })}
           >
-            {item.icon ? (
+            {item.iconData ? (
               <ProgressiveImage
-                src={item.icon}
-                placeholder={item.iconMin}
+                meta={item.iconData}
                 alt={`${item.school} logo`}
                 style={{
                   width: "100%",
@@ -139,10 +138,9 @@ export function Experience({ truncate = false }: { truncate?: boolean }) {
                   border: `1px solid ${theme.getCssVar("palette-divider")}`,
                 })}
               >
-                {items[0].icon ? (
+                {items[0].iconData ? (
                   <ProgressiveImage
-                    src={items[0].icon}
-                    placeholder={items[0].iconMin}
+                    meta={items[0].iconData}
                     alt={`${items[0].company} logo`}
                     style={{
                       width: "100%",

@@ -10,7 +10,6 @@
     "lint": "eslint src",
     "preview": "vite preview",
     "build": "tsc -b && yarn lint && vite build",
-    "build-assets": "tsx scripts/build-assets.ts",
     "build-resume": "tsx scripts/build-resume.ts"
   },
   "dependencies": {
@@ -44,7 +43,6 @@
     "eslint-plugin-react": "^7.35.0",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.7",
-    "eslint-plugin-storybook": "^0.11.3",
     "globals": "^15.9.0",
     "puppeteer": "^24.4.0",
     "sass": "^1.85.0",
@@ -52,6 +50,7 @@
     "tsx": "^4.16.0",
     "typescript-eslint": "^8.17.0",
     "vite": "^5.4.10",
+    "vite-imagetools": "^9.0.0",
     "vite-plugin-svgr": "^4.2.0"
   },
   "packageManager": "yarn@4.3.1"

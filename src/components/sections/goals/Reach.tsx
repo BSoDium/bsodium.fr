@@ -1,8 +1,6 @@
 import { FiAtSign, FiUser } from "react-icons/fi";
-import satelliteDark from "@/assets/satellite_dark.webp";
-import satelliteDarkMin from "@/assets/satellite_dark.min.webp";
-import satelliteLight from "@/assets/satellite_light.webp";
-import satelliteLightMin from "@/assets/satellite_light.min.webp";
+import satelliteDarkData from "@/assets/satellite_dark.webp?progressive";
+import satelliteLightData from "@/assets/satellite_light.webp?progressive";
 import React, { useEffect, useState } from "react";
 import {
   animated,
@@ -208,8 +206,7 @@ export default function Reach({ step }: { step: number }) {
                   return (
                     <ProgressiveImage
                       animate
-                      src={satelliteLight}
-                      placeholder={satelliteLightMin}
+                      meta={satelliteLightData}
                       alt="satellite"
                       style={{
                         ...style,
@@ -227,8 +224,7 @@ export default function Reach({ step }: { step: number }) {
                   return (
                     <ProgressiveImage
                       animate
-                      src={satelliteDark}
-                      placeholder={satelliteDarkMin}
+                      meta={satelliteDarkData}
                       alt="satellite"
                       style={{
                         ...style,

@@ -5,16 +5,11 @@ import {
   useSpringRef,
   useTransition,
 } from "@react-spring/web";
-import balloonMin from "@/assets/balloon.min.webp";
-import balloon from "@/assets/balloon.webp";
-import planetDarkMin from "@/assets/planet_dark.min.webp";
-import planetDark from "@/assets/planet_dark.webp";
-import planetLightMin from "@/assets/planet_light.min.webp";
-import planetLight from "@/assets/planet_light.webp";
-import skyMin from "@/assets/sky.min.webp";
-import sky from "@/assets/sky.webp";
-import spaceStationMin from "@/assets/space-station.min.webp";
-import spaceStation from "@/assets/space-station.webp";
+import balloonData from "@/assets/balloon.webp?progressive";
+import planetDarkData from "@/assets/planet_dark.webp?progressive";
+import planetLightData from "@/assets/planet_light.webp?progressive";
+import skyData from "@/assets/sky.webp?progressive";
+import spaceStationData from "@/assets/space-station.webp?progressive";
 import ProgressiveImage from "@/components/ProgressiveImage";
 import { useEffect } from "react";
 import { Parallax } from "react-scroll-parallax";
@@ -165,8 +160,7 @@ export default function Illustrations() {
                     }}
                   />
                   <ProgressiveImage
-                    src={sky}
-                    placeholder={skyMin}
+                    meta={skyData}
                     alt="sky"
                     style={{
                       position: "absolute",
@@ -189,8 +183,7 @@ export default function Illustrations() {
                   style={{ ...style, zIndex: -1, position: "relative" }}
                 >
                   <ProgressiveImage
-                    src={sky}
-                    placeholder={skyMin}
+                    meta={skyData}
                     alt="sky"
                     style={{
                       position: "absolute",
@@ -206,8 +199,7 @@ export default function Illustrations() {
                     }}
                   />
                   <ProgressiveImage
-                    src={sky}
-                    placeholder={skyMin}
+                    meta={skyData}
                     alt="sky"
                     style={{
                       position: "absolute",
@@ -234,8 +226,7 @@ export default function Illustrations() {
             case "light":
               return (
                 <ProgressiveImage
-                  src={planetLight}
-                  placeholder={planetLightMin}
+                  meta={planetLightData}
                   alt="planet"
                   animate
                   style={{
@@ -250,8 +241,7 @@ export default function Illustrations() {
             case "dark":
               return (
                 <ProgressiveImage
-                  src={planetDark}
-                  placeholder={planetDarkMin}
+                  meta={planetDarkData}
                   alt="planet"
                   animate
                   style={{
@@ -274,8 +264,7 @@ export default function Illustrations() {
             case "light":
               return (
                 <ProgressiveImage
-                  src={balloon}
-                  placeholder={balloonMin}
+                  meta={balloonData}
                   animate
                   alt="balloon"
                   style={{
@@ -291,8 +280,7 @@ export default function Illustrations() {
             case "dark":
               return (
                 <ProgressiveImage
-                  src={spaceStation}
-                  placeholder={spaceStationMin}
+                  meta={spaceStationData}
                   animate
                   alt="space station"
                   style={{

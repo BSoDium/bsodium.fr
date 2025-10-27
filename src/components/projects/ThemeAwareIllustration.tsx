@@ -2,10 +2,8 @@ import { Stack, useColorScheme } from "@mui/joy";
 import { animated, useSpringRef, useTransition } from "@react-spring/web";
 import { useEffect, useState } from "react";
 import ProgressiveImage from "@/components/ProgressiveImage";
-import architectureDarkMin from "@/assets/architecture_dark.min.webp";
-import architectureDark from "@/assets/architecture_dark.webp";
-import architectureLightMin from "@/assets/architecture_light.min.webp";
-import architectureLight from "@/assets/architecture_light.webp";
+import architectureDarkData from "@/assets/architecture_dark.webp?progressive";
+import architectureLightData from "@/assets/architecture_light.webp?progressive";
 
 export function ThemeAwareIllustration() {
   const { colorScheme } = useColorScheme();
@@ -63,8 +61,7 @@ export function ThemeAwareIllustration() {
             return (
               <animated.div style={style}>
                 <ProgressiveImage
-                  src={architectureLight}
-                  placeholder={architectureLightMin}
+                  meta={architectureLightData}
                   alt="Brutalist building by Arthur Swiffen"
                   onLoad={() => setLoaded(true)}
                   style={imgSx}
@@ -75,8 +72,7 @@ export function ThemeAwareIllustration() {
             return (
               <animated.div style={style}>
                 <ProgressiveImage
-                  src={architectureDark}
-                  placeholder={architectureDarkMin}
+                  meta={architectureDarkData}
                   alt="Red lamps in Subway in Hamburg by Travel with Lenses"
                   onLoad={() => setLoaded(true)}
                   style={imgSx}

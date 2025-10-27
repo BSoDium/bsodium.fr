@@ -10,9 +10,6 @@
       "source.fixAll.eslint": "explicit"
     },
     "explorer.fileNesting.enabled": true,
-    "explorer.fileNesting.patterns": {
-      "*.webp": "${capture}.min.webp"
-    },
     "cSpell.words": [
       "bsodium"
     ]
