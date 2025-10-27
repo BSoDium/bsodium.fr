@@ -86,7 +86,7 @@ export default function Resume() {
   return (
     <>
       <Meta
-        title={`Curriculum Vitae - ${details.name.first} ${details.name.last}`}
+        title={`Curriculum Vitae • ${details.name.first} ${details.name.last}`}
       />
       <Download />
       <Stack

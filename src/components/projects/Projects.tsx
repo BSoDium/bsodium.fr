@@ -22,7 +22,7 @@ export default function Projects() {
       }}
     >
       <Meta
-        title={`Projects and experiments - ${details.name.first} ${details.name.last}`}
+        title={`Projects and experiments • ${details.name.first} ${details.name.last}`}
       />
       <ThemeAwareIllustration />
       <Stack padding={mobile ? "1rem" : "5rem"} gap={2} alignItems="start">
