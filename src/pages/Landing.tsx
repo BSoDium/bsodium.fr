@@ -53,7 +53,7 @@ export default function Landing() {
   const mobile = useMobileMode();
   return (
     <ParallaxProvider>
-      <Meta title={`${details.name.first} ${details.name.last}`} />
+      <Meta title={`Home • ${details.name.first} ${details.name.last}`} />
       <Stack overflow="hidden">
         <Illustrations />
         <div

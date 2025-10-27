@@ -19,7 +19,7 @@ const details = {
     last: "Négrel-Jerzy",
     nickname: "BSoDium",
   },
-  title: "Software Engineer",
+  title: "Software engineer",
   biography:
     "Full-stack web developer blending **design** intuition with **technical** precision. From smooth **interfaces** to well-architected **APIs**, I love turning ideas into **tools people actually enjoy using**. I am active on GitHub, curious about new frameworks, and always chasing that sweet spot where **code meets creativity**.",
   education: [

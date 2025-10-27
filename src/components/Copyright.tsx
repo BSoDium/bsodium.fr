@@ -1,7 +1,9 @@
 import { Card, Link, Typography } from "@mui/joy";
 import { animated } from "@react-spring/web";
-import useOverlayQueryParam from '@/navigation/useOverlayQueryParam';
+import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
 import { useMobileMode } from "@/components/Responsive";
+
+export const trustedDomains = ["bsodium.fr", "www.bsodium.fr", "localhost"];
 
 /**
  * Component displaying credits for this website.
@@ -18,13 +20,10 @@ import { useMobileMode } from "@/components/Responsive";
 export default function Copyright() {
   const mobile = useMobileMode();
 
-  const hidden = useOverlayQueryParam();
+  const shouldHideOverlay = useOverlayQueryParam();
+  const isDomainTrusted = trustedDomains.includes(window.location.hostname);
 
-  const isAuthorDomain = ["bsodium.fr", "www.bsodium.fr"].includes(
-    window.location.hostname
-  );
-
-  return isAuthorDomain ? null : (
+  return (
     <Card
       component={animated.div}
       sx={(theme) => ({
@@ -33,18 +32,19 @@ export default function Copyright() {
         right: "0",
         width: mobile ? "100vw" : undefined,
         zIndex: 1000,
-        display: hidden ? 'none' : 'flex',
-        flexDirection: 'row',
+        display: shouldHideOverlay || isDomainTrusted ? "none" : "flex",
+        flexDirection: "row",
         borderRadius: 0,
         borderBottomLeftRadius: mobile ? undefined : "1rem",
         padding: "0.5rem 1rem",
-        backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 20%)`,
+        backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 50%)`,
         backdropFilter: "blur(10px)",
         overflow: "auto",
       })}
     >
       <Typography
         level="body2"
+        textColor="text.primary"
         sx={{
           whiteSpace: "nowrap",
         }}
