@@ -131,6 +131,10 @@ function NavigationBarItem({
   );
 }
 
+/**
+ * Navigation bar component
+ * @deprecated
+ */
 export default function NavigationBar({
   children,
 }: {
