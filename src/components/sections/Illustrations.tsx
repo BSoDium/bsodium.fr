@@ -225,35 +225,47 @@ export default function Illustrations() {
           switch (item) {
             case "light":
               return (
-                <ProgressiveImage
-                  meta={planetLightData}
-                  alt="planet"
-                  animate
+                <animated.div
                   style={{
                     ...style,
                     position: "absolute",
                     width: "75rem",
                     left: "calc(50% - 37.5rem)",
-                    animation: "spin 360s linear infinite",
                   }}
-                />
+                >
+                  <ProgressiveImage
+                    meta={planetLightData}
+                    alt="planet"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      animation: "spin 360s linear infinite",
+                    }}
+                  />
+                </animated.div>
               );
             case "dark":
               return (
-                <ProgressiveImage
-                  meta={planetDarkData}
-                  alt="planet"
-                  animate
+                <animated.div
                   style={{
                     ...style,
                     position: "absolute",
                     width: "75rem",
                     left: "calc(50% - 37.5rem)",
-                    filter:
-                      "hue-rotate(20deg) drop-shadow(0 0 4rem #0C0223) drop-shadow(-3rem -3rem 3rem #3570b55b)",
-                    animation: "spin 360s linear infinite",
                   }}
-                />
+                >
+                  <ProgressiveImage
+                    meta={planetDarkData}
+                    alt="planet"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      filter:
+                        "hue-rotate(20deg) drop-shadow(0 0 4rem #0C0223) drop-shadow(-3rem -3rem 3rem #3570b55b)",
+                      animation: "spin 360s linear infinite",
+                    }}
+                  />
+                </animated.div>
               );
             default:
               return null;
@@ -263,39 +275,51 @@ export default function Illustrations() {
           switch (item) {
             case "light":
               return (
-                <ProgressiveImage
-                  meta={balloonData}
-                  animate
-                  alt="balloon"
+                <animated.div
                   style={{
                     ...style,
                     position: "absolute",
                     width: "min(200px, 60vw)",
                     left: mobile ? "50%" : "55%",
                     transform: `translateX(${mobile ? "-50%" : "20vw"})`,
-                    animation: "float 20s ease-in-out infinite",
                   }}
-                />
+                >
+                  <ProgressiveImage
+                    meta={balloonData}
+                    alt="balloon"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      animation: "float 20s ease-in-out infinite",
+                    }}
+                  />
+                </animated.div>
               );
             case "dark":
               return (
-                <ProgressiveImage
-                  meta={spaceStationData}
-                  animate
-                  alt="space station"
+                <animated.div
                   style={{
                     ...style,
                     position: "absolute",
                     width: "min(500px, 80vw)",
                     left: "50%",
                     transform: `translateX(${mobile ? "-50%" : "20vw"})`,
-                    transformOrigin: "",
-                    filter: `${
-                      mobile ? "" : "drop-shadow(0 0 .5rem #141619b0)"
-                    } drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
-                    animation: "float 20s ease-in-out infinite",
                   }}
-                />
+                >
+                  <ProgressiveImage
+                    meta={spaceStationData}
+                    alt="space station"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      transformOrigin: "",
+                      filter: `${
+                        mobile ? "" : "drop-shadow(0 0 .5rem #141619b0)"
+                      } drop-shadow(.5rem -.5rem 2rem #8fa4cc4e)`,
+                      animation: "float 20s ease-in-out infinite",
+                    }}
+                  />
+                </animated.div>
               );
             default:
               return null;
