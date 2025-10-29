@@ -47,7 +47,7 @@ export function Education({ wrap }: { wrap?: boolean } = { wrap: false }) {
           >
             {item.iconData ? (
               <ProgressiveImage
-                meta={item.iconData}
+                variants={item.iconData}
                 alt={`${item.school} logo`}
                 style={{
                   width: "100%",
@@ -140,7 +140,7 @@ export function Experience({ truncate = false }: { truncate?: boolean }) {
               >
                 {items[0].iconData ? (
                   <ProgressiveImage
-                    meta={items[0].iconData}
+                    variants={items[0].iconData}
                     alt={`${items[0].company} logo`}
                     style={{
                       width: "100%",

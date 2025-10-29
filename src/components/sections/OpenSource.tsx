@@ -177,7 +177,7 @@ export default function OpenSource() {
           }
         >
           <ProgressiveImage
-            meta={vaderData}
+            variants={vaderData}
             alt="Darth vader"
             style={{
               ...(mobile

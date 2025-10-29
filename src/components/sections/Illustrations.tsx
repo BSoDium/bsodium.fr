@@ -160,7 +160,7 @@ export default function Illustrations() {
                     }}
                   />
                   <ProgressiveImage
-                    meta={skyData}
+                    variants={skyData}
                     alt="sky"
                     style={{
                       position: "absolute",
@@ -183,7 +183,7 @@ export default function Illustrations() {
                   style={{ ...style, zIndex: -1, position: "relative" }}
                 >
                   <ProgressiveImage
-                    meta={skyData}
+                    variants={skyData}
                     alt="sky"
                     style={{
                       position: "absolute",
@@ -199,7 +199,7 @@ export default function Illustrations() {
                     }}
                   />
                   <ProgressiveImage
-                    meta={skyData}
+                    variants={skyData}
                     alt="sky"
                     style={{
                       position: "absolute",
@@ -234,7 +234,7 @@ export default function Illustrations() {
                   }}
                 >
                   <ProgressiveImage
-                    meta={planetLightData}
+                    variants={planetLightData}
                     alt="planet"
                     style={{
                       width: "100%",
@@ -255,7 +255,7 @@ export default function Illustrations() {
                   }}
                 >
                   <ProgressiveImage
-                    meta={planetDarkData}
+                    variants={planetDarkData}
                     alt="planet"
                     style={{
                       width: "100%",
@@ -285,7 +285,7 @@ export default function Illustrations() {
                   }}
                 >
                   <ProgressiveImage
-                    meta={balloonData}
+                    variants={balloonData}
                     alt="balloon"
                     style={{
                       width: "100%",
@@ -307,7 +307,7 @@ export default function Illustrations() {
                   }}
                 >
                   <ProgressiveImage
-                    meta={spaceStationData}
+                    variants={spaceStationData}
                     alt="space station"
                     style={{
                       width: "100%",

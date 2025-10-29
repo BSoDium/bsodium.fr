@@ -56,7 +56,7 @@ export default function Credits() {
                   }}
                 />
                 <ProgressiveImage
-                  meta={mountainsLightData}
+                  variants={mountainsLightData}
                   alt="mountains"
                   style={{
                     position: "absolute",
@@ -95,7 +95,7 @@ export default function Credits() {
                   }}
                 />
                 <ProgressiveImage
-                  meta={mountainsDarkData}
+                  variants={mountainsDarkData}
                   alt="mountains"
                   style={{
                     position: "absolute",

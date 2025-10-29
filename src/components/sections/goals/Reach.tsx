@@ -204,37 +204,55 @@ export default function Reach({ step }: { step: number }) {
               switch (item) {
                 case "light":
                   return (
-                    <ProgressiveImage
-                      meta={satelliteLightData}
-                      alt="satellite"
+                    <animated.div
                       style={{
                         ...style,
                         position: "absolute",
                         top: "-1rem",
                         left: "max(67%, 36rem)",
                         height: "20rem",
-                        rotate: opacity.to((o) => `${o * 15 - 15}deg`),
-                        filter:
-                          "drop-shadow(-1rem -1rem 1.5rem #f4e9d068) drop-shadow(1rem 1rem 1rem #326c8c4c) hue-rotate(15deg)",
+                        transform: opacity.to(
+                          (o) => `rotate(${o * 15 - 15}deg)`
+                        ),
                       }}
-                    />
+                    >
+                      <ProgressiveImage
+                        variants={satelliteLightData}
+                        alt="satellite"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          filter:
+                            "drop-shadow(-1rem -1rem 1.5rem #f4e9d068) drop-shadow(1rem 1rem 1rem #326c8c4c) hue-rotate(15deg)",
+                        }}
+                      />
+                    </animated.div>
                   );
                 case "dark":
                   return (
-                    <ProgressiveImage
-                      meta={satelliteDarkData}
-                      alt="satellite"
+                    <animated.div
                       style={{
                         ...style,
                         position: "absolute",
                         top: "-2rem",
                         left: "max(65%, 36rem)",
                         height: "20rem",
-                        rotate: opacity.to((o) => `${o * 15 - 15}deg`),
-                        filter:
-                          "drop-shadow(-1rem -1rem 1.5rem #dcedfa41) drop-shadow(1rem 1rem 1rem #01012563)",
+                        transform: opacity.to(
+                          (o) => `rotate(${o * 15 - 15}deg)`
+                        ),
                       }}
-                    />
+                    >
+                      <ProgressiveImage
+                        variants={satelliteDarkData}
+                        alt="satellite"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          filter:
+                            "drop-shadow(-1rem -1rem 1.5rem #dcedfa41) drop-shadow(1rem 1rem 1rem #01012563)",
+                        }}
+                      />
+                    </animated.div>
                   );
                 default:
                   return null;

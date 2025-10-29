@@ -12,7 +12,7 @@ import {
   CircularProgress,
   Chip,
 } from "@mui/joy";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { ReactNode, useEffect, useMemo, useState } from "react";
 import { IoIosClose, IoIosSearch, IoIosShuffle } from "react-icons/io";
 import {
   Interaction,
@@ -35,7 +35,7 @@ function Message({
   title,
   subtitle,
 }: {
-  children: JSX.Element;
+  children: ReactNode;
   title: string;
   subtitle: string;
 }) {

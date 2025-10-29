@@ -61,7 +61,7 @@ export function ThemeAwareIllustration() {
             return (
               <animated.div style={style}>
                 <ProgressiveImage
-                  meta={architectureLightData}
+                  variants={architectureLightData}
                   alt="Brutalist building by Arthur Swiffen"
                   onLoad={() => setLoaded(true)}
                   style={imgSx}
@@ -72,7 +72,7 @@ export function ThemeAwareIllustration() {
             return (
               <animated.div style={style}>
                 <ProgressiveImage
-                  meta={architectureDarkData}
+                  variants={architectureDarkData}
                   alt="Red lamps in Subway in Hamburg by Travel with Lenses"
                   onLoad={() => setLoaded(true)}
                   style={imgSx}

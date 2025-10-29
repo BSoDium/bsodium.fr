@@ -6,7 +6,7 @@ import {
   Typography,
   useColorScheme,
 } from "@mui/joy";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { ReactNode, useEffect, useMemo, useState } from "react";
 import { useLandScapeMode, useMobileMode } from "@/components/Responsive";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -33,10 +33,10 @@ function NavigationBarItem({
   layout = "vertical",
   selected,
 }: {
-  icon: JSX.Element;
+  icon: ReactNode;
   text: string;
   to: string;
-  selectedIcon?: JSX.Element;
+  selectedIcon?: ReactNode;
   layout?: "vertical" | "horizontal";
   selected?: boolean;
 }) {
@@ -138,7 +138,7 @@ function NavigationBarItem({
 export default function NavigationBar({
   children,
 }: {
-  children: JSX.Element | JSX.Element[];
+  children: ReactNode | ReactNode[];
 }) {
   const location = useLocation();
   const { mode, setMode } = useColorScheme();

@@ -1,154 +1,82 @@
-import React, { ComponentProps, useEffect, useRef, useState } from "react";
-
-interface ImageMetadata {
-  src: string;
-  width: number;
-  height: number;
-  format: string;
-}
+import { ComponentProps, useEffect, useRef, useState } from "react";
 
 export type ProgressiveImageProps = {
-  meta: ImageMetadata[];
-  alt: string;
-  onLoad?: () => void;
-  imgProps?: Omit<
-    ComponentProps<"img">,
-    "src" | "srcSet" | "alt" | "loading" | "onLoad"
-  >;
-} & ComponentProps<"picture">;
+  variants: ImageVariantCollection;
+} & Omit<ComponentProps<"img">, "src" | "srcSet" | "loading">;
 
 /**
- * A React component that progressively loads images using multiple resolutions and formats.
- * It starts by displaying a low-resolution placeholder image with a blur effect,
- * and then replaces it with a high-resolution image once it's fully loaded.
- * Behaves exactly like a normal <img /> tag with progressive and lazy loading capabilities.
+ * Progressive image loading component with lazy loading and blur-to-sharp transition.
+ * Supports multiple formats (AVIF, WebP, PNG) and resolutions.
  */
 export default function ProgressiveImage({
-  meta,
-  alt,
-  onLoad,
-  imgProps,
-  ...pictureProps
+  variants,
+  style,
+  ...imageProps
 }: ProgressiveImageProps) {
-  const [loaded, setLoaded] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const ref = useRef<HTMLImageElement>(null);
-  const highResLoadedRef = useRef(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isErrored, setIsErrored] = useState(false);
+  const isSuccessful = isLoaded && !isErrored;
 
-  // Set up intersection observer for lazy loading
+  // Set isLoaded to true if the image is already cached
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          // Disconnect after becoming visible since we don't need to track anymore
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "50px" } // Start loading slightly before image enters viewport
-    );
-
-    if (ref.current) {
-      observer.observe(ref.current);
+    if (imgRef.current) {
+      setIsLoaded(imgRef.current.complete);
     }
-
-    return () => observer.disconnect();
   }, []);
 
-  // Monitor when the actual rendered image (from srcSet) loads
-  useEffect(() => {
-    if (!visible || !ref.current) return;
-
-    const imgElement = ref.current;
-
-    // Check if image is already loaded (from cache)
-    if (imgElement.complete && imgElement.naturalWidth > 0) {
-      if (!highResLoadedRef.current) {
-        highResLoadedRef.current = true;
-        setLoaded(true);
-        onLoad?.();
-      }
-    }
-  }, [visible, onLoad]);
-
-  /** Callback handling the image load event. */
-  const handleLoad = () => {
-    if (!highResLoadedRef.current) {
-      highResLoadedRef.current = true;
-      setLoaded(true);
-      onLoad?.();
-    }
-  };
-
-  if (!meta || meta.length === 0) {
+  if (!variants || variants.length === 0) {
     return null;
   }
 
-  // Sort by width to get the smallest as placeholder and largest as full resolution
-  const sortedData = [...meta].sort((a, b) => a.width - b.width);
-  const placeholder = sortedData[0]; // Smallest (20px wide)
-  const fullRes = sortedData[sortedData.length - 1]; // Largest
+  const avifImages = variants.filter((img) => img.format === "avif");
+  const webpImages = variants.filter((img) => img.format === "webp");
+  const pngImages = variants.filter((img) => img.format === "png");
 
-  // Group by format for srcSet
-  const avifImages = sortedData.filter((img) => img.format === "avif");
-  const webpImages = sortedData.filter((img) => img.format === "webp");
-  const pngImages = sortedData.filter((img) => img.format === "png");
-
-  const pictureStyle: React.CSSProperties = {
-    aspectRatio: `${fullRes.width} / ${fullRes.height}`,
-    width: pictureProps.style?.height ? "auto" : fullRes.width,
-    height: pictureProps.style?.width ? "auto" : fullRes.height,
-    ...pictureProps.style,
-  };
-
-  const imgStyle: React.CSSProperties = {
-    // By default, the picture element dictates the image size
-    width: "100%",
-    height: "100%",
-    ...imgProps?.style,
-    filter: loaded
-      ? (imgProps?.style?.filter as string) || "none"
-      : `${(imgProps?.style?.filter as string) || ""} blur(10px)`.trim(),
-    transition: `${
-      imgProps?.style?.transition || ""
-    } filter 0.5s ease-out`.trim(),
-  };
+  const sortedPngImages = pngImages.sort((a, b) => a.width - b.width);
+  const minResPngImage = sortedPngImages[0];
+  const maxResPngImage = sortedPngImages[sortedPngImages.length - 1];
 
   return (
-    <picture {...pictureProps} style={pictureStyle}>
-      {visible && avifImages.length > 0 && (
+    <picture>
+      {avifImages.length > 0 && (
         <source
           type="image/avif"
           srcSet={avifImages
             .map((img) => `${img.src} ${img.width}w`)
             .join(", ")}
-          sizes={imgProps?.sizes}
         />
       )}
-      {visible && webpImages.length > 0 && (
+      {webpImages.length > 0 && (
         <source
           type="image/webp"
           srcSet={webpImages
             .map((img) => `${img.src} ${img.width}w`)
             .join(", ")}
-          sizes={imgProps?.sizes}
         />
       )}
-      {visible && pngImages.length > 0 && (
+      {pngImages.length > 0 && (
         <source
           type="image/png"
           srcSet={pngImages.map((img) => `${img.src} ${img.width}w`).join(", ")}
-          sizes={imgProps?.sizes}
         />
       )}
       <img
-        {...imgProps}
-        ref={ref}
-        src={visible ? fullRes.src : placeholder.src}
-        alt={alt}
+        ref={imgRef}
         loading="lazy"
-        onLoad={handleLoad}
-        style={imgStyle}
+        src={maxResPngImage.src}
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setIsErrored(true)}
+        style={{
+          backgroundImage: isSuccessful
+            ? undefined
+            : `url(${minResPngImage.src})`,
+          backgroundSize: isSuccessful ? undefined : "100% 100%",
+          filter: isSuccessful ? "none" : "blur(20px)",
+          transition: "filter 0.5s ease-out",
+          ...style,
+        }}
+        {...imageProps}
       />
     </picture>
   );
