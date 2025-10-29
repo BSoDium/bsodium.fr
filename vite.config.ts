@@ -29,11 +29,13 @@ export default defineConfig({
           // Generate widths based on percentages of original image width
           // Using common responsive breakpoint percentages
           const percentages = [0.15, 0.35, 0.65, 1.0]; // 15%, 35%, 65%, 100%
-          const widths = percentages
-            .map((p) => Math.round(originalWidth * p))
-            .filter((w) => w >= 20) // Ensure minimum width of 20px
-            .filter((w, i, arr) => i === 0 || w > arr[i - 1] + 10) // Remove too-similar widths
-            .join(";");
+          const widths = [
+            20, // Always include 20px for very small previews
+            ...percentages
+              .map((p) => Math.round(originalWidth * p))
+              .filter((w) => w >= 20) // Ensure minimum width of 20px
+              .filter((w, i, arr) => i === 0 || w > arr[i - 1] + 10), // Remove too-similar widths
+          ].join(";");
           return new URLSearchParams({
             w: widths,
             format: "avif;webp;png",

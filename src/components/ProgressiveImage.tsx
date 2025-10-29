@@ -91,7 +91,7 @@ export default function ProgressiveImage({
             ? style?.filter || "none"
             : `${
                 style?.filter || ""
-              } blur(${minResImageBlurSize}px) contrast(0.8)`,
+              } blur(${minResImageBlurSize}px)`,
         }}
         {...imageProps}
       />
