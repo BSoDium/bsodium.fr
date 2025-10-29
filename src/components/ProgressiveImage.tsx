@@ -1,3 +1,4 @@
+import useRenderedSize from "@/hooks/useRenderedSize";
 import { ComponentProps, useEffect, useRef, useState } from "react";
 
 export type ProgressiveImageProps = {
@@ -13,10 +14,14 @@ export default function ProgressiveImage({
   style,
   ...imageProps
 }: ProgressiveImageProps) {
-  const imgRef = useRef<HTMLImageElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isErrored, setIsErrored] = useState(false);
   const isSuccessful = isLoaded && !isErrored;
+
+  const imgRef = useRef<HTMLImageElement>(null);
+  const imgSize = useRenderedSize({
+    ref: imgRef,
+  });
 
   // Set isLoaded to true if the image is already cached
   useEffect(() => {
@@ -34,8 +39,16 @@ export default function ProgressiveImage({
   const pngImages = variants.filter((img) => img.format === "png");
 
   const sortedPngImages = pngImages.sort((a, b) => a.width - b.width);
-  const minResPngImage = sortedPngImages[0];
   const maxResPngImage = sortedPngImages[sortedPngImages.length - 1];
+  const minResPngImage = sortedPngImages[0];
+
+  const minResImageBlurSize = imgSize !== null ? Math.max(
+    Math.max(
+      imgSize.width / minResPngImage.width,
+      imgSize.height / minResPngImage.height
+    ),
+    1
+  ) : 20;
 
   return (
     <picture>
@@ -68,13 +81,17 @@ export default function ProgressiveImage({
         onLoad={() => setIsLoaded(true)}
         onError={() => setIsErrored(true)}
         style={{
-          backgroundImage: isSuccessful
-            ? undefined
-            : `url(${minResPngImage.src})`,
-          backgroundSize: isSuccessful ? undefined : "100% 100%",
-          filter: isSuccessful ? "none" : "blur(20px)",
-          transition: "filter 0.5s ease-out",
           ...style,
+          backgroundImage: isSuccessful
+            ? style?.backgroundImage
+            : `url(${minResPngImage.src})`,
+          backgroundSize: isSuccessful ? style?.backgroundSize : "100% 100%",
+          transition: `${style?.transition || ""} filter 0.5s ease-out`,
+          filter: isSuccessful
+            ? style?.filter || "none"
+            : `${
+                style?.filter || ""
+              } blur(${minResImageBlurSize}px) contrast(0.8)`,
         }}
         {...imageProps}
       />
