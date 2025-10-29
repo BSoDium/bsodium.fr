@@ -11,7 +11,8 @@
     },
     "explorer.fileNesting.enabled": true,
     "cSpell.words": [
-      "bsodium"
+      "bsodium",
+      "imagetools"
     ]
   },
   "tasks": {

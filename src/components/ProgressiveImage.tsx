@@ -1,5 +1,3 @@
-import { Box } from "@mui/joy";
-import { animated } from "@react-spring/web";
 import React, { ComponentProps, useEffect, useRef, useState } from "react";
 
 interface ImageMetadata {
@@ -9,29 +7,44 @@ interface ImageMetadata {
   format: string;
 }
 
-type ProgressiveImageData = ImageMetadata[];
+export type ProgressiveImageProps = {
+  meta: ImageMetadata[];
+  alt: string;
+  onLoad?: () => void;
+  imgProps?: Omit<
+    ComponentProps<"img">,
+    "src" | "srcSet" | "alt" | "loading" | "onLoad"
+  >;
+} & ComponentProps<"picture">;
 
+/**
+ * A React component that progressively loads images using multiple resolutions and formats.
+ * It starts by displaying a low-resolution placeholder image with a blur effect,
+ * and then replaces it with a high-resolution image once it's fully loaded.
+ * Behaves exactly like a normal <img /> tag with progressive and lazy loading capabilities.
+ */
 export default function ProgressiveImage({
   meta,
   alt,
-  animate = false,
-  style,
   onLoad,
-}: {
-  meta: ProgressiveImageData;
-  alt: string;
-  animate?: boolean;
-  style?: ComponentProps<typeof animated.img>["style"];
-  onLoad?: () => void;
-}) {
+  imgProps,
+  ...pictureProps
+}: ProgressiveImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
+  const highResLoadedRef = useRef(false);
 
-  // Intersection observer for lazy loading
+  // Set up intersection observer for lazy loading
   useEffect(() => {
     const observer = new IntersectionObserver(
-      ([entry]) => setVisible(entry.isIntersecting),
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          // Disconnect after becoming visible since we don't need to track anymore
+          observer.disconnect();
+        }
+      },
       { rootMargin: "50px" } // Start loading slightly before image enters viewport
     );
 
@@ -42,9 +55,29 @@ export default function ProgressiveImage({
     return () => observer.disconnect();
   }, []);
 
+  // Monitor when the actual rendered image (from srcSet) loads
+  useEffect(() => {
+    if (!visible || !ref.current) return;
+
+    const imgElement = ref.current;
+
+    // Check if image is already loaded (from cache)
+    if (imgElement.complete && imgElement.naturalWidth > 0) {
+      if (!highResLoadedRef.current) {
+        highResLoadedRef.current = true;
+        setLoaded(true);
+        onLoad?.();
+      }
+    }
+  }, [visible, onLoad]);
+
+  /** Callback handling the image load event. */
   const handleLoad = () => {
-    setLoaded(true);
-    onLoad?.();
+    if (!highResLoadedRef.current) {
+      highResLoadedRef.current = true;
+      setLoaded(true);
+      onLoad?.();
+    }
   };
 
   if (!meta || meta.length === 0) {
@@ -57,44 +90,66 @@ export default function ProgressiveImage({
   const fullRes = sortedData[sortedData.length - 1]; // Largest
 
   // Group by format for srcSet
+  const avifImages = sortedData.filter((img) => img.format === "avif");
   const webpImages = sortedData.filter((img) => img.format === "webp");
   const pngImages = sortedData.filter((img) => img.format === "png");
 
-  const imgStyle: React.CSSProperties = {
-    ...(style as React.CSSProperties),
-    filter: loaded
-      ? (style?.filter as string) || "none"
-      : `${(style?.filter as string) || ""} blur(10px)`,
-    transition: "filter 0.5s ease-out",
+  const pictureStyle: React.CSSProperties = {
+    aspectRatio: `${fullRes.width} / ${fullRes.height}`,
+    width: pictureProps.style?.height ? "auto" : fullRes.width,
+    height: pictureProps.style?.width ? "auto" : fullRes.height,
+    ...pictureProps.style,
   };
 
-  const ImageComponent = animate ? animated.img : "img";
+  const imgStyle: React.CSSProperties = {
+    // By default, the picture element dictates the image size
+    width: "100%",
+    height: "100%",
+    ...imgProps?.style,
+    filter: loaded
+      ? (imgProps?.style?.filter as string) || "none"
+      : `${(imgProps?.style?.filter as string) || ""} blur(10px)`.trim(),
+    transition: `${
+      imgProps?.style?.transition || ""
+    } filter 0.5s ease-out`.trim(),
+  };
 
   return (
-    <Box component="picture" sx={{ display: "contents" }}>
+    <picture {...pictureProps} style={pictureStyle}>
+      {visible && avifImages.length > 0 && (
+        <source
+          type="image/avif"
+          srcSet={avifImages
+            .map((img) => `${img.src} ${img.width}w`)
+            .join(", ")}
+          sizes={imgProps?.sizes}
+        />
+      )}
       {visible && webpImages.length > 0 && (
         <source
           type="image/webp"
           srcSet={webpImages
             .map((img) => `${img.src} ${img.width}w`)
             .join(", ")}
+          sizes={imgProps?.sizes}
         />
       )}
       {visible && pngImages.length > 0 && (
         <source
           type="image/png"
           srcSet={pngImages.map((img) => `${img.src} ${img.width}w`).join(", ")}
+          sizes={imgProps?.sizes}
         />
       )}
-      <Box
-        ref={ref as React.RefObject<HTMLImageElement>}
-        component={ImageComponent}
+      <img
+        {...imgProps}
+        ref={ref}
         src={visible ? fullRes.src : placeholder.src}
         alt={alt}
         loading="lazy"
-        style={imgStyle}
         onLoad={handleLoad}
+        style={imgStyle}
       />
-    </Box>
+    </picture>
   );
 }
