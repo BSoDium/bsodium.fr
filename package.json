@@ -9,9 +9,9 @@
     "dev": "vite",
     "lint": "eslint src",
     "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
     "build": "tsc -b && yarn lint && vite build",
     "build-resume": "tsx scripts/build-resume.ts",
-    "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "dependencies": {
