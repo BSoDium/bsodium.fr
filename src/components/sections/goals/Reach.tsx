@@ -205,7 +205,6 @@ export default function Reach({ step }: { step: number }) {
                 case "light":
                   return (
                     <ProgressiveImage
-                      animate
                       meta={satelliteLightData}
                       alt="satellite"
                       style={{
@@ -223,7 +222,6 @@ export default function Reach({ step }: { step: number }) {
                 case "dark":
                   return (
                     <ProgressiveImage
-                      animate
                       meta={satelliteDarkData}
                       alt="satellite"
                       style={{
