@@ -1,10 +1,10 @@
-import aauData from "@/assets/icons/aau.webp?progressive";
-import enseeihtData from "@/assets/icons/enseeiht.webp?progressive";
-import deaudatData from "@/assets/icons/deaudat.webp?progressive";
-import escapeData from "@/assets/icons/escape.webp?progressive";
-import tauniqoData from "@/assets/icons/tauniqo.webp?progressive";
-import kanopData from "@/assets/icons/kanop.webp?progressive";
-import lfdcData from "@/assets/icons/lfdc.webp?progressive";
+import aau from "@/assets/icons/aau.webp";
+import enseeiht from "@/assets/icons/enseeiht.webp";
+import deaudat from "@/assets/icons/deaudat.webp";
+import escape from "@/assets/icons/escape.webp";
+import tauniqo from "@/assets/icons/tauniqo.webp";
+import kanop from "@/assets/icons/kanop.webp";
+import lfdc from "@/assets/icons/lfdc.webp";
 
 const details = {
   name: {
@@ -19,7 +19,7 @@ const details = {
     {
       school: "ENSEEIHT",
       url: "https://www.enseeiht.fr/en/index.html",
-      iconData: enseeihtData,
+      icon: enseeiht,
       location: "Toulouse, France",
       degree: "Master's degree in engineering",
       major: "Computer Science and Applied Mathematics",
@@ -29,7 +29,7 @@ const details = {
     {
       school: "AAU Klagenfurt",
       url: "https://www.aau.at/en/",
-      iconData: aauData,
+      icon: aau,
       location: "Klagenfurt, Austria",
       degree: "Master's degree in computer science",
       major: "Computer Graphics and Vision",
@@ -39,7 +39,7 @@ const details = {
     {
       school: "CPGE Lycée Déodat de Séverac",
       url: "https://dossier.parcoursup.fr/Candidats/public/fiches/afficherFicheFormation?g_ta_cod=4052",
-      iconData: deaudatData,
+      icon: deaudat,
       location: "Toulouse, France",
       degree: "PCSI/PSI* (Bachelor equivalent)",
       major: "Mathematics and Physics",
@@ -51,7 +51,7 @@ const details = {
     {
       company: "Kanop",
       url: "https://www.kanop.io/",
-      iconData: kanopData,
+      icon: kanop,
       location: "Barcelona, Spain",
       contract: "Full-time",
       position: "Front-end engineer",
@@ -70,7 +70,7 @@ const details = {
     {
       company: "Tauniqo.ai",
       url: "https://tauniqo.ai/",
-      iconData: tauniqoData,
+      icon: tauniqo,
       location: "Barcelona, Spain",
       contract: "Full-time",
       position: "Full-stack engineer",
@@ -85,7 +85,7 @@ const details = {
     {
       company: "Escape technologies",
       url: "https://www.escape.tech/",
-      iconData: escapeData,
+      icon: escape,
       location: "Paris, France",
       contract: "Full-time",
       position: "Full-stack engineer",
@@ -101,7 +101,7 @@ const details = {
     {
       company: "Kanop",
       url: "https://www.kanop.io/",
-      iconData: kanopData,
+      icon: kanop,
       location: "Paris, France",
       contract: "Freelance & Internship",
       position: "Front-end engineer",
@@ -124,7 +124,7 @@ const details = {
     {
       company: "La Fresque du Climat",
       url: "https://fresqueduclimat.org/",
-      iconData: lfdcData,
+      icon: lfdc,
       location: "Toulouse, France",
       contract: "Volunteering",
       position: "Facilitator",

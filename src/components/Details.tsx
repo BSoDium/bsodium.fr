@@ -1,7 +1,6 @@
 import { Avatar, Chip, Stack, Typography } from "@mui/joy";
 import { animated, useSpringRef, useTransition } from "@react-spring/web";
 import details from "@/assets/Details";
-import ProgressiveImage from "@/components/ProgressiveImage";
 import moment from "moment";
 import React, { useEffect } from "react";
 import { BsCode } from "react-icons/bs";
@@ -45,9 +44,9 @@ export function Education({ wrap }: { wrap?: boolean } = { wrap: false }) {
               border: `1px solid ${theme.getCssVar("palette-divider")}`,
             })}
           >
-            {item.iconData ? (
-              <ProgressiveImage
-                variants={item.iconData}
+            {item.icon ? (
+              <img
+                src={item.icon}
                 alt={`${item.school} logo`}
                 style={{
                   width: "100%",
@@ -138,9 +137,9 @@ export function Experience({ truncate = false }: { truncate?: boolean }) {
                   border: `1px solid ${theme.getCssVar("palette-divider")}`,
                 })}
               >
-                {items[0].iconData ? (
-                  <ProgressiveImage
-                    variants={items[0].iconData}
+                {items[0].icon ? (
+                  <img
+                    src={items[0].icon}
                     alt={`${items[0].company} logo`}
                     style={{
                       width: "100%",

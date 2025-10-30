@@ -3,11 +3,15 @@ import { Stack, Typography, useColorScheme } from "@mui/joy";
 import { ATypography } from "@/pages/Landing";
 import mountainsDarkData from "@/assets/mountains_dark.webp?progressive";
 import mountainsLightData from "@/assets/mountains_light.webp?progressive";
-import { animated, useSpringRef, useTransition } from "@react-spring/web";
+import { animated, easings, useSpringRef, useTransition } from "@react-spring/web";
 import ProgressiveImage from "@/components/ProgressiveImage";
 import details from "@/assets/Details";
-import { transitionConfig } from "@/components/sections/Illustrations";
 import { useMobileMode } from "@/components/Responsive";
+
+export const transitionConfig = {
+  duration: 1000,
+  easing: easings.easeInOutExpo,
+};
 
 export default function Credits() {
   const mountainsTransRef = useSpringRef();

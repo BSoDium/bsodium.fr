@@ -40,7 +40,7 @@ export default function AnalyticsBanner() {
         sx={(theme) => ({
           display: hidden ? 'none' : 'flex',
           position: 'fixed',
-          bottom: 'var(--nav-safe-area-inset-bottom, 0)',
+          bottom: '0',
           marginBottom: '1rem',
           left: '50%',
           backgroundColor: theme.palette.background.body,

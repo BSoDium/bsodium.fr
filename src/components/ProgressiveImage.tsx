@@ -1,9 +1,11 @@
 import useRenderedSize from "@/hooks/useRenderedSize";
+import { css } from "@emotion/react";
 import { ComponentProps, useEffect, useRef, useState } from "react";
 
 export type ProgressiveImageProps = {
   variants: ImageVariantCollection;
-} & Omit<ComponentProps<"img">, "src" | "srcSet" | "loading">;
+  style?: ComponentProps<"picture">["style"];
+} & Omit<ComponentProps<"img">, "style">;
 
 /**
  * Progressive image loading component with lazy loading and blur-to-sharp transition.
@@ -11,8 +13,8 @@ export type ProgressiveImageProps = {
  */
 export default function ProgressiveImage({
   variants,
-  style,
-  ...imageProps
+  style: pictureStyle,
+  ...imgProps
 }: ProgressiveImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isErrored, setIsErrored] = useState(false);
@@ -42,16 +44,25 @@ export default function ProgressiveImage({
   const maxResPngImage = sortedPngImages[sortedPngImages.length - 1];
   const minResPngImage = sortedPngImages[0];
 
-  const minResImageBlurSize = imgSize !== null ? Math.max(
-    Math.max(
-      imgSize.width / minResPngImage.width,
-      imgSize.height / minResPngImage.height
-    ),
-    1
-  ) : 20;
+  const minResImageBlurSize =
+    imgSize !== null
+      ? Math.max(
+          Math.max(
+            imgSize.width / minResPngImage.width,
+            imgSize.height / minResPngImage.height
+          ),
+          1
+        )
+      : 20;
 
   return (
-    <picture>
+    <picture
+      css={css`
+        display: block;
+        aspect-ratio: ${maxResPngImage.width} / ${maxResPngImage.height};
+      `}
+      style={pictureStyle}
+    >
       {avifImages.length > 0 && (
         <source
           type="image/avif"
@@ -75,25 +86,26 @@ export default function ProgressiveImage({
         />
       )}
       <img
+        {...imgProps}
         ref={imgRef}
         loading="lazy"
         src={maxResPngImage.src}
-        onLoad={() => setIsLoaded(true)}
-        onError={() => setIsErrored(true)}
-        style={{
-          ...style,
-          backgroundImage: isSuccessful
-            ? style?.backgroundImage
-            : `url(${minResPngImage.src})`,
-          backgroundSize: isSuccessful ? style?.backgroundSize : "100% 100%",
-          transition: `${style?.transition || ""} filter 0.5s ease-out`,
-          filter: isSuccessful
-            ? style?.filter || "none"
-            : `${
-                style?.filter || ""
-              } blur(${minResImageBlurSize}px)`,
+        onLoad={(event) => {
+          setIsLoaded(true);
+          imgProps?.onLoad?.(event);
         }}
-        {...imageProps}
+        onError={(event) => {
+          setIsErrored(true);
+          imgProps?.onError?.(event);
+        }}
+        style={{
+          height: "100%",
+          width: "100%",
+          backgroundImage: isSuccessful ? "none" : `url(${minResPngImage.src})`,
+          backgroundSize: isSuccessful ? undefined : "100% 100%",
+          transition: `filter 0.25s ease-out`,
+          filter: isSuccessful ? "none" : `blur(${minResImageBlurSize}px)`,
+        }}
       />
     </picture>
   );

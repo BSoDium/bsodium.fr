@@ -1,9 +1,9 @@
 import { Stack, useColorScheme } from "@mui/joy";
 import { animated, useSpringRef, useTransition } from "@react-spring/web";
 import { useEffect, useState } from "react";
-import ProgressiveImage from "@/components/ProgressiveImage";
-import architectureDarkData from "@/assets/architecture_dark.webp?progressive";
-import architectureLightData from "@/assets/architecture_light.webp?progressive";
+import architectureDarkVariants from "@/assets/architecture_dark.webp?progressive";
+import architectureLightVariants from "@/assets/architecture_light.webp?progressive";
+import ProgressiveImage from "../ProgressiveImage";
 
 export function ThemeAwareIllustration() {
   const { colorScheme } = useColorScheme();
@@ -25,14 +25,13 @@ export function ThemeAwareIllustration() {
     }
   }, [colorScheme, loaded]);
 
-  const imgSx = {
+  const imgSx: React.CSSProperties = {
     position: "relative",
     marginTop: "-23rem",
     width: "100%",
-    WebkitMaskImage: "linear-gradient(to left,black 10%,transparent 80%)",
-    maskImage: "linear-gradient(to left,black 10%,transparent 80%)",
+    mask: "linear-gradient(to left,black 10%,transparent 80%)",
     filter: "grayscale(1)",
-  } as React.CSSProperties;
+  };
 
   return (
     <Stack
@@ -61,7 +60,7 @@ export function ThemeAwareIllustration() {
             return (
               <animated.div style={style}>
                 <ProgressiveImage
-                  variants={architectureLightData}
+                  variants={architectureLightVariants}
                   alt="Brutalist building by Arthur Swiffen"
                   onLoad={() => setLoaded(true)}
                   style={imgSx}
@@ -72,7 +71,7 @@ export function ThemeAwareIllustration() {
             return (
               <animated.div style={style}>
                 <ProgressiveImage
-                  variants={architectureDarkData}
+                  variants={architectureDarkVariants}
                   alt="Red lamps in Subway in Hamburg by Travel with Lenses"
                   onLoad={() => setLoaded(true)}
                   style={imgSx}
