@@ -14,7 +14,7 @@ import {
   Typography,
   useColorScheme,
 } from "@mui/joy";
-import React, { useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import {
   VscChromeClose,
   VscChromeMaximize,
@@ -39,7 +39,7 @@ export type Category = (typeof categories)[number];
 
 export interface Tab {
   name: string;
-  icon: JSX.Element;
+  icon: ReactNode;
 }
 
 export function FakeButton({

@@ -1,8 +1,6 @@
 import { FiAtSign, FiUser } from "react-icons/fi";
-import satelliteDark from "@/assets/satellite_dark.webp";
-import satelliteDarkMin from "@/assets/satellite_dark.min.webp";
-import satelliteLight from "@/assets/satellite_light.webp";
-import satelliteLightMin from "@/assets/satellite_light.min.webp";
+import satelliteDarkData from "@/assets/satellite_dark.webp?progressive";
+import satelliteLightData from "@/assets/satellite_light.webp?progressive";
 import React, { useEffect, useState } from "react";
 import {
   animated,
@@ -206,41 +204,55 @@ export default function Reach({ step }: { step: number }) {
               switch (item) {
                 case "light":
                   return (
-                    <ProgressiveImage
-                      animate
-                      src={satelliteLight}
-                      placeholder={satelliteLightMin}
-                      alt="satellite"
+                    <animated.div
                       style={{
                         ...style,
                         position: "absolute",
                         top: "-1rem",
                         left: "max(67%, 36rem)",
                         height: "20rem",
-                        rotate: opacity.to((o) => `${o * 15 - 15}deg`),
-                        filter:
-                          "drop-shadow(-1rem -1rem 1.5rem #f4e9d068) drop-shadow(1rem 1rem 1rem #326c8c4c) hue-rotate(15deg)",
+                        transform: opacity.to(
+                          (o) => `rotate(${o * 15 - 15}deg)`
+                        ),
                       }}
-                    />
+                    >
+                      <ProgressiveImage
+                        variants={satelliteLightData}
+                        alt="satellite"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          filter:
+                            "drop-shadow(-1rem -1rem 1.5rem #f4e9d068) drop-shadow(1rem 1rem 1rem #326c8c4c) hue-rotate(15deg)",
+                        }}
+                      />
+                    </animated.div>
                   );
                 case "dark":
                   return (
-                    <ProgressiveImage
-                      animate
-                      src={satelliteDark}
-                      placeholder={satelliteDarkMin}
-                      alt="satellite"
+                    <animated.div
                       style={{
                         ...style,
                         position: "absolute",
                         top: "-2rem",
                         left: "max(65%, 36rem)",
                         height: "20rem",
-                        rotate: opacity.to((o) => `${o * 15 - 15}deg`),
-                        filter:
-                          "drop-shadow(-1rem -1rem 1.5rem #dcedfa41) drop-shadow(1rem 1rem 1rem #01012563)",
+                        transform: opacity.to(
+                          (o) => `rotate(${o * 15 - 15}deg)`
+                        ),
                       }}
-                    />
+                    >
+                      <ProgressiveImage
+                        variants={satelliteDarkData}
+                        alt="satellite"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          filter:
+                            "drop-shadow(-1rem -1rem 1.5rem #dcedfa41) drop-shadow(1rem 1rem 1rem #01012563)",
+                        }}
+                      />
+                    </animated.div>
                   );
                 default:
                   return null;

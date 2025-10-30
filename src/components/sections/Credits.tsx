@@ -1,15 +1,17 @@
 import { useEffect } from "react";
 import { Stack, Typography, useColorScheme } from "@mui/joy";
 import { ATypography } from "@/pages/Landing";
-import mountainsDark from "@/assets/mountains_dark.webp";
-import mountainsDarkMin from "@/assets/mountains_dark.min.webp";
-import mountainsLight from "@/assets/mountains_light.webp";
-import mountainsLightMin from "@/assets/mountains_light.min.webp";
-import { animated, useSpringRef, useTransition } from "@react-spring/web";
+import mountainsDarkData from "@/assets/mountains_dark.webp?progressive";
+import mountainsLightData from "@/assets/mountains_light.webp?progressive";
+import { animated, easings, useSpringRef, useTransition } from "@react-spring/web";
 import ProgressiveImage from "@/components/ProgressiveImage";
 import details from "@/assets/Details";
-import { transitionConfig } from "@/components/sections/Illustrations";
 import { useMobileMode } from "@/components/Responsive";
+
+export const transitionConfig = {
+  duration: 1000,
+  easing: easings.easeInOutExpo,
+};
 
 export default function Credits() {
   const mountainsTransRef = useSpringRef();
@@ -58,8 +60,7 @@ export default function Credits() {
                   }}
                 />
                 <ProgressiveImage
-                  src={mountainsLight}
-                  placeholder={mountainsLightMin}
+                  variants={mountainsLightData}
                   alt="mountains"
                   style={{
                     position: "absolute",
@@ -98,8 +99,7 @@ export default function Credits() {
                   }}
                 />
                 <ProgressiveImage
-                  src={mountainsDark}
-                  placeholder={mountainsDarkMin}
+                  variants={mountainsDarkData}
                   alt="mountains"
                   style={{
                     position: "absolute",

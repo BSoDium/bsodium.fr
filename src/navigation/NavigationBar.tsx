@@ -1,13 +1,11 @@
 import {
   Button,
-  IconButton,
   Stack,
-  Tooltip,
   Typography,
   useColorScheme,
 } from "@mui/joy";
-import React, { useEffect, useMemo, useState } from "react";
-import { useLandScapeMode, useMobileMode } from "@/components/Responsive";
+import React, { ReactNode, useEffect, useState } from "react";
+import { useMobileMode } from "@/components/Responsive";
 import { Link, useLocation } from "react-router-dom";
 import {
   BsHouse,
@@ -21,7 +19,6 @@ import {
 } from "react-icons/bs";
 import { MdOutlineAutoMode } from "react-icons/md";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
-import FloatingActionButton from "./FloatingActionButton";
 
 const modes = ["light", "dark", "system"] as const;
 
@@ -33,10 +30,10 @@ function NavigationBarItem({
   layout = "vertical",
   selected,
 }: {
-  icon: JSX.Element;
+  icon: ReactNode;
   text: string;
   to: string;
-  selectedIcon?: JSX.Element;
+  selectedIcon?: ReactNode;
   layout?: "vertical" | "horizontal";
   selected?: boolean;
 }) {
@@ -131,23 +128,15 @@ function NavigationBarItem({
   );
 }
 
-/**
- * Navigation bar component
- * @deprecated
- */
 export default function NavigationBar({
   children,
 }: {
-  children: JSX.Element | JSX.Element[];
+  children: ReactNode | ReactNode[];
 }) {
   const location = useLocation();
   const { mode, setMode } = useColorScheme();
 
   const hidden = useOverlayQueryParam();
-
-  const bottom = useMobileMode();
-  const landscape = useLandScapeMode();
-  const horizontal = useMemo(() => !landscape && !bottom, [landscape, bottom]);
 
   const [width, setWidth] = useState<number>();
   const [height, setHeight] = useState<number>();
@@ -178,15 +167,15 @@ export default function NavigationBar({
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--nav-safe-area-inset-top",
-      landscape || bottom || hidden ? "0" : height ? `${height}px` : "3rem"
+      height ? `${height}px` : "3rem"
     );
     document.documentElement.style.setProperty(
       "--nav-safe-area-inset-bottom",
-      bottom && !hidden ? (height ? `${height}px` : "4.5rem") : "0px"
+      "0px"
     );
     document.documentElement.style.setProperty(
       "--nav-safe-area-inset-left",
-      landscape && !hidden ? (width ? `${width}px` : "5.5rem") : "0px"
+      "0px"
     );
 
     return () => {
@@ -200,58 +189,35 @@ export default function NavigationBar({
         "--nav-safe-area-inset-left"
       );
     };
-  }, [landscape, bottom, width, height]);
+  }, [width, height]);
 
   return (
     <>
       <Stack
         ref={navigationRef}
-        direction={landscape ? "column" : "row"}
+        direction="row"
         sx={(theme) => ({
           position: "fixed",
-          ...(bottom
-            ? {
-                bottom: 0,
-                borderTop: `1px solid ${theme.palette.divider}`,
-              }
-            : {
-                top: 0,
-              }),
+          top: 0,
           left: 0,
           gap: 4,
           display: hidden ? "none" : "flex",
           alignItems: "center",
           backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 50%)`,
           zIndex: 1000,
-          ...(landscape
-            ? {
-                paddingTop: "2rem",
-                paddingBottom: "1.5rem",
-                height: "100vh",
-                width: "fit-content",
-              }
-            : {
-                backdropFilter: "blur(10px)",
-                padding: bottom ? ".5rem" : ".5rem 2rem",
-                width: "100vw",
-                height: "fit-content",
-                borderBottom: bottom
-                  ? undefined
-                  : `1px solid ${theme.palette.divider}`,
-              }),
+          backdropFilter: "blur(10px)",
+          padding: ".5rem 2rem",
+          width: "100vw",
+          height: "fit-content",
+          borderBottom: `1px solid ${theme.palette.divider}`,
         })}
       >
-        <Stack
-          flex={1}
-          justifyContent={bottom ? "space-evenly" : "flex-start"}
-          direction={landscape ? "column" : "row"}
-          gap={landscape ? 2.5 : 1}
-        >
+        <Stack flex={1} justifyContent={"flex-start"} direction={"row"} gap={1}>
           <NavigationBarItem
             icon={<BsHouse />}
             selectedIcon={<BsHouseFill />}
             text="Home"
-            layout={horizontal ? "horizontal" : "vertical"}
+            layout={"horizontal"}
             to="/"
             selected={location.pathname === "/"}
           />
@@ -259,7 +225,7 @@ export default function NavigationBar({
             icon={<BsJournalBookmark />}
             selectedIcon={<BsJournalBookmarkFill />}
             text="Projects"
-            layout={horizontal ? "horizontal" : "vertical"}
+            layout={"horizontal"}
             to="/projects"
             selected={location.pathname.startsWith("/projects")}
           />
@@ -267,107 +233,41 @@ export default function NavigationBar({
             icon={<BsFilePerson />}
             selectedIcon={<BsFilePersonFill />}
             text="Resume"
-            layout={horizontal ? "horizontal" : "vertical"}
+            layout={"horizontal"}
             to="/resume"
             selected={location.pathname === "/resume"}
           />
         </Stack>
-        {horizontal ? (
-          <Button
-            variant="plain"
-            color="neutral"
-            size="lg"
-            sx={{
-              minHeight: "fit-content",
-              borderRadius: "100vmax",
-              padding: ".6rem 1rem",
-              transition: "all 0.2s",
-              fontSize: "var(--joy-fontSize-sm)",
-            }}
-            onClick={() => {
-              if (mode)
-                setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
-            }}
-            startDecorator={
-              mode === "system" ? (
-                <MdOutlineAutoMode />
-              ) : mode === "light" ? (
-                <BsSun />
-              ) : (
-                <BsMoon />
-              )
-            }
-          >
-            {`${
-              mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"
-            } theme`}
-          </Button>
-        ) : (
-          <Tooltip
-            variant="soft"
-            placement="right"
-            title={`${
-              mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"
-            } theme`}
-          >
-            <IconButton
-              variant="plain"
-              color="neutral"
-              size="lg"
-              sx={{
-                transition: "all 0.2s",
-                display: bottom ? "none" : undefined,
-                borderRadius: "100vmax",
-                padding: 2,
-              }}
-              onClick={() => {
-                if (mode)
-                  setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
-              }}
-            >
-              {mode === "system" ? (
-                <MdOutlineAutoMode />
-              ) : mode === "light" ? (
-                <BsSun />
-              ) : (
-                <BsMoon />
-              )}
-            </IconButton>
-          </Tooltip>
-        )}
-      </Stack>
-      {bottom && !hidden && (
-        <Tooltip
-          variant="soft"
-          placement="left"
-          title={`${
-            mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"
-          } theme`}
-        >
-          <FloatingActionButton
-            size="lg"
-            color="neutral"
-            variant="outlined"
-            onClick={() => {
-              if (mode)
-                setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
-            }}
-            sx={{
-              height: "58px",
-              width: "58px",
-              borderRadius: "1rem",
-            }}
-          >
-            {mode === "system" ? (
+
+        <Button
+          variant="plain"
+          color="neutral"
+          size="lg"
+          sx={{
+            minHeight: "fit-content",
+            borderRadius: "100vmax",
+            padding: ".6rem 1rem",
+            transition: "all 0.2s",
+            fontSize: "var(--joy-fontSize-sm)",
+          }}
+          onClick={() => {
+            if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
+          }}
+          startDecorator={
+            mode === "system" ? (
               <MdOutlineAutoMode />
             ) : mode === "light" ? (
               <BsSun />
             ) : (
               <BsMoon />
-            )}
-          </FloatingActionButton>
-        </Tooltip>
-      )}
+            )
+          }
+        >
+          {`${
+            mode === "system" ? "System" : mode === "light" ? "Light" : "Dark"
+          } theme`}
+        </Button>
+      </Stack>
       {children}
     </>
   );

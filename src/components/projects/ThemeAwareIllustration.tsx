@@ -1,11 +1,9 @@
 import { Stack, useColorScheme } from "@mui/joy";
 import { animated, useSpringRef, useTransition } from "@react-spring/web";
 import { useEffect, useState } from "react";
-import ProgressiveImage from "@/components/ProgressiveImage";
-import architectureDarkMin from "@/assets/architecture_dark.min.webp";
-import architectureDark from "@/assets/architecture_dark.webp";
-import architectureLightMin from "@/assets/architecture_light.min.webp";
-import architectureLight from "@/assets/architecture_light.webp";
+import architectureDarkVariants from "@/assets/architecture_dark.webp?progressive";
+import architectureLightVariants from "@/assets/architecture_light.webp?progressive";
+import ProgressiveImage from "../ProgressiveImage";
 
 export function ThemeAwareIllustration() {
   const { colorScheme } = useColorScheme();
@@ -27,14 +25,13 @@ export function ThemeAwareIllustration() {
     }
   }, [colorScheme, loaded]);
 
-  const imgSx = {
+  const imgSx: React.CSSProperties = {
     position: "relative",
     marginTop: "-23rem",
     width: "100%",
-    WebkitMaskImage: "linear-gradient(to left,black 10%,transparent 80%)",
-    maskImage: "linear-gradient(to left,black 10%,transparent 80%)",
+    mask: "linear-gradient(to left,black 10%,transparent 80%)",
     filter: "grayscale(1)",
-  } as React.CSSProperties;
+  };
 
   return (
     <Stack
@@ -63,8 +60,7 @@ export function ThemeAwareIllustration() {
             return (
               <animated.div style={style}>
                 <ProgressiveImage
-                  src={architectureLight}
-                  placeholder={architectureLightMin}
+                  variants={architectureLightVariants}
                   alt="Brutalist building by Arthur Swiffen"
                   onLoad={() => setLoaded(true)}
                   style={imgSx}
@@ -75,8 +71,7 @@ export function ThemeAwareIllustration() {
             return (
               <animated.div style={style}>
                 <ProgressiveImage
-                  src={architectureDark}
-                  placeholder={architectureDarkMin}
+                  variants={architectureDarkVariants}
                   alt="Red lamps in Subway in Hamburg by Travel with Lenses"
                   onLoad={() => setLoaded(true)}
                   style={imgSx}

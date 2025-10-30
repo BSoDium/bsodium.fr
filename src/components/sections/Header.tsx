@@ -191,7 +191,7 @@ export default function Header() {
             &nbsp;
           </>
         ) : null}
-        and an this is my playground for all things web development.
+        and this is my playground for all things web development.
       </Typography>
     </Stack>
   );

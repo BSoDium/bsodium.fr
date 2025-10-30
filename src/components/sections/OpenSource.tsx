@@ -1,7 +1,6 @@
 import { Avatar, Stack, Typography, useColorScheme } from "@mui/joy";
 import { useMemo } from "react";
-import vader from "@/assets/vader.webp";
-import vaderMin from "@/assets/vader.min.webp";
+import vaderData from "@/assets/vader.webp?progressive";
 import { RiOpenSourceLine } from "react-icons/ri";
 import { Parallax } from "react-scroll-parallax";
 import ProgressiveImage from "@/components/ProgressiveImage";
@@ -178,8 +177,7 @@ export default function OpenSource() {
           }
         >
           <ProgressiveImage
-            src={vader}
-            placeholder={vaderMin}
+            variants={vaderData}
             alt="Darth vader"
             style={{
               ...(mobile
