@@ -59,7 +59,7 @@ export default function NavigationBarItem({
           />
         )}
         <motion.span
-          layout
+          layoutId={`${id}-nav-item-contents`}
           style={{
             display: "flex",
             alignItems: "center",
