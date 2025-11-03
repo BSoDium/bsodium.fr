@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Lobster&family=Righteous&family=Rock+Salt&display=swap');
 
+html {
+  scroll-snap-type: y proximity;
+  scroll-behavior: smooth;
+}
+
 html,
 body,
 main,
@@ -22,43 +27,5 @@ body {
 @media print {
   .pagebreak {
     page-break-before: always;
-  }
-}
-
-@keyframes float {
-  0% {
-    translate: 0 0;
-  }
-
-  50% {
-    translate: 0 -10%;
-  }
-
-  100% {
-    translate: 0 0;
-  }
-}
-
-@keyframes blink {
-  0% {
-    opacity: 0;
-  }
-
-  50% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes spin {
-  0% {
-    rotate: 0;
-  }
-
-  100% {
-    rotate: 360deg;
   }
 }
