@@ -35,6 +35,12 @@ export default function NavigationBar({
     navY.set(newNavY);
   });
 
+  // Handle scroll snapping
+  const snapTopY = useTransform(() => pageScrollY.get() + navY.get());
+  const snapBottomY = useTransform(
+    () => pageScrollY.get() + navY.get() + height
+  );
+
   // Handle nav background visibility on scroll
   const { scrollYProgress: navScrollProgressY } = useScroll({
     axis: "y",
@@ -48,6 +54,30 @@ export default function NavigationBar({
 
   return (
     <>
+      <motion.span
+        id="nav-snap-anchor-top"
+        style={{
+          position: "absolute",
+          scrollSnapAlign: "start",
+          top: snapTopY,
+
+          width: "100%",
+          height: 1,
+          background: "transparent",
+        }}
+      />
+      <motion.span
+        id="nav-snap-anchor-bottom"
+        style={{
+          position: "absolute",
+          scrollSnapAlign: "start",
+          top: snapBottomY,
+
+          width: "100%",
+          height: 1,
+          background: "transparent",
+        }}
+      />
       <Stack
         component={motion.nav}
         direction="row"
