@@ -14,7 +14,7 @@ export default function NavigationBarItem({
       <Button
         component={motion.button}
         layoutId={`${id}-nav-item-button`}
-        variant={"plain"}
+        variant="plain"
         color="neutral"
         style={{
           position: "relative",
@@ -63,6 +63,7 @@ export default function NavigationBarItem({
           style={{
             display: "flex",
             alignItems: "center",
+            whiteSpace: "nowrap",
           }}
         >
           {children as ReactNode}
