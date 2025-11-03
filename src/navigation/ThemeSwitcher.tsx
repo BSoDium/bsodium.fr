@@ -20,7 +20,6 @@ export default function ThemeSwitcher() {
         layoutId="theme-mode-button"
         variant="plain"
         color="neutral"
-        size="lg"
         style={{
           overflow: "hidden",
           position: "relative",
@@ -28,6 +27,19 @@ export default function ThemeSwitcher() {
           borderRadius: "100vmax",
           padding: ".6rem .75rem .6rem .6rem",
           fontSize: "var(--joy-fontSize-sm)",
+          background:
+            "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 100%)",
+        }}
+        whileHover={{
+          background:
+            "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 50%)",
+        }}
+        whileTap={{
+          background:
+            "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 0%)",
+        }}
+        transition={{
+          background: { ease: "easeIn", duration: 0.2 },
         }}
         onClick={() => {
           if (mode) setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);

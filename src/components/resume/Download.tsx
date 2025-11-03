@@ -3,7 +3,7 @@ import details from "@/assets/Details";
 import { useMobileMode } from "@/components/Responsive";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
 import pdf from "@/assets/pdf/resume.pdf";
-import { LuDownload,  LuFileText, LuGlasses } from "react-icons/lu";
+import { LuDownload, LuFileText, LuGlasses } from "react-icons/lu";
 
 /**
  * A component that allows the user to download the resume as a PDF.
@@ -22,22 +22,19 @@ export default function Download() {
       sx={{
         position: "fixed",
         display: hidden ? "none" : "flex",
-        bottom: "var(--nav-safe-area-inset-bottom, 0)",
+        bottom: 0,
         width: "100%",
-        paddingLeft: "var(--nav-safe-area-inset-left, 0)",
         zIndex: 2,
       }}
     >
       <Card
         variant="outlined"
         sx={(theme) => ({
-          width: mobile ? "calc(100% - 6rem)" : "30rem",
-          margin: mobile ? "1rem" : "0 0 1rem 0",
-          marginRight: mobile ? "5rem" : "0",
+          width: mobile ? "calc(100% - 2rem)" : "30rem",
+          margin: mobile ? "1rem 1rem 1rem 1rem" : "0 0 1rem 0",
           borderRadius: "0.75rem 1rem 1rem 0.75rem",
-          backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 30%)`,
+          backgroundColor: `color-mix(in srgb, ${theme.palette.background.body}, transparent 40%)`,
           backdropFilter: "blur(10px)",
-          webkitBackdropFilter: "blur(10px)",
           padding: ".5rem",
           boxShadow: "lg",
         })}

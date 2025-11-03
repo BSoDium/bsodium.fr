@@ -1,63 +1,99 @@
+import NavigationBarItems from "@/navigation/NavigationBarItems";
 import ThemeSwitcher from "@/navigation/ThemeSwitcher";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
 import { Stack, Typography } from "@mui/joy";
-import { motion } from "framer-motion";
+import {
+  motion,
+  useMotionValue,
+  useMotionValueEvent,
+  useScroll,
+  useTransform,
+} from "motion/react";
 import { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function NavigationBar({
   children,
+  height = 64,
 }: {
   children: ReactNode | ReactNode[];
+  height?: number;
 }) {
   const hidden = useOverlayQueryParam();
+
+  // Handle nav hide/show on scroll
+  const { scrollYProgress: pageScrollProgressY } = useScroll({ axis: "y" });
+  const navY = useMotionValue(0);
+  useMotionValueEvent(pageScrollProgressY, "change", (latest) => {
+    const previous = pageScrollProgressY.getPrevious() || 0;
+    const delta = latest - previous;
+
+    const currentNavY = navY.get();
+    let newNavY = currentNavY - delta * height * 5;
+    if (newNavY > 0) newNavY = 0;
+    if (newNavY < -height) newNavY = -height;
+    navY.set(newNavY);
+  });
+
+  // Handle nav background visibility on scroll
+  const { scrollYProgress: navScrollProgressY } = useScroll({
+    axis: "y",
+    offset: [`${-height}px start`, `${height}px start`],
+  });
+  const navBackgroundVisibility = useTransform(
+    navScrollProgressY,
+    [1, 0.5],
+    ["80%", "0%"]
+  );
 
   return (
     <>
       <Stack
-        component="nav"
+        component={motion.nav}
         direction="row"
-        sx={(theme) => ({
-          position: "sticky",
-          top: 0,
-          left: 0,
-          gap: 4,
-          height: "4rem",
-          alignItems: "center",
-          justifyContent: "center",
-          display: hidden ? "none" : "flex",
-          background: theme.palette.background.body,
-          padding: "0 2rem",
-          width: "100vw",
-          zIndex: 1000,
-        })}
+        style={
+          {
+            position: "sticky",
+            y: navY,
+            top: 0,
+            left: 0,
+            height: `${height}px`,
+            alignItems: "center",
+            justifyContent: "center",
+            display: hidden ? "none" : "flex",
+            padding: "0 2rem",
+            width: "100vw",
+            zIndex: 1000,
+            "--nav-background-visibility": navBackgroundVisibility,
+            background: `color-mix(in srgb, var(--joy-palette-background-surface) var(--nav-background-visibility), transparent 0%)`,
+            backdropFilter: "blur(10px)",
+          } as React.CSSProperties
+        }
       >
         <Stack
-          gap={1}
+          gap={4}
           flex={1}
           direction={"row"}
           maxWidth={"80rem"}
           alignItems={"center"}
         >
-          <Stack
-            id="nav-items"
-            flex={1}
-            alignItems="flex-start"
-            direction="row"
-            gap={2}
-          >
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/projects">Projects</NavLink>
-            <NavLink to="/resume">Resume</NavLink>
-          </Stack>
           <Typography
             id="nav-logo"
             level="h5"
+            textColor="text.secondary"
             fontFamily="'Fira Code', monospace"
             height="1.6rem"
+            component={Link}
+            to="/"
+            sx={{
+              textDecoration: "none",
+            }}
           >
-            BSoDium
-            <Typography fontWeight="sm">.fr</Typography>
+            <Typography textColor="text.primary">BSoD</Typography>
+            <Typography>ium</Typography>
+            <Typography textColor="text.tertiary" fontWeight="sm">
+              .fr
+            </Typography>
             <Typography
               fontWeight="sm"
               component={motion.span}
@@ -73,6 +109,15 @@ export default function NavigationBar({
               _
             </Typography>
           </Typography>
+          <Stack
+            id="nav-items"
+            flex={1}
+            alignItems="flex-start"
+            direction="row"
+            gap={1}
+          >
+            <NavigationBarItems />
+          </Stack>
           <Stack id="nav-buttons" flex={1} alignItems="flex-end">
             <ThemeSwitcher />
           </Stack>
