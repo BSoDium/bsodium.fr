@@ -22,14 +22,14 @@ export default function NavigationBar({
   const hidden = useOverlayQueryParam();
 
   // Handle nav hide/show on scroll
-  const { scrollYProgress: pageScrollProgressY } = useScroll({ axis: "y" });
+  const { scrollY: pageScrollY } = useScroll({ axis: "y" });
   const navY = useMotionValue(0);
-  useMotionValueEvent(pageScrollProgressY, "change", (latest) => {
-    const previous = pageScrollProgressY.getPrevious() || 0;
+  useMotionValueEvent(pageScrollY, "change", (latest) => {
+    const previous = pageScrollY.getPrevious() || 0;
     const delta = latest - previous;
 
     const currentNavY = navY.get();
-    let newNavY = currentNavY - delta * height * 5;
+    let newNavY = currentNavY - delta;
     if (newNavY > 0) newNavY = 0;
     if (newNavY < -height) newNavY = -height;
     navY.set(newNavY);
