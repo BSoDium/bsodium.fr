@@ -79,11 +79,14 @@ export default function NavigationBar({
         }}
       />
       <Stack
-        component={motion.nav}
+        layoutRoot
         direction="row"
+        layoutId="navigation-bar"
+        component={motion.nav}
         style={
           {
             position: "sticky",
+            originY: "top",
             y: navY,
             top: 0,
             left: 0,
