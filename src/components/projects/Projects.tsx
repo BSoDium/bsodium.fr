@@ -16,10 +16,6 @@ export default function Projects() {
       width="100vw"
       position="relative"
       overflow="hidden"
-      sx={{
-        paddingLeft: "var(--nav-safe-area-inset-left)",
-        paddingBottom: "var(--nav-safe-area-inset-bottom)",
-      }}
     >
       <Meta
         title={`Projects and experiments • ${details.name.first} ${details.name.last}`}

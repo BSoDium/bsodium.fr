@@ -41,7 +41,6 @@ export function ThemeAwareIllustration() {
         width: "100rem",
         height: "min(100%, 31rem)",
         overflow: "hidden",
-        paddingTop: "var(--nav-safe-area-inset-top)",
         "&:after": {
           content: '""',
           position: "absolute",
