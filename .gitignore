@@ -37,3 +37,6 @@ dist-ssr
 .vscode
 *storybook.log
 storybook-static
+
+# NPM
+package-lock.json

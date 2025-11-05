@@ -7,8 +7,8 @@ export default function NavigationBarItem({
   children,
   ...props
 }: NavLinkProps) {
+  const id = useId();
   const render = (renderProps: NavLinkRenderProps): ReactNode => {
-    const id = useId();
     const { isActive } = renderProps;
 
     return (

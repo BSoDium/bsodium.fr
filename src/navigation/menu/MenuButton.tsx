@@ -20,8 +20,8 @@ const AnimatedBorder = ({
       style={{
         position: "absolute",
         padding,
-        top: `-${borderWidth + padding}px`,
-        left: `-${borderWidth + padding}px`,
+        top: -(borderWidth + padding),
+        left: -(borderWidth + padding),
         width: `calc(100% + ${(borderWidth + padding) * 2}px)`,
         height: `calc(100% + ${(borderWidth + padding) * 2}px)`,
         filter: `blur(${blur}px)`,
