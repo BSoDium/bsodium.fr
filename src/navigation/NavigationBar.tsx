@@ -54,7 +54,15 @@ export default function NavigationBar({
     [1, 0.5],
     ["80%", "0%"]
   );
-  const navBackground = useMotionTemplate`color-mix(in srgb, var(--joy-palette-background-surface) ${navBackgroundVisibility}, transparent 0%)`;
+  const navBackground = useMotionTemplate`color-mix(in srgb, var(--joy-palette-background-surface) ${navBackgroundVisibility}, transparent)`;
+
+  // Handle nav border visibility on scroll
+  const navBorderVisibility = useTransform(
+    navScrollProgressY,
+    [1, 0.5],
+    ["100%", "0%"]
+  );
+  const navBorder = useMotionTemplate`1px solid color-mix(in srgb, var(--joy-palette-neutral-outlinedBorder) ${navBorderVisibility}, transparent)`;
 
   return (
     <>
@@ -101,6 +109,7 @@ export default function NavigationBar({
           zIndex: 1000,
           background: navBackground,
           backdropFilter: "blur(10px)",
+          borderBottom: navBorder,
         }}
       >
         <Stack

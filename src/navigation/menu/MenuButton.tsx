@@ -6,6 +6,71 @@ import { css } from "@emotion/react";
 import { LuMenu, LuX } from "react-icons/lu";
 import { useEffect, useState } from "react";
 
+const AnimatedBorder = ({
+  borderWidth,
+  blur = 0,
+}: {
+  borderWidth: number;
+  blur?: number;
+}) => {
+  const padding = blur > 0 ? blur * 2 : 0;
+
+  return (
+    <span
+      style={{
+        position: "absolute",
+        padding,
+        top: `-${borderWidth + padding}px`,
+        left: `-${borderWidth + padding}px`,
+        width: `calc(100% + ${(borderWidth + padding) * 2}px)`,
+        height: `calc(100% + ${(borderWidth + padding) * 2}px)`,
+        filter: `blur(${blur}px)`,
+        mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) ",
+        maskComposite: "exclude",
+        pointerEvents: "none",
+        borderRadius: "100vmax",
+        zIndex: -1,
+      }}
+    >
+      <motion.span
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "block",
+          borderRadius: "100vmax",
+        }}
+        css={css`
+          border: ${borderWidth}px solid #0000;
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask-composite: exclude;
+          background: linear-gradient(
+              var(--angle),
+              rgba(0, 0, 0, 0),
+              var(--joy-palette-text-tertiary),
+              rgba(0, 0, 0, 0),
+              rgba(0, 0, 0, 0),
+              var(--joy-palette-text-secondary)
+            )
+            border-box;
+          animation: 8s rotate linear infinite;
+
+          @keyframes rotate {
+            to {
+              --angle: 360deg;
+            }
+          }
+
+          @property --angle {
+            syntax: "<angle>";
+            initial-value: 0deg;
+            inherits: false;
+          }
+        `}
+      />
+    </span>
+  );
+};
+
 export default function MenuButton({
   open,
   ...props
@@ -59,64 +124,10 @@ export default function MenuButton({
       {...props}
     >
       <AnimatePresence mode="popLayout" initial={false}>
+        <AnimatedBorder borderWidth={3} blur={5} />
+        <AnimatedBorder borderWidth={1} />
         <motion.span
-          style={{
-            position: "absolute",
-            top: "-1px",
-            left: "-1px",
-            width: "calc(100% + 2px)",
-            height: "calc(100% + 2px)",
-            borderRadius: "100vmax",
-            pointerEvents: "none",
-            zIndex: -1,
-          }}
-          css={css`
-            border: 1px solid #0000;
-            background: linear-gradient(
-                  var(--joy-palette-background-body),
-                  var(--joy-palette-background-body)
-                )
-                padding-box,
-              linear-gradient(
-                  var(--angle),
-                  rgba(0, 0, 0, 0),
-                  var(--joy-palette-text-tertiary),
-                  rgba(0, 0, 0, 0),
-                  rgba(0, 0, 0, 0),
-                  var(--joy-palette-text-secondary)
-                )
-                border-box;
-            animation: 8s rotate linear infinite;
-
-            &::before {
-              content: "";
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              bottom: 0;
-              border-radius: 100vmax;
-              background: inherit;
-              border: 5px solid #0000;
-              filter: blur(8px);
-              z-index: -1;
-            }
-
-            @keyframes rotate {
-              to {
-                --angle: 360deg;
-              }
-            }
-
-            @property --angle {
-              syntax: "<angle>";
-              initial-value: 0deg;
-              inherits: false;
-            }
-          `}
-        />
-        (
-        <motion.span
+          layout
           initial={{ opacity: 0, rotate: -90 }}
           animate={{ opacity: 1, rotate: 0 }}
           exit={{ opacity: 0, rotate: 90 }}
@@ -126,6 +137,7 @@ export default function MenuButton({
           <ButtonIcon />
         </motion.span>
         <motion.span
+          layout
           style={{
             display: "flex",
             alignItems: "center",
