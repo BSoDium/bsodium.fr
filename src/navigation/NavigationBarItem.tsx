@@ -10,6 +10,7 @@ export default function NavigationBarItem({
   const render = (renderProps: NavLinkRenderProps): ReactNode => {
     const id = useId();
     const { isActive } = renderProps;
+
     return (
       <Button
         component={motion.button}
