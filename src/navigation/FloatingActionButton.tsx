@@ -12,7 +12,7 @@ export default ({ color, variant, sx, ...rest }: FloatingActionButtonProps) => {
         position: "fixed",
         boxShadow: "lg",
         backgroundColor: `var(--joy-palette-${color}-${variant}Bg, var(--joy-palette-background-body))`,
-        bottom: "calc(1rem + var(--nav-safe-area-inset-bottom))",
+        bottom: "1rem",
         right: "1rem",
         zIndex: 999,
         transition: "all 0.2s",

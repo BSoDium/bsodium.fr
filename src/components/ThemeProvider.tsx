@@ -14,12 +14,24 @@ export const appTheme = extendTheme({
           body: 'var(--joy-palette-common-black)',
           surface: 'var(--joy-palette-neutral-900)',
         },
+        neutral: {
+          solidBg: "var(--joy-palette-neutral-200)",
+          solidColor: "var(--joy-palette-neutral-900)",
+          solidHoverBg: "var(--joy-palette-neutral-300)",
+          solidActiveBg: "var(--joy-palette-neutral-400)",
+        },
       },
     },
     light: {
       palette: {
         background: {
           body: 'var(--joy-palette-neutral-50)',
+        },
+        neutral: {
+          solidBg: "var(--joy-palette-neutral-800)",
+          solidColor: "var(--joy-palette-neutral-100)",
+          solidHoverBg: "var(--joy-palette-neutral-800)",
+          solidActiveBg: "var(--joy-palette-neutral-700)",
         },
       },
     },

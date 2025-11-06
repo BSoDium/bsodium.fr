@@ -28,7 +28,6 @@ export default function Copyright() {
       component={animated.div}
       sx={(theme) => ({
         position: "fixed",
-        top: "var(--nav-safe-area-inset-top, 0)",
         right: "0",
         width: mobile ? "100vw" : undefined,
         zIndex: 1000,

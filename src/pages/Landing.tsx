@@ -51,9 +51,6 @@ export default function Landing() {
             alignItems: "center",
             position: "relative",
             width: "100vw",
-            paddingTop: "var(--nav-safe-area-inset-top)",
-            paddingBottom: "var(--nav-safe-area-inset-bottom)",
-            paddingLeft: "var(--nav-safe-area-inset-left)",
           }}
         >
           We are working on this.
