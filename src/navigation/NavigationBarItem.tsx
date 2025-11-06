@@ -38,13 +38,13 @@ export default function NavigationBarItem({
             "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 100%)",
         }}
         animate={{
-          "--children-scale": 1,
+          "--content-scale": 1,
           color: isActive
             ? "var(--joy-palette-neutral-solidColor)"
             : "var(--joy-palette-text-secondary)",
         }}
         whileTap={{
-          "--children-scale": 0.98,
+          "--content-scale": 0.97,
         }}
       >
         <AnimatePresence>
@@ -96,7 +96,7 @@ export default function NavigationBarItem({
             display: "flex",
             alignItems: "center",
             whiteSpace: "nowrap",
-            transform: "scale(var(--children-scale))",
+            transform: "scale(var(--content-scale))",
             zIndex: 1,
           }}
         >
