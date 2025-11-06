@@ -1,6 +1,6 @@
 import { Button } from "@mui/joy";
 import { AnimatePresence, motion } from "motion/react";
-import { ReactNode, useId } from "react";
+import { ReactNode } from "react";
 import { NavLink, NavLinkProps, useMatch } from "react-router-dom";
 import { useNavigationBar } from "./NavigationBarContext";
 
@@ -9,7 +9,7 @@ export default function NavigationBarItem({
   to,
   ...props
 }: NavLinkProps) {
-  const id = useId();
+  const id = `${to}`;
   const { hoveredItem, setHoveredItem } = useNavigationBar();
   const isHovered = hoveredItem === id;
   const isActive = useMatch(to as string) !== null;
@@ -44,7 +44,7 @@ export default function NavigationBarItem({
             : "var(--joy-palette-text-secondary)",
         }}
         whileTap={{
-          "--content-scale": 0.97,
+          "--content-scale": 0.95,
         }}
       >
         <AnimatePresence>

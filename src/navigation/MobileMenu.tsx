@@ -8,10 +8,11 @@ export default function MobileMenu() {
 
   return (
     <AnimatePresence>
-      {!open && (
+      {open ? (
+        <FullscreenMenu key="menu" onClose={() => setOpen(false)} />
+      ) : (
         <MenuButton key="button" onClick={() => setOpen(true)} open={open} />
       )}
-      {open && <FullscreenMenu key="menu" onClose={() => setOpen(false)} />}
     </AnimatePresence>
   );
 }

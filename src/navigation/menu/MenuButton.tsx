@@ -2,74 +2,8 @@ import { Button, ButtonProps } from "@mui/joy";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocation } from "react-router-dom";
 import { navigationBarItems } from "../items";
-import { css } from "@emotion/react";
 import { LuMenu, LuX } from "react-icons/lu";
 import { useEffect, useState } from "react";
-
-const AnimatedBorder = ({
-  borderWidth,
-  blur = 0,
-}: {
-  borderWidth: number;
-  blur?: number;
-}) => {
-  const padding = blur > 0 ? blur * 2 : 0;
-
-  return (
-    <span
-      style={{
-        position: "absolute",
-        padding,
-        top: `-${borderWidth + padding}px`,
-        left: `-${borderWidth + padding}px`,
-        width: `calc(100% + ${(borderWidth + padding) * 2}px)`,
-        height: `calc(100% + ${(borderWidth + padding) * 2}px)`,
-        filter: `blur(${blur}px)`,
-        mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) ",
-        maskComposite: "exclude",
-        pointerEvents: "none",
-        borderRadius: "100vmax",
-        zIndex: -1,
-      }}
-    >
-      <motion.span
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "block",
-          borderRadius: "100vmax",
-        }}
-        css={css`
-          border: ${borderWidth}px solid #0000;
-          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          mask-composite: exclude;
-          background: linear-gradient(
-              var(--angle),
-              rgba(0, 0, 0, 0),
-              var(--joy-palette-text-tertiary),
-              rgba(0, 0, 0, 0),
-              rgba(0, 0, 0, 0),
-              var(--joy-palette-text-secondary)
-            )
-            border-box;
-          animation: 8s rotate linear infinite;
-
-          @keyframes rotate {
-            to {
-              --angle: 360deg;
-            }
-          }
-
-          @property --angle {
-            syntax: "<angle>";
-            initial-value: 0deg;
-            inherits: false;
-          }
-        `}
-      />
-    </span>
-  );
-};
 
 export default function MenuButton({
   open,
@@ -99,7 +33,7 @@ export default function MenuButton({
   return (
     <Button
       component={motion.button}
-      layoutId="menu-button"
+      layoutId={`${pathname}-nav-item-button`}
       variant="plain"
       color="neutral"
       style={{
@@ -124,8 +58,6 @@ export default function MenuButton({
       {...props}
     >
       <AnimatePresence mode="popLayout" initial={false}>
-        <AnimatedBorder borderWidth={3} blur={5} />
-        <AnimatedBorder borderWidth={1} />
         <motion.span
           layout
           initial={{ opacity: 0, rotate: -90 }}

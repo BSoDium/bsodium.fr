@@ -84,7 +84,6 @@ export default function NavigationBar({
           position: "absolute",
           scrollSnapAlign: "start",
           top: snapBottomY,
-
           width: "100%",
           height: 1,
           background: "transparent",
