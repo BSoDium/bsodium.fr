@@ -40,7 +40,7 @@ export default function NavigationBarItem({
         animate={{
           "--children-scale": 1,
           color: isActive
-            ? "var(--joy-palette-text-primary)"
+            ? "var(--joy-palette-neutral-solidColor)"
             : "var(--joy-palette-text-secondary)",
         }}
         whileTap={{
@@ -64,7 +64,7 @@ export default function NavigationBarItem({
               height: "100%",
               borderRadius: "100vmax",
               padding: ".6rem .75rem .6rem .75rem",
-              backgroundColor: "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 50%)",
+              backgroundColor: "var(--joy-palette-neutral-softBg)",
               pointerEvents: "none",
               zIndex: -2,
             }}
@@ -85,7 +85,7 @@ export default function NavigationBarItem({
               height: "100%",
               borderRadius: "100vmax",
               padding: ".6rem .75rem .6rem .75rem",
-              backgroundColor: "var(--joy-palette-neutral-softBg)",
+              backgroundColor: "var(--joy-palette-neutral-solidBg)",
               pointerEvents: "none",
               zIndex: -1,
             }}
