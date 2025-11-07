@@ -17,7 +17,7 @@ export default function NavigationBarItem({
   return (
     <NavLink to={to} {...props} style={{ textDecoration: "none" }}>
       <Button
-        component={motion.button}
+        component={motion.div}
         layoutId={`${id}-nav-item-button`}
         variant="plain"
         color="neutral"
@@ -49,33 +49,28 @@ export default function NavigationBarItem({
       >
         <AnimatePresence>
           {isHovered && (
-          <motion.span
-            layoutId="nav-item-hovered-bg"
-            transition={{
-              type: "spring",
-              bounce: 0.2,
-              duration: 0.6,
-            }}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              borderRadius: "100vmax",
-              padding: ".6rem .75rem .6rem .75rem",
-              backgroundColor: "var(--joy-palette-neutral-softBg)",
-              pointerEvents: "none",
-              zIndex: -2,
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          />
-        )}
+            <motion.div
+              layoutId="nav-item-hovered-bg"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                borderRadius: "100vmax",
+                padding: ".6rem .75rem .6rem .75rem",
+                backgroundColor: "var(--joy-palette-neutral-softBg)",
+                pointerEvents: "none",
+                zIndex: -2,
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+          )}
         </AnimatePresence>
         {isActive && (
-          <motion.span
+          <motion.div
             layoutId="nav-item-active-bg"
             style={{
               position: "absolute",
@@ -89,19 +84,22 @@ export default function NavigationBarItem({
               pointerEvents: "none",
               zIndex: -1,
             }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           />
         )}
-        <motion.span
+        <motion.div
           style={{
             display: "flex",
             alignItems: "center",
             whiteSpace: "nowrap",
-            transform: "scale(var(--content-scale))",
+            scale: "var(--content-scale)",
             zIndex: 1,
           }}
         >
           {children as ReactNode}
-        </motion.span>
+        </motion.div>
       </Button>
     </NavLink>
   );

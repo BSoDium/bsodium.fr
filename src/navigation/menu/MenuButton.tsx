@@ -43,42 +43,65 @@ export default function MenuButton({
         padding: ".6rem .75rem .6rem .6rem",
         fontSize: "var(--joy-fontSize-sm)",
         fontWeight: `var(--joy-fontWeight-md)`,
-        color: "var(--joy-palette-text-primary)",
+        color: "var(--joy-palette-neutral-solidColor)",
         backgroundColor:
           "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 100%)",
       }}
-      whileHover={{
-        backgroundColor:
-          "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 50%)",
+      animate={{
+        "--content-scale": 1,
       }}
       whileTap={{
-        backgroundColor:
-          "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 0%)",
+        "--content-scale": 0.95,
       }}
       {...props}
     >
-      <AnimatePresence mode="popLayout" initial={false}>
-        <motion.span
-          layout
-          initial={{ opacity: 0, rotate: -90 }}
-          animate={{ opacity: 1, rotate: 0 }}
-          exit={{ opacity: 0, rotate: 90 }}
-          style={{ marginRight: "0.5rem", lineHeight: 0 }}
-          key={`icon-${displayItemIcon}-${open}`}
-        >
-          <ButtonIcon />
-        </motion.span>
-        <motion.span
-          layout
-          style={{
-            display: "flex",
-            alignItems: "center",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {label}
-        </motion.span>
-      </AnimatePresence>
+      <motion.span
+        layoutId="nav-item-active-bg"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          borderRadius: "100vmax",
+          padding: ".6rem .75rem .6rem .75rem",
+          backgroundColor: "var(--joy-palette-neutral-solidBg)",
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      />
+      <motion.span
+        style={{
+          display: "flex",
+          alignItems: "center",
+          whiteSpace: "nowrap",
+          scale: "var(--content-scale)",
+          zIndex: 1,
+        }}
+      >
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            layout
+            initial={{ opacity: 0, rotate: -90 }}
+            animate={{ opacity: 1, rotate: 0 }}
+            exit={{ opacity: 0, rotate: 90 }}
+            style={{ marginRight: "0.5rem", lineHeight: 0 }}
+            key={`icon-${displayItemIcon}-${open}`}
+          >
+            <ButtonIcon />
+          </motion.span>
+          <motion.span
+            layout
+            style={{
+              display: "flex",
+              alignItems: "center",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {label}
+          </motion.span>
+        </AnimatePresence>
+      </motion.span>
     </Button>
   );
 }

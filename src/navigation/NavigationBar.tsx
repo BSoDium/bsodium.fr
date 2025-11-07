@@ -1,4 +1,4 @@
-import { Default, Mobile } from "@/components/Responsive";
+import { Default, Mobile, useMobileMode } from "@/components/Responsive";
 import MobileMenu from "@/navigation/MobileMenu";
 import NavigationBarItems from "@/navigation/NavigationBarItems";
 import ThemeSwitcher from "@/navigation/ThemeSwitcher";
@@ -22,6 +22,7 @@ export default function NavigationBar({
   children: ReactNode | ReactNode[];
   height?: number;
 }) {
+  const mobile = useMobileMode();
   const hidden = useOverlayQueryParam();
 
   // Handle nav hide/show on scroll
@@ -90,7 +91,7 @@ export default function NavigationBar({
         }}
       />
       <Stack
-        layoutRoot
+        layoutRoot={!mobile}
         direction="row"
         layoutId="navigation-bar"
         component={motion.nav}
