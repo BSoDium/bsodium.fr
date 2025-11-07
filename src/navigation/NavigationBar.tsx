@@ -1,10 +1,11 @@
 import { Default, Mobile, useMobileMode } from "@/components/Responsive";
-import MobileMenu from "@/navigation/MobileMenu";
 import NavigationBarItems from "@/navigation/NavigationBarItems";
 import ThemeSwitcher from "@/navigation/ThemeSwitcher";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
+import MobileMenuButton from "@/navigation/mobile-menu/MobileMenuButton";
 import { Stack, Typography } from "@mui/joy";
 import {
+  AnimatePresence,
   motion,
   useMotionTemplate,
   useMotionValue,
@@ -12,8 +13,9 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
+import MobileMenu from "./mobile-menu/MobileMenu";
 
 export default function NavigationBar({
   children,
@@ -24,6 +26,7 @@ export default function NavigationBar({
 }) {
   const mobile = useMobileMode();
   const hidden = useOverlayQueryParam();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Handle nav hide/show on scroll
   const { scrollY: pageScrollY } = useScroll({ axis: "y" });
@@ -91,7 +94,7 @@ export default function NavigationBar({
         }}
       />
       <Stack
-        layoutRoot={!mobile}
+        layoutRoot
         direction="row"
         layoutId="navigation-bar"
         component={motion.nav}
@@ -162,16 +165,25 @@ export default function NavigationBar({
               <NavigationBarItems />
             </Stack>
           </Default>
-          <Stack id="nav-buttons" flex={1} alignItems="flex-end">
-            <Default>
-              <ThemeSwitcher />
-            </Default>
+          <Stack
+            id="nav-buttons"
+            direction="row"
+            flex={1}
+            gap={1}
+            justifyContent="flex-end"
+            alignItems="center"
+          >
+            <ThemeSwitcher />
             <Mobile>
-              <MobileMenu />
+              <MobileMenuButton
+                onClick={() => setMenuOpen(true)}
+                open={menuOpen}
+              />
             </Mobile>
           </Stack>
         </Stack>
       </Stack>
+      <AnimatePresence>{mobile && menuOpen && <MobileMenu />}</AnimatePresence>
       {children}
     </>
   );

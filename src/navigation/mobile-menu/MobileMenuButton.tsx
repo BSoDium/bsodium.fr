@@ -5,7 +5,7 @@ import { navigationBarItems } from "../items";
 import { LuMenu, LuX } from "react-icons/lu";
 import { useEffect, useState } from "react";
 
-export default function MenuButton({
+export default function MobileMenuButton({
   open,
   ...props
 }: ButtonProps & { open?: boolean }) {
@@ -33,7 +33,7 @@ export default function MenuButton({
   return (
     <Button
       component={motion.button}
-      layoutId={`${pathname}-nav-item-button`}
+      layoutId="mobile-menu"
       variant="plain"
       color="neutral"
       style={{
@@ -44,14 +44,7 @@ export default function MenuButton({
         fontSize: "var(--joy-fontSize-sm)",
         fontWeight: `var(--joy-fontWeight-md)`,
         color: "var(--joy-palette-neutral-solidColor)",
-        backgroundColor:
-          "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 100%)",
-      }}
-      animate={{
-        "--content-scale": 1,
-      }}
-      whileTap={{
-        "--content-scale": 0.95,
+        backgroundColor: "var(--joy-palette-neutral-solidBg)",
       }}
       {...props}
     >
@@ -65,7 +58,6 @@ export default function MenuButton({
           height: "100%",
           borderRadius: "100vmax",
           padding: ".6rem .75rem .6rem .75rem",
-          backgroundColor: "var(--joy-palette-neutral-solidBg)",
           pointerEvents: "none",
           zIndex: -1,
         }}
