@@ -32,7 +32,8 @@
     "react-responsive": "^10.0.0",
     "react-router-dom": "^7.9.4",
     "react-scroll-parallax": "^3.5.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "use-sound": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.7.0",

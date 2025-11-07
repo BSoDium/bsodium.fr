@@ -76,7 +76,6 @@ export default function NavigationBar({
           position: "absolute",
           scrollSnapAlign: "start",
           top: snapTopY,
-
           width: "100%",
           height: 1,
           background: "transparent",
@@ -172,6 +171,7 @@ export default function NavigationBar({
             gap={1}
             justifyContent="flex-end"
             alignItems="center"
+            position="relative"
           >
             <ThemeSwitcher />
             <Mobile>
@@ -180,10 +180,12 @@ export default function NavigationBar({
                 open={menuOpen}
               />
             </Mobile>
+            <AnimatePresence>
+              {mobile && menuOpen && <MobileMenu />}
+            </AnimatePresence>
           </Stack>
         </Stack>
       </Stack>
-      <AnimatePresence>{mobile && menuOpen && <MobileMenu />}</AnimatePresence>
       {children}
     </>
   );

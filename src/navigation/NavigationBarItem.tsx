@@ -22,6 +22,7 @@ export default function NavigationBarItem({
   return (
     <MotionNavLink
       to={to}
+      layoutId={`nav-item-${id}`}
       onMouseEnter={() => {
         setHoveredItem(id);
       }}
@@ -33,7 +34,7 @@ export default function NavigationBarItem({
         minHeight: "fit-content",
         borderRadius: "100vmax",
         lineHeight: 1,
-        padding: ".6rem .75rem .6rem .6rem",
+        padding: ".625rem .775rem .625rem .625rem",
         fontSize: "var(--joy-fontSize-sm)",
         fontWeight: `var(--joy-fontWeight-md)`,
         backgroundColor:
@@ -43,6 +44,7 @@ export default function NavigationBarItem({
         alignItems: "center",
         ...style,
       }}
+      initial={false}
       animate={{
         "--content-scale": 1,
         color: isActive
@@ -64,7 +66,6 @@ export default function NavigationBarItem({
               width: "100%",
               height: "100%",
               borderRadius: "100vmax",
-              padding: ".6rem .75rem .6rem .75rem",
               backgroundColor: "var(--joy-palette-neutral-softBg)",
               pointerEvents: "none",
               zIndex: -2,
@@ -85,7 +86,6 @@ export default function NavigationBarItem({
             width: "100%",
             height: "100%",
             borderRadius: "100vmax",
-            padding: ".6rem .75rem .6rem .75rem",
             backgroundColor: "var(--joy-palette-neutral-solidBg)",
             pointerEvents: "none",
             zIndex: -1,
@@ -98,6 +98,7 @@ export default function NavigationBarItem({
           alignItems: "center",
           whiteSpace: "nowrap",
           scale: "var(--content-scale)",
+          color: "inherit",
           zIndex: 1,
         }}
       >

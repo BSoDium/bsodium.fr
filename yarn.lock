@@ -3736,6 +3736,7 @@ __metadata:
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.46.2"
+    use-sound: "npm:^5.0.0"
     vite: "npm:^7.1.12"
     vite-imagetools: "npm:^9.0.0"
     vite-plugin-svgr: "npm:^4.5.0"
@@ -5614,6 +5615,13 @@ __metadata:
   dependencies:
     react-is: "npm:^16.7.0"
   checksum: 10c0/fe0889169e845d738b59b64badf5e55fa3cf20454f9203d1eb088df322d49d4318df774828e789898dcb280e8a5521bb59b3203385662ca5e9218a6ca5820e74
+  languageName: node
+  linkType: hard
+
+"howler@npm:^2.2.4":
+  version: 2.2.4
+  resolution: "howler@npm:2.2.4"
+  checksum: 10c0/74a295f56fd9b2abce122b27ed12c33fa195fb8a76832803e92d8e462a1eca803b55f44c14db052211d0cfab85c7c5249664c68d95bbbc16c775fac73866c6ef
   languageName: node
   linkType: hard
 
@@ -8960,6 +8968,17 @@ __metadata:
   dependencies:
     punycode: "npm:^2.1.0"
   checksum: 10c0/4ef57b45aa820d7ac6496e9208559986c665e49447cb072744c13b66925a362d96dd5a46c4530a6b8e203e5db5fe849369444440cb22ecfc26c679359e5dfa3c
+  languageName: node
+  linkType: hard
+
+"use-sound@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "use-sound@npm:5.0.0"
+  dependencies:
+    howler: "npm:^2.2.4"
+  peerDependencies:
+    react: ">=16.8"
+  checksum: 10c0/128287009affb3e83abf88c117bb4ebbc1accf6cc4931bb90ea22dc550c9005472bf303d182f7883eb2191cb255664e6bcb20e5e5795427c185f47bf09784531
   languageName: node
   linkType: hard
 

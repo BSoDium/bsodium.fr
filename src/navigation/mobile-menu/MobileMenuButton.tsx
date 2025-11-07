@@ -34,34 +34,21 @@ export default function MobileMenuButton({
     <Button
       component={motion.button}
       layoutId="mobile-menu"
-      variant="plain"
+      variant="outlined"
       color="neutral"
       style={{
-        position: "relative",
         minHeight: "fit-content",
-        borderRadius: "100vmax",
-        padding: ".6rem .75rem .6rem .6rem",
+        borderRadius: 18,
+        originX: "right",
+        originY: "top",
+        padding: ".625rem .775rem .625rem .625rem",
         fontSize: "var(--joy-fontSize-sm)",
         fontWeight: `var(--joy-fontWeight-md)`,
-        color: "var(--joy-palette-neutral-solidColor)",
-        backgroundColor: "var(--joy-palette-neutral-solidBg)",
+        color: "var(--joy-palette-text-primary)",
+        backgroundColor: "var(--joy-palette-background-surface)",
       }}
       {...props}
     >
-      <motion.span
-        layoutId="nav-item-active-bg"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          borderRadius: "100vmax",
-          padding: ".6rem .75rem .6rem .75rem",
-          pointerEvents: "none",
-          zIndex: -1,
-        }}
-      />
       <motion.span
         style={{
           display: "flex",
