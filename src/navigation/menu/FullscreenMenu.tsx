@@ -26,6 +26,7 @@ export default function FullscreenMenu({
         position: "fixed",
         top: 0,
         right: 0,
+        originY: "top",
         width: "100vw",
         height: "100vh",
         zIndex: 2000,
@@ -39,8 +40,11 @@ export default function FullscreenMenu({
         backdropFilter: "blur(10px)",
         gap: 4,
       }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
     >
-      <Stack direction="column" gap={1} alignItems="flex-end">
+      <Stack direction="column" gap={1} alignItems="stretch">
         <NavigationBarProvider>
           {navigationBarItems.map(({ path, icon: Icon, label }) => (
             <NavigationBarItem key={path} to={path}>
