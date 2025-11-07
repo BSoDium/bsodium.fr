@@ -20,6 +20,7 @@ export default function FullscreenMenu({
 
   return createPortal(
     <Box
+      layoutRoot
       component={motion.div}
       style={{
         position: "fixed",
