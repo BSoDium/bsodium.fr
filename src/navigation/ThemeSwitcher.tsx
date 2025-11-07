@@ -1,11 +1,29 @@
 import { Button, useColorScheme } from "@mui/joy";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { LuMoon, LuSun, LuSunMoon } from "react-icons/lu";
+import flashBangSfx from "../assets/sound/flashbang.mp3";
+import useSound from "use-sound";
+import { useEffect } from "react";
 
 const modes = ["light", "dark", "system"] as const;
 
 export default function ThemeSwitcher() {
-  const { mode, setMode } = useColorScheme();
+  const [playFlashBang] = useSound(flashBangSfx, { volume: 0.25 });
+  const { mode, systemMode, setMode } = useColorScheme();
+
+  // Play flash-bang sound effect when enabling light mode at night, only once
+  useEffect(() => {
+    const hour = new Date().getHours();
+    const isNight = hour < 6 || hour > 23;
+    const isLightMode =
+      mode === "light" || (mode === "system" && systemMode === "light");
+    const hasPlayed = localStorage.getItem("flashbang-played") === "true";
+
+    if (isLightMode && isNight && !hasPlayed) {
+      playFlashBang();
+      localStorage.setItem("flashbang-played", "true");
+    }
+  }, [mode, systemMode, playFlashBang]);
 
   return (
     <MotionConfig
