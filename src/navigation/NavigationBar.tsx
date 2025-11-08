@@ -1,11 +1,10 @@
-import { Default, Mobile, useMobileMode } from "@/components/Responsive";
+import { Default, Mobile } from "@/components/Responsive";
 import NavigationBarItems from "@/navigation/NavigationBarItems";
 import ThemeSwitcher from "@/navigation/ThemeSwitcher";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
-import MobileMenuButton from "@/navigation/mobile-menu/MobileMenuButton";
 import { Stack, Typography } from "@mui/joy";
 import {
-  AnimatePresence,
+  LayoutGroup,
   motion,
   useMotionTemplate,
   useMotionValue,
@@ -13,7 +12,7 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import MobileMenu from "./mobile-menu/MobileMenu";
 
@@ -24,9 +23,7 @@ export default function NavigationBar({
   children: ReactNode | ReactNode[];
   height?: number;
 }) {
-  const mobile = useMobileMode();
   const hidden = useOverlayQueryParam();
-  const [menuOpen, setMenuOpen] = useState(false);
 
   // Handle nav hide/show on scroll
   const { scrollY: pageScrollY } = useScroll({ axis: "y" });
@@ -164,26 +161,22 @@ export default function NavigationBar({
               <NavigationBarItems />
             </Stack>
           </Default>
-          <Stack
-            id="nav-buttons"
-            direction="row"
-            flex={1}
-            gap={1}
-            justifyContent="flex-end"
-            alignItems="center"
-            position="relative"
-          >
-            <ThemeSwitcher />
-            <Mobile>
-              <MobileMenuButton
-                onClick={() => setMenuOpen(true)}
-                open={menuOpen}
-              />
-            </Mobile>
-            <AnimatePresence>
-              {mobile && menuOpen && <MobileMenu />}
-            </AnimatePresence>
-          </Stack>
+          <LayoutGroup id="mobile-menu">
+            <Stack
+              id="nav-buttons"
+              direction="row"
+              flex={1}
+              gap={1}
+              justifyContent="flex-end"
+              alignItems="center"
+              position="relative"
+            >
+              <ThemeSwitcher />
+              <Mobile>
+                <MobileMenu />
+              </Mobile>
+            </Stack>
+          </LayoutGroup>
         </Stack>
       </Stack>
       {children}

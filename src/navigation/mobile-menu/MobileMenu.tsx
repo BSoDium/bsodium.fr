@@ -1,44 +1,15 @@
-import { Card } from "@mui/joy";
-import { motion, MotionConfig } from "motion/react";
-import NavigationBarItem from "../NavigationBarItem";
-import { navigationBarItems } from "../items";
-import { NavigationBarProvider } from "../NavigationBarContext";
+import { useState } from "react";
+import MobileMenuButton from "./MobileMenuButton";
+import MobileMenuPanel from "./MobileMenuPanel";
+import { Stack } from "@mui/joy";
 
 export default function MobileMenu() {
+  const [open, setOpen] = useState(false);
+
   return (
-    <MotionConfig
-      transition={{
-        // type: "spring", stiffness: 500, damping: 30,
-        duration: 10,
-      }}
-    >
-      <Card
-        component={motion.div}
-        layoutId="mobile-menu"
-        variant="outlined"
-        style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          borderRadius: 21,
-          originX: "right",
-          originY: "top",
-          padding: "0.25rem",
-          zIndex: 2000,
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.5rem",
-        }}
-      >
-        <NavigationBarProvider>
-          {navigationBarItems.map(({ path, icon: Icon, label }) => (
-            <NavigationBarItem key={path} to={path}>
-              <Icon style={{ marginRight: "0.5rem" }} />
-              {label}
-            </NavigationBarItem>
-          ))}
-        </NavigationBarProvider>
-      </Card>
-    </MotionConfig>
+    <Stack direction="row" alignItems="center" position="relative">
+      <MobileMenuButton open={open} onOpen={() => setOpen(true)} />
+      <MobileMenuPanel open={open} onClose={() => setOpen(false)} />
+    </Stack>
   );
 }
