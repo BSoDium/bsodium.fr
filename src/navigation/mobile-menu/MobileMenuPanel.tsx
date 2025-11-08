@@ -12,8 +12,8 @@ export default function MobileMenuPanel({
   return open ? (
     <MotionConfig
       transition={{
-        // type: "spring", stiffness: 500, damping: 30,
-        duration: 10,
+        type: "spring", stiffness: 500, damping: 30,
+        // duration: 10,
       }}
     >
       <Card
