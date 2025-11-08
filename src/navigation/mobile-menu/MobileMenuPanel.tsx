@@ -6,16 +6,13 @@ import { NavigationBarProvider } from "../NavigationBarContext";
 
 export default function MobileMenuPanel({
   open,
-  onClose,
 }: {
   open?: boolean;
-  onClose?: () => void;
 }) {
   return open ? (
     <MotionConfig
       transition={{
-        // type: "spring", stiffness: 500, damping: 30,
-        duration: 10,
+        type: "spring", stiffness: 500, damping: 30,
       }}
     >
       <Card
