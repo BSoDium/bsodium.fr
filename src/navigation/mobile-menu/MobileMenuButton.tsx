@@ -33,6 +33,9 @@ export default function MobileMenuButton({
         color: "var(--joy-palette-text-primary)",
         backgroundColor: "var(--joy-palette-background-surface)",
       }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
     >
       <motion.span layout>
         <LuMenu />

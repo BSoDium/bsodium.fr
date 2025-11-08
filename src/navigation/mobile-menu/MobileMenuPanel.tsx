@@ -4,15 +4,15 @@ import NavigationBarItem from "../NavigationBarItem";
 import { navigationBarItems } from "../items";
 import { NavigationBarProvider } from "../NavigationBarContext";
 
-export default function MobileMenuPanel({
-  open,
-}: {
-  open?: boolean;
-}) {
+export default function MobileMenuPanel({ open }: { open?: boolean }) {
   return open ? (
     <MotionConfig
       transition={{
-        type: "spring", stiffness: 500, damping: 30,
+        layout: {
+          type: "spring",
+          stiffness: 500,
+          damping: 30,
+        },
       }}
     >
       <Card
@@ -30,6 +30,12 @@ export default function MobileMenuPanel({
           flexDirection: "column",
           gap: "0.5rem",
         }}
+        sx={{
+          boxShadow: "lg",
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
       >
         <NavigationBarProvider>
           {navigationBarItems.map(({ path, icon: Icon, label }) => (

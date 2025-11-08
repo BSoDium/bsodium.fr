@@ -68,6 +68,7 @@ export default function NavigationBarItem({
               borderRadius: "100vmax",
               backgroundColor: "var(--joy-palette-neutral-softBg)",
               pointerEvents: "none",
+              opacity: 1,
               zIndex: -2,
             }}
             initial={{ opacity: 0 }}
