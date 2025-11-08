@@ -12,7 +12,7 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import MobileMenu from "./mobile-menu/MobileMenu";
 
@@ -24,10 +24,8 @@ export default function NavigationBar({
   height?: number;
 }) {
   const hidden = useOverlayQueryParam();
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeoutRef = useRef<number>();
 
-  // Handle nav hide/show on scroll
+  // Handle nav hide/show on scroll with GPU-accelerated transforms
   const { scrollY: pageScrollY } = useScroll({ axis: "y" });
   const navOffset = useMotionValue(0);
   
@@ -40,43 +38,13 @@ export default function NavigationBar({
     if (newOffset > 0) newOffset = 0;
     if (newOffset < -height) newOffset = -height;
     navOffset.set(newOffset);
-
-    // Set scrolling state
-    setIsScrolling(true);
-    
-    // Clear existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-    
-    // Set timeout to detect when scrolling stops
-    scrollTimeoutRef.current = window.setTimeout(() => {
-      setIsScrolling(false);
-    }, 150);
   });
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, []);
+  // Use transform (y/translateY) for GPU-accelerated positioning
+  // This updates every frame without React re-renders
+  const navY = navOffset;
 
-  // Calculate position based on scrolling state
-  // When scrolling: use fixed position with offset (smooth, no lag)
-  // When idle: use absolute position (allows Motion animations)
-  const navTop = useTransform(() => {
-    if (isScrolling) {
-      return navOffset.get();
-    }
-    return pageScrollY.get() + navOffset.get();
-  });
-
-  const navPosition = isScrolling ? "fixed" : "absolute";
-
-  // Handle scroll snapping
+  // Handle scroll snapping - position anchors at absolute positions
   const snapTopY = useTransform(() => pageScrollY.get() + navOffset.get());
   const snapBottomY = useTransform(() => pageScrollY.get() + navOffset.get() + height);
 
@@ -129,10 +97,10 @@ export default function NavigationBar({
         layoutId="navigation-bar"
         component={motion.nav}
         style={{
-          position: navPosition,
-          originY: "top",
-          top: navTop,
+          position: "fixed",
+          top: 0,
           left: 0,
+          y: navY,
           height: `${height}px`,
           alignItems: "center",
           justifyContent: "center",
