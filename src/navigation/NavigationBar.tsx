@@ -93,7 +93,6 @@ export default function NavigationBar({
         }}
       />
       <Stack
-        layoutRoot
         direction="row"
         layoutId="navigation-bar"
         component={motion.nav}
