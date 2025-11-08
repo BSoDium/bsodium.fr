@@ -6,10 +6,8 @@ import { NavigationBarProvider } from "../NavigationBarContext";
 
 export default function MobileMenuPanel({
   open,
-  onClose,
 }: {
   open?: boolean;
-  onClose?: () => void;
 }) {
   return open ? (
     <MotionConfig
