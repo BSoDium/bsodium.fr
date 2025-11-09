@@ -10,11 +10,11 @@ export default function MobileMenuButton({
   onOpen?: () => void;
 }) {
   return open ? (
-    <span style={{ height: "2.25rem", width: "2.25rem" }} />
+    <span style={{ height: "2.125rem", width: "2.125rem" }} />
   ) : (
     <IconButton
       component={motion.button}
-      layoutId="mobile-menu"
+      layoutId="mobile-menu-button"
       color="neutral"
       onClick={onOpen}
       style={{
@@ -31,11 +31,10 @@ export default function MobileMenuButton({
         fontSize: "var(--joy-fontSize-sm)",
         fontWeight: `var(--joy-fontWeight-md)`,
         color: "var(--joy-palette-text-primary)",
-        backgroundColor: "var(--joy-palette-background-surface)",
+        backgroundColor:
+          "color-mix(in srgb, var(--joy-palette-background-surface), transparent 30%)",
+        backdropFilter: "blur(5px)",
       }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
     >
       <motion.span layout>
         <LuMenu />

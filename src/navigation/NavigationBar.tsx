@@ -28,7 +28,7 @@ export default function NavigationBar({
   // Handle nav hide/show on scroll with GPU-accelerated transforms
   const { scrollY: pageScrollY } = useScroll({ axis: "y" });
   const navOffset = useMotionValue(0);
-  
+
   useMotionValueEvent(pageScrollY, "change", (latest) => {
     const previous = pageScrollY.getPrevious() || 0;
     const delta = latest - previous;
@@ -46,7 +46,9 @@ export default function NavigationBar({
 
   // Handle scroll snapping - position anchors at absolute positions
   const snapTopY = useTransform(() => pageScrollY.get() + navOffset.get());
-  const snapBottomY = useTransform(() => pageScrollY.get() + navOffset.get() + height);
+  const snapBottomY = useTransform(
+    () => pageScrollY.get() + navOffset.get() + height
+  );
 
   // Handle nav background visibility on scroll
   const { scrollYProgress: navScrollProgressY } = useScroll({
@@ -67,6 +69,10 @@ export default function NavigationBar({
     ["100%", "0%"]
   );
   const navBorder = useMotionTemplate`1px solid color-mix(in srgb, var(--joy-palette-neutral-outlinedBorder) ${navBorderVisibility}, transparent)`;
+
+  // Handle nav blur strength on scroll
+  const navBlurStrength = useTransform(navScrollProgressY, [1, 0.5], [20, 0]);
+  const navBackdropFilter = useMotionTemplate`blur(${navBlurStrength}px)`;
 
   return (
     <>
@@ -109,7 +115,7 @@ export default function NavigationBar({
           width: "100vw",
           zIndex: 1000,
           background: navBackground,
-          backdropFilter: "blur(10px)",
+          backdropFilter: navBackdropFilter,
           borderBottom: navBorder,
         }}
       >
