@@ -13,7 +13,12 @@ export default function MobileMenuPanel({ open }: { open?: boolean }) {
             layout: {
               type: "spring",
               stiffness: 500,
-              damping: 27,
+              damping: 30,
+            },
+            x: {
+              type: "spring",
+              stiffness: 500,
+              damping: 30,
             },
           }}
         >
@@ -21,10 +26,10 @@ export default function MobileMenuPanel({ open }: { open?: boolean }) {
             component={motion.div}
             layoutId="mobile-menu-button"
             style={{
-              position: "absolute",
+              position: "fixed",
               overflow: "hidden",
               top: 10,
-              right: 20,
+              right: 10,
               borderRadius: 21,
               padding: "0.25rem",
               zIndex: 2000,
@@ -39,7 +44,6 @@ export default function MobileMenuPanel({ open }: { open?: boolean }) {
               boxShadow: "lg",
             }}
             animate={{
-              x: [0, -5, 0],
               y: [0, 10, 0],
             }}
           >
