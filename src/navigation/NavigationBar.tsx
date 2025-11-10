@@ -76,6 +76,11 @@ export default function NavigationBar({
 
   return (
     <>
+      <div
+        style={{ height, width: "100%" }}
+        aria-hidden="true"
+        id="navigation-bar-placeholder"
+      />
       <motion.span
         id="nav-snap-anchor-top"
         style={{
@@ -101,6 +106,7 @@ export default function NavigationBar({
       <Stack
         direction="row"
         layoutId="navigation-bar"
+        id="navigation-bar"
         component={motion.nav}
         style={{
           position: "fixed",
