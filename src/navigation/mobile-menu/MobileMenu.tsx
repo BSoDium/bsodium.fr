@@ -9,7 +9,7 @@ export default function MobileMenu() {
   return (
     <Stack direction="row" alignItems="center" position="relative">
       <MobileMenuButton open={open} onOpen={() => setOpen(true)} />
-      <MobileMenuPanel open={open} />
+      <MobileMenuPanel open={open} onClose={() => setOpen(false)} />
     </Stack>
   );
 }

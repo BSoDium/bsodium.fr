@@ -4,8 +4,40 @@ import { motion, MotionConfig } from "motion/react";
 import NavigationBarItem from "../NavigationBarItem";
 import { navigationBarItems } from "../items";
 import { NavigationBarProvider } from "../NavigationBarContext";
+import { useEffect, useRef } from "react";
 
-export default function MobileMenuPanel({ open }: { open?: boolean }) {
+export default function MobileMenuPanel({
+  open,
+  onClose,
+}: {
+  open?: boolean;
+  onClose?: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || !onClose) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(event.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    // Add a small delay to prevent immediate closure when opening
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open, onClose]);
+
   return open
     ? createPortal(
         <MotionConfig
@@ -23,6 +55,7 @@ export default function MobileMenuPanel({ open }: { open?: boolean }) {
           }}
         >
           <Card
+            ref={panelRef}
             component={motion.div}
             layoutId="mobile-menu-button"
             style={{
