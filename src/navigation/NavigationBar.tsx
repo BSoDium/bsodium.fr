@@ -1,10 +1,10 @@
 import { Default, Mobile } from "@/components/Responsive";
-import MobileMenu from "@/navigation/MobileMenu";
 import NavigationBarItems from "@/navigation/NavigationBarItems";
 import ThemeSwitcher from "@/navigation/ThemeSwitcher";
 import useOverlayQueryParam from "@/navigation/useOverlayQueryParam";
 import { Stack, Typography } from "@mui/joy";
 import {
+  LayoutGroup,
   motion,
   useMotionTemplate,
   useMotionValue,
@@ -12,8 +12,9 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Link } from "react-router-dom";
+import MobileMenu from "./mobile-menu/MobileMenu";
 
 export default function NavigationBar({
   children,
@@ -24,24 +25,38 @@ export default function NavigationBar({
 }) {
   const hidden = useOverlayQueryParam();
 
-  // Handle nav hide/show on scroll
+  // Set document-level CSS variable for nav height
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--navigation-bar-height",
+      `${height}px`
+    );
+
+    return () => {
+      document.documentElement.style.removeProperty("--navigation-bar-height");
+    };
+  }, [height]);
+
+  // Observe page scroll position
   const { scrollY: pageScrollY } = useScroll({ axis: "y" });
-  const navTop = useMotionValue(0);
+
+  // Handle nav hide/show on scroll with GPU-accelerated transforms
+  const navY = useMotionValue(0);
   useMotionValueEvent(pageScrollY, "change", (latest) => {
     const previous = pageScrollY.getPrevious() || 0;
     const delta = latest - previous;
 
-    const currentNavTop = navTop.get();
-    let newNavTop = currentNavTop - delta;
-    if (newNavTop > 0) newNavTop = 0;
-    if (newNavTop < -height) newNavTop = -height;
-    navTop.set(newNavTop);
+    const currentNavY = navY.get();
+    let newNavY = currentNavY - delta;
+    if (newNavY > 0) newNavY = 0;
+    if (newNavY < -height) newNavY = -height;
+    navY.set(newNavY);
   });
 
-  // Handle scroll snapping
-  const snapTopY = useTransform(() => pageScrollY.get() + navTop.get());
+  // Handle scroll snapping - position anchors at absolute positions
+  const snapTopY = useTransform(() => pageScrollY.get() + navY.get());
   const snapBottomY = useTransform(
-    () => pageScrollY.get() + navTop.get() + height
+    () => pageScrollY.get() + navY.get() + height
   );
 
   // Handle nav background visibility on scroll
@@ -64,6 +79,10 @@ export default function NavigationBar({
   );
   const navBorder = useMotionTemplate`1px solid color-mix(in srgb, var(--joy-palette-neutral-outlinedBorder) ${navBorderVisibility}, transparent)`;
 
+  // Handle nav blur strength on scroll
+  const navBlurStrength = useTransform(navScrollProgressY, [1, 0.5], [20, 0]);
+  const navBackdropFilter = useMotionTemplate`blur(${navBlurStrength}px)`;
+
   return (
     <>
       <motion.span
@@ -72,7 +91,6 @@ export default function NavigationBar({
           position: "absolute",
           scrollSnapAlign: "start",
           top: snapTopY,
-
           width: "100%",
           height: 1,
           background: "transparent",
@@ -84,22 +102,21 @@ export default function NavigationBar({
           position: "absolute",
           scrollSnapAlign: "start",
           top: snapBottomY,
-
           width: "100%",
           height: 1,
           background: "transparent",
         }}
       />
       <Stack
-        layoutRoot
         direction="row"
         layoutId="navigation-bar"
+        id="navigation-bar"
         component={motion.nav}
         style={{
-          position: "sticky",
-          originY: "top",
-          top: navTop,
+          position: "fixed",
+          top: 0,
           left: 0,
+          y: navY,
           height: `${height}px`,
           alignItems: "center",
           justifyContent: "center",
@@ -108,7 +125,7 @@ export default function NavigationBar({
           width: "100vw",
           zIndex: 1000,
           background: navBackground,
-          backdropFilter: "blur(10px)",
+          backdropFilter: navBackdropFilter,
           borderBottom: navBorder,
         }}
       >
@@ -162,14 +179,22 @@ export default function NavigationBar({
               <NavigationBarItems />
             </Stack>
           </Default>
-          <Stack id="nav-buttons" flex={1} alignItems="flex-end">
-            <Default>
+          <LayoutGroup id="mobile-menu">
+            <Stack
+              id="nav-buttons"
+              direction="row"
+              flex={1}
+              gap={1}
+              justifyContent="flex-end"
+              alignItems="center"
+              position="relative"
+            >
               <ThemeSwitcher />
-            </Default>
-            <Mobile>
-              <MobileMenu />
-            </Mobile>
-          </Stack>
+              <Mobile>
+                <MobileMenu />
+              </Mobile>
+            </Stack>
+          </LayoutGroup>
         </Stack>
       </Stack>
       {children}
