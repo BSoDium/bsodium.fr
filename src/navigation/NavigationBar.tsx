@@ -12,7 +12,7 @@ import {
   useScroll,
   useTransform,
 } from "motion/react";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Link } from "react-router-dom";
 import MobileMenu from "./mobile-menu/MobileMenu";
 
@@ -25,29 +25,38 @@ export default function NavigationBar({
 }) {
   const hidden = useOverlayQueryParam();
 
-  // Handle nav hide/show on scroll with GPU-accelerated transforms
-  const { scrollY: pageScrollY } = useScroll({ axis: "y" });
-  const navOffset = useMotionValue(0);
+  // Set document-level CSS variable for nav height
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--navigation-bar-height",
+      `${height}px`
+    );
 
+    return () => {
+      document.documentElement.style.removeProperty("--navigation-bar-height");
+    };
+  }, [height]);
+
+  // Observe page scroll position
+  const { scrollY: pageScrollY } = useScroll({ axis: "y" });
+
+  // Handle nav hide/show on scroll with GPU-accelerated transforms
+  const navY = useMotionValue(0);
   useMotionValueEvent(pageScrollY, "change", (latest) => {
     const previous = pageScrollY.getPrevious() || 0;
     const delta = latest - previous;
 
-    const currentOffset = navOffset.get();
-    let newOffset = currentOffset - delta;
-    if (newOffset > 0) newOffset = 0;
-    if (newOffset < -height) newOffset = -height;
-    navOffset.set(newOffset);
+    const currentNavY = navY.get();
+    let newNavY = currentNavY - delta;
+    if (newNavY > 0) newNavY = 0;
+    if (newNavY < -height) newNavY = -height;
+    navY.set(newNavY);
   });
 
-  // Use transform (y/translateY) for GPU-accelerated positioning
-  // This updates every frame without React re-renders
-  const navY = navOffset;
-
   // Handle scroll snapping - position anchors at absolute positions
-  const snapTopY = useTransform(() => pageScrollY.get() + navOffset.get());
+  const snapTopY = useTransform(() => pageScrollY.get() + navY.get());
   const snapBottomY = useTransform(
-    () => pageScrollY.get() + navOffset.get() + height
+    () => pageScrollY.get() + navY.get() + height
   );
 
   // Handle nav background visibility on scroll
@@ -76,11 +85,6 @@ export default function NavigationBar({
 
   return (
     <>
-      <div
-        style={{ height, width: "100%" }}
-        aria-hidden="true"
-        id="navigation-bar-placeholder"
-      />
       <motion.span
         id="nav-snap-anchor-top"
         style={{
