@@ -1,61 +1,64 @@
-import { Button } from "@mui/joy";
 import { AnimatePresence, motion } from "motion/react";
-import { ReactNode, useId } from "react";
+import { ReactNode } from "react";
 import { NavLink, NavLinkProps, useMatch } from "react-router-dom";
 import { useNavigationBar } from "./NavigationBarContext";
+
+const MotionNavLink = motion.create(NavLink);
 
 export default function NavigationBarItem({
   children,
   to,
-  ...props
-}: NavLinkProps) {
-  const id = useId();
+  style,
+}: {
+  children: ReactNode | ReactNode[];
+  to: NavLinkProps["to"];
+  style?: React.CSSProperties;
+}) {
+  const id = to.toString();
   const { hoveredItem, setHoveredItem } = useNavigationBar();
   const isHovered = hoveredItem === id;
   const isActive = useMatch(to as string) !== null;
 
   return (
-    <NavLink to={to} {...props} style={{ textDecoration: "none" }}>
-      <Button
-        component={motion.button}
-        layoutId={`${id}-nav-item-button`}
-        variant="plain"
-        color="neutral"
-        onMouseEnter={() => {
-          setHoveredItem(id);
-        }}
-        onMouseLeave={() => {
-          setHoveredItem(null);
-        }}
-        style={{
-          position: "relative",
-          minHeight: "fit-content",
-          borderRadius: "100vmax",
-          padding: ".6rem .75rem .6rem .6rem",
-          fontSize: "var(--joy-fontSize-sm)",
-          fontWeight: `var(--joy-fontWeight-md)`,
-          backgroundColor:
-            "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 100%)",
-        }}
-        animate={{
-          "--content-scale": 1,
-          color: isActive
-            ? "var(--joy-palette-neutral-solidColor)"
-            : "var(--joy-palette-text-secondary)",
-        }}
-        whileTap={{
-          "--content-scale": 0.97,
-        }}
-      >
-        <AnimatePresence>
-          {isHovered && (
+    <MotionNavLink
+      to={to}
+      layoutId={`nav-item-${id}`}
+      onMouseEnter={() => {
+        setHoveredItem(id);
+      }}
+      onMouseLeave={() => {
+        setHoveredItem(null);
+      }}
+      style={{
+        position: "relative",
+        minHeight: "fit-content",
+        borderRadius: "100vmax",
+        lineHeight: 1,
+        padding: ".625rem .775rem .625rem .625rem",
+        fontSize: "var(--joy-fontSize-sm)",
+        fontWeight: `var(--joy-fontWeight-md)`,
+        backgroundColor:
+          "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 100%)",
+        textDecoration: "none",
+        display: "flex",
+        alignItems: "center",
+        ...style,
+      }}
+      initial={false}
+      animate={{
+        "--content-scale": 1,
+        color: isActive
+          ? "var(--joy-palette-neutral-solidColor)"
+          : "var(--joy-palette-text-secondary)",
+      }}
+      whileTap={{
+        "--content-scale": 0.95,
+      }}
+    >
+      <AnimatePresence>
+        {isHovered && (
           <motion.span
             layoutId="nav-item-hovered-bg"
-            transition={{
-              type: "spring",
-              bounce: 0.2,
-              duration: 0.6,
-            }}
             style={{
               position: "absolute",
               top: 0,
@@ -63,9 +66,9 @@ export default function NavigationBarItem({
               width: "100%",
               height: "100%",
               borderRadius: "100vmax",
-              padding: ".6rem .75rem .6rem .75rem",
               backgroundColor: "var(--joy-palette-neutral-softBg)",
               pointerEvents: "none",
+              opacity: 1,
               zIndex: -2,
             }}
             initial={{ opacity: 0 }}
@@ -73,36 +76,35 @@ export default function NavigationBarItem({
             exit={{ opacity: 0 }}
           />
         )}
-        </AnimatePresence>
-        {isActive && (
-          <motion.span
-            layoutId="nav-item-active-bg"
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              borderRadius: "100vmax",
-              padding: ".6rem .75rem .6rem .75rem",
-              backgroundColor: "var(--joy-palette-neutral-solidBg)",
-              pointerEvents: "none",
-              zIndex: -1,
-            }}
-          />
-        )}
+      </AnimatePresence>
+      {isActive && (
         <motion.span
+          layoutId="nav-item-active-bg"
           style={{
-            display: "flex",
-            alignItems: "center",
-            whiteSpace: "nowrap",
-            transform: "scale(var(--content-scale))",
-            zIndex: 1,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            borderRadius: "100vmax",
+            backgroundColor: "var(--joy-palette-neutral-solidBg)",
+            pointerEvents: "none",
+            zIndex: -1,
           }}
-        >
-          {children as ReactNode}
-        </motion.span>
-      </Button>
-    </NavLink>
+        />
+      )}
+      <motion.span
+        style={{
+          display: "flex",
+          alignItems: "center",
+          whiteSpace: "nowrap",
+          scale: "var(--content-scale)",
+          color: "inherit",
+          zIndex: 1,
+        }}
+      >
+        {children as ReactNode}
+      </motion.span>
+    </MotionNavLink>
   );
 }

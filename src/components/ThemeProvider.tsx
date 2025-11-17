@@ -1,18 +1,20 @@
 import {
   CssBaseline,
-  CssVarsProvider, extendTheme,
+  CssVarsProvider,
+  extendTheme,
   useColorScheme,
   useTheme,
-} from '@mui/joy';
-import React, { useEffect } from 'react';
+} from "@mui/joy";
+import React, { useEffect } from "react";
+import ThemeSfxProvider from "./ThemeSfxProvider";
 
 export const appTheme = extendTheme({
   colorSchemes: {
     dark: {
       palette: {
         background: {
-          body: 'var(--joy-palette-common-black)',
-          surface: 'var(--joy-palette-neutral-900)',
+          body: "var(--joy-palette-common-black)",
+          surface: "var(--joy-palette-neutral-900)",
         },
         neutral: {
           solidBg: "var(--joy-palette-neutral-200)",
@@ -25,7 +27,7 @@ export const appTheme = extendTheme({
     light: {
       palette: {
         background: {
-          body: 'var(--joy-palette-neutral-50)',
+          body: "var(--joy-palette-neutral-50)",
         },
         neutral: {
           solidBg: "var(--joy-palette-neutral-800)",
@@ -40,7 +42,7 @@ export const appTheme = extendTheme({
     JoyChip: {
       styleOverrides: {
         root: ({ ownerState }) => ({
-          ...(ownerState.variant === 'outlined' && {
+          ...(ownerState.variant === "outlined" && {
             border: `1px solid var(--joy-palette-${ownerState.color}-600)`,
           }),
         }),
@@ -53,10 +55,12 @@ function Meta() {
   const { colorScheme } = useColorScheme();
   const { palette } = useTheme();
 
+  // Update the theme-color meta tag based on the current color scheme
   useEffect(() => {
-    const meta = document.createElement('meta');
-    meta.name = 'theme-color';
-    meta.content = colorScheme === 'dark' ? palette.common.black : palette.common.white;
+    const meta = document.createElement("meta");
+    meta.name = "theme-color";
+    meta.content =
+      colorScheme === "dark" ? palette.common.black : palette.common.white;
     document.head.appendChild(meta);
     return () => {
       document.head.removeChild(meta);
@@ -75,6 +79,7 @@ export default function ThemeProvider({
     <CssVarsProvider theme={appTheme} defaultMode="system">
       <CssBaseline />
       <Meta />
+      <ThemeSfxProvider />
       {children}
     </CssVarsProvider>
   );

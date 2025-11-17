@@ -36,6 +36,9 @@
       "@public/*": [
         "./public/*"
       ],
+      "@assets/*": [
+        "./src/assets/*"
+      ]
     }
   },
   "include": [
