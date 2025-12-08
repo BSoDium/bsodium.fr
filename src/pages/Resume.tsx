@@ -94,6 +94,7 @@ export default function Resume() {
         sx={{
           width: "100vw",
           paddingBottom: "3rem",
+          marginTop: "var(--navigation-bar-height)",
         }}
       >
         <Box component="div" maxWidth="65em">
