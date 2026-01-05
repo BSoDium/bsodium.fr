@@ -21,7 +21,7 @@ export default function Projects() {
         title={`Projects and experiments • ${details.name.first} ${details.name.last}`}
       />
       <ThemeAwareIllustration />
-      <Stack padding={mobile ? "1rem" : "5rem"} gap={2} alignItems="start">
+      <Stack padding={mobile ? "1rem" : "5rem"} paddingTop="var(--navigation-bar-height)" gap={2} alignItems="start">
         <Stack marginBottom="min(10vw, 3rem)" marginTop={mobile ? "10vw" : 0}>
           <Typography
             level="display1"

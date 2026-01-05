@@ -43,7 +43,7 @@ export default function Landing() {
   return (
     <ParallaxProvider>
       <Meta title={`Home • ${details.name.first} ${details.name.last}`} />
-      <Stack overflow="hidden">
+      <Stack overflow="hidden" marginTop="var(--navigation-bar-height)">
         <div
           style={{
             display: "flex",
