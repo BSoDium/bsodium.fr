@@ -1,4 +1,4 @@
-# Copilot Instructions for bsodium.fr
+# Copilot Instructions for bsodium.dev
 
 ## Architecture Overview
 
