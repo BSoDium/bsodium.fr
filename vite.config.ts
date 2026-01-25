@@ -56,6 +56,10 @@ export default defineConfig({
         find: "@public",
         replacement: "/public",
       },
+      {
+        find: "@assets",
+        replacement: "/src/assets",
+      },
     ],
   },
   test: {

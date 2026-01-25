@@ -25,7 +25,7 @@ export default function ThemeSwitcher() {
           position: "relative",
           minHeight: "fit-content",
           borderRadius: "100vmax",
-          padding: ".6rem .75rem .6rem .6rem",
+          padding: ".625rem .775rem .625rem .625rem",
           fontSize: "var(--joy-fontSize-sm)",
           background:
             "color-mix(in srgb, var(--joy-palette-neutral-softBg), transparent 100%)",

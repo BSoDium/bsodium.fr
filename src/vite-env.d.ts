@@ -14,3 +14,8 @@ declare module "*?progressive" {
   const value: ImageVariantCollection;
   export default value;
 }
+
+declare module "*.mp3" {
+  const src: string;
+  export default src;
+}
