@@ -7,6 +7,11 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Ignore configuration and metadata files
+package.json
+vite.config.ts
+tsconfig.json
+vercel.json
 node_modules
 dist
 dist-ssr
