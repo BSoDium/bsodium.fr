@@ -3732,7 +3732,7 @@ __metadata:
     react-scroll-parallax: "npm:^3.5.0"
     sass: "npm:^1.85.0"
     sharp: "npm:^0.33.4"
-    storybook: "npm:^10.0.0"
+    storybook: "npm:^10.0.6"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.46.2"
@@ -8261,9 +8261,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"storybook@npm:^10.0.0":
-  version: 10.0.1
-  resolution: "storybook@npm:10.0.1"
+"storybook@npm:^10.0.6":
+  version: 10.0.6
+  resolution: "storybook@npm:10.0.6"
   dependencies:
     "@storybook/global": "npm:^5.0.0"
     "@storybook/icons": "npm:^1.6.0"
@@ -8283,7 +8283,7 @@ __metadata:
       optional: true
   bin:
     storybook: ./dist/bin/dispatcher.js
-  checksum: 10c0/5b251ce434e365ae6c2f019c9f215fa10159d6f7660f0e1a61467d59d8230f2aa4de4dff5e599d81c0fb38a7b3cd51c7a9b423c4cb7abc63bd4a0ca39ea4de17
+  checksum: 10c0/74a6d473b596d011afbb678671309cae4dd7757d1be08df634d0301301f6228f735bdcc678f7d84516bd88ce0c8dc78d9292d2bbce4473bfef4f4239940a6bf7
   languageName: node
   linkType: hard
 
