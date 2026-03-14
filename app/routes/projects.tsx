@@ -1,5 +1,4 @@
-import { Container, Title, Text, Anchor, Stack } from "@mantine/core";
-import { Link } from "react-router";
+import { Link as HeroLink } from "@heroui/react";
 import { motion } from "motion/react";
 import type { Route } from "./+types/projects";
 
@@ -12,22 +11,20 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Projects() {
   return (
-    <Container size="sm" py={120}>
+    <div className="mx-auto max-w-screen-sm py-30">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <Stack gap="lg">
-          <Title order={1}>Projects</Title>
-          <Text size="lg" c="dimmed">
-            Coming soon.
-          </Text>
-          <Anchor component={Link} to="/">
+        <div className="flex flex-col gap-6">
+          <h1 className="text-4xl font-bold">Projects</h1>
+          <p className="text-lg text-gray-500">Coming soon.</p>
+          <HeroLink href="/">
             &larr; Back home
-          </Anchor>
-        </Stack>
+          </HeroLink>
+        </div>
       </motion.div>
-    </Container>
+    </div>
   );
 }

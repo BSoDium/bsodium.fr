@@ -6,12 +6,9 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
-import { MantineProvider, ColorSchemeScript } from "@mantine/core";
-import { Container, Title, Text, Code } from "@mantine/core";
 
 import type { Route } from "./+types/root";
 
-import "@mantine/core/styles.css";
 import "./app.css";
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -22,7 +19,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <ColorSchemeScript />
       </head>
       <body>
         {children}
@@ -34,11 +30,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return (
-    <MantineProvider>
-      <Outlet />
-    </MantineProvider>
-  );
+  return <Outlet />;
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
@@ -58,12 +50,14 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <MantineProvider>
-      <Container py="xl">
-        <Title>{message}</Title>
-        <Text>{details}</Text>
-        {stack && <Code block>{stack}</Code>}
-      </Container>
-    </MantineProvider>
+    <div className="mx-auto max-w-screen-sm py-10">
+      <h1 className="text-3xl font-bold">{message}</h1>
+      <p className="mt-2 text-lg text-gray-500">{details}</p>
+      {stack && (
+        <pre className="mt-4 overflow-x-auto rounded bg-gray-100 p-4 text-sm">
+          <code>{stack}</code>
+        </pre>
+      )}
+    </div>
   );
 }

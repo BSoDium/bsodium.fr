@@ -11,17 +11,16 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mantine/core": "^8.3.16",
-    "@mantine/hooks": "^8.3.16",
+    "@heroui/react": "^3.0.0-rc.1",
+    "@heroui/styles": "^3.0.0-rc.1",
     "@react-router/node": "7.12.0",
     "@react-router/serve": "7.12.0",
     "isbot": "^5.1.31",
     "motion": "^12.36.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router": "7.12.0"
+    "react-router": "7.12.0",
+    "tailwindcss": "4"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.0.1",
@@ -30,15 +29,13 @@
     "@storybook/addon-docs": "^10.2.19",
     "@storybook/addon-vitest": "^10.2.19",
     "@storybook/react-vite": "^10.2.19",
+    "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^22",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitest/browser-playwright": "^4.1.0",
     "@vitest/coverage-v8": "^4.1.0",
     "playwright": "^1.58.2",
-    "postcss": "^8.5.8",
-    "postcss-preset-mantine": "^1.18.0",
-    "postcss-simple-vars": "^7.0.1",
     "storybook": "^10.2.19",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
