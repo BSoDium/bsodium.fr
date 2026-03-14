@@ -1,44 +1,87 @@
-# bsodium.fr
+# Welcome to React Router!
 
-## Overview
+A modern, production-ready template for building full-stack React applications using React Router.
 
-This repository contains the source code of my eportfolio, a React progressive web app which showcases my skills and projects. It is based on *MUI Joy* for UI components, *React Spring* for animations and *DALL-E 3* for illustration generation. Feel free to check out the latest production deployment at https://bsodium.fr.
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
 
-This project is available for free as a proof of concept and source of inspiration, and was by design tailored to my personal needs. However, its generic structure and components could technically allow anyone to make it their own.
+## Features
 
-**If you are interested in using this project for your own portfolio, please carefully read the [License](#license) section.**
+- 🚀 Server-side rendering
+- ⚡️ Hot Module Replacement (HMR)
+- 📦 Asset bundling and optimization
+- 🔄 Data loading and mutations
+- 🔒 TypeScript by default
+- 🎉 TailwindCSS for styling
+- 📖 [React Router docs](https://reactrouter.com/)
 
-## Installation
+## Getting Started
 
-### Frontend
+### Installation
 
-This app uses several environment variables to configure the API url, Google Analytics tracking ID and Web3forms access key. You can create a `.env.local` file in the root directory with the following content:
+Install the dependencies:
 
-```shell
-VITE_API_URL=https://localhost:3001 # The URL of the backend
-VITE_GA_MEASUREMENT_ID=UA-XXXXXXXXX-X # Your google Analytics tracking ID
-VITE_WEB3FORMS_ACCESS_KEY=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX # Your web3forms access key
+```bash
+npm install
 ```
 
-To run the app locally, you need to have Node.js and yarn installed on your machine. Clone this repository and run the following commands in the root directory:
+### Development
 
-```shell
-yarn install # install dependencies
-yarn start # start development server
+Start the development server with HMR:
+
+```bash
+npm run dev
 ```
 
-In its default configuration, the app should be available at http://localhost:3000.
+Your application will be available at `http://localhost:5173`.
 
-### Backend
+## Building for Production
 
-For detailed documentation on how to run the backend, please refer to the [api.bsodium.fr](https://github.com/BSoDium/api.bsodium.fr) repository.
+Create a production build:
 
-By default, the backend is expected to run on `http://localhost:3001`. If you decide to change this, you should also modify the `VITE_API_URL` environment variable in the `.env.local` file accordingly.
+```bash
+npm run build
+```
 
-## License
+## Deployment
 
-This project is licensed under the GNU General Public License - see the [LICENSE](LICENSE) file for details. Any use of the code must include a reference to the original repository. Any components or UI elements reused in other projects must be credited in a visible way to the original authors.
+### Docker Deployment
 
-The removal of the credit banner which appears at the top right corner of the website is strictly prohibited and constitutes a violation of the license. It must be visible at all times and should not be covered by any other element. 
+To build and run using Docker:
 
-This software is available for free and is provided "as is" without warranty of any kind. Please respect the work that has been put into this project and do not use it for commercial purposes without permission.
+```bash
+docker build -t my-app .
+
+# Run the container
+docker run -p 3000:3000 my-app
+```
+
+The containerized application can be deployed to any platform that supports Docker, including:
+
+- AWS ECS
+- Google Cloud Run
+- Azure Container Apps
+- Digital Ocean App Platform
+- Fly.io
+- Railway
+
+### DIY Deployment
+
+If you're familiar with deploying Node applications, the built-in app server is production-ready.
+
+Make sure to deploy the output of `npm run build`
+
+```
+├── package.json
+├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
+├── build/
+│   ├── client/    # Static assets
+│   └── server/    # Server-side code
+```
+
+## Styling
+
+This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+
+---
+
+Built with ❤️ using React Router.
