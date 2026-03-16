@@ -1,83 +1,91 @@
-import { useRef } from "react";
-import {
-  motion,
-  useScroll,
-  useTransform,
-  type MotionValue,
-} from "motion/react";
+import { lazy, Suspense } from "react";
+import { motion } from "motion/react";
 import type { Route } from "./+types/home";
+import Header from "~/components/Header";
+import Experience from "~/components/sections/Experience";
+import Projects from "~/components/sections/Projects";
+import Education from "~/components/sections/Education";
+import Contact from "~/components/sections/Contact";
 
-import layer1 from "~/assets/parallax/1.png";
-import layer2 from "~/assets/parallax/2.png";
-import layer3 from "~/assets/parallax/3.png";
-import layer4 from "~/assets/parallax/4.png";
-import layer5 from "~/assets/parallax/5.png";
-
-const parallaxLayers = [layer1, layer2, layer3, layer4, layer5];
+const Globe = lazy(() => import("~/components/Globe"));
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "BSoDium" },
-    { name: "description", content: "BSoDium's portfolio" },
+    { title: "BSoDium — Elliot Negrel-Jerzy" },
+    { name: "description", content: "Developer & creative tinkerer" },
   ];
 }
 
-function ParallaxLayer({
-  src,
-  index,
-  offsetY,
-  scrollYProgress,
-}: {
-  src: string;
-  index: number;
-  offsetY?: number;
-  scrollYProgress: MotionValue<number>;
-}) {
-  const exitEnd = (parallaxLayers.length - index) / parallaxLayers.length;
-  const yVh = useTransform(
-    scrollYProgress,
-    [0, exitEnd],
-    ["0vh", "-150vh"],
-  );
-  const y = useTransform(() => {
-    const progress = yVh.get();
-    return offsetY ? `calc(${progress} + ${offsetY}px)` : progress;
-  });
-
-  return (
-    <motion.img
-      src={src}
-      alt=""
-      style={{ y, zIndex: index + 1 }}
-      className="absolute top-0 left-0 w-full"
-      draggable={false}
-    />
-  );
-}
-
 export default function Home() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
-
   return (
-    <div ref={containerRef} className="relative h-[300vh]">
-      <div
-        className="sticky top-0 h-screen overflow-hidden"
-        style={{ backgroundColor: "#0a0a0a" }}
-      >
-        {parallaxLayers.map((src, index) => (
-          <ParallaxLayer
-            key={index}
-            src={src}
-            index={index}
-            offsetY={index >= 3 ? 400 : undefined}
-            scrollYProgress={scrollYProgress}
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      <Header />
+
+      <main>
+        {/* Hero */}
+        <section className="relative flex h-[80vh] min-h-150 items-center overflow-hidden">
+          {/* Globe */}
+          <div className="absolute inset-y-0 -right-16 w-[70%] lg:right-0">
+            <Suspense fallback={null}>
+              <Globe />
+            </Suspense>
+          </div>
+
+          {/* Gradient for text readability */}
+          <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-background via-background/80 to-transparent" />
+
+          {/* Intro */}
+          <div className="relative z-10 mx-auto w-full max-w-5xl px-8 pt-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
+                Elliot Negrel-Jerzy
+              </h1>
+              <p className="mt-3 text-xl text-gray-400">
+                Developer &amp; creative tinkerer
+              </p>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-gray-300">
+                I build things for the web and beyond. Passionate about clean
+                code, interactive experiences, and making software that feels
+                alive.
+              </p>
+            </motion.div>
+          </div>
+
+          {/* Scroll indicator */}
+          <motion.div
+            className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-gray-500"
+            animate={{ y: [0, 6, 0] }}
+            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </motion.div>
+        </section>
+
+        {/* Content sections */}
+        <div className="mx-auto max-w-3xl space-y-32 px-8 py-24">
+          <Experience />
+          <Projects />
+          <Education />
+          <Contact />
+        </div>
+      </main>
+
+      <footer className="border-t border-white/5 py-8 text-center text-sm text-gray-500">
+        &copy; {new Date().getFullYear()} Elliot Negrel-Jerzy
+      </footer>
+    </>
   );
 }

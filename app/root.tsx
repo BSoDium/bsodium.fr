@@ -11,16 +11,32 @@ import type { Route } from "./+types/root";
 
 import "./app.css";
 
+const themeSyncScript = `
+  (function() {
+    var d = document.documentElement;
+    var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    d.classList.toggle('dark', dark);
+    d.classList.toggle('light', !dark);
+    d.setAttribute('data-theme', dark ? 'dark' : 'light');
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+      d.classList.toggle('dark', e.matches);
+      d.classList.toggle('light', !e.matches);
+      d.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    });
+  })();
+`;
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script dangerouslySetInnerHTML={{ __html: themeSyncScript }} />
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="bg-background text-foreground">
         {children}
         <ScrollRestoration />
         <Scripts />
