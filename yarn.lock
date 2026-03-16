@@ -2502,12 +2502,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/color@npm:^3.0.3":
-  version: 3.0.6
-  resolution: "@types/color@npm:3.0.6"
+"@types/color@npm:^4.2.0":
+  version: 4.2.0
+  resolution: "@types/color@npm:4.2.0"
   dependencies:
     "@types/color-convert": "npm:*"
-  checksum: 10c0/79267eeb67f9d11761aecee36bb1503fb8daa699b9ae7e036fc23a74380e5b130c5c0f6d7adafabba89256e46f36ee4d3e28e0ac7e107e8258550eae7d091acf
+  checksum: 10c0/d09b68390bfd4ae6d57115e047be9dbd3ad4d30e9b7c20e6004c778057a94eec9f5c61689c1b6b09a743f8c2491536870dd0c9a2c79bfcaa37f594b54fc9c96d
   languageName: node
   linkType: hard
 
@@ -3701,7 +3701,7 @@ __metadata:
     "@storybook/addon-docs": "npm:^10.0.0"
     "@storybook/addon-vitest": "npm:^10.0.0"
     "@storybook/react-vite": "npm:^10.0.0"
-    "@types/color": "npm:^3.0.3"
+    "@types/color": "npm:^4.2.0"
     "@types/node": "npm:^24.10.0"
     "@types/react": "npm:^19.2.2"
     "@types/react-dom": "npm:^19.2.2"

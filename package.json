@@ -19,7 +19,7 @@
     "@emotion/styled": "^11.13.0",
     "@mui/joy": "5.0.0-alpha.85",
     "@react-spring/web": "^10.0.3",
-    "@types/color": "^3.0.3",
+    "@types/color": "^4.2.0",
     "@vercel/speed-insights": "^1.0.12",
     "axios": "^1.6.5",
     "marked": "^14.1.3",
