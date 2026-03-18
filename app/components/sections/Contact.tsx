@@ -1,5 +1,3 @@
-import { motion } from "motion/react";
-
 const links = [
   { label: "GitHub", url: "https://github.com/bsodium" },
   { label: "LinkedIn", url: "https://linkedin.com/in/" },
@@ -8,12 +6,8 @@ const links = [
 
 export default function Contact() {
   return (
-    <motion.section
+    <section
       id="contact"
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.6 }}
       className="scroll-mt-20 space-y-6"
     >
       <h2 className="text-2xl font-semibold tracking-tight">Contact</h2>
@@ -33,6 +27,6 @@ export default function Contact() {
           </a>
         ))}
       </div>
-    </motion.section>
+    </section>
   );
 }

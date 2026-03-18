@@ -1,4 +1,3 @@
-import { motion } from "motion/react";
 import type { Route } from "./+types/home";
 import Header from "~/components/Header";
 import Experience from "~/components/sections/Experience";
@@ -23,11 +22,7 @@ export default function Home() {
         <section className="relative flex h-[80vh] min-h-150 items-center overflow-hidden">
           {/* Intro */}
           <div className="relative z-10 mx-auto w-full max-w-5xl px-8 pt-16">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
+            <div>
               <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
                 Elliot Negrel-Jerzy
               </h1>
@@ -39,15 +34,11 @@ export default function Home() {
                 code, interactive experiences, and making software that feels
                 alive.
               </p>
-            </motion.div>
+            </div>
           </div>
 
           {/* Scroll indicator */}
-          <motion.div
-            className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-gray-500"
-            animate={{ y: [0, 6, 0] }}
-            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-          >
+          <div className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 text-gray-500">
             <svg
               width="20"
               height="20"
@@ -58,7 +49,7 @@ export default function Home() {
             >
               <path d="M6 9l6 6 6-6" />
             </svg>
-          </motion.div>
+          </div>
         </section>
 
         {/* Content sections */}

@@ -1,13 +1,7 @@
-import { motion } from "motion/react";
-
 export default function Education() {
   return (
-    <motion.section
+    <section
       id="education"
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.6 }}
       className="scroll-mt-20 space-y-8"
     >
       <h2 className="text-2xl font-semibold tracking-tight">Education</h2>
@@ -26,6 +20,6 @@ export default function Education() {
           engineering, distributed systems, and machine learning.
         </p>
       </div>
-    </motion.section>
+    </section>
   );
 }

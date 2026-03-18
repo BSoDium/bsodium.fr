@@ -1,5 +1,3 @@
-import { motion } from "motion/react";
-
 const experiences = [
   {
     company: "Kanop",
@@ -33,12 +31,8 @@ const experiences = [
 
 export default function Experience() {
   return (
-    <motion.section
+    <section
       id="experience"
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.6 }}
       className="scroll-mt-20 space-y-8"
     >
       <h2 className="text-2xl font-semibold tracking-tight">Experience</h2>
@@ -62,6 +56,6 @@ export default function Experience() {
           </div>
         ))}
       </div>
-    </motion.section>
+    </section>
   );
 }
