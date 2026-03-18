@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 const links = [
   { label: "GitHub", url: "https://github.com/bsodium" },
   { label: "LinkedIn", url: "https://linkedin.com/in/" },
-  { label: "Email", url: "mailto:hello@bsodium.fr" },
+  { label: "Email", url: "mailto:hello@catalyst" },
 ];
 
 export default function Contact() {

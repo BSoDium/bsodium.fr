@@ -32,14 +32,14 @@ const isDev = process.env.NODE_ENV === "development";
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   server: {
-    host: "bsodium.fr.localhost",
+    host: "catalyst.localhost",
     port: 5173,
   },
   plugins: [
     tailwindcss(),
     tsconfigPaths(),
     ...(isStorybook ? [] : [reactRouter()]),
-    ...(isDev ? [mkcert({ hosts: ["bsodium.fr.localhost"] })] : []),
+    ...(isDev ? [mkcert({ hosts: ["catalyst.localhost"] })] : []),
   ],
   test: {
     projects: [

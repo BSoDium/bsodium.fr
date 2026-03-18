@@ -2,11 +2,11 @@ import { motion } from "motion/react";
 
 const projects = [
   {
-    title: "bsodium.fr",
+    title: "catalyst",
     description:
       "This portfolio — featuring a Three.js globe hero and modern React architecture.",
     tags: ["React", "Three.js", "React Router", "Tailwind CSS"],
-    url: "https://bsodium.fr",
+    url: "https://catalyst",
   },
   {
     title: "klode",

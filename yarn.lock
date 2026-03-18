@@ -4046,45 +4046,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bsodium.dev@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "bsodium.dev@workspace:."
-  dependencies:
-    "@chromatic-com/storybook": "npm:^5.0.1"
-    "@heroui/react": "npm:^3.0.0-rc.1"
-    "@heroui/styles": "npm:^3.0.0-rc.1"
-    "@react-router/dev": "npm:7.12.0"
-    "@react-router/node": "npm:7.12.0"
-    "@react-router/serve": "npm:7.12.0"
-    "@storybook/addon-a11y": "npm:^10.2.19"
-    "@storybook/addon-docs": "npm:^10.2.19"
-    "@storybook/addon-vitest": "npm:^10.2.19"
-    "@storybook/react-vite": "npm:^10.2.19"
-    "@tailwindcss/vite": "npm:^4.2.1"
-    "@types/node": "npm:^22"
-    "@types/react": "npm:^19.2.7"
-    "@types/react-dom": "npm:^19.2.3"
-    "@types/topojson-client": "npm:^3.1.5"
-    "@vitest/browser-playwright": "npm:^4.1.0"
-    "@vitest/coverage-v8": "npm:^4.1.0"
-    isbot: "npm:^5.1.31"
-    motion: "npm:^12.36.0"
-    playwright: "npm:^1.58.2"
-    react: "npm:^19.2.4"
-    react-dom: "npm:^19.2.4"
-    react-globe.gl: "npm:^2.37.0"
-    react-router: "npm:7.12.0"
-    storybook: "npm:^10.2.19"
-    tailwindcss: "npm:4"
-    topojson-client: "npm:^3.1.0"
-    typescript: "npm:^5.9.2"
-    vite: "npm:^7.1.7"
-    vite-plugin-mkcert: "npm:^1.17.10"
-    vite-tsconfig-paths: "npm:^5.1.4"
-    vitest: "npm:^4.1.0"
-  languageName: unknown
-  linkType: soft
-
 "buffer-from@npm:^1.0.0":
   version: 1.1.2
   resolution: "buffer-from@npm:1.1.2"
@@ -4160,6 +4121,45 @@ __metadata:
   checksum: 10c0/8a88f39758a228852d6f3ac92362ecb7694b1b2b022f194d8dfe59123ad40a5de6202bf2dff0fe316bb3d5ca9caf316c22056e0da693459c3be2771cde4f4bf9
   languageName: node
   linkType: hard
+
+"catalyst@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "catalyst@workspace:."
+  dependencies:
+    "@chromatic-com/storybook": "npm:^5.0.1"
+    "@heroui/react": "npm:^3.0.0-rc.1"
+    "@heroui/styles": "npm:^3.0.0-rc.1"
+    "@react-router/dev": "npm:7.12.0"
+    "@react-router/node": "npm:7.12.0"
+    "@react-router/serve": "npm:7.12.0"
+    "@storybook/addon-a11y": "npm:^10.2.19"
+    "@storybook/addon-docs": "npm:^10.2.19"
+    "@storybook/addon-vitest": "npm:^10.2.19"
+    "@storybook/react-vite": "npm:^10.2.19"
+    "@tailwindcss/vite": "npm:^4.2.1"
+    "@types/node": "npm:^22"
+    "@types/react": "npm:^19.2.7"
+    "@types/react-dom": "npm:^19.2.3"
+    "@types/topojson-client": "npm:^3.1.5"
+    "@vitest/browser-playwright": "npm:^4.1.0"
+    "@vitest/coverage-v8": "npm:^4.1.0"
+    isbot: "npm:^5.1.31"
+    motion: "npm:^12.36.0"
+    playwright: "npm:^1.58.2"
+    react: "npm:^19.2.4"
+    react-dom: "npm:^19.2.4"
+    react-globe.gl: "npm:^2.37.0"
+    react-router: "npm:7.12.0"
+    storybook: "npm:^10.2.19"
+    tailwindcss: "npm:4"
+    topojson-client: "npm:^3.1.0"
+    typescript: "npm:^5.9.2"
+    vite: "npm:^7.1.7"
+    vite-plugin-mkcert: "npm:^1.17.10"
+    vite-tsconfig-paths: "npm:^5.1.4"
+    vitest: "npm:^4.1.0"
+  languageName: unknown
+  linkType: soft
 
 "chai@npm:^5.2.0":
   version: 5.3.3
