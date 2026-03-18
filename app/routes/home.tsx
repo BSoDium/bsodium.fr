@@ -1,4 +1,3 @@
-import { lazy, Suspense } from "react";
 import { motion } from "motion/react";
 import type { Route } from "./+types/home";
 import Header from "~/components/Header";
@@ -6,8 +5,6 @@ import Experience from "~/components/sections/Experience";
 import Projects from "~/components/sections/Projects";
 import Education from "~/components/sections/Education";
 import Contact from "~/components/sections/Contact";
-
-const Globe = lazy(() => import("~/components/Globe"));
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -24,16 +21,6 @@ export default function Home() {
       <main>
         {/* Hero */}
         <section className="relative flex h-[80vh] min-h-150 items-center overflow-hidden">
-          {/* Globe */}
-          <div className="absolute inset-y-0 -right-16 w-[70%] lg:right-0">
-            <Suspense fallback={null}>
-              <Globe />
-            </Suspense>
-          </div>
-
-          {/* Gradient for text readability */}
-          <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-background via-background/80 to-transparent" />
-
           {/* Intro */}
           <div className="relative z-10 mx-auto w-full max-w-5xl px-8 pt-16">
             <motion.div

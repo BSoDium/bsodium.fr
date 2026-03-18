@@ -9,6 +9,9 @@ import { fileURLToPath } from "node:url";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 
+/**
+ * The directory name of the current module. This is used to construct the path to the Storybook config directory, which is needed for the storybookTest plugin to find the stories defined in the Storybook config. In CommonJS, __dirname is available by default, but in ES modules, we need to use fileURLToPath and path.dirname to get the directory name. See: https://nodejs.org/api/esm.html#esm_filename_and_dirname
+ */
 const dirname =
   typeof __dirname !== "undefined"
     ? __dirname

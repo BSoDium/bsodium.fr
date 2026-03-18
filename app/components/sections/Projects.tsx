@@ -4,8 +4,8 @@ const projects = [
   {
     title: "catalyst",
     description:
-      "This portfolio — featuring a Three.js globe hero and modern React architecture.",
-    tags: ["React", "Three.js", "React Router", "Tailwind CSS"],
+      "This portfolio — focused on clean UX and modern React architecture.",
+    tags: ["React", "Motion", "React Router", "Tailwind CSS"],
     url: "https://catalyst",
   },
   {
