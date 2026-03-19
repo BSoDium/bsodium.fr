@@ -27,12 +27,6 @@ const dirname =
 const isStorybook = process.env.STORYBOOK === "true";
 
 /**
- * Whether the Vite config is being run in development mode. This is used to conditionally
- * include the mkcert plugin, which is only needed in development mode to generate a local SSL certificate for the dev server. In production mode, the dev server is not used and the mkcert plugin is not needed.
- */
-const isDev = process.env.NODE_ENV === "development";
-
-/**
  * The host name for the Vite dev server. This is used to generate the local SSL certificate with mkcert and to configure the dev server to use this host name. By using a custom host name instead of localhost, we can ensure that the SSL certificate is valid for the dev server, which allows us to use HTTPS in development without browser warnings about invalid certificates. The mkcert plugin will generate a certificate for this host name and add it to the system's trusted certificates, so that the browser will trust it when connecting to the dev server.
  */
 const hostName = `catalyst.localhost`;
@@ -47,7 +41,7 @@ export default defineConfig({
     tailwindcss(),
     tsconfigPaths(),
     ...(isStorybook ? [] : [reactRouter()]),
-    ...(isDev ? [mkcert({ hosts: [hostName] })] : []),
+    mkcert({ hosts: [hostName] }),
   ],
   test: {
     projects: [
