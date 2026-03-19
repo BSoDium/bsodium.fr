@@ -32,17 +32,22 @@ const isStorybook = process.env.STORYBOOK === "true";
  */
 const isDev = process.env.NODE_ENV === "development";
 
+/**
+ * The host name for the Vite dev server. This is used to generate the local SSL certificate with mkcert and to configure the dev server to use this host name. By using a custom host name instead of localhost, we can ensure that the SSL certificate is valid for the dev server, which allows us to use HTTPS in development without browser warnings about invalid certificates. The mkcert plugin will generate a certificate for this host name and add it to the system's trusted certificates, so that the browser will trust it when connecting to the dev server.
+ */
+const hostName = `catalyst.localhost`;
+
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   server: {
-    host: "catalyst.localhost",
+    host: hostName,
     port: 5173,
   },
   plugins: [
     tailwindcss(),
     tsconfigPaths(),
     ...(isStorybook ? [] : [reactRouter()]),
-    ...(isDev ? [mkcert({ hosts: ["catalyst.localhost"] })] : []),
+    ...(isDev ? [mkcert({ hosts: [hostName] })] : []),
   ],
   test: {
     projects: [
