@@ -19,7 +19,7 @@ export default function Home() {
 
       <main>
         {/* Hero */}
-        <section className="relative flex h-[80vh] min-h-150 items-center overflow-hidden">
+        <section className="relative flex h-[80vh] min-h-[150px] items-center overflow-hidden">
           {/* Intro */}
           <div className="relative z-10 mx-auto w-full max-w-5xl px-8 pt-16">
             <div>
