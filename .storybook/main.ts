@@ -15,7 +15,17 @@ const config: StorybookConfig = {
   viteFinal: async (config) => {
     // react-router's Vite plugin expects a full React Router build context
     // and is incompatible with Storybook's dev server — remove it here.
-    config.plugins = (config.plugins ?? []).filter(
+    const flattenPlugins = (plugins: any[]): any[] => {
+      // Flatten arrays arbitrarily deep
+      return plugins.reduce((acc, plugin) => {
+        if (Array.isArray(plugin)) {
+          return acc.concat(flattenPlugins(plugin));
+        }
+        return acc.concat(plugin);
+      }, []);
+    };
+    
+    config.plugins = flattenPlugins(config.plugins ?? []).filter(
       (p) => !(p && typeof p === 'object' && 'name' in p &&
         String((p as { name: unknown }).name).includes('react-router'))
     );

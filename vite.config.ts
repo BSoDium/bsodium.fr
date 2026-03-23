@@ -18,15 +18,6 @@ const dirname =
     : path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Whether this Vite config is being evaluated for Storybook.
- *
- * This is true only when the `STORYBOOK` environment variable is set to `"true"`.
- * It is used to conditionally exclude the React Router Vite plugin, which is
- * incompatible with Storybook's dep pre-bundling step.
- */
-const isStorybook = process.env.STORYBOOK === "true";
-
-/**
  * The host name for the Vite dev server. This is used to generate the local SSL certificate with mkcert and to configure the dev server to use this host name. By using a custom host name instead of localhost, we can ensure that the SSL certificate is valid for the dev server, which allows us to use HTTPS in development without browser warnings about invalid certificates. The mkcert plugin will generate a certificate for this host name and add it to the system's trusted certificates, so that the browser will trust it when connecting to the dev server.
  */
 const hostName = `catalyst.localhost`;
@@ -40,7 +31,7 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     tsconfigPaths(),
-    ...(isStorybook ? [] : [reactRouter()]),
+    reactRouter(),
     mkcert({ hosts: [hostName] }),
   ],
   test: {
