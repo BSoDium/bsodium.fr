@@ -16,23 +16,33 @@ async function render(url: string, { shell = true } = {}): Promise<string> {
 }
 
 describe("Navbar", () => {
-  it("has no logo: the first item is the site's name as plain text, a link home; then the four sections, in order, then the search", async () => {
+  it("has no logo: the first item is \"Globe\" as plain text, a link home; then the four sections, in order, then the search", async () => {
     const html = await render("/");
     // the only drawing in the header is the search glyph, after the links: no mark, no icon in front of the name
     expect(html.indexOf("<svg")).toBeGreaterThan(html.indexOf('href="/poems"'));
     expect(html).not.toContain("lucide");
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
     expect(links).toEqual([
-      ["/", SITE_NAME],
+      ["/", "Globe"],
       ["/projects", "Projects"],
       ["/articles", "Articles"],
       ["/artworks", "Artworks"],
       ["/poems", "Poems"],
     ]);
-    expect(html).toContain(`aria-label="${SITE_NAME}, home"`);
+    // the accessible name starts with the visible word and says what it is
+    expect(html).toContain(`aria-label="Globe, ${SITE_NAME} home"`);
     expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
     // the search trigger follows the links in the DOM (so in the focus order)
     expect(html.indexOf('data-slot="search-trigger"')).toBeGreaterThan(html.indexOf('href="/poems"'));
+  });
+
+  it("offers the search as one word where the icon trigger is not shown (a phone), after the links, with no drawing", async () => {
+    const html = await render("/");
+    const compact = html.indexOf('data-slot="search-trigger-compact"');
+    expect(compact).toBeGreaterThan(html.indexOf('href="/poems"'));
+    expect(html.slice(compact, html.indexOf("</button>", compact))).toMatch(/>Search$/);
+    expect(html.slice(compact, html.indexOf("</button>", compact))).not.toContain("<svg");
+    expect(html.slice(compact, html.indexOf("</button>", compact))).toContain("@md:hidden");
   });
 
   it("marks the current page with aria-current on the name (home) or the section", async () => {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Frame, Glyph, KindTag } from "~/components/ui";
+import { isMac } from "~/lib/platform";
 import { groupResults, searchItems, SEARCH_LABELS, type SearchItem } from "~/lib/search";
 import { cn } from "~/lib/utils";
 
@@ -18,7 +19,13 @@ function loadIndex(): Promise<SearchItem[]> {
   return pending;
 }
 
-const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+/** Anything on the page (the landing hero's search line) opens the palette by this event; the palette is mounted once, by the navigation. */
+const OPEN_SEARCH_EVENT = "catalyst:open-search";
+
+/** Open the quick search palette. A no-op until the navigation has mounted it (the hydration). */
+export function openSearch(): void {
+  window.dispatchEvent(new Event(OPEN_SEARCH_EVENT));
+}
 
 /**
  * Quick search (Cmd or Ctrl + K, or the button in the navigation): a modal `dialog` holding an ARIA combobox over the places and
@@ -47,6 +54,12 @@ export function SearchPalette() {
   const hide = useCallback(() => {
     dialogRef.current?.close();
   }, []);
+
+  useEffect(() => {
+    const onOpen = () => show();
+    window.addEventListener(OPEN_SEARCH_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_SEARCH_EVENT, onOpen);
+  }, [show]);
 
   // The shortcut works from anywhere, also while a field has the focus (it is a chord).
   useEffect(() => {
@@ -126,6 +139,17 @@ export function SearchPalette() {
 
   return (
     <>
+      {/* Where the icon trigger below is not shown (the header is under 28 rem: a phone), the same control as one quiet word: a 44 px target. */}
+      <button
+        type="button"
+        onClick={show}
+        aria-keyshortcuts="Control+K Meta+K"
+        aria-haspopup="dialog"
+        data-slot="search-trigger-compact"
+        className="nav-link pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground @md:hidden"
+      >
+        Search
+      </button>
       <button
         type="button"
         onClick={show}
