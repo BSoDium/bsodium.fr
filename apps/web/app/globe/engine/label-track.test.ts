@@ -696,3 +696,27 @@ describe("flicker metric over a camera sweep: labels move all the time and never
     expect(now.finalOverlaps).toBeLessThanOrEqual(old.finalOverlaps + 1);
   });
 });
+
+describe("the position the cut reserved reaches the plan (TrackItem.pref)", () => {
+  it("a new label takes it, and keeps it while the plan runs again", () => {
+    const t = tracker();
+    const items = [box(1, 100, 100, { pref: SPOT.belowRight }), box(2, 400, 100)];
+    const first = t.step(0, items, VIEW, INSET);
+    expect(first.map((p) => p.cand)).toEqual([SPOT.belowRight, SPOT.aboveLeft]);
+    for (let f = 1; f < 40; f++) expect(t.step(f * 16, items, VIEW, INSET).map((p) => p.cand), `frame ${f}`).toEqual([SPOT.belowRight, SPOT.aboveLeft]);
+  });
+});
+
+describe("a node that was fading out and is wanted again glides from where its plate was drawn (no hop)", () => {
+  it("the plate drawn by `follow` at the fallback place does not jump to the planned slot", () => {
+    const t = tracker();
+    const it = box(1, 100, 100);
+    // a node that has no slot yet is followed (fading out): drawn at the fallback above-left of its box
+    const fb = t.follow(1000, [{ id: 1, rect: it.rect, size: FULL }], VIEW, INSET)[0]!;
+    // wanted again a frame later, with a reserved position that is not the fallback
+    const placed = t.step(1016, [{ ...it, pref: SPOT.belowRight }], VIEW, INSET)[0]!;
+    expect(placed.cand).toBe(SPOT.belowRight);
+    expect(Math.hypot(placed.x - fb.x, placed.y - fb.y)).toBeLessThan(6); // (it starts where it was)
+    expect(placed.gx !== 0 || placed.gy !== 0).toBe(true); // and glides
+  });
+});

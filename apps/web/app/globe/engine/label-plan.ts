@@ -90,6 +90,12 @@ export interface PlanItem {
    * the whole wording is still taken, rather than going over other plates.
    */
   avoid?: readonly Plate[] | undefined;
+  /**
+   * The candidate id (`SPOT`) the cut of the hierarchy reserved for this plate, clear of every other box and plate by the cut's gap (engine/lod-tree.ts
+   * `plateSlot`): the whole label takes it first when it is free, so the planner's plates keep the room the cut checked instead of the first
+   * position that is free by a few px. Not available (off the grid, taken): the usual order.
+   */
+  pref?: number | undefined;
 }
 
 export interface PlanResult {
@@ -176,6 +182,11 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
       return touching;
     };
     let chosen: { v: number; s: LabelSpot } | null = first(0);
+    if (t.pref !== undefined && t.variants.length > 0) {
+      const s = spotsOf(0).find((c) => c.id === t.pref);
+      const { w, h } = t.variants[0]!;
+      if (s && free(s.x, s.y, w, h, clearance) && clearOfBoxes(s.x, s.y, w, h)) chosen = { v: 0, s };
+    }
     const prev = t.prev;
     if (chosen && prev && prev.cand >= 0 && prev.variant < count) {
       const { w, h } = t.variants[prev.variant]!;

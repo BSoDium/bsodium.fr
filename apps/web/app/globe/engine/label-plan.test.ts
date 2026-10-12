@@ -224,3 +224,29 @@ describe("a label keeps clear of the other nodes' boxes (PlanItem.avoid, boxesTo
     expect(boxesToAvoid(boxes, 1, 1000)).toEqual([boxes[0], boxes[2]]);
   });
 });
+
+describe("the position the cut reserved (PlanItem.pref)", () => {
+  it("is taken first when it is free, whatever the order of the positions", () => {
+    const plan = planLabels([item("a", 200, 200, { name: "Houston", pref: SPOT.belowRight })], GRID);
+    expect(plan[0]).toMatchObject({ cand: SPOT.belowRight, variant: 0, overlap: false });
+  });
+  it("is not taken when another plate is on it: the usual order", () => {
+    // b is placed first (higher score) and sits where a's reserved position would be
+    const b = item("b", 200, 236, { score: 120, name: "Beta" });
+    const a = item("a", 200, 200, { score: 80, name: "Houston", pref: SPOT.belowLeft });
+    const plan = planLabels([a, b], GRID);
+    expect(plan[0]!.cand).not.toBe(SPOT.belowLeft);
+    expect(plan[0]!.overlap).toBe(false);
+    expect(overlaps(plan[0]!, plan[1]!, CLEARANCE)).toBe(false);
+  });
+  it("is not taken when it touches a neighbour's box (PlanItem.avoid)", () => {
+    const avoid = [{ x0: 190, y0: 238, x1: 280, y1: 300 }];
+    const plan = planLabels([item("a", 200, 200, { name: "Houston", pref: SPOT.belowLeft, avoid })], GRID);
+    expect(plan[0]!.cand).not.toBe(SPOT.belowLeft);
+  });
+  it("is not a candidate for a wording other than the whole label, and a position off the grid falls back to the usual order", () => {
+    const plan = planLabels([item("a", 200, 2, { w: 20, h: 20, name: "Houston", pref: SPOT.aboveLeft })], GRID);
+    expect(plan[0]!.y).toBeGreaterThanOrEqual(0);
+    expect(plan[0]!.cand).not.toBe(SPOT.aboveLeft);
+  });
+});

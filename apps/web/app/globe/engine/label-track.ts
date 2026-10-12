@@ -114,6 +114,8 @@ export interface TrackItem {
   vkey: number;
   /** The rectangles the plate must also stay clear of when it is planned (`PlanItem.avoid`: the other nodes' boxes), built only for a node that is planned. */
   avoid?: (() => readonly Plate[]) | undefined;
+  /** The candidate the cut reserved for the plate (`PlanItem.pref`). */
+  pref?: number | undefined;
 }
 
 export interface Placed {
@@ -323,7 +325,7 @@ export class LabelTracker {
     if (plan.length) {
       const sub: PlanItem[] = plan.map((n) => {
         const it = items[n]!;
-        return { score: it.score, area: it.area, key: it.key, rect: it.rect, variants: it.variants, prev: mem.prev(it.id), hold: moving && mem.set[it.id] === 1 && t - mem.since[it.id]! < this.opts.dwellMs, avoid: it.avoid?.() };
+        return { score: it.score, area: it.area, key: it.key, rect: it.rect, variants: it.variants, prev: mem.prev(it.id), hold: moving && mem.set[it.id] === 1 && t - mem.since[it.id]! < this.opts.dwellMs, avoid: it.avoid?.(), pref: it.pref };
       });
       // At rest nothing moves, so a better place needs no room to spare to be taken: labels settle on their first free position (the one anchor)
       const planUnits: PlanUnits = full && !moving ? { ...units, upgradeMargin: 0 } : units;
@@ -335,7 +337,9 @@ export class LabelTracker {
         const fresh = !mem.set[i];
         const b = before[n]!;
         // a new slot: another position, or, for the last resort, another displacement
-        const kind: Move = fresh ? "fresh" : b && (b.cand !== p.cand || (p.cand < 0 && (Math.abs(b.dx - (p.x - it.rect.c0)) > 0.01 || Math.abs(b.dy - (p.y - it.rect.r0)) > 0.01))) ? "retarget" : "keep";
+        // (a label that was on the screen a frame ago as a node fading out, `follow`, and is wanted again has no slot but a place: it glides from there)
+        const shown = mem.seen[i]! > 0 && t - mem.seen[i]! < 2 * this.opts.maxDtMs;
+        const kind: Move = fresh ? (shown ? "retarget" : "fresh") : b && (b.cand !== p.cand || (p.cand < 0 && (Math.abs(b.dx - (p.x - it.rect.c0)) > 0.01 || Math.abs(b.dy - (p.y - it.rect.r0)) > 0.01))) ? "retarget" : "keep";
         const changedSlot = fresh || !b || b.cand !== p.cand || b.variant !== p.variant;
         if (changedSlot) mem.since[i] = t;
         else if (full && moving && t - mem.since[i]! < this.opts.dwellMs) held = true;
