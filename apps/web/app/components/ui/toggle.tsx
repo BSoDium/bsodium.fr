@@ -29,7 +29,7 @@ interface ExpandToggleProps {
  */
 export function ExpandToggle({ expanded, onExpandedChange, label = "Full screen", showLabel, size = "default", className }: ExpandToggleProps) {
   return (
-    <Toggle pressed={expanded} onPressedChange={onExpandedChange} size={size} icon={!showLabel} aria-label={showLabel ? undefined : label} className={className}>
+    <Toggle variant="ghost" pressed={expanded} onPressedChange={onExpandedChange} size={size} icon={!showLabel} aria-label={showLabel ? undefined : label} className={className}>
       <Glyph name={expanded ? "collapse" : "expand"} size={16} />
       {showLabel && label}
     </Toggle>

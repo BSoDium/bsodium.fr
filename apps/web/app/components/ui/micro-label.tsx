@@ -9,8 +9,8 @@ interface MicroLabelProps extends HTMLAttributes<HTMLElement> {
 }
 
 /**
- * The unit of the annotation language: mono, uppercase, tracked, tabular (`.ds-micro`). Codes ("ARTICLE / 0042"), coordinates,
- * timestamps, keys. 11 px is the floor; never use it for sentences (docs/design-system.md, "Micro-labels").
+ * A short code in the mono face: uppercase, tracked, tabular (`.ds-micro`). Rare now: use it only for a genuine code or key cap, never for
+ * a section title, a kind, a count or a sentence (dates and coordinates are `.ds-meta`; labels are sentence case). 11 px is the floor.
  */
 export function MicroLabel({ as: Tag = "span", tone = "muted", className, ...props }: MicroLabelProps) {
   return <Tag data-slot="micro-label" data-tone={tone === "muted" ? undefined : tone} className={cn("ds-micro", className)} {...props} />;

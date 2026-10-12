@@ -6,7 +6,7 @@ export { DataList, DataRow } from "./data-row";
 export { Divider } from "./divider";
 export { EntryCard } from "./entry-card";
 export { Frame, type FrameVariant } from "./frame";
-export { Glyph, RegMark, type GlyphName } from "./glyphs";
+export { Glyph, type GlyphName } from "./glyphs";
 export { IconButton } from "./icon-button";
 export { KindTag } from "./kind-tag";
 export { Col, Grid, Stack } from "./layout";
