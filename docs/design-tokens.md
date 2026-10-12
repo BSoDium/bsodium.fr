@@ -6,7 +6,7 @@ Source of truth: `apps/web/app/app.css`. Colors, radii, motion and layout are CS
 Tailwind 4 reads them through `@theme` / `@theme inline`. Light and dark follow `prefers-color-scheme`
 (no toggle for visitors; `[data-scheme="light"|"dark"]` forces a scheme on a subtree and is set only by the dev styleguide). Names match shadcn/ui's contract so selectively added components work unchanged.
 
-Principles: monochrome with one accent, generous spacing, clear hierarchy. System fonts only (no remote font requests).
+Principles: monochrome with one accent, generous spacing, clear hierarchy. The system stack plus three self-hosted fonts (display, reading, metadata), no remote font requests.
 The navbar has no surface of its own: it floats over the page and a gradient (a scrim over content, a fade over the globe) keeps it readable (see "Nav scrim").
 
 ## Color
@@ -22,6 +22,9 @@ The navbar has no surface of its own: it floats over the page and a gradient (a 
 | `--border-strong` | `rgb(0 0 0 / .4)` | `rgb(255 255 255 / .45)` | outlined buttons (not the credits dialog, which uses `--border`) |
 | `--ring` | `#0a0a0a` | `#f5f5f5` | focus ring (2px outline, 2px offset, all focusable elements) |
 | `--primary` / `--primary-foreground` | `#0a0a0a` / `#fbfbfb` | `#f5f5f5` / `#0a0a0a` | default button |
+| `--signal` | `#ea6024` | `#f26a2e` | the one accent: LARGE display text (24 px, or 18.66 px bold, and up), non-text marks (underline, tick, rule, a cover's mark) and fills. 3.27:1 on the page and 3.08:1 on the surface in light, 6.5:1 and 6.1:1 in dark. See "Accent" below |
+| `--signal-text` | `#b8420f` | `#f26a2e` | the accent as text of any size under 24 px: 5.31:1 on the page, 4.99:1 on the surface, 4.65:1 on the hover grey (light); 6.5 / 6.1 / 5.4:1 (dark) |
+| `--signal-foreground` | `#0a0a0a` | `#0a0a0a` | text on a `--signal` fill: 5.84:1 (light), 6.48:1 (dark) |
 | `--globe-grid`, `--globe-limb` | `rgb(0 0 0 / .12)`, `rgb(0 0 0 / .3)` | `rgb(255 255 255 / .14)`, `rgb(255 255 255 / .34)` | no longer read by the map: the graticule is the palette's `faint` level (level 3) and the horizon outline is one level fainter (level 2, `outlineLevel` in `engine/colors.ts`: 1.24:1 light, 1.21:1 dark against the page; it was `soft` until 2026-10-07 and `faint` until 2026-10-08, when the owner found the globe's ring still too visible; floor 1.2:1, `colors.test.ts`); the tokens remain for any other use |
 
 ### Map palette
@@ -30,7 +33,21 @@ The globe and the street map draw with one grey palette derived from `--backgrou
 
 The globe's ocean has no token of its own: it is `--background` (the disc and the clear colour are exactly the page colour, so the canvas never shows a seam). The detail panel uses `--background` at 85% with a backdrop blur.
 
-UI-system additions (2026-10-08, values and use in design-system.md): `--surface` (`#f4f4f4` / `#121212`, the panel plate), `--line-faint` (grid and tick texture), the one accent `--signal` (`#00698c` / `#38d4f5`, 5.6:1 and 10.6:1 on the surface; for state and the generated covers' marks only) with `--signal-foreground` and `--signal-wash`, the `--inverse-*` set (an inverted frame's rebinding), and a faint hue per kind (`--kind-article|project|artwork|poem|place`, the generated covers' lightest tone only). `design-system.test.ts` keeps the four copies of the colour list (light, dark, and the two forced-scheme rules) identical and asserts the AA pairs.
+UI-system additions (2026-10-08, values and use in design-system.md): `--surface` (`#f4f4f4` / `#121212`, the panel plate), `--line-faint` (grid and tick texture), the one accent `--signal` with `--signal-text`, `--signal-foreground` and `--signal-wash` (see "Accent" below; it was a cyan until 2026-10-12), the `--inverse-*` set (an inverted frame's rebinding, including `--inverse-signal` and `--inverse-signal-text`), and a faint hue per kind (`--kind-article|project|artwork|poem|place`, the generated covers' lightest tone only). `design-system.test.ts` keeps the four copies of the colour list (light, dark, and the two forced-scheme rules) identical and asserts the AA pairs.
+
+### Accent
+
+The one accent is orange. The owner's value is `#f26a2e`; it is used as is in the dark scheme (6.48:1 on the page, so it is AA even as small text there). In the light scheme `#f26a2e` is 2.95:1 on `#fbfbfb` and 2.78:1 on `#f4f4f4`, a little under the 3:1 that large text and graphics need, so `--signal` is `#ea6024` there (3.27:1 on the page, 3.08:1 on the surface; the same hue, 8 / 10 / 10 steps of RGB deeper). Changing the accent later is the five accent lines of `app.css` (`--signal`, `--signal-text`, `--signal-foreground`, `--signal-wash`, and the two `--inverse-signal*`), times the four copies of the list; the tests say what no longer holds.
+
+| Use | Token | Rule |
+| --- | --- | --- |
+| Display text of 24 px and up (or 18.66 px and up in bold), the drop cap, `text-signal` | `--signal` | 3:1 on the page and the surface (`design-system.test.ts`) |
+| Non-text marks: link underline, the active tick, the progress line, a cover's mark, a rule | `--signal` | 3:1 |
+| Any text under that size (a status word, a micro-label, a meta line) | `--signal-text` (`text-signal-text`) | 4.5:1 on the page, the surface and the hover grey |
+| Text on a filled accent block | `--signal-foreground` on `--signal` | 4.5:1; the fill is orange with ink on it in both schemes |
+| Inside an inverted frame | `--signal` and `--signal-text` are rebound to `--inverse-signal` / `--inverse-signal-text` | 3:1 and 4.5:1 on the inverted page |
+
+The accent stays out of the map and the globe (they are monochrome); on paper (`@media print`) both tokens are black.
 
 Tailwind utilities: `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-accent`, etc.
 The map and the globe stay monochrome: the accent `--signal` and the kind hues are for the data-display UI only, and there is no destructive color on purpose (an error is the word Error in an inverted tag).
@@ -62,10 +79,47 @@ Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251
 
 ## Typography
 
+Three self-hosted font families sit beside the system stack. They are SIL Open Font License 1.1 (licences beside the files in `apps/web/public/fonts/`), Latin subset, variable, from `@fontsource-variable` 5.3.0, declared in `app.css` with `font-display: swap`. Nothing is requested from another origin (`font-src 'self'`). Characters outside the Latin subset (Vietnamese place names, Arabic ...) are set glyph by glyph in the system stack (`unicode-range`).
+
+| Token | Stack | File (version in the name: cached `immutable` for a year) | Use |
+| --- | --- | --- | --- |
+| `--font-display` | `"Bricolage Grotesque Variable"`, `"Bricolage Grotesque Fallback"`, `--font-sans` | `bricolage-grotesque-5.3.0-latin-wght-opsz.woff2`, 77 kB, wght 200 to 800, opsz 12 to 96 | the wordmark, headlines, headings: heavy against thin |
+| `--font-reading` | `"Newsreader Variable"`, `"Newsreader Fallback"`, `ui-serif, Georgia, "Times New Roman", serif` | `newsreader-5.3.0-latin-wght.woff2` (58 kB) and `-italic` (65 kB), wght 200 to 800 | the body of an entry, the standfirst, pull quotes |
+| `--font-meta` | `"JetBrains Mono Variable"`, `--font-mono` | `jetbrains-mono-5.3.0-latin-wght.woff2`, 40 kB, wght 100 to 800 | page metadata (`.type-meta`) only |
+| `--font-sans`, `--font-mono` | the system stacks below, unchanged | none | the interface until a component takes a role; the map's labels, the credits line and the planner's measurement (`--font-mono`) |
+
+Why the optical-size file: the plain `wght` file of Bricolage is frozen at its text cut (opsz 14). At display sizes the font's own display cut (opsz 96) is about 10 % narrower with finer joints and higher contrast: it is the cut the wordmark is designed in, and `font-optical-sizing: auto` picks it by itself as the size grows. The file is 36 kB larger than the `wght` one and replaces it (one display file, not two). Only this file is preloaded, and only on the home page (`routes/home.tsx`). The reading and metadata files load only where a glyph of them is drawn.
+
+Fallback faces (`"Bricolage Grotesque Fallback"` on Arial / Arial Bold, `"Newsreader Fallback"` on Georgia / Georgia Bold / Georgia Italic): `size-adjust` from the frequency-weighted average advance of English text measured in Chrome at the weights each face stands for (Arial 99 %, Georgia 95.3 % roman, 87 % bold, 86 % italic), `ascent-override` and `descent-override` from the font's hhea metrics over its em divided by `size-adjust`, `line-gap-override` 0. Text set in the fallback has the real face's width and line box to within a few percent, so the swap moves little. JetBrains Mono has none on purpose: every system monospace is 0.6 em wide like it, and the `--font-mono` stack that follows it already is that.
+
+System stacks (unchanged):
+
 - Sans: `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`
 - Mono (labels, small caps): `ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace`
+
+Weights (`--weight-*`): `thin` 200 and `heavy` 800 are the display pair ("Cata" 200 against "lyst" 800); `light` 300 (standfirst, pull quote, third-level heading), `reading` 400, `medium` 500, `semibold` 600, `bold` 700. Tailwind's own `font-extralight` (200) and `font-extrabold` (800) are the same numbers.
+
+Roles. A class sets a whole role; `text-<role>` plus `font-display | font-reading | font-meta` does the same in utilities (the `--text-<role>--line-height`, `--letter-spacing` and `--font-weight` are Tailwind's theme keys, so `text-display-xl` carries them).
+
+| Role | Class | Size | Leading | Tracking | Weight | Wrap, features |
+| --- | --- | --- | --- | --- | --- | --- |
+| `display-xl` (the wordmark) | `.type-display-xl` | `clamp(3.5rem, 11vw, 10rem)`: 56 px on a phone, 158 px at 1440 px | 0.88 | -0.045em | 800 | `balance`, optical sizing auto, no synthesis |
+| `display-lg` (an entry's headline) | `.type-display-lg` | `clamp(2.25rem, 1.35rem + 3.7vw, 4.5rem)`: 36 to 72 px | 0.98 | -0.035em | 800 | same |
+| `display-md` (a card title, a section) | `.type-display-md` | `clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem)`: 26 to 36 px | 1.06 | -0.025em | 700 | same |
+| `standfirst` | `.type-standfirst` | `clamp(1.5rem, 1.25rem + 0.9vw, 1.9rem)`: 24 to 30 px, reading face italic | 1.3 | -0.01em | 300 | `balance` |
+| `reading` | `.type-reading` | `clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem)`: 18 to 20 px | 1.65 | 0 | 400 | `pretty`, proportional figures; column `.type-measure` |
+| `meta` | `.type-meta` | 12 px, mono | 16 px | 0.1em | 500 | uppercase, tabular figures, ligatures off |
+
+Modifiers: `.type-thin` / `.type-heavy` put a run of a display heading at either end of the weight axis (`Cata<span class="type-thin">`...). `.type-link` underlines in the accent (`.ds-prose` links do the same). `.drop-cap` sets the first letter of a paragraph three lines tall in the heavy display weight and the accent (`initial-letter` where it exists, a float elsewhere). `.type-pullquote` is the reading face in 300 italic between two hairlines; `.type-rule` and `.ds-prose hr` a 1 px rule in `--border-strong`.
+
+Reading measure: `--measure-reading` is 28.5 em of the reading size, 570 px at 20 px: 66 characters of running text (measured in Chrome, 1440 and 390 px wide). It is em and not `ch` on purpose: the "0" of Newsreader is 0.5 em wide against a 0.43 em average letter, so 65 `ch` would be 75 characters. Figures in Newsreader are lining: the subset ships no old-style figures (`onum` is absent from the file), so `font-variant-numeric` only asks for proportional ones.
+
+`.ds-prose` (the entry body) is now the reading face at the `reading` role, headings in the display face (h2 800, h3 and h4 300), blockquotes in light italic, rules hairline. Component utilities (`font-semibold`, `text-2xl`) still win over it where the markup sets them.
+
+Older steps (system sans, still used by the interface):
+
 - `.label`: sans, `text-sm`, sentence case, muted color (the places list's group names and regions). `.ds-meta`: mono 13 / 20, tabular, muted, untracked (dates, coordinates). `.ds-micro`: mono 11 / 16, uppercase, 0.12em (a short code or key cap only).
-- `.map-label` and `.map-halo` (the names of the map's detection boxes, `app.css`; two lines, the name and a second line with the country or number of places and the linked entries): the mono stack; the name 14 px weight 500, the second line 11 px weight 400, 0.01 / 0.02em tracking, line heights 18 / 14 px, 6 x 3 px plate padding (`LABEL_TYPE` in `app/globe/engine/label-text.ts`, which the layout also measures with); 3 px between a label and its box. EVERY label has a `--background` plate with a feathered edge (`.map-halo`: a two-layer `box-shadow` of `--background`, blur 8 px / spread 3 px, in a layer below the boxes); the name is `--foreground`, the second line `--muted-foreground` (6.8:1 light, 7.9:1 dark on the plate: AA); no underline, no text-shadow, no opacity; hovered: unchanged; selected: `--foreground` plate with `--background` text (inverted), the second line `color-mix(--background 72%, --foreground)` (10:1 light, 7.9:1 dark), no feather. `docs/web-architecture.md`, "Labels in device pixels".
+- `.map-label` and `.map-halo` (the names of the map's detection boxes, `app.css`; two lines, the name and a second line with the country or number of places and the linked entries): the mono stack; the name 14 px weight 500, the second line 11 px weight 400, 0.01 / 0.02em tracking, line heights 18 / 14 px, 6 x 3 px plate padding (`LABEL_TYPE` in `app/globe/engine/label-text.ts`, which the layout also measures with); 3 px between a label and its box. EVERY label has a `--background` plate with a feathered edge (`.map-halo`: a two-layer `box-shadow` of `--background`, blur 8 px / spread 3 px, in a layer below the boxes); the name is `--foreground`, the second line `--muted-foreground` (6.8:1 light, 7.9:1 dark on the plate: AA); no underline, no text-shadow, no opacity; hovered: unchanged; selected: `--foreground` plate with `--background` text (inverted), the second line `color-mix(--background 72%, --foreground)` (10:1 light, 7.9:1 dark), no feather. `docs/web-architecture.md`, "Labels in device pixels". The map's text never takes a new family.
 
 | Step | Size / line height | Use |
 | --- | --- | --- |

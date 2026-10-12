@@ -7,15 +7,15 @@ The UI system for the data display: the side panel and the full-screen view that
 The first version of this system (2026-10-08) read the brief ("Y2K art, generative art, labellisation, square edges, Watch Dogs style") as a
 HUD: corner brackets on every box, index codes, numbered sections, tracked mono labels everywhere. The owner asked for something "a bit less
 AI" (2026-10-11) and the system was restrained (2026-10-12). What stayed of the brief is the square edges, the hairlines, the generative
-covers and the one cyan accent; the annotation language is now used only where it carries information.
+covers and the one accent (cyan until 2026-10-12, orange now); the annotation language is now used only where it carries information.
 
 | Principle | What it means here |
 | --- | --- |
 | Square edges | Radius 0 everywhere (all `--radius-*` tokens are 0; a test scans the components). No pills, no soft shadows. |
 | Few boxes | Spacing and a cover separate things; a hairline box is for the few things that are one (a code block, a link card, the search dialog, an error). A card has no box, a list has no chips, metadata has no inner rules, an empty state is one muted line. No corner brackets anywhere in the UI (the map's detection boxes keep their own corner arms). |
 | Label only when it adds information | No decorative numbering (`01 ENTRIES`, `№ 0042`, `000 entries`), no index codes, no eyebrow that repeats the page's title, no kind on a card in a list of one kind, no "Place" on a place. A date, a place, a count, a tag say what they are. |
-| One sans scale | Titles, body and secondary text are sans at comfortable sizes (body 16 px or more, secondary 14 px). Mono is for figures that are read as values: dates, coordinates, short codes, the map's own text, the credits line. Sentence case; the tracked uppercase mono micro-label is the exception, not the language. |
-| One accent, for state | The cyan `--signal` marks state: the contents entry being read, the highlighted search result, the active Frame, the error tag; and the marks of generated covers. Never decoration (no numerals, no rules, no labels). |
+| Type is the voice | Display type in a very heavy weight against a very thin one, a reading serif for long text, mono for metadata (see "Type"). Interface text (buttons, filters, tags) stays sans at comfortable sizes (16 px or more, secondary 14 px), sentence case; the tracked uppercase mono micro-label is the exception, not the language. |
+| One accent, for state | The orange `--signal` marks state: the contents entry being read, the highlighted search result, the active Frame, the error tag; and the marks of generated covers. Never decoration (no numerals, no rules, no labels). |
 | Generative art | Entries without an image get a **seeded procedural cover**: a small dithered grid in the palette plus one signal mark. Deterministic, subtle, never carrying information. |
 | Clean grid | 4 px base grid; 12-column panel grid with 16 px gutters; 24 px panel padding. |
 
@@ -33,7 +33,7 @@ All in `app.css`; light and dark keep the map's near-black / near-white family. 
 | Text | `--foreground` / `--muted-foreground` | `#0a0a0a` / `#595959` | `#f5f5f5` / `#a3a3a3` | 18:1 / 6.4:1 on the surface (light) |
 | Hairline / control line | `--border` / `--border-strong` | 14 % / 40 % ink | 16 % / 45 % ink | strong is 2.8:1 or more (control outline) |
 | Texture | `--line-faint` | 7 % ink | 9 % ink | the 16 px grid and hatch only |
-| **Accent (one)** | `--signal` | `#00698c` | `#38d4f5` | a cyan: 5.6:1 on the surface (light), 10.6:1 (dark). Fills use `--signal-foreground` (`#fbfbfb` / `#0a0a0a`, 6.0:1 / 11:1). `--signal-wash` is its 8 to 9 % plate for the active Frame. |
+| **Accent (one)** | `--signal` | `#ea6024` | `#f26a2e` | an orange (the owner's `#f26a2e`, deepened in light to reach 3:1): for large display text (24 px and up) and marks and fills, 3.1:1 on the surface (light), 6.1:1 (dark). Text under 24 px takes `--signal-text` (`#b8420f` / `#f26a2e`: 5.0:1 / 6.1:1 on the surface). Text on a fill is `--signal-foreground` (`#0a0a0a`, 5.8:1 / 6.5:1). `--signal-wash` is its 8 to 9 % plate for the active Frame. |
 | Kind hues | `--kind-article` 275, `-project` 150, `-artwork` 55, `-poem` 340, `-place` (muted grey) | `oklch(.58 .10 H)` | `oklch(.76 .10 H)` | **faint and redundant** (see Kind coding) |
 | Inverse set | `--inverse-background/-foreground/-muted/-border/-signal` | the dark scheme's ink on page | and vice versa | what an inverted Frame rebinds the colour tokens to |
 
@@ -45,7 +45,21 @@ Each kind has a **glyph** on a 12 px grid (article: lines of text; project: term
 
 ### Type
 
-No web font is added. The sans and mono stacks of `design-tokens.md` are system fonts (zero bytes, no layout shift, native rendering), and the system mono already reads as the technical HUD face. Swapping to a vendored OFL face later is one token each (`--font-sans`, `--font-mono`); no component names a family.
+The direction (2026-10-12): the pixel globe is the only illustrative element; everything else is type. A very heavy display weight against a very thin one (the name: "Cata" 200, "lyst" 800), a reading serif for long text, mono for metadata, hairline rules, one accent. Three self-hosted families (`design-tokens.md`, "Typography": files, fallbacks, weights, the scale with its numbers) over the unchanged system stacks. Each role is a class in `app.css` (`.type-*`); a component composes them and names no family itself.
+
+| Role | Face | Where |
+| --- | --- | --- |
+| `display-xl` (`.type-display-xl`) | Bricolage Grotesque 800, "Cata" at 200 (`.type-thin`), tight (0.88 leading, -0.045em), 56 to 158 px | the wordmark on the home page |
+| `display-lg` | Bricolage 800, 36 to 72 px, 0.98 leading | an entry's headline; a run may be `.type-thin` |
+| `display-md` | Bricolage 700, 26 to 36 px | a card's title, a section of a list |
+| `standfirst` | Newsreader italic 300, 24 to 30 px, balanced | the line under a headline |
+| `reading` (`.type-reading`, `.ds-prose`) | Newsreader 400, 18 to 20 px / 1.65, 66 characters per line (`--measure-reading`), `pretty`; `.drop-cap` for the first paragraph; links underlined in the accent; blockquote is a 300 italic pull quote; headings Bricolage (h2 800, h3 300) | the body of an entry, the place's text |
+| `meta` (`.type-meta`) | JetBrains Mono 500, 12 px, uppercase, 0.1em | page metadata: a date, a place, a count, a reading time. Never the map's text |
+| interface (existing) | system sans and mono as in the table below | buttons, filters, tags, controls, code blocks, the map and its credits |
+
+The accent as text: `--signal` (large display text and marks) or `--signal-text` (under 24 px); see `design-tokens.md`, "Accent". Colour is never part of a role, and a role never sets a width: the reading column is `.type-measure`.
+
+What is still the system sans until a component takes a role (the previous table, kept as the interface's scale):
 
 | Use | Face | Size / line | Case |
 | --- | --- | --- | --- |
@@ -53,14 +67,13 @@ No web font is added. The sans and mono stacks of `design-tokens.md` are system 
 | Panel title | sans 600 | 36 / 40 (a place), 28 / 34 (an entry) | sentence |
 | Card title | sans 600 | 22 / 30 (`text-xl`) | sentence |
 | Section heading | sans 600 | 18 / 28 (`text-lg`) | sentence |
-| Summary, reading text | sans | 18 / 28 (`.ds-prose`), blocks limited to `60ch` (about 65 characters), `text-wrap: pretty`; headings `balance` | sentence |
 | Body (a card's summary, a row's name) | sans | 16 / 26 | sentence |
 | Secondary (meta lines, captions, tags, counts) | sans, muted | 14 / 22 | sentence |
 | Date, coordinates (`.ds-meta`) | mono, tabular, slashed zero, muted | 13 / 20 | as written, untracked |
 | Buttons | sans 500 | 14 / 22 | sentence |
 | Short code (`.ds-micro`, `MicroLabel`): `ERR / 500`, a key cap | mono, tabular | 11 / 16, 0.12em | UPPERCASE |
 
-Body text is never under 16 px and secondary text never under 14 px. The micro-label is for a real code or key cap, never for a title, a kind, a count or a sentence; 11 px is the floor for any text.
+Body text is never under 16 px (reading 18 px) and secondary text never under 14 px. The micro-label is for a real code or key cap, never for a title, a kind, a count or a sentence; 11 px is the floor for any text. The two uppercase mono units are `.ds-micro` and `.type-meta`; `design-system.test.ts` counts them.
 
 ### Spacing, lines, layout
 
@@ -183,7 +196,7 @@ overlapping, the overlap knocked out. The square is the bounding box, the disc i
 grid, one bit per cell, solid shapes, no outline, no gradient, `currentColor`; whole multiples of 16 px stay crisp, and it is legible
 at 16 px. It says nothing in words, so it survives a rename; the name sits beside it as the **wordmark** (`LogoWordmark`: the mark and
 the site's name as text in the display weight, semibold and tight, the mark at the height of the capitals). Both are monochrome: the
-cyan stays for state. The look of the site is a studio's (heavy typographic work, big bold display type against thin text, mono
+accent stays for state. The look of the site is a studio's (heavy typographic work, big bold display type against thin text, mono
 accents, hairline grids, restraint) over the pixel-art globe: the mark is the one geometric shape of that language and it never
 carries texture. Where it is used: the favicon (SVG, follows the scheme; ICO at 16, 32, 48 px on the dark tile), the home-screen and
 manifest icons, the styleguide, and `LogoMark` / `LogoWordmark` for the places that want them (neither is in the header). To change it,
