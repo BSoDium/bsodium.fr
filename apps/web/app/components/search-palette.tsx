@@ -133,10 +133,10 @@ export function SearchPalette() {
         aria-keyshortcuts="Control+K Meta+K"
         aria-haspopup="dialog"
         data-slot="search-trigger"
-        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2 px-2 text-sm text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground sm:inline-flex"
+        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2 px-2 text-sm text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground @md:inline-flex"
       >
         <Glyph name="search" size={16} />
-        <span aria-hidden="true" className="ds-micro hidden border border-border px-1.5 lg:inline">
+        <span aria-hidden="true" className="ds-micro hidden border border-border px-1.5 @xl:inline">
           {mac ? "⌘" : "Ctrl"} K
         </span>
       </button>

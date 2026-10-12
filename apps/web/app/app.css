@@ -69,8 +69,9 @@
 
   /* Layout. */
   --navbar-height: 3.5rem;
-  /* The nav scrim fades content out under the floating nav (see `.nav-scrim`). */
+  /* The nav scrim fades content out under the floating nav (see `.nav-scrim`); the nav's own fade over the globe is a little taller (`.nav-fade`). */
   --scrim-height: calc(var(--navbar-height) + 2.5rem);
+  --fade-height: calc(var(--navbar-height) + 3.5rem);
   /* Width of the places list when it is revealed by keyboard focus. */
   --list-width: 18rem;
   /* Panel grid: 12 columns on a 4 px base; control heights follow the touch rule (44 px below md). */
@@ -832,6 +833,65 @@
   }
 
   /*
+   * Nav fade: the navigation's own backdrop over the globe and the map (the shell), where the page-wide scrim is not drawn. It sits behind
+   * the row inside the header and is only as wide as the row plus a soft margin, so the globe is not dimmed across its whole width.
+   *  - vertical: the page colour at 85 % from the top edge down past the row's text, then an eased (smoothstep) fall to nothing over
+   *    `--fade-height` (112 px): no stop has a visible edge;
+   *  - horizontal: the same easing in a mask on both ends (6 rem), so the band melts into the map on either side.
+   * No blur (a backdrop blur over the WebGL canvas costs a composited layer for nothing: the fade alone keeps the text at 4.5:1 or more).
+   * Colours are the page colour only: the fade follows both schemes with no token of its own, and is invisible where the page colour is
+   * what is behind it.
+   */
+  .nav-fade {
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: -6rem;
+    right: -6rem;
+    height: var(--fade-height);
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--background) 85%, transparent) 0%,
+      color-mix(in srgb, var(--background) 85%, transparent) 20%,
+      color-mix(in srgb, var(--background) 81%, transparent) 30%,
+      color-mix(in srgb, var(--background) 72%, transparent) 40%,
+      color-mix(in srgb, var(--background) 58%, transparent) 50%,
+      color-mix(in srgb, var(--background) 43%, transparent) 60%,
+      color-mix(in srgb, var(--background) 27%, transparent) 70%,
+      color-mix(in srgb, var(--background) 13%, transparent) 80%,
+      color-mix(in srgb, var(--background) 4%, transparent) 90%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      rgb(0 0 0 / 0.16) 1.5rem,
+      rgb(0 0 0 / 0.5) 3rem,
+      rgb(0 0 0 / 0.84) 4.5rem,
+      #000 6rem,
+      #000 calc(100% - 6rem),
+      rgb(0 0 0 / 0.84) calc(100% - 4.5rem),
+      rgb(0 0 0 / 0.5) calc(100% - 3rem),
+      rgb(0 0 0 / 0.16) calc(100% - 1.5rem),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      rgb(0 0 0 / 0.16) 1.5rem,
+      rgb(0 0 0 / 0.5) 3rem,
+      rgb(0 0 0 / 0.84) 4.5rem,
+      #000 6rem,
+      #000 calc(100% - 6rem),
+      rgb(0 0 0 / 0.84) calc(100% - 4.5rem),
+      rgb(0 0 0 / 0.5) calc(100% - 3rem),
+      rgb(0 0 0 / 0.16) calc(100% - 1.5rem),
+      transparent 100%
+    );
+  }
+
+  /*
    * The places list: always in the DOM and the accessibility tree, visually hidden like a skip link, and revealed as
    * a compact floating overlay while keyboard focus is inside it (:focus-visible, so a pointer user whose click
    * moved focus there does not get a surprise popup). It is also shown when the globe cannot run (no WebGL), as
@@ -1101,10 +1161,28 @@ h1[tabindex="-1"]:focus-visible {
   }
 }
 
+@media (forced-colors: active) {
+  /* System colours: the fade is the canvas colour, as opaque at the row as the scrim is. */
+  .nav-fade {
+    background: linear-gradient(to bottom, Canvas 0%, Canvas 30%, transparent 100%);
+  }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   /* No blur, and a band that stays solid longer. */
   .nav-scrim > span {
     display: none;
+  }
+
+  .nav-fade {
+    background: linear-gradient(
+      to bottom,
+      var(--background) 0%,
+      var(--background) 40%,
+      color-mix(in srgb, var(--background) 60%, transparent) 60%,
+      color-mix(in srgb, var(--background) 25%, transparent) 80%,
+      transparent 100%
+    );
   }
 
   .nav-scrim {
