@@ -47,10 +47,13 @@ import { labelVariants, type LabelText } from "./label-text";
 import { LOD, type LodTree } from "./lod-tree";
 import type { NodeScreen } from "./node-screen";
 import { textFloorLevel } from "./palette";
-import { ALPHA_STEPS, HASH_SEED, PixelOverlay, drawBox, hashStep, labelTones, quantAlpha, type CellRect, type LabelTones } from "./pixel-labels";
+import { ALPHA_STEPS, HASH_SEED, PixelOverlay, SPOT, drawBox, hashStep, labelTones, quantAlpha, type CellRect, type LabelTones } from "./pixel-labels";
 
 /** Room kept between a label and the boxes of the other nodes, px (the early opening keeps `LOD.open.gapPx.leave` from every box and label: the same). */
 const AVOID_PAD = LOD.open.gapPx.leave;
+
+/** The planner's candidates (`SPOT`) for the positions the cut of the hierarchy reserves a label at (`LodTree.plateSlot`). */
+const CUT_SPOT: readonly number[] = [SPOT.aboveLeft, SPOT.aboveRight, SPOT.belowLeft, SPOT.belowRight, SPOT.right, SPOT.left, SPOT.insideTopLeft];
 
 /** The art-pixel grid of a map's canvas. */
 export interface PixelGrid {
@@ -404,6 +407,7 @@ export class BoxScene {
       variants: t.variants,
       vkey: this.vkey(t.i),
       avoid: () => boxesToAvoid(boxPlates, n, t.variants[0]!.w + t.variants[0]!.h + 2 * AVOID_PAD),
+      pref: CUT_SPOT[lod.plateSlot(t.i)],
     }));
     const placed: Placed[] = this.tracker.step(now, track, view, units.inset);
     if (this.tracker.info.full) this.replans++;
