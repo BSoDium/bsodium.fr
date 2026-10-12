@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createStaticHandler, createStaticRouter, StaticRouterProvider, type StaticHandlerContext } from "react-router";
 import { describe, expect, it } from "vitest";
 import { createHeroMachine } from "~/lib/hero-machine";
-import { SITE_NAME } from "~/lib/site";
+import { SITE_NAME, SITE_TAGLINE } from "~/lib/site";
 import { LandingHero } from "./landing-hero";
 
 async function render(props: { away?: boolean; empty?: boolean } = {}, machine = createHeroMachine()): Promise<string> {
@@ -26,19 +26,35 @@ describe("LandingHero", () => {
     machine.stop();
   });
 
-  it("is the page's h1, the name set thin then heavy, and says the site's name", async () => {
+  it("is the page's h1: the owner's name, the given name at the thin end of the weight axis and the family name at the heavy end", async () => {
     const html = await render();
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
-    expect(html).toMatch(/<h1 class="hero-name type-display-xl"><span class="type-thin">Cata<\/span>lyst<\/h1>/);
-    expect("Cata" + "lyst").toBe(SITE_NAME);
+    expect(html).toMatch(
+      /<h1 class="hero-name type-display-xl"><span class="hero-given type-thin">Elliot<\/span> <span class="hero-family"><span>Négrel<\/span><span><span class="hero-hyphen">-<\/span>Jerzy<\/span><\/span><\/h1>/,
+    );
+    const heading = /<h1[^>]*>(.*?)<\/h1>/.exec(html)?.[1]?.replace(/<[^>]+>/g, "");
+    expect(heading).toBe(SITE_NAME);
+    expect(SITE_NAME).toBe("Elliot Négrel-Jerzy");
   });
 
-  it("says the owner's sentences: the intro, with no place a line that does not point at an empty globe", async () => {
+  it("says who the owner is from the published facts only, then how to use the page; with no place a line that does not point at an empty globe", async () => {
     const html = await render();
-    expect(html).toContain("A personal archive organised around places. Pick a point on the globe, or start from a list.");
+    expect(html).toContain(`<p class="hero-intro">${SITE_TAGLINE}</p>`);
+    expect(SITE_TAGLINE).toBe(
+      "Front-end and UX software engineer based in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.",
+    );
+    expect(html).toContain('<p class="hero-hint">Pick a point on the globe, or start from a list.</p>');
     const empty = await render({ empty: true });
-    expect(empty).toContain("A personal archive organised around places. No place is published yet: start from a list.");
+    expect(empty).toContain('<p class="hero-hint">No place is published yet: start from a list.</p>');
     expect(empty).not.toContain("Pick a point");
+  });
+
+  it("is the home page's primary navigation: the four lists in a nav landmark, with an icon each that is decoration", async () => {
+    const html = await render();
+    const nav = html.slice(html.indexOf('<nav aria-label="Primary" class="hero-list">'), html.indexOf("</nav>"));
+    expect(nav).toContain("<ul>");
+    expect(nav.match(/<svg/g)).toHaveLength(4);
+    expect(nav.match(/aria-hidden="true"/g)?.length).toBe(4);
   });
 
   it("has a labelled search button that names the shortcut, then the four lists as links in order", async () => {
@@ -47,6 +63,9 @@ describe("LandingHero", () => {
     expect(search).toBeGreaterThan(0);
     const button = html.slice(html.lastIndexOf("<button", search), html.indexOf("</button>", search));
     expect(button).toContain("Search places and entries");
+    // the search icon of the icon set, at the control size: not the old square bullet
+    expect(button).toContain("<svg");
+    expect(button).toContain('data-size="control"');
     expect(button).toContain('aria-haspopup="dialog"');
     expect(button).toContain('aria-keyshortcuts="Control+K Meta+K"');
     expect(button).toContain('type="button"');
@@ -63,10 +82,11 @@ describe("LandingHero", () => {
     expect(search).toBeLessThan(html.indexOf('href="/projects"'));
   });
 
-  it("shows no count, no number and no invented name", async () => {
+  it("shows no count, no number, no employer and no code name", async () => {
     const html = await render();
     const text = html.replace(/<[^>]+>/g, " ");
     expect(text).not.toMatch(/\d/);
+    expect(html).not.toMatch(/catalyst/i);
   });
 
   it("is away, hidden from assistive technology and no second heading, while a place or entry is open", async () => {
@@ -116,10 +136,10 @@ describe("the hero's CSS (app.css, 'Landing hero')", () => {
     expect(block).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.landing-hero \*,\s*\.landing-hero::before \{\s*transition: none !important;/);
   });
 
-  it("uses the tokens: the accent only on the search bullet and the row's hover, the display and reading faces", () => {
+  it("uses the tokens: the accent only on the row's hover, the display and reading faces", () => {
     const uses = block.split("\n").filter((l) => l.includes("var(--signal)") && !l.includes("--signal-"));
-    expect(uses).toHaveLength(2);
-    expect(rule(".hero-bullet")).toContain("background: var(--signal)");
+    expect(uses).toHaveLength(1);
+    expect(block).not.toContain("hero-bullet");
     expect(block).toMatch(/\.hero-row:hover,\s*\.hero-row:focus-visible \{\s*color: var\(--signal\);/);
     expect(rule(".hero-name")).not.toContain("--signal");
     expect(rule(".hero-intro")).toContain("font-family: var(--font-reading)");

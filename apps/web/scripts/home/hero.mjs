@@ -1,6 +1,8 @@
-// The landing hero in a browser (docs/landing.md): at rest over the globe with real text, the globe still draggable beneath it, the
-// collapse on the first gesture, the way back after the idle delay (and only at the world view), reduced motion, the credits line never
-// covered, the four viewports, the keyboard path and the search palette, no console error and no hydration warning.
+// The landing hero in a browser (docs/landing.md): at rest over the globe with real text (the owner's name on one line at desktop width,
+// stacked on a phone), the globe still draggable beneath it, the collapse on the first gesture, the way back after the idle delay (and
+// only at the world view), the header carrying no section links while the hero's rows are the sections (and taking them back when the
+// rows are hidden), the icons at their scale, reduced motion, the credits line never covered, the four viewports, the keyboard path and
+// the search palette, no console error and no hydration warning.
 // Works against `pnpm dev` (the owner's preview data) and `pnpm dev:demo`; it asserts nothing about which places there are.
 //
 //   CHROME_PATH=/path/to/chrome BASE_URL=http://localhost:5451 OUT_DIR=/tmp/hero node scripts/home/hero.mjs
@@ -69,7 +71,8 @@ async function geometry(page) {
     };
     const shown = (node) => {
       const cs = getComputedStyle(node);
-      return cs.visibility !== "hidden" && Number(cs.opacity) > 0.01;
+      // (`display: none` has no box: the how-to line is not drawn on a wide, short window)
+      return cs.display !== "none" && cs.visibility !== "hidden" && Number(cs.opacity) > 0.01;
     };
     const root = el("[data-slot=landing-hero]");
     const state = root.getAttribute("data-hero");
@@ -78,6 +81,7 @@ async function geometry(page) {
     if (state === "rest") {
       add("name", el(".hero-name"), true);
       add("intro", el(".hero-intro"), true);
+      add("hint", el(".hero-hint"), true);
       add("search", el(".hero-search"));
       document.querySelectorAll(".hero-row").forEach((a, i) => add(`row${i}`, a));
     } else {
@@ -118,8 +122,12 @@ async function layoutChecks(page, label) {
 {
   const html = await (await fetch(`${BASE_URL}/`)).text();
   ok(/data-slot="landing-hero"[^>]*data-hero="rest"|data-hero="rest"[^>]*data-slot="landing-hero"/.test(html), "SSR: the hero is in the page at rest");
-  ok(/<h1[^>]*class="hero-name[^"]*"[^>]*><span class="type-thin">Cata<\/span>lyst<\/h1>/.test(html), "SSR: the name is the page's h1, Cata (thin) and lyst");
-  ok(/A personal archive organised around places\./.test(html), "SSR: the intro is real text");
+  ok(/<h1[^>]*class="hero-name[^"]*"[^>]*><span class="hero-given type-thin">Elliot<\/span> <span class="hero-family">/.test(html), "SSR: the name is the page's h1, Elliot (thin) and Négrel-Jerzy");
+  ok(/Front-end and UX software engineer based in Paris\. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\./.test(html), "SSR: who the owner is is real text");
+  ok(!/catalyst/i.test(html.replace(/CATALYST_[A-Z_]+/g, "")), "SSR: the code name is nowhere in the home page");
+  const header = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+  ok(!/<a /.test(header), "SSR: the header carries no section link while the hero shows its rows");
+  ok(/data-slot="search-trigger"/.test(header) && /<nav aria-label="Primary" class="hero-list">/.test(html), "SSR: the header keeps the search; the hero's list is the primary navigation");
   const hrefs = [...html.matchAll(/class="hero-row"[^>]*href="([^"]+)"|href="([^"]+)"[^>]*class="hero-row"/g)].map((m) => m[1] ?? m[2]);
   ok(JSON.stringify(hrefs) === JSON.stringify(PATHS), `SSR: the four lists, in order (${hrefs.join(" ")})`);
   ok((html.match(/<h1[ >]/g) ?? []).length === 1, "SSR: exactly one h1");
@@ -133,9 +141,34 @@ async function layoutChecks(page, label) {
   await waitDebug(page);
   await sleep(1200);
   ok((await heroState(page)) === "rest", "desktop: at rest on load");
-  ok((await page.locator("h1").count()) === 1 && (await page.locator("h1").innerText()) === "Catalyst", "desktop: one h1, Catalyst");
+  ok((await page.locator("h1").count()) === 1 && (await page.locator("h1").innerText()) === "Elliot Négrel-Jerzy", "desktop: one h1, the owner's name");
+  ok(!/catalyst/i.test(await page.evaluate(() => document.title + " " + document.body.innerText)), "desktop: the code name is nowhere in the title or the text");
   const intro = await page.locator(".hero-intro").innerText();
-  ok(/^A personal archive organised around places\. (Pick a point on the globe, or start from a list\.|No place is published yet: start from a list\.)$/.test(intro), `desktop: the intro is the board's sentence (${intro})`);
+  ok(/^Front-end and UX software engineer based in Paris\. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\.$/.test(intro), `desktop: the intro says who the owner is (${intro})`);
+  const hintText = await page.locator(".hero-hint").innerText();
+  ok(/^(Pick a point on the globe, or start from a list\.|No place is published yet: start from a list\.)$/.test(hintText), `desktop: then how to use the page (${hintText})`);
+  // the name: one line, within the gutters, the given name thin and the family name heavy
+  const nm = await page.evaluate(() => {
+    const n = document.querySelector(".hero-name");
+    const fs = parseFloat(getComputedStyle(n).fontSize);
+    const g = document.querySelector(".hero-given"), f = document.querySelector(".hero-family");
+    const r = (e) => { const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom }; };
+    const gutter = parseFloat(getComputedStyle(document.querySelector(".landing-hero")).paddingLeft);
+    return { fs, given: r(g), family: r(f), gutter, vw: innerWidth, weights: [getComputedStyle(g).fontWeight, getComputedStyle(f).fontWeight], h: n.getBoundingClientRect().height };
+  });
+  ok(Math.abs(nm.given.t - nm.family.t) < 2 && nm.family.l > nm.given.r, `desktop: the name is on one line (given ${Math.round(nm.given.l)}-${Math.round(nm.given.r)}, family from ${Math.round(nm.family.l)})`);
+  ok(nm.family.r <= nm.vw - nm.gutter + 0.5 && nm.family.r >= nm.vw - nm.gutter - 0.2 * nm.vw, `desktop: it fills the width up to the gutter (ends at ${Math.round(nm.family.r)} of ${nm.vw}, gutter ${Math.round(nm.gutter)})`);
+  ok(nm.weights.join() === "200,800", `desktop: 200 against 800 (${nm.weights.join(" / ")})`);
+  const icons = await page.evaluate(() => {
+    const w = (s) => document.querySelector(s)?.getBoundingClientRect().width ?? 0;
+    return { arrow: w(".hero-arrow"), rowFont: parseFloat(getComputedStyle(document.querySelector(".hero-row")).fontSize), search: w(".hero-search svg"), headerSearch: w("[data-slot=search-trigger] svg") };
+  });
+  ok(icons.arrow >= icons.rowFont && icons.arrow <= icons.rowFont * 1.25, `desktop: the row arrows are 1.1 em of the row's text (${icons.arrow.toFixed(1)} px for ${icons.rowFont} px text)`);
+  ok(Math.abs(icons.search - 20) < 0.5 && Math.abs(icons.headerSearch - 20) < 0.5, `desktop: the search icons are the control size, 20 px (hero ${icons.search}, header ${icons.headerSearch})`);
+  ok((await page.locator(".hero-search > svg").count()) === 1 && (await page.locator(".hero-search [class*=bullet]").count()) === 0, "desktop: the search line starts with the search icon, not a square bullet");
+  // the header: the search alone while the rows are the sections
+  ok((await page.locator("header a").count()) === 0 && (await page.locator("header [data-slot=search-trigger]").count()) === 1, "desktop: the header has no section link at rest, only the search");
+  ok((await page.locator("nav[aria-label=Primary]:visible").count()) === 1 && (await page.locator("header nav").getAttribute("role")) === "none", "desktop: exactly one primary navigation, the hero's list; the header's row is no landmark");
   ok((await page.locator("[data-slot=hero-search]").innerText()).includes("Search places and entries"), "desktop: the search line is labelled");
   ok((await page.locator(".hero-row").evaluateAll((as) => as.map((a) => a.getAttribute("href")))).join() === PATHS.join(), "desktop: the four rows link to the lists");
   const pe = await page.evaluate(() => ({
@@ -169,7 +202,11 @@ async function layoutChecks(page, label) {
   ok((await opacityOf(page, ".hero-intro")) === 0 && (await opacityOf(page, ".hero-list")) === 0 && (await opacityOf(page, ".hero-search")) === 0, "desktop: the text has faded out");
   ok((await opacityOf(page, ".hero-mini")) === 1, "desktop: the small line is shown");
   const mini = await page.locator(".hero-mini").innerText();
-  ok(/Catalyst/.test(mini) && /Drag to explore\. Back to start after a moment\./.test(mini), `desktop: the small line is the name and the hint (${mini.replace(/\n/g, " ")})`);
+  ok(/Elliot/.test(mini) && /Négrel-Jerzy/.test(mini) && /Drag to explore\. Back to start after a moment\./.test(mini), `desktop: the small line is the name and the hint (${mini.replace(/\n/g, " ")})`);
+  // the rows are hidden now: the header takes the sections back, so the visitor is never left without a way to the lists
+  const collapsedLinks = await page.locator("header a").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
+  ok(JSON.stringify(collapsedLinks) === JSON.stringify(["/", ...PATHS]), `desktop: collapsed, the header shows Globe and the four sections (${collapsedLinks.join(" ")})`);
+  ok((await page.locator("nav[aria-label=Primary]:visible").count()) === 1, "desktop: collapsed, still exactly one primary navigation (the header's)");
   ok((await page.locator(".hero-row").first().evaluate((a) => getComputedStyle(a).visibility)) === "hidden", "desktop: the hidden rows are out of the tab order (visibility hidden)");
   ok((await page.locator("h1").count()) === 1 && (await page.locator("h1").evaluate((h) => getComputedStyle(h).visibility)) !== "hidden", "desktop: the h1 stays in the accessibility tree");
   const m = await layoutChecks(page, "desktop collapsed");
@@ -183,6 +220,7 @@ async function layoutChecks(page, label) {
   ok(true, "desktop: back at rest after the idle delay at the world view");
   await sleep(400);
   ok((await opacityOf(page, ".hero-intro")) === 1 && (await opacityOf(page, ".hero-mini")) === 0, "desktop: the text is back and the small line is gone");
+  ok((await page.locator("header a").count()) === 0, "desktop: back at rest, the header gives the sections up again");
 
   // zoomed in: it collapses and does not come back; zoomed out again: it does
   await page.mouse.move(720, 300);
@@ -232,13 +270,25 @@ for (const [name, options] of VIEWPORTS) {
     await sleep(1000);
     const label = `${name} ${scheme}`;
     await layoutChecks(page, `${label} rest`);
+    {
+      // the name: stacked on a phone (given over family, the family name filling the width), one line from 48 rem; never wider than the gutters
+      const n = await page.evaluate(() => {
+        const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom }; };
+        return { given: r(".hero-given"), family: r(".hero-family"), vw: innerWidth, gutter: parseFloat(getComputedStyle(document.querySelector(".landing-hero")).paddingLeft) };
+      });
+      const stacked = options.viewport.width < 768;
+      ok(stacked ? n.family.t > n.given.b - 0.2 * (n.given.b - n.given.t) : Math.abs(n.family.t - n.given.t) < 2, `${label}: the name is ${stacked ? "stacked" : "on one line"}`);
+      ok(n.family.r <= n.vw - n.gutter + 0.5 && n.given.l >= 0, `${label}: the name is inside the gutters (right edge ${Math.round(n.family.r)} of ${n.vw})`);
+    }
     if (!(name === "1440x900" && scheme === "dark")) await page.screenshot({ path: `${OUT_DIR}/hero-rest-${name}-${scheme}.png` });
-    // the first gesture: a touch tap on the globe where the hero's text is not (the top third), or a drag on desktop
-    if (options.hasTouch) await page.touchscreen.tap(options.viewport.width / 2, options.viewport.height * 0.3);
+    // the first gesture: a touch tap or a drag on the globe's stage where neither the hero's text nor a place marker is (the upper right:
+    // a tap on a marker would open its place, which is a different state)
+    const gx = options.viewport.width * 0.92, gy = options.viewport.height * 0.25;
+    if (options.hasTouch) await page.touchscreen.tap(gx, gy);
     else {
-      await page.mouse.move(options.viewport.width * 0.5, options.viewport.height * 0.3);
+      await page.mouse.move(gx, gy);
       await page.mouse.down();
-      await page.mouse.move(options.viewport.width * 0.55, options.viewport.height * 0.32, { steps: 5 });
+      await page.mouse.move(gx - options.viewport.width * 0.03, gy + options.viewport.height * 0.02, { steps: 5 });
       await page.mouse.up();
     }
     await waitState(page, "collapsed", 1500);
@@ -314,8 +364,24 @@ for (const width of [320, 360, 390, 430]) {
   await page.keyboard.press("Escape");
   await sleep(200);
   ok(await page.locator("[data-slot=hero-search]").evaluate((b) => document.activeElement === b), "keyboard: Enter on the search line opens the palette, Escape gives the focus back to it");
-  const kbd = await page.locator(".hero-kbd").innerText();
-  ok(/^(⌘K|Ctrl K)$/.test(kbd), `keyboard: the hint is filled in after hydration (${kbd})`);
+  const kbd = (await page.locator(".hero-kbd").innerText()).replace(/\s+/g, " ").trim();
+  const kbdIcon = await page.locator(".hero-kbd svg").count();
+  ok(/^(K|Ctrl K)$/.test(kbd) && (kbd === "K" ? kbdIcon === 1 : kbdIcon === 0), `keyboard: the hint is filled in after hydration, the command icon then K or Ctrl K (${kbd}, ${kbdIcon} icon)`);
+  // the palette's icons at the scale: the field's and each result's kind
+  await page.keyboard.press("Control+k");
+  await page.waitForSelector("[data-slot=search-palette]", { state: "visible", timeout: 3000 });
+  await page.keyboard.type("a");
+  await sleep(250);
+  const pal = await page.evaluate(() => {
+    const w = (el) => el?.getBoundingClientRect().width ?? 0;
+    const d = document.querySelector("[data-slot=search-palette]");
+    return { field: w(d.querySelector("svg")), kinds: [...d.querySelectorAll("[data-slot=kind-tag] svg")].map(w), options: d.querySelectorAll("[role=option]").length };
+  });
+  ok(Math.abs(pal.field - 20) < 0.5, `palette: the field's search icon is 20 px (${pal.field})`);
+  ok(pal.kinds.length > 0 && pal.kinds.every((s) => Math.abs(s - 20) < 0.5), `palette: all ${pal.kinds.length} result icons are 20 px, one size`);
+  await page.screenshot({ path: `${OUT_DIR}/palette-1440-dark.png` });
+  await page.keyboard.press("Escape");
+  await sleep(250);
 
   // collapsed: the hidden controls are not tab stops
   await page.mouse.move(700, 300);
@@ -339,7 +405,7 @@ for (const width of [320, 360, 390, 430]) {
   await page.goto(`${BASE_URL}/${IDLE_QUERY}`);
   await waitGlobe(page);
   await sleep(1000);
-  const durations = await page.evaluate(() => [".hero-name", ".hero-intro", ".hero-list", ".hero-mini"].map((s) => getComputedStyle(document.querySelector(s)).transitionDuration));
+  const durations = await page.evaluate(() => [".hero-name", ".hero-intro", ".hero-hint", ".hero-list", ".hero-mini"].map((s) => getComputedStyle(document.querySelector(s)).transitionDuration));
   ok(durations.every((d) => /^0(\.0*1?)?m?s/.test(d) || d === "0s"), `reduced motion: no transition on the hero's parts (${durations.join(" ")})`);
   await page.mouse.move(700, 300);
   await page.mouse.wheel(0, 100);

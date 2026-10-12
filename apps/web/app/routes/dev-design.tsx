@@ -19,7 +19,10 @@ import {
   ExpandToggle,
   Frame,
   Grid,
+  ICONS,
+  Icon,
   IconButton,
+  KeyHint,
   KindTag,
   LogoMark,
   LogoWordmark,
@@ -33,12 +36,14 @@ import {
   StatusTag,
   TagList,
   Toggle,
-  type GlyphName,
+  type IconName,
+  type IconSize,
 } from "~/components/ui";
 import { parseColor, contrastRatio, over } from "~/lib/contrast";
 import { COVER_PATTERNS } from "~/lib/cover-art";
 import { ENTRY_KINDS, ENTRY_KIND_LABEL, type EntryKind } from "~/lib/entry-kind";
 import { formatPlaceCoordinates, formatStamp, STATUSES } from "~/lib/labelling";
+import { SITE } from "~/lib/site";
 import { cn } from "~/lib/utils";
 
 const enabled = () => import.meta.env.DEV || process.env.CATALYST_DEV_ROUTES === "1";
@@ -227,6 +232,57 @@ function Colour({ scheme }: { scheme: Scheme }) {
   );
 }
 
+/* ------------------------------------------------------------------- icons */
+
+const ICON_SIZES: { size: IconSize; value: string; where: string }[] = [
+  { size: "inline", value: "1.1em", where: "beside running text or a label: it takes that text's size" },
+  { size: "control", value: "1.25rem", where: "inside a control, or at the head of a row" },
+  { size: "large", value: "1.5rem", where: "alone, with no text to follow" },
+];
+
+/** The icon library's set under the names the interface uses, the three sizes next to the text each is for, and the shortcut hint. */
+function Icons() {
+  return (
+    <Stack gap={8}>
+      <Spec caption="The set (lucide-react, one library: nothing is drawn by hand). Stroke 1.75 in the library's 24-unit grid, square ends and joins.">
+        <ul className="m-0 grid list-none grid-cols-2 gap-x-6 gap-y-3 p-0 sm:grid-cols-3 lg:grid-cols-4">
+          {(Object.keys(ICONS) as IconName[]).map((name) => (
+            <li key={name} className="flex min-h-11 items-center gap-3">
+              <Icon name={name} size="control" />
+              <code className="ds-meta">{name}</code>
+            </li>
+          ))}
+        </ul>
+      </Spec>
+      <Spec caption="The three sizes, each beside the text it is for">
+        <ul className="m-0 flex list-none flex-col gap-4 p-0">
+          {ICON_SIZES.map(({ size, value, where }) => (
+            <li key={size} className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <span className="ds-meta w-40">
+                {size} {value}
+              </span>
+              <span className="inline-flex items-center gap-2 text-base">
+                <Icon name="search" size={size} />
+                Search places and entries
+              </span>
+              <span className="font-display text-3xl font-light">
+                Projects <Icon name="arrow-right" size={size} />
+              </span>
+              <span className="text-sm text-muted-foreground">{where}</span>
+            </li>
+          ))}
+        </ul>
+      </Spec>
+      <Spec caption="The shortcut hint (the command key on a Mac, Ctrl elsewhere), boxed and plain">
+        <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
+          <KeyHint boxed />
+          <KeyHint />
+        </div>
+      </Spec>
+    </Stack>
+  );
+}
+
 /* -------------------------------------------------------------------- type */
 
 /**
@@ -237,9 +293,9 @@ function TypeSpecimen() {
   return (
     <Stack gap={8}>
       <div>
-        <p className="type-meta m-0 mb-3 text-muted-foreground">Display XL / the wordmark, 200 against 800</p>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Display XL / the name, 200 against 800</p>
         <p className="type-display-xl">
-          <span className="type-thin">Cata</span>lyst
+          <span className="type-thin">{SITE.givenName}</span> {SITE.familyName}
         </p>
       </div>
       <div>
@@ -451,7 +507,7 @@ function Controls() {
         <Col span={12} spanMd={6}>
           <Spec caption="IconButton, Toggle, ExpandToggle">
             <div className="flex flex-wrap items-center gap-3">
-              {(["close", "expand", "arrow-right", "arrow-up-right"] as GlyphName[]).map((icon) => (
+              {(["close", "expand", "arrow-right", "arrow-up-right"] as IconName[]).map((icon) => (
                 <IconButton key={icon} icon={icon} label={icon.replace("-", " ")} />
               ))}
               <IconButton icon="close" label="Close ghost" variant="ghost" />
@@ -889,7 +945,9 @@ function EntrySpecimen({ scheme }: { scheme: "light" | "dark" }) {
       <p className="type-standfirst mt-6 max-w-[25.4em]">One made-up sentence that says what the piece is, set thin and italic against the heavy headline.</p>
       <div className="entry-dateline mt-8 flex flex-wrap gap-x-8">
         <span>2026.03.14</span>
-        <span>Placeholder Bay &#8599; open on the globe</span>
+        <span>
+          Placeholder Bay <Icon name="arrow-up-right" size="inline" /> open on the globe
+        </span>
       </div>
       <div className="entry-margin mt-8">
         <div>
@@ -1000,7 +1058,7 @@ export default function DevDesign() {
             ]}
           />
         </div>
-        <h1 className="m-0 text-4xl leading-[3.25rem] font-semibold tracking-tight">Catalyst UI system</h1>
+        <h1 className="m-0 text-4xl leading-[3.25rem] font-semibold tracking-tight">UI system</h1>
         <p className="m-0 max-w-[60ch] text-lg text-muted-foreground">
           A quiet archive: few boxes, no decorative numbering, a label only where it adds information, generative covers, and one accent for state. Sample text on
           this page is made up.
@@ -1045,6 +1103,9 @@ export default function DevDesign() {
       </Section>
       <Section index={13} title="Entry pages">
         <EntryPages />
+      </Section>
+      <Section index={14} title="Icons">
+        <Icons />
       </Section>
     </main>
   );

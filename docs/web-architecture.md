@@ -116,8 +116,8 @@ What a deployment needs beyond the features, in one place. Everything here is ve
 
 ### Site identity, head tags and sharing
 
-- `lib/site.ts` holds the name, the description, the home title (`Catalyst · A personal archive organized around places`), the default share image and the theme colours; `CATALYST_SITE_URL` (server env, default `https://v2.bsodium.fr`) is the origin of every absolute URL. The root loader returns it as `siteUrl`, so a route's `meta` (server and client) reads it from `matches` (`metaBase(args)` in `lib/meta.ts`) and the two agree.
-- Every route's `meta` goes through `pageMeta`: title `<Page> · Catalyst`, description, `<link rel="canonical">` (origin + path, never the query: `?view=full` is the same page), `og:site_name/type/title/description/url/locale/image(+type,width,height,alt)`, `twitter:card summary_large_image/title/description/image/image:alt`. An entry is `og:type article` (+ `article:published_time`, `article:tag`) when it is an article, `website` otherwise.
+- `lib/site.ts` holds the site's identity as ONE constant, `SITE` (the owner's name "Elliot Négrel-Jerzy", its two halves for the hero, a short form "Elliot N.-J." for tight spots, the role, the place and the specialities: facts the owner stated, nothing else), and what is derived from it: the description, the home title (`Elliot Négrel-Jerzy · Front-end and UX software engineer`), the sentence under the hero's name, the default share image's alt text; plus the theme colours. The project's code name ("Catalyst") is for the repository, the packages and the environment variables only: it appears in no text the site serves (`lib/identity.test.ts` checks the markup, the head tags, the manifest and the source; `scripts/prod/check.mjs` checks every document, the manifest and the sitemap over HTTP). The one file that still carries it, `public/media/.catalyst-manifest.json`, belongs to the content export, which writes and verifies that name; `CATALYST_SITE_URL` (server env, default `https://v2.bsodium.fr`) is the origin of every absolute URL. The root loader returns it as `siteUrl`, so a route's `meta` (server and client) reads it from `matches` (`metaBase(args)` in `lib/meta.ts`) and the two agree.
+- Every route's `meta` goes through `pageMeta`: title `<Page> · Elliot Négrel-Jerzy` (the name from `SITE`), description, `<link rel="canonical">` (origin + path, never the query: `?view=full` is the same page), `og:site_name/type/title/description/url/locale/image(+type,width,height,alt)`, `twitter:card summary_large_image/title/description/image/image:alt`. An entry is `og:type article` (+ `article:published_time`, `article:tag`) when it is an article, `website` otherwise.
 - The share image of an entry is its authored cover when scrapers can read the format (png, jpg, gif, webp: never SVG, which Facebook, X, LinkedIn and Slack do not render), absolute; else `public/og-default.png` (1200x630, 28 kB). A place uses its first raster image the same way. Covers are authored paths under `/media/` (the contract), never external URLs.
 - `<html lang="en">`, `color-scheme`, `theme-color` for each scheme (`#fbfbfb` / `#0a0a0a`, kept equal to `--background` by a test), the SVG and `.ico` favicons, `apple-touch-icon.png` (180), `manifest.webmanifest` (192, 512 and a maskable 512 PNG; dark theme and background colours: a manifest cannot vary by scheme). All of them show the site's mark (below).
 - JSON-LD, from published fields only (no author, publisher or invented date): the home page is a `WebSite`; an article an `Article` (`headline` capped at 110 characters); a project `SoftwareSourceCode` when its `url` is a repository on a known forge, else `CreativeWork`; an artwork `CreativeWork`; a poem `CreativeWork` with `genre: "Poem"`. Each has `url`, `datePublished` (the authored partial ISO date), `image` (raster covers only), `keywords` (tags), `contentLocation` (its places) and `isPartOf` the site. `lib/json-ld.ts`; React Router escapes the script's content.
@@ -200,9 +200,14 @@ Not verified: how Vercel merges the `vercel.json` headers with the ones our serv
 
 - `Navbar` has no background, border or blur and **no logo** (owner, 2026-10-12: the icon in the top-left corner went; the mark is
   not in the header for now). One row of text, centred at the top of the viewport, in reading and focus order: the site's name
-  (`SITE_NAME`, a plain text link home in the foreground colour, accessible name "Catalyst, home", `aria-current="page"` on the home
-  page; semibold and tight: the wordmark as text), a hairline, Projects, Articles, Artworks, Poems (`aria-current="page"` on the active one, underlined, via `NavLink`), the search
-  trigger. The `<header>` is `pointer-events-none`; only the links take the pointer. 44 px targets (links 44 px tall, at least 52 px
+  "Globe" (a plain text link home, accessible name "Globe, Elliot Négrel-Jerzy home"; the site's name is the home hero's headline and the
+  title template's suffix, not the row's), Projects, Articles, Artworks, Poems (`aria-current="page"` on the active one, underlined, via
+  `NavLink`), the search trigger. **On the home page, while the landing hero is at rest, the row is the search trigger alone**: the hero's
+  four rows are the sections (docs/landing.md), the row's `nav` element stays (the palette inside it keeps its state) with
+  `role="none"` and no label, and the hero's list is the page's one "Primary" navigation. The hero publishes its state
+  (`lib/hero-rest.ts`, an external store: the header is a sibling of the shell, not a child) and the sections come back whenever the rows
+  are hidden (the hero collapsed after a gesture, a zoomed-in view), so the visitor is never left without a way to the lists. Every other
+  route has the row above, unchanged. The `<header>` is `pointer-events-none`; only the links take the pointer. 44 px targets (links 44 px tall, at least 52 px
   wide; the search trigger 44 x 44).
 - **Where the row is centred.** Over the whole viewport (home, lists, 404, the full-screen entry view); **over the map** while the place
   or entry panel is open beside the globe (desktop, `md` and up): the header's right edge goes to 50 % (`md:right-1/2`, decided in
@@ -296,7 +301,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   same objects after toggling. Under the full view the globe's `main` is `inert` (no tab stops in the places list behind it).
 - **Landmarks.** Panel: `role="complementary"` labelled by the h1. Full: the same element becomes `role="main"` with `id="main"`
   (the globe's `main` gives up the id), so "Skip to content" lands on the full view and there is one `main`. One h1 per view: the
-  entry's (or the place's) title while the panel is open; a visually hidden "Catalyst" h1 on the globe page when it is closed. Body
+  entry's (or the place's) title while the panel is open; the landing hero's name (the owner's, `SITE.name`) on the globe page when it is closed. Body
   headings are h2/h3 (an h3 before any h2 is drawn as h2: the outline never skips a level); the sections after the body are h2.
 - **Place -> entry -> place.** The place panel's cards link with `state={{ from: "<place slug>" }}`; the entry shows "Back to
   <place>" (read and validated against the shell's places by `resolveBackTarget`) and the shell keeps that place selected on the globe
@@ -327,7 +332,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   path changes: a `?view` toggle is not a page); the top line of `NavProgress` shows after 150 ms.
 - **Quick search.** `components/search-palette.tsx`, mounted by the navbar (a trigger button from 28 rem of header width up, and Cmd/Ctrl-K anywhere): a
   modal `<dialog>` with an ARIA combobox (the input keeps the focus, `aria-activedescendant` follows the highlighted option, arrows /
-  Home / End move, Enter opens, Escape closes), results grouped into places and the four kinds, with the same glyphs. The index
+  Home / End move, Enter opens, Escape closes), results grouped into places and the four kinds, each row led by the kind's icon (`Icon`, control size, the same set as everywhere). The index
   (`/search-index.json`, built from the projection by `buildSearchIndex`: titles, kind, region or code and date, tags and summaries, never
   a body) is fetched once when the palette first opens and searched in the browser (`searchItems`: accents and case folded, every word
   must match, a word that starts a title word ranks above one inside it, then the tags and the summary). Nothing is rendered before the

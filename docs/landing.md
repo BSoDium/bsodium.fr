@@ -1,6 +1,6 @@
 # Landing hero
 
-The home page (`/`): the pixel globe with a typographic hero over it. Design source: the owner's canvas boards "home-rest" and "home-touched" (2026-10-12; 1440 x 900, dark scheme; both schemes are built from the app tokens, nothing is copied from the boards' hex values). All type, no boxes, no ornament; the accent appears twice (the search line's square bullet, and a row or header item under the pointer or the keyboard).
+The home page (`/`): the pixel globe with a typographic hero over it. Design source: the owner's canvas boards "home-rest" and "home-touched" (2026-10-12; 1440 x 900, dark scheme; both schemes are built from the app tokens, nothing is copied from the boards' hex values). All type, no boxes, no ornament; the accent appears once (a row or header item under the pointer or the keyboard). Identity change (2026-10-13): the big type is the owner's NAME, not the project's code name, and the four rows replace the header's section links on this page.
 
 Code: `app/components/landing-hero.tsx` (the markup), `app/lib/hero-machine.ts` (the state machine, pure), `app/hooks/use-landing-hero.ts` (wiring to the shell), `app/routes/shell.tsx` (mounts it), the "Landing hero" block at the end of `app/app.css`. Check: `scripts/home/hero.mjs`.
 
@@ -8,15 +8,17 @@ Code: `app/components/landing-hero.tsx` (the markup), `app/lib/hero-machine.ts` 
 
 ```
 <div data-slot="landing-hero" data-hero="rest | collapsed | away" data-world="true | false">
-  h1.hero-name        "Cata" (.type-thin, 200) + "lyst" (800), Bricolage, .type-display-xl; the page's h1
+  h1.hero-name        "Elliot" (.hero-given .type-thin, 200) + "Négrel-Jerzy" (.hero-family, 800), Bricolage, .type-display-xl; the page's h1
   .hero-lead
-    p.hero-intro      "A personal archive organised around places. Pick a point on the globe, or start from a list."
-    button.hero-search  square accent bullet, "Search places and entries" (mono 13), "⌘K" / "Ctrl K"; opens the existing palette
-  ul.hero-list        Projects, Articles, Artworks, Poems: hairline rows, Bricolage 30 / 300, a muted "→"
+    p.hero-intro      who and what: "Front-end and UX software engineer based in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics."
+    p.hero-hint       how: "Pick a point on the globe, or start from a list." (muted, a step smaller; gone on a wide, short window)
+    button.hero-search  the search icon (control size), "Search places and entries" (mono 13), the key hint (command icon + K, or Ctrl K); opens the existing palette
+  nav.hero-list       aria-label "Primary" (the home page's navigation; the header has none here)
+    ul > li > a.hero-row  Projects, Articles, Artworks, Poems: hairline rows, Bricolage 30 / 300, an arrow icon at 1.1 em (33 px)
   p.hero-mini         aria-hidden: the small name and "Drag to explore. Back to start after a moment."
 ```
 
-Layout (wide): intro and search left (470 px), the four rows right (360 px), the name across the whole width under them (20.3 vw: 292 px at 1440, the board's size; the word is 3.09 em wide, so it takes about two thirds). Gutters 56 px (`clamp(1rem, 3.9vw, 3.5rem)`). Under 48 rem it stacks: name (filling the width), intro, search, rows. Wide and short (a phone on its side, under 34 rem tall): the rows in two columns and the name capped at 26 vh. DOM order is reading order (name, intro, search, rows); the grid places the name last on a wide screen.
+Layout (wide): intro, hint and search left (470 px), the four rows right (360 px), the name across the whole width under them: ONE line from 48 rem, sized to fill the width between the gutters (`--hero-size` = width less two gutters over `--hero-fit` 6.6 em, the name's measured width at 200 / 800 and -0.055em, which is 6.49 em from about 98 px up, so the name ends a little inside the right gutter: 201 px at 1440), never over a third of the height nor 30 rem. The hyphen of the family name has its own span (`.hero-hyphen`, 0.045 em of margin): at 800 and that tracking it fused with the "l" and the "J". Gutters 56 px (`clamp(1rem, 3.9vw, 3.5rem)`). Under 48 rem it stacks in two lines: the given name over the family name (`--hero-fit` 5.3, the family name fills the width: 67 px at 390), then intro, hint, search, rows. Wide and short (a phone on its side, under 34 rem tall): the rows in two columns, the name capped at 26 vh and the hint dropped (the globe is in plain view; the line saved is room for it). DOM order is reading order (name, intro, search, rows); the grid places the name last on a wide screen.
 
 The block is bottom-anchored and rises by the credits line's height plus what the "y" hangs under the line box (`padding-bottom: clear + 0.15 * name size`), so no letter is ever over the credits line (bottom right, 8 to 30 px from the bottom) or, in development, the content badge. The hero is `pointer-events: none`; only the search line and the rows take the pointer, so the globe stays draggable and zoomable beneath all the rest. A page-colour fade (`.landing-hero::before`, no blur) sits behind the thin type.
 
@@ -25,7 +27,7 @@ The block is bottom-anchored and rises by the credits line's height plus what th
 | State | When | What shows |
 | --- | --- | --- |
 | `rest` | load; or idle at the world view after a gesture | the whole hero |
-| `collapsed` | after a gesture on the globe; or whenever the view is not the world view (zoomed in, a place open) | the small line bottom-left (left 40 px, bottom 32 px: the name in Bricolage 30 / 800 with "Cata" at 200, and the hint). The h1 stays in the accessibility tree at opacity 0; the search line and the rows are `visibility: hidden` (not tab stops). The hint is shown only while the way back is real (`data-world="true"`) |
+| `collapsed` | after a gesture on the globe; or whenever the view is not the world view (zoomed in, a place open) | the small line bottom-left (left 40 px, bottom 32 px: the name in Bricolage 30 / 800 with "Elliot" at 200, and the hint). The h1 stays in the accessibility tree at opacity 0; the search line and the rows are `visibility: hidden` (not tab stops). The hint is shown only while the way back is real (`data-world="true"`) |
 | `away` | a place or an entry is open | nothing is shown or exposed (instant); the name renders as a `p`, so the panel's title is the only h1 |
 
 Transitions: opacity and transform only (visibility follows the fade), `--duration-base` (220 ms) with `--ease-standard`; `prefers-reduced-motion`: none (instant). No JS animation loop; a state change costs one React re-render of the hero, and only on a gesture start, the world view being left or reached, or the idle timer.
@@ -40,20 +42,22 @@ The machine (`createHeroMachine`): `rest` goes to `collapsed` on `interact()` or
 
 ## Header
 
-Restyled with the hero (the board's header): `Globe` (the home page; accessible name "Globe, Catalyst home"), Projects, Articles, Artworks, Poems in mono capitals (`.nav-link`: 12 px, tracking 0.14em and 44 px between items from a 44 rem wide row, shrinking by container width down to 11 px / 6 px on a 320 px phone), the current one in the foreground and underlined, the rest muted, the pointer or keyboard turning an item to `--signal-text`. Where the icon trigger is hidden (row under 28 rem: a phone) the same control is one word, "Search" (`data-slot="search-trigger-compact"`, 44 px target).
+Restyled with the hero (the board's header): `Globe` (the home page; accessible name "Globe, Elliot Négrel-Jerzy home"), Projects, Articles, Artworks, Poems in mono capitals (`.nav-link`: 12 px, tracking 0.14em and 44 px between items from a 44 rem wide row, shrinking by container width down to 11 px / 6 px on a 320 px phone), the current one in the foreground and underlined, the rest muted, the pointer or keyboard turning an item to `--signal-text`. Where the icon trigger is hidden (row under 28 rem: a phone) the same control is one word, "Search" (`data-slot="search-trigger-compact"`, 44 px target).
+
+**On the home page the header carries no section links while the hero is at rest** (owner, 2026-10-13: the hero's four rows are the sections; two sets one above the other was redundancy). It is the search trigger alone (icon and key hint, or the word on a phone), centred as before. What keeps the page accessible: the skip links are unchanged; the header's search trigger stays first in the tab order, then the hero's search line and its four rows; the hero's list is a `nav` with `aria-label="Primary"` (the only primary navigation in the accessibility tree), and the header's row, which stays the same element so that the open palette keeps its state, becomes `role="none"` and loses its label. **The sections come back whenever the hero is not at rest**: collapsed after a gesture, or zoomed in (its rows are `visibility: hidden` then, and zoomed in it never returns on its own, so without this the visitor would have no way to the lists but the search); they go again when the hero returns. Mechanism: `LandingHero` publishes `state === "rest"` to `lib/hero-rest.ts` (a tiny external store) and `Navbar` reads it, because the header is a sibling of the shell in the root layout. The server and the first client render say "at rest", like the hero's server markup, so nothing differs at hydration. Every other route, including a place or an entry opened from the globe, has the header unchanged.
 
 ## Empty archive
 
-With no published place the hero is also the empty home (it replaced `ArchiveEmpty`, which is no longer rendered): the intro reads "A personal archive organised around places. No place is published yet: start from a list." The hero shows no count or number.
+With no published place the hero is also the empty home (it replaced `ArchiveEmpty`, which is no longer rendered): the hint reads "No place is published yet: start from a list." (under who the owner is). The hero shows no count or number.
 
 ## Tokens used
 
-Colour: `--foreground`, `--muted-foreground`, `--border`, `--border-strong`, `--background` (fade), `--signal` (the bullet; the row hover: 30 px display text), `--signal-text` (header hover). Type: `--font-display`, `--font-reading`, `--font-meta`, `.type-display-xl`, `.type-thin`, `--weight-light`, `--weight-heavy`. Motion: `--duration-base`, `--duration-fast`, `--ease-standard`. The only new values are local to the block: `--hero-gutter`, `--hero-size`, `--hero-clear`, `--hero-mini-*`.
+Colour: `--foreground`, `--muted-foreground`, `--border`, `--border-strong`, `--background` (fade), `--signal` (the row hover: 30 px display text), `--signal-text` (header hover). Type: `--font-display`, `--font-reading`, `--font-meta`, `.type-display-xl`, `.type-thin`, `--weight-light`, `--weight-heavy`. Motion: `--duration-base`, `--duration-fast`, `--ease-standard`. The only new values are local to the block: `--hero-gutter`, `--hero-size`, `--hero-clear`, `--hero-mini-*`.
 
 ## Test
 
-- Unit: `lib/hero-machine.test.ts` (fake timers: states, idle clock, world view, one timer), `components/landing-hero.test.ts` (server markup, accessible names, order, the CSS rules that must hold), `components/navbar.test.ts`.
-- Browser: `CHROME_PATH=... BASE_URL=http://localhost:5451 OUT_DIR=/tmp/hero node apps/web/scripts/home/hero.mjs` against `pnpm dev` (or `dev:demo`). It covers SSR markup, rest with real text, a drag through the hero turning the globe, collapse, return (1.5 s with `?globe-debug&hero-idle=1500`, and the real 8 s without), zoomed in staying collapsed, the credits line and the dev badge never covered at 1440 x 900, 1024 x 700, 390 x 844 and 844 x 390 in both schemes, the header at 320 to 430 px, the keyboard order (header search, hero search, the four lists, then on) and Cmd/Ctrl-K, reduced motion, a place open, and no console error or warning (hydration warnings come through there).
+- Unit: `lib/hero-machine.test.ts` (fake timers: states, idle clock, world view, one timer), `components/landing-hero.test.ts` (server markup, the name's split, the primary navigation, accessible names, order, the CSS rules that must hold), `components/navbar.test.ts` (the home header without sections, with them when the hero has stepped back, unchanged elsewhere), `lib/identity.test.ts` (the code name appears nowhere a visitor sees), `components/ui/icon.test.ts` (no bespoke SVG, one library, the scale).
+- Browser: `CHROME_PATH=... BASE_URL=http://localhost:5451 OUT_DIR=/tmp/hero node apps/web/scripts/home/hero.mjs` against `pnpm dev` (or `dev:demo`). It covers SSR markup, rest with real text, a drag through the hero turning the globe, collapse, return (1.5 s with `?globe-debug&hero-idle=1500`, and the real 8 s without), zoomed in staying collapsed, the credits line and the dev badge never covered at 1440 x 900, 1024 x 700, 390 x 844 and 844 x 390 in both schemes, the name on one line at desktop widths and stacked on a phone, inside the gutters, at 200 / 800, the header without section links at rest and with them when collapsed, the icon sizes (hero arrows 1.1 em, search icons 20 px, the palette's kind icons 20 px), the header at 320 to 430 px, the keyboard order (header search, hero search, the four lists, then on) and Cmd/Ctrl-K, reduced motion, a place open, and no console error or warning (hydration warnings come through there).
 - The idle override `?hero-idle=MS` (100 to 60000) works only in debug mode (`?globe-debug`), like `?spin-idle`.
 
 ## Not done

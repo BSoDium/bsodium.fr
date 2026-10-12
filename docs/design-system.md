@@ -41,15 +41,15 @@ The accent is for state and for the generated covers' marks, nothing else: the c
 
 ### Kind coding
 
-Each kind has a **glyph** on a 12 px grid (article: lines of text; project: terminal prompt `>_`; artwork: two filled squares in a frame; poem: centred verse lines; place: crosshair) AND its word. `KindTag` draws the glyph plain beside the word (no box, no tint) and is used only where kinds are mixed: the search results (glyph; the group heading says the word) and the related entries of an entry. A list of one kind, a place's entries (already grouped under "Articles", "Projects") and an entry's own header do not repeat it as a tag (the entry says it once, in plain words, in its meta line). The kind hues only tint the lightest tone of a generated cover. Text is never set in a kind hue.
+Each kind has an **icon** from the icon set (article: a page of text; project: a terminal prompt; artwork: an image; poem: a feather; place: a map pin; "Icons" below) AND its word. `KindTag` draws the icon plain beside the word (no box, no tint) and is used only where kinds are mixed: the search results (glyph; the group heading says the word) and the related entries of an entry. A list of one kind, a place's entries (already grouped under "Articles", "Projects") and an entry's own header do not repeat it as a tag (the entry says it once, in plain words, in its meta line). The kind hues only tint the lightest tone of a generated cover. Text is never set in a kind hue.
 
 ### Type
 
-The direction (2026-10-12): the pixel globe is the only illustrative element; everything else is type. A very heavy display weight against a very thin one (the name: "Cata" 200, "lyst" 800), a reading serif for long text, mono for metadata, hairline rules, one accent. Three self-hosted families (`design-tokens.md`, "Typography": files, fallbacks, weights, the scale with its numbers) over the unchanged system stacks. Each role is a class in `app.css` (`.type-*`); a component composes them and names no family itself.
+The direction (2026-10-12): the pixel globe is the only illustrative element; everything else is type. A very heavy display weight against a very thin one (the owner's name: "Elliot" 200, "Négrel-Jerzy" 800), a reading serif for long text, mono for metadata, hairline rules, one accent. Three self-hosted families (`design-tokens.md`, "Typography": files, fallbacks, weights, the scale with its numbers) over the unchanged system stacks. Each role is a class in `app.css` (`.type-*`); a component composes them and names no family itself.
 
 | Role | Face | Where |
 | --- | --- | --- |
-| `display-xl` (`.type-display-xl`) | Bricolage Grotesque 800, "Cata" at 200 (`.type-thin`), tight (0.88 leading, -0.045em), 56 to 158 px | the wordmark on the home page |
+| `display-xl` (`.type-display-xl`) | Bricolage Grotesque 800, the given name at 200 (`.type-thin`), tight (0.88 leading, -0.045em), 56 to 158 px | the name on the home page (the hero sets its own size: one line across the width, stacked on a phone) |
 | `display-lg` | Bricolage 800, 36 to 72 px, 0.98 leading | a list's year numerals (`.type-thin`), specimens; an entry's headline is `.entry-title` (Newsreader 700, see "Entry pages") |
 | `display-md` | Bricolage 700, 26 to 36 px | a card's title, a section of a list |
 | `standfirst` | Newsreader italic 300, 24 to 30 px, balanced | the line under a headline |
@@ -102,14 +102,14 @@ All in `app/components/ui/`, importable from `~/components/ui` (barrel) or by fi
 | --- | --- | --- |
 | `Frame` | hairline box on `--surface`; no decoration | `variant` plain, active (strong line and a faint signal wash), inverted (opposite scheme tokens rebound for the subtree); `interactive` (hover line, focus ring), `padding` none, sm 12, md 16, lg 24; `as` element |
 | `MicroLabel` | `.ds-micro` text: a short code in mono capitals | `tone` muted, strong, signal; `as` element. Rare. |
-| `KindTag` | the kind's 12 px glyph plain, and its word | `iconOnly` (word stays for assistive tech), `solid` (glyph in the foreground). Mixed lists only. |
+| `KindTag` | the kind's icon plain, and its word | `iconOnly` (control size; the word stays for assistive tech), `solid` (icon in the foreground). Mixed lists only. |
 | `StatusTag` | one plain word ("Draft") | `tone` muted (default), default, signal, solid, signal-solid; any string. Shown only when it tells something. |
 | `DataList`, `DataRow` | `dl > div > dt + dd`, two columns: the key muted, the value beside it; no rules, no leaders | `mono` values (`.ds-meta`) |
 | `Divider` | one hairline, optional tick scale and set-in label (styleguide) | `decorative` (default; `false` renders an `hr`) |
 | `Button` | square, sans 500 14 px, 1 px line, 44 px high below md | `primary`, `secondary`, `ghost`, `link` (`default` and `outline` kept as aliases of primary / secondary); size default, sm; hover, focus-visible, disabled; `asChild` |
-| `IconButton` | square `Button` with a 16 px glyph; `label` is required (the accessible name) | same variants; the panel's close is `ghost` |
+| `IconButton` | square `Button` with a control-size icon (20 px); `label` is required (the accessible name) | same variants; the panel's close is `ghost` |
 | `Toggle` | `Button` with `aria-pressed`; pressed = inverted fill (a ghost toggle: the hover grey) | name never changes with state |
-| `ExpandToggle` | ghost `Toggle` of the panel / full-screen switch; glyph swaps outward / inward corners | `expanded`, `showLabel`, size |
+| `ExpandToggle` | ghost `Toggle` of the panel / full-screen switch; icon swaps outward / inward diagonals | `expanded`, `showLabel`, size |
 | `SegmentedControl` | group of `Toggle`s sharing 1 px lines (wraps on phones) | one value; the scheme choice in the styleguide |
 | `CoverArt` | inline SVG of a dithered grid; `aria-hidden`; box takes the grid's aspect ratio | `seed`, `kind` (tint), `cols`, `rows`, `pattern` (field, bars, rings, stream, lattice; default: the seed picks) |
 | `MetadataStrip` | `dl` of plain lines (date, place); the keys are for assistive technology only | one line each, truncated |
@@ -119,7 +119,8 @@ All in `app/components/ui/`, importable from `~/components/ui` (barrel) or by fi
 | `Skeleton`, `StatePanel` | skeleton block with a scan sweep; the three non-content states; `headingLevel` (1 to 4) and `titleId` (focus target) | `state` loading (polite `role=status`, `aria-busy`, no frame), empty (one muted line: no frame, glyph or code), error (`role=alert`, an active Frame, the `ERR / 500` code in mono, `Error`, a retry action) |
 | `EntryCard` | cover (authored image or generated, 16:9, one hairline) + optional kind (`showKind`, mixed lists only) + title + three-line summary + status + date and places as two plain lines + the first three tags as muted text | one link (the title), stretched over the card with `::after`; hover underlines the title, focus-within draws a ring; `orientation="horizontal"` puts the cover beside the text inside an `@container` of 28 rem or more (the place panel), `priority` loads the image at once (the first cards of a list) |
 | `CopyButton` | ghost button that copies a string (or a function of the window) and confirms in place: its word turns to `Copied` (or `Not copied`) for 2 s, a polite status says it; no toast | drawn only once hydrated; clipboard API with an `execCommand` fallback; `glyph`, `label` (the accessible name), `announcement` |
-| `Glyph` | the glyph set (5 kinds, close, expand, collapse, arrows, copy, link, check, search, hash) | decorative (`aria-hidden`) |
+| `Icon` | one icon of the set by name (5 kinds, close, expand, collapse, arrows, enter, command, copy, link, check, search, hash), from lucide-react | `size` inline (1.1 em), control (1.25 rem, default), large (1.5 rem); decorative (`aria-hidden`); "Icons" below |
+| `KeyHint` | the shortcut's hint in a `kbd`: the command icon (Mac) or "Ctrl", then K, mono 13 px; empty box of its final width until hydrated | `boxed` (hairline key cap: the header trigger) or plain (the hero's search line) |
 
 ### Generative cover art
 
@@ -198,17 +199,46 @@ the cards h3). A place without entries shows nothing for them (no section, no em
 - **Empty states.** Home with no place: the globe stays and `ArchiveEmpty` (a small plate under one ink rule, "Nothing on the globe yet" in the display face, one
   line in the reading face and the four lists with their counts in mono) sits bottom left; a list with no entries is one muted line ("Nothing here yet."); a place
   with none shows no entries section.
-- **Search.** A modal dialog on the surface Frame: a combobox input with the glyph, an `Esc` key cap, group headings in mono, rows of kind
-  glyph + title (display face, 700) + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of key hints and the result count.
-  The trigger is a 44 px icon button with `⌘ K` / `Ctrl K` from `lg`.
+- **Search.** A modal dialog on the surface Frame: a combobox input with the search icon, an `Esc` key cap, group headings in mono, rows of kind
+  icon (control size, one size for every kind) + title (display face, 700) + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of key hints
+  (icons for the arrows and Enter) and the result count. The trigger is a 44 px button with the search icon and, from `xl` of header width, the `KeyHint` (command icon + K, or Ctrl K).
 - **Print.** Ink on white, no globe, navigation, controls, contents, related cards or neighbours; external link addresses are written out.
+
+## Icons
+
+One library, one wrapper, one scale (owner, 2026-10-13: the hand-drawn glyph set was too small next to its text everywhere). The set is
+**lucide-react** (already a dependency); `components/ui/icon.tsx` is the only file that imports it, and every use is `<Icon name="..." size="..." />`.
+Nothing is drawn by hand: `components/ui/icon.test.ts` fails on an inline `<svg>` anywhere in the components other than the brand mark
+(`logo-mark.tsx`, a fixed 16 x 16 grid) and the generated cover art (`cover-art.tsx`, a dithered grid, not an icon), on an SVG data URI
+in the CSS, on a second importer of the library, on a text character used as an icon (an arrow, the command key, a tick) and on a size given in pixels.
+
+**The scale.** A size says what the icon sits next to, not a number; the values are tokens in `app.css` (`--icon-*`).
+
+| Size (`size=`) | Token | Value | Use | Where |
+| --- | --- | --- | --- | --- |
+| `inline` | `--icon-inline` | 1.1 em | beside running text or a label: it takes that text's size, so it grows with a display row and stays right in small mono | the arrows of the hero's rows (33 px at 30 px type), "Back to ...", the "Open host" button's arrow, a button's leading arrow, a `KindTag` with its word, the credits' "See more", the command key in the key hint, the footer hints of the palette |
+| `control` (default) | `--icon-control` | 1.25 rem (20 px) | inside a control or at the head of a row: a fixed size, whatever the text beside it | icon buttons (close, full screen), the search trigger, the search line and the palette's field, a palette result's kind icon and its go arrow, previous / next arrows, the link card's arrow, the heading anchor |
+| `large` | `--icon-large` | 1.5 rem (24 px) | alone and prominent, with no text to follow | none yet (the size an empty state's mark would take) |
+
+**Stroke and ends.** One weight, `--icon-stroke: 1.75` in the library's 24-unit grid (it scales with the icon, as a glyph's stems do with its
+size: 1.5 px at 20 px, 2.4 px at 33 px, to sit beside Bricolage at 300), and **square ends and mitred joins** at every size (the library's
+are round; square edges are the system). Colour is always `currentColor`: an icon is never tinted on its own, so it follows its text, its
+hover and its scheme. An icon is decorative (`aria-hidden`); the control or the text that holds it carries the accessible name.
+
+**The set** (names are the interface's; see `ICONS`): kinds `article` (page of text), `project` (terminal prompt), `artwork` (image), `poem`
+(feather), `place` (map pin); `close`, `expand`, `collapse`, `arrow-left`, `arrow-right`, `arrow-up`, `arrow-down`, `arrow-up-right`,
+`arrow-up-left`, `enter`, `command`, `check`, `copy`, `link`, `hash`, `search`. Shown live in `/dev/design`, section 14.
+
+**The shortcut hint** (`KeyHint`): the command key is the library's `Command` icon (inline size) followed by "K"; elsewhere the word "Ctrl"
+then "K", in mono 13 px, in a hairline key cap in the header and plain on the hero's search line. It is decoration (`aria-keyshortcuts`
+names the shortcut); its box has its final width on the server so that nothing moves when the platform is known.
 
 ## Brand and header
 
 **The mark** (2026-10-12; `scripts/brand/mark.mjs`, `components/ui/logo-mark.tsx`, section 12 of `/dev/design`): a square and a disc
 overlapping, the overlap knocked out. The square is the bounding box, the disc is the globe: the two things the map is made of. 16 x 16
 grid, one bit per cell, solid shapes, no outline, no gradient, `currentColor`; whole multiples of 16 px stay crisp, and it is legible
-at 16 px. It says nothing in words, so it survives a rename; the name sits beside it as the **wordmark** (`LogoWordmark`: the mark and
+at 16 px. It says nothing in words, so it survives a rename; the name sits beside it as the **wordmark** (the owner's name, from `SITE`) (`LogoWordmark`: the mark and
 the site's name as text in the display weight, semibold and tight, the mark at the height of the capitals). Both are monochrome: the
 accent stays for state. The look of the site is a studio's (heavy typographic work, big bold display type against thin text, mono
 accents, hairline grids, restraint) over the pixel-art globe: the mark is the one geometric shape of that language and it never
@@ -218,11 +248,13 @@ edit `MARK` in `mark.mjs`, run `pnpm --filter @catalyst/web brand`, paste the ne
 differ. Alternatives that were drawn and set aside: a pixel sphere with a dithered shadow side inside a dashed bounding box (the first
 choice: it carried the globe's own look, but its texture is noise at 16 px and it does not sit beside a wordmark); a solid disc with
 a bounding box cut out of it (bold, but a round silhouette like any button); a C-shaped globe holding a place (a monogram that ties the
-mark to the name "Catalyst"); a disc with one squared corner (a leaf shape, generic).
+mark to the project's first name); a disc with one squared corner (a leaf shape, generic).
 
-**The header** (`components/navbar.tsx`): one centred row of text and no logo (owner: the icon in the corner went). In order: the
-site's name as a plain text link home (the wordmark as text: foreground colour, semibold, tight; a hairline after it), Projects, Articles, Artworks, Poems (muted; the
-current one in the foreground and underlined, `aria-current="page"`), the search trigger. Centred over the viewport; while the place
+**The header** (`components/navbar.tsx`): one centred row of text and no logo (owner: the icon in the corner went). In order: "Globe"
+(the way home, in mono capitals like the rest: the site's name is the home hero's headline, not the header's), Projects, Articles, Artworks, Poems (muted; the
+current one in the foreground and underlined, `aria-current="page"`), the search trigger. **On the home page, while the landing hero shows
+its four rows, the header is the search trigger alone** (the rows are the sections: docs/landing.md); the sections are back whenever the
+hero has stepped back, and on every other route. Centred over the viewport; while the place
 or entry panel is open beside the globe it is centred over the map (the left half), so it never meets the panel's Close and expand
 controls, and it glides with the panel. Its width decides what it shows (container query): the name and the four sections always,
 the search trigger from 28 rem, its key hint from 36 rem. 44 px targets. Over content that scrolls (lists, 404, errors) it has the
@@ -243,4 +275,4 @@ as the row (design-tokens.md, "Nav fade"). Details and measurements: [web-archit
 
 ## Dev styleguide
 
-`/dev/design` (`routes/dev-design.tsx`) is guarded exactly like `/dev/street`: `routes.ts` registers it only when `NODE_ENV !== "production"` or the build sets `CATALYST_DEV_ROUTES=1`, and its loader answers 404 anywhere else. Production builds contain neither the route nor its sample strings (made-up placeholders only). `?scheme=light|dark` or the on-page toggle sets `data-scheme` on `<html>`; the "Both schemes" section forces each scheme per block, whatever the toggle says.
+`/dev/design` (`routes/dev-design.tsx`; section 14 is the icon set, the three sizes beside their text and the key hint) is guarded exactly like `/dev/street`: `routes.ts` registers it only when `NODE_ENV !== "production"` or the build sets `CATALYST_DEV_ROUTES=1`, and its loader answers 404 anywhere else. Production builds contain neither the route nor its sample strings (made-up placeholders only). `?scheme=light|dark` or the on-page toggle sets `data-scheme` on `<html>`; the "Both schemes" section forces each scheme per block, whatever the toggle says.

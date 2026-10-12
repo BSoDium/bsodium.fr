@@ -7,8 +7,8 @@ import { SITE_NAME } from "~/lib/site";
 import { Navbar } from "./navbar";
 
 /** The navbar server-rendered at `url`; `shell` stands for the route that owns the globe (`routes/shell`). */
-async function render(url: string, { shell = true } = {}): Promise<string> {
-  const routes = [{ id: shell ? "routes/shell" : "routes/list", path: "*", Component: Navbar }];
+async function render(url: string, { shell = true, heroResting }: { shell?: boolean; heroResting?: boolean } = {}): Promise<string> {
+  const routes = [{ id: shell ? "routes/shell" : "routes/list", path: "*", Component: () => createElement(Navbar, { heroResting }) }];
   const handler = createStaticHandler(routes);
   const context = (await handler.query(new Request(`http://localhost${url}`))) as StaticHandlerContext;
   const router = createStaticRouter(handler.dataRoutes, context);
@@ -17,10 +17,10 @@ async function render(url: string, { shell = true } = {}): Promise<string> {
 
 describe("Navbar", () => {
   it("has no logo: the first item is \"Globe\" as plain text, a link home; then the four sections, in order, then the search", async () => {
-    const html = await render("/");
-    // the only drawing in the header is the search glyph, after the links: no mark, no icon in front of the name
+    const html = await render("/articles", { shell: false });
+    // the only drawing in the header is the search icon, after the links: no mark, no icon in front of the name
     expect(html.indexOf("<svg")).toBeGreaterThan(html.indexOf('href="/poems"'));
-    expect(html).not.toContain("lucide");
+    expect(html.match(/<svg/g)).toHaveLength(1);
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
     expect(links).toEqual([
       ["/", "Globe"],
@@ -36,8 +36,37 @@ describe("Navbar", () => {
     expect(html.indexOf('data-slot="search-trigger"')).toBeGreaterThan(html.indexOf('href="/poems"'));
   });
 
-  it("offers the search as one word where the icon trigger is not shown (a phone), after the links, with no drawing", async () => {
+  it("on the home page, while the hero shows its four rows, is the search trigger alone: no section links, no second primary navigation", async () => {
     const html = await render("/");
+    expect([...html.matchAll(/<a /g)]).toHaveLength(0);
+    for (const word of ["Globe", "Projects", "Articles", "Artworks", "Poems"]) expect(html).not.toContain(`>${word}<`);
+    // the nav element stays (the palette inside it keeps its state when the sections come back) but is no landmark
+    expect(html).toContain('role="none"');
+    expect(html).not.toContain('aria-label="Primary"');
+    // both forms of the trigger are there: the icon one and the compact word
+    expect(html).toContain('data-slot="search-trigger"');
+    expect(html).toContain('data-slot="search-trigger-compact"');
+    // the fade over the globe stays
+    expect(html).toContain("nav-fade");
+  });
+
+  it("on the home page, once the hero has stepped back (its rows are hidden), brings the sections back", async () => {
+    const html = await render("/", { heroResting: false });
+    const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => m[1]);
+    expect(links).toEqual(["/", "/projects", "/articles", "/artworks", "/poems"]);
+    expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
+  });
+
+  it("is unchanged on every other route, whatever the hero's state (it is not on the page there)", async () => {
+    for (const url of ["/articles", "/poems", "/locations/x", "/articles/x"]) {
+      const html = await render(url, { shell: url.startsWith("/locations") || url.startsWith("/articles/"), heroResting: true });
+      expect([...html.matchAll(/<a [^>]*href="([^"]*)"/g)].map((m) => m[1]), url).toEqual(["/", "/projects", "/articles", "/artworks", "/poems"]);
+      expect(html, url).toContain('aria-label="Primary"');
+    }
+  });
+
+  it("offers the search as one word where the icon trigger is not shown (a phone), after the links, with no drawing", async () => {
+    const html = await render("/articles", { shell: false });
     const compact = html.indexOf('data-slot="search-trigger-compact"');
     expect(compact).toBeGreaterThan(html.indexOf('href="/poems"'));
     expect(html.slice(compact, html.indexOf("</button>", compact))).toMatch(/>Search$/);
@@ -45,8 +74,8 @@ describe("Navbar", () => {
     expect(html.slice(compact, html.indexOf("</button>", compact))).toContain("@md:hidden");
   });
 
-  it("marks the current page with aria-current on the name (home) or the section", async () => {
-    expect(await render("/")).toMatch(/<a [^>]*aria-current="page"[^>]*href="\/"|<a [^>]*href="\/"[^>]*aria-current="page"/);
+  it("marks the current page with aria-current on the name (when it is shown) or the section", async () => {
+    expect(await render("/", { heroResting: false })).toMatch(/<a [^>]*aria-current="page"[^>]*href="\/"|<a [^>]*href="\/"[^>]*aria-current="page"/);
     const articles = await render("/articles", { shell: false });
     expect(articles).toMatch(/<a [^>]*aria-current="page"[^>]*>Articles<\/a>/);
     expect(articles).not.toMatch(/<a [^>]*aria-current="page"[^>]*>Projects<\/a>/);

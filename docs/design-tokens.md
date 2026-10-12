@@ -83,7 +83,7 @@ Three self-hosted font families sit beside the system stack. They are SIL Open F
 
 | Token | Stack | File (version in the name: cached `immutable` for a year) | Use |
 | --- | --- | --- | --- |
-| `--font-display` | `"Bricolage Grotesque Variable"`, `"Bricolage Grotesque Fallback"`, `--font-sans` | `bricolage-grotesque-5.3.0-latin-wght-opsz.woff2`, 77 kB, wght 200 to 800, opsz 12 to 96 | the wordmark, headlines, headings: heavy against thin |
+| `--font-display` | `"Bricolage Grotesque Variable"`, `"Bricolage Grotesque Fallback"`, `--font-sans` | `bricolage-grotesque-5.3.0-latin-wght-opsz.woff2`, 77 kB, wght 200 to 800, opsz 12 to 96 | the owner's name on the home page, headlines, headings: heavy against thin |
 | `--font-reading` | `"Newsreader Variable"`, `"Newsreader Fallback"`, `ui-serif, Georgia, "Times New Roman", serif` | `newsreader-5.3.0-latin-wght-opsz.woff2` (132 000 B) and `-italic` (146 872 B), wght 200 to 800 and opsz 6 to 72 | the body of an entry, an entry's headline (700), a poem's title and lines, the standfirst, pull quotes |
 | `--font-meta` | `"JetBrains Mono Variable"`, `--font-mono` | `jetbrains-mono-5.3.0-latin-wght.woff2`, 40 kB, wght 100 to 800 | page metadata (`.type-meta`) only |
 | `--font-sans`, `--font-mono` | the system stacks below, unchanged | none | the interface until a component takes a role; the map's labels, the credits line and the planner's measurement (`--font-mono`) |
@@ -99,20 +99,20 @@ System stacks (unchanged):
 - Sans: `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`
 - Mono (labels, small caps): `ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace`
 
-Weights (`--weight-*`): `thin` 200 and `heavy` 800 are the display pair ("Cata" 200 against "lyst" 800); `light` 300 (standfirst, pull quote, third-level heading), `reading` 400, `medium` 500, `semibold` 600, `bold` 700. Tailwind's own `font-extralight` (200) and `font-extrabold` (800) are the same numbers.
+Weights (`--weight-*`): `thin` 200 and `heavy` 800 are the display pair (the given name 200 against the family name 800: "Elliot" / "Négrel-Jerzy"); `light` 300 (standfirst, pull quote, third-level heading), `reading` 400, `medium` 500, `semibold` 600, `bold` 700. Tailwind's own `font-extralight` (200) and `font-extrabold` (800) are the same numbers.
 
 Roles. A class sets a whole role; `text-<role>` plus `font-display | font-reading | font-meta` does the same in utilities (the `--text-<role>--line-height`, `--letter-spacing` and `--font-weight` are Tailwind's theme keys, so `text-display-xl` carries them).
 
 | Role | Class | Size | Leading | Tracking | Weight | Wrap, features |
 | --- | --- | --- | --- | --- | --- | --- |
-| `display-xl` (the wordmark) | `.type-display-xl` | `clamp(3.5rem, 11vw, 10rem)`: 56 px on a phone, 158 px at 1440 px | 0.88 | -0.045em | 800 | `balance`, optical sizing auto, no synthesis |
+| `display-xl` (the name) | `.type-display-xl` | `clamp(3.5rem, 11vw, 10rem)`: 56 px on a phone, 158 px at 1440 px | 0.88 | -0.045em | 800 | `balance`, optical sizing auto, no synthesis |
 | `display-lg` (an entry's headline) | `.type-display-lg` | `clamp(2.25rem, 1.35rem + 3.7vw, 4.5rem)`: 36 to 72 px | 0.98 | -0.035em | 800 | same |
 | `display-md` (a card title, a section) | `.type-display-md` | `clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem)`: 26 to 36 px | 1.06 | -0.025em | 700 | same |
 | `standfirst` | `.type-standfirst` | `clamp(1.5rem, 1.25rem + 0.9vw, 1.9rem)`: 24 to 30 px, reading face italic | 1.3 | -0.01em | 300 | `balance` |
 | `reading` | `.type-reading` | `clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem)`: 18 to 20 px | 1.65 | 0 | 400 | `pretty`, proportional figures; column `.type-measure` |
 | `meta` | `.type-meta` | 12 px, mono | 16 px | 0.1em | 500 | uppercase, tabular figures, ligatures off |
 
-Modifiers: `.type-thin` / `.type-heavy` put a run of a display heading at either end of the weight axis (`Cata<span class="type-thin">`...). `.type-link` underlines in the accent (`.ds-prose` links do the same). `.drop-cap` sets the first letter of a paragraph as a float 5.33 em tall (4.2 em in a column under 40 rem), Newsreader 700 in the ink, line-height 0.8, padding 0.07 em 0.13 em 0 0 (the "Article on paper" board: 112 px against a 21 px body); a float and not `initial-letter`, because the board's letter sits on the third line and `initial-letter` sinks differently in each engine. `.type-pullquote` is the reading face in 300 italic, `clamp(1.5rem, 0.9rem + 1.9cqi, 2.5rem)` (40 px at 1328 px) / 1.15, -0.01em, between two 1 px rules of the ink with 18 px padding; `.type-rule` and `.ds-prose hr` a 1 px rule in `--border-strong`. Entry pages add (app.css, reading section, documented in design-system.md, "Entry pages"): `.entry-title` (the headline: Newsreader 700, `--entry-title`, 0.92, -0.03em, 8.95 em wide at most; `data-poem` makes it 200 italic at `--poem-title`, 0.95), `.entry-rule` (the double rule: 3 px, 3 px gap, 1 px), `.entry-dateline`, `.entry-margin`, `.entry-figure`, `.ds-caption` (mono 12 px / 1.6, muted: a figure's caption).
+Modifiers: `.type-thin` / `.type-heavy` put a run of a display heading at either end of the weight axis (`<span class="type-thin">Elliot</span> Négrel-Jerzy`). `.type-link` underlines in the accent (`.ds-prose` links do the same). `.drop-cap` sets the first letter of a paragraph as a float 5.33 em tall (4.2 em in a column under 40 rem), Newsreader 700 in the ink, line-height 0.8, padding 0.07 em 0.13 em 0 0 (the "Article on paper" board: 112 px against a 21 px body); a float and not `initial-letter`, because the board's letter sits on the third line and `initial-letter` sinks differently in each engine. `.type-pullquote` is the reading face in 300 italic, `clamp(1.5rem, 0.9rem + 1.9cqi, 2.5rem)` (40 px at 1328 px) / 1.15, -0.01em, between two 1 px rules of the ink with 18 px padding; `.type-rule` and `.ds-prose hr` a 1 px rule in `--border-strong`. Entry pages add (app.css, reading section, documented in design-system.md, "Entry pages"): `.entry-title` (the headline: Newsreader 700, `--entry-title`, 0.92, -0.03em, 8.95 em wide at most; `data-poem` makes it 200 italic at `--poem-title`, 0.95), `.entry-rule` (the double rule: 3 px, 3 px gap, 1 px), `.entry-dateline`, `.entry-margin`, `.entry-figure`, `.ds-caption` (mono 12 px / 1.6, muted: a figure's caption).
 
 Reading measure: `--measure-reading` is 28.5 em of the reading size, 570 px at 20 px: 66 characters of running text (measured in Chrome, 1440 and 390 px wide). It is em and not `ch` on purpose: the "0" of Newsreader is 0.5 em wide against a 0.43 em average letter, so 65 `ch` would be 75 characters. Figures in Newsreader are lining: the subset ships no old-style figures (`onum` is absent from the file), so `font-variant-numeric` only asks for proportional ones.
 
@@ -167,6 +167,10 @@ Layout variables:
 | `--panel-pad`, `--grid-gap` | `1.5rem`, `1rem` (panel padding; the 12-column grid's gutter) |
 | `--control-h`, `--control-h-sm` | `2.75rem` below md (44 px touch rule); `2.25rem` / `2rem` from md |
 | `--hairline`, `--tick-step` | `1px`, `8px` (frames and lines; the tick scale of the styleguide's dividers) |
+| `--icon-inline` | `1.1em` (an icon beside text: the text's own size; docs/design-system.md, "Icons") |
+| `--icon-control` | `1.25rem` (an icon in a control or at the head of a row) |
+| `--icon-large` | `1.5rem` (an icon on its own) |
+| `--icon-stroke` | `1.75` (the icon stroke in the library's 24-unit grid, square ends and joins, every size) |
 
 The desktop detail panel is `50vw` wide (`md:w-1/2`, from 768px) and full height; there is no panel width token.
 
