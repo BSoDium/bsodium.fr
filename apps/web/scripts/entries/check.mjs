@@ -348,9 +348,10 @@ if (process.env.BASE_URL_EMPTY) {
   await page.goto(process.env.BASE_URL_EMPTY);
   await waitGlobeMounted(page);
   await page.waitForTimeout(800);
-  ok((await page.locator("[data-slot=archive-empty]").count()) === 1 && (await page.locator("[data-globe]").count()) === 1, "empty home: the globe stays and the archive card is there");
-  ok(/Nothing on the globe yet/.test(await page.locator("[data-slot=archive-empty]").innerText()), "empty home: the card says there is nothing on the globe yet");
-  ok((await page.locator("[data-slot=archive-empty] a").count()) === 4, "empty home: the card opens the four lists");
+  // The landing hero is the empty home too (docs/landing.md): the globe stays, the intro says no place is published, the four lists are its rows.
+  ok((await page.locator("[data-slot=landing-hero]").count()) === 1 && (await page.locator("[data-globe]").count()) === 1, "empty home: the globe stays and the landing hero is there");
+  ok(/No place is published yet/.test(await page.locator("[data-slot=landing-hero]").innerText()), "empty home: the hero says no place is published yet");
+  ok((await page.locator("[data-slot=landing-hero] a").count()) === 4, "empty home: the hero opens the four lists");
   ok((await page.locator("h1").count()) === 1, "empty home: one h1");
   await page.screenshot({ path: `${OUT_DIR}/home-empty-dark.png` });
   ok(logs.length === 0, `empty home: no console errors${logs.length ? ` (${logs.join(" | ")})` : ""}`);
