@@ -1,6 +1,6 @@
 # Design tokens
 
-The UI system built on these tokens (frames, micro-labels, kind coding, components) is in [design-system.md](design-system.md); this file keeps the values.
+The UI system built on these tokens (frames, type roles, kind coding, components) is in [design-system.md](design-system.md); this file keeps the values.
 
 Source of truth: `apps/web/app/app.css`. Colors, radii, motion and layout are CSS variables on `:root`;
 Tailwind 4 reads them through `@theme` / `@theme inline`. Light and dark follow `prefers-color-scheme`
@@ -30,10 +30,10 @@ The globe and the street map draw with one grey palette derived from `--backgrou
 
 The globe's ocean has no token of its own: it is `--background` (the disc and the clear colour are exactly the page colour, so the canvas never shows a seam). The detail panel uses `--background` at 85% with a backdrop blur.
 
-UI-system additions (2026-10-08, values and use in design-system.md): `--surface` (`#f4f4f4` / `#121212`, the panel plate), `--line-faint` (grid and tick texture), the one accent `--signal` (`#00698c` / `#38d4f5`, 5.6:1 and 10.6:1 on the surface) with `--signal-foreground` and `--signal-wash`, the `--inverse-*` set (an inverted frame's rebinding), and a faint hue per kind (`--kind-article|project|artwork|poem|place`, decorative only). `design-system.test.ts` keeps the four copies of the colour list (light, dark, and the two forced-scheme rules) identical and asserts the AA pairs.
+UI-system additions (2026-10-08, values and use in design-system.md): `--surface` (`#f4f4f4` / `#121212`, the panel plate), `--line-faint` (grid and tick texture), the one accent `--signal` (`#00698c` / `#38d4f5`, 5.6:1 and 10.6:1 on the surface; for state and the generated covers' marks only) with `--signal-foreground` and `--signal-wash`, the `--inverse-*` set (an inverted frame's rebinding), and a faint hue per kind (`--kind-article|project|artwork|poem|place`, the generated covers' lightest tone only). `design-system.test.ts` keeps the four copies of the colour list (light, dark, and the two forced-scheme rules) identical and asserts the AA pairs.
 
 Tailwind utilities: `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-accent`, etc.
-The map and the globe stay monochrome: the accent `--signal` and the kind hues are for the data-display UI only, and there is no destructive color on purpose (an error is the word ERROR in a bracket and an inverted tag).
+The map and the globe stay monochrome: the accent `--signal` and the kind hues are for the data-display UI only, and there is no destructive color on purpose (an error is the word Error in an inverted tag).
 
 ### Sky
 
@@ -64,20 +64,20 @@ Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251
 
 - Sans: `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`
 - Mono (labels, small caps): `ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace`
-- `.label`: mono, `text-xs`, uppercase, `0.08em` tracking, muted color.
+- `.label`: sans, `text-sm`, sentence case, muted color (the places list's group names and regions). `.ds-meta`: mono 13 / 20, tabular, muted, untracked (dates, coordinates). `.ds-micro`: mono 11 / 16, uppercase, 0.12em (a short code or key cap only).
 - `.map-label` and `.map-halo` (the names of the map's detection boxes, `app.css`; two lines, the name and a second line with the country or number of places and the linked entries): the mono stack; the name 14 px weight 500, the second line 11 px weight 400, 0.01 / 0.02em tracking, line heights 18 / 14 px, 6 x 3 px plate padding (`LABEL_TYPE` in `app/globe/engine/label-text.ts`, which the layout also measures with); 3 px between a label and its box. EVERY label has a `--background` plate with a feathered edge (`.map-halo`: a two-layer `box-shadow` of `--background`, blur 8 px / spread 3 px, in a layer below the boxes); the name is `--foreground`, the second line `--muted-foreground` (6.8:1 light, 7.9:1 dark on the plate: AA); no underline, no text-shadow, no opacity; hovered: unchanged; selected: `--foreground` plate with `--background` text (inverted), the second line `color-mix(--background 72%, --foreground)` (10:1 light, 7.9:1 dark), no feather. `docs/web-architecture.md`, "Labels in device pixels".
 
 | Step | Size / line height | Use |
 | --- | --- | --- |
-| `text-xs` | 12 / 18 px | labels |
-| `text-sm` | 14 / 22 px | lists, nav, buttons |
+| `text-xs` | 12 / 18 px | small mono labels (a code block's language) |
+| `text-sm` | 14 / 22 px | secondary text, nav, buttons, captions, tags |
 | `text-base` | 16 / 26.4 px | body |
 | `text-lg` | 18 / 28 px | summaries |
-| `text-xl` | 22 / 30 px | item titles |
+| `text-xl` | 22 / 30 px | card titles |
 | `text-2xl` | 28 / 34 px | panel headings |
 | `text-3xl` | 36 / 40 px | page headings |
 | `text-4xl` | 48 / 52 px | full-screen entry title |
-| `text-micro` | 11 / 16 px | micro-labels (mono, uppercase, 0.12em: `.ds-micro`), the floor for any text |
+| `text-micro` | 11 / 16 px | short codes (mono, uppercase, 0.12em: `.ds-micro`), the floor for any text |
 
 ## Spacing
 
@@ -94,7 +94,7 @@ Layout variables:
 | `--list-width` | `18rem` (the places list when revealed by keyboard focus) |
 | `--panel-pad`, `--grid-gap` | `1.5rem`, `1rem` (panel padding; the 12-column grid's gutter) |
 | `--control-h`, `--control-h-sm` | `2.75rem` below md (44 px touch rule); `2.25rem` / `2rem` from md |
-| `--hairline`, `--bracket-len`, `--bracket-w`, `--tick-step` | `1px`, `10px`, `1px`, `8px` (frames and tick scales) |
+| `--hairline`, `--tick-step` | `1px`, `8px` (frames and lines; the tick scale of the styleguide's dividers) |
 
 The desktop detail panel is `50vw` wide (`md:w-1/2`, from 768px) and full height; there is no panel width token.
 
