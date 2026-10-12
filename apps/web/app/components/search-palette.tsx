@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { Frame, Glyph, KindTag } from "~/components/ui";
-import { isMac } from "~/lib/platform";
+import { Frame, Icon, KeyHint, KindTag } from "~/components/ui";
 import { groupResults, searchItems, SEARCH_LABELS, type SearchItem } from "~/lib/search";
 import { cn } from "~/lib/utils";
 
@@ -20,7 +19,7 @@ function loadIndex(): Promise<SearchItem[]> {
 }
 
 /** Anything on the page (the landing hero's search line) opens the palette by this event; the palette is mounted once, by the navigation. */
-const OPEN_SEARCH_EVENT = "catalyst:open-search";
+const OPEN_SEARCH_EVENT = "site:open-search";
 
 /** Open the quick search palette. A no-op until the navigation has mounted it (the hydration). */
 export function openSearch(): void {
@@ -30,7 +29,7 @@ export function openSearch(): void {
 /**
  * Quick search (Cmd or Ctrl + K, or the button in the navigation): a modal `dialog` holding an ARIA combobox over the places and
  * entries. The input owns the focus; the arrow keys move a highlight (`aria-activedescendant`) through the listbox, Enter opens it,
- * Escape closes and gives the focus back. Results are grouped (places, then the four kinds) with the same glyphs as everywhere. The index
+ * Escape closes and gives the focus back. Results are grouped (places, then the four kinds), each row led by the kind's icon at the control size. The index
  * is fetched once (`/search-index.json`) and searched in the browser (`lib/search.ts`). Nothing renders before the first open.
  */
 export function SearchPalette() {
@@ -42,11 +41,8 @@ export function SearchPalette() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [load, setLoad] = useState<Load>({ state: "idle" });
-  const [mac, setMac] = useState(false);
   const id = useId();
   const listId = `${id}-list`;
-
-  useEffect(() => setMac(isMac()), []);
 
   const show = useCallback(() => {
     setOpen(true);
@@ -157,12 +153,10 @@ export function SearchPalette() {
         aria-keyshortcuts="Control+K Meta+K"
         aria-haspopup="dialog"
         data-slot="search-trigger"
-        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2 px-2 text-sm text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground @md:inline-flex"
+        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2.5 px-2 text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground @md:inline-flex"
       >
-        <Glyph name="search" size={16} />
-        <span aria-hidden="true" className="ds-micro hidden border border-border px-1.5 @xl:inline">
-          {mac ? "⌘" : "Ctrl"} K
-        </span>
+        <Icon name="search" size="control" />
+        <KeyHint boxed className="hidden @xl:inline-flex" />
       </button>
       {open && (
         <dialog
@@ -180,7 +174,7 @@ export function SearchPalette() {
               Search
             </h2>
             <div className="flex items-center gap-3 border-b border-border px-4">
-              <Glyph name="search" size={16} className="shrink-0 text-muted-foreground" />
+              <Icon name="search" size="control" className="shrink-0 text-muted-foreground" />
               <input
                 ref={inputRef}
                 autoFocus
@@ -201,7 +195,13 @@ export function SearchPalette() {
                 onKeyDown={onInputKey}
                 className="min-h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
-              <button type="button" onClick={hide} aria-label="Close search" className="ds-micro min-h-11 min-w-11 shrink-0 border border-border px-2 text-muted-foreground hover:bg-accent hover:text-foreground">
+              <button
+                type="button"
+                onClick={hide}
+                aria-label="Close search"
+                data-boxed=""
+                className="ds-kbd min-h-11 min-w-11 shrink-0 text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
                 Esc
               </button>
             </div>
@@ -231,7 +231,7 @@ export function SearchPalette() {
                               <span className="truncate font-display text-base font-bold tracking-[-0.01em]">{item.title}</span>
                               {item.sub && <span className="ds-meta truncate">{item.sub}</span>}
                             </span>
-                            <Glyph name="arrow-right" size={12} className={cn("shrink-0", selected ? "opacity-100" : "opacity-0")} />
+                            <Icon name="arrow-right" size="control" className={cn("shrink-0", selected ? "opacity-100" : "opacity-0")} />
                           </li>
                         );
                       })}
@@ -248,7 +248,25 @@ export function SearchPalette() {
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2 text-sm text-muted-foreground">
               <span>
-                <span aria-hidden="true">↑↓ move · ↵ open · esc close</span>
+                <span aria-hidden="true" className="flex items-center gap-4">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex">
+                      <Icon name="arrow-up" size="inline" />
+                      <Icon name="arrow-down" size="inline" />
+                    </span>
+                    move
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon name="enter" size="inline" />
+                    open
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="ds-kbd" data-boxed="">
+                      Esc
+                    </span>
+                    close
+                  </span>
+                </span>
                 <span className="sr-only">Up and Down move, Enter opens, Escape closes</span>
               </span>
               <span aria-hidden="true" className="tabular-nums">

@@ -4,7 +4,7 @@ import { PANEL_HEADING_ID } from "~/components/detail-panel";
 import { BlockRenderer, Figures } from "~/components/entry/blocks";
 import { EntryRefCard } from "~/components/entry/entry-list-card";
 import { TableOfContents } from "~/components/entry/toc";
-import { Button, CopyButton, CoverArt, Glyph, StatusTag, TagList } from "~/components/ui";
+import { Button, CopyButton, CoverArt, Icon, StatusTag, TagList } from "~/components/ui";
 import { shareUrl } from "~/lib/clipboard";
 import { formatEntryDate } from "~/lib/dates";
 import {
@@ -86,7 +86,7 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
   ];
 
   const copy = (
-    <CopyButton text={() => shareUrl(window.location.origin, entry.href)} label={`Copy link to ${entry.title}`} announcement="Link copied to the clipboard" glyph="link">
+    <CopyButton text={() => shareUrl(window.location.origin, entry.href)} label={`Copy link to ${entry.title}`} announcement="Link copied to the clipboard" icon="link">
       Copy link
     </CopyButton>
   );
@@ -97,7 +97,7 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
   );
   const globeLink = firstPlace && (
     <Link to={firstPlace.href} className="entry-link inline-block no-underline hover:underline">
-      {firstPlace.name} <span aria-hidden="true">{"\u2197"}</span> open on the globe
+      {firstPlace.name} <Icon name="arrow-up-right" size="inline" /> open on the globe
     </Link>
   );
 
@@ -129,7 +129,7 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
             <Button asChild variant="primary" className="w-full">
               <a href={external} target="_blank" rel="noopener noreferrer">
                 <span className="truncate">Open {displayHost(external)}</span>
-                <Glyph name="arrow-up-right" size={16} />
+                <Icon name="arrow-up-right" size="inline" />
                 <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </Button>
@@ -154,7 +154,7 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
               to={backTo.href}
               className="type-meta -ml-1 mb-3 inline-flex min-h-11 w-fit items-center gap-2 px-1 text-muted-foreground no-underline hover:text-foreground hover:underline print:hidden"
             >
-              <Glyph name="arrow-left" size={12} />
+              <Icon name="arrow-left" size="inline" />
               <span>
                 Back to <span className="sr-only">place </span>
                 {backTo.name}
@@ -357,7 +357,7 @@ function Neighbour({ direction, entry, label }: { direction: "prev" | "next"; en
   const prev = direction === "prev";
   return (
     <Link to={entry.href} rel={direction} className={cn("group flex min-h-11 items-start gap-3 no-underline", !prev && "flex-row-reverse text-right")}>
-      <Glyph name={prev ? "arrow-left" : "arrow-right"} size={16} className="mt-1 shrink-0 text-muted-foreground" />
+      <Icon name={prev ? "arrow-left" : "arrow-right"} size="control" className="mt-0.5 shrink-0 text-muted-foreground" />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="type-meta text-muted-foreground">
           {prev ? "Previous" : "Next"} {label.toLowerCase()}

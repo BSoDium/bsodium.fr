@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { copyText } from "~/lib/clipboard";
 import { Button, type ButtonProps } from "./button";
-import { Glyph, type GlyphName } from "./glyphs";
+import { Icon, type IconName } from "./icon";
 
 interface CopyButtonProps extends Pick<ButtonProps, "variant" | "size" | "className"> {
   /** What is copied: a string, or a function called at the click (an address that depends on the window). */
@@ -12,7 +12,8 @@ interface CopyButtonProps extends Pick<ButtonProps, "variant" | "size" | "classN
   label?: string;
   /** What the assistive technology hears on success. */
   announcement?: string;
-  glyph?: GlyphName;
+  /** The icon before the word (it turns to a check once copied). */
+  icon?: IconName;
 }
 
 /**
@@ -20,7 +21,7 @@ interface CopyButtonProps extends Pick<ButtonProps, "variant" | "size" | "classN
  * for two seconds and a polite live region says it too. Drawn only after hydration: without scripts there is nothing to press.
  * The clipboard API is used where it exists, else the old `execCommand` fallback (`lib/clipboard.ts`).
  */
-export function CopyButton({ text, children, label, announcement = "Copied to the clipboard", glyph, variant = "ghost", size = "sm", className }: CopyButtonProps) {
+export function CopyButton({ text, children, label, announcement = "Copied to the clipboard", icon, variant = "ghost", size = "sm", className }: CopyButtonProps) {
   const [ready, setReady] = useState(false);
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -45,7 +46,7 @@ export function CopyButton({ text, children, label, announcement = "Copied to th
           timer.current = setTimeout(() => setState("idle"), 2000);
         }}
       >
-        {glyph && <Glyph name={state === "copied" ? "check" : glyph} size={16} />}
+        {icon && <Icon name={state === "copied" ? "check" : icon} size="inline" />}
         {word}
       </Button>
       <span role="status" className="sr-only">

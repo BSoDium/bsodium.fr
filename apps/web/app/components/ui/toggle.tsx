@@ -1,5 +1,5 @@
 import { Button, type ButtonProps } from "./button";
-import { Glyph } from "./glyphs";
+import { Icon } from "./icon";
 import { cn } from "~/lib/utils";
 
 type ToggleProps = Omit<ButtonProps, "pressed" | "onClick"> & {
@@ -17,20 +17,20 @@ interface ExpandToggleProps {
   onExpandedChange(expanded: boolean): void;
   /** The accessible name, constant across states. */
   label?: string;
-  /** Show the label beside the glyph (the panel footer) instead of the glyph alone (the panel header). */
+  /** Show the label beside the icon (the panel footer) instead of the icon alone (the panel header). */
   showLabel?: boolean;
   size?: "default" | "sm";
   className?: string;
 }
 
 /**
- * The panel / full-screen toggle: `aria-pressed` is "the view is full screen". The glyph swaps between four outward corners
- * and four inward corners. Same control in the panel header (icon) and footer (icon and label).
+ * The panel / full-screen toggle: `aria-pressed` is "the view is full screen". The icon swaps between the outward and the inward
+ * diagonal arrows. Same control in the panel header (icon) and footer (icon and label).
  */
 export function ExpandToggle({ expanded, onExpandedChange, label = "Full screen", showLabel, size = "default", className }: ExpandToggleProps) {
   return (
     <Toggle variant="ghost" pressed={expanded} onPressedChange={onExpandedChange} size={size} icon={!showLabel} aria-label={showLabel ? undefined : label} className={className}>
-      <Glyph name={expanded ? "collapse" : "expand"} size={16} />
+      <Icon name={expanded ? "collapse" : "expand"} size={showLabel ? "inline" : "control"} />
       {showLabel && label}
     </Toggle>
   );

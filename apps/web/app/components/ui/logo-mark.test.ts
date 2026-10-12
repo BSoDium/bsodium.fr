@@ -57,9 +57,9 @@ describe("LogoMark", () => {
     expect(html).not.toContain("role=");
   });
   it("takes a name when it stands alone", () => {
-    const html = renderToStaticMarkup(createElement(LogoMark, { size: 64, title: "Catalyst" }));
+    const html = renderToStaticMarkup(createElement(LogoMark, { size: 64, title: SITE_NAME }));
     expect(html).toContain('role="img"');
-    expect(html).toContain('aria-label="Catalyst"');
+    expect(html).toContain(`aria-label="${SITE_NAME}"`);
     expect(html).not.toContain("aria-hidden");
   });
 });

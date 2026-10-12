@@ -1,6 +1,6 @@
 import { Fragment, useMemo } from "react";
 import type { PublishedBodyBlock } from "@catalyst/schemas";
-import { CopyButton, Divider, Frame, Glyph } from "~/components/ui";
+import { CopyButton, Divider, Frame, Icon } from "~/components/ui";
 import {
   buildOutline,
   dedupeKeys,
@@ -153,7 +153,7 @@ function HeadingView({ item }: { item: OutlineItem }) {
       <span className="min-w-0">{item.text}</span>
       {/* A link to the section, for sharing and for the keyboard: always there for assistive tech, drawn on hover and focus (always on touch screens). */}
       <a href={`#${item.id}`} aria-label={`Link to section: ${item.text}`} className="ds-anchor print:hidden">
-        <Glyph name="hash" size={12} />
+        <Icon name="hash" size="control" />
       </a>
     </Tag>
   );
@@ -267,7 +267,7 @@ function LinkCard({ block }: { block: Extract<Block, { type: "link" }> }) {
         {block.description && <span className="text-sm text-muted-foreground">{block.description}</span>}
         {href && <span className="text-sm text-muted-foreground">{displayHost(href)}</span>}
       </span>
-      {href && <Glyph name="arrow-up-right" size={16} className="mt-1 shrink-0" />}
+      {href && <Icon name="arrow-up-right" size="control" className="mt-0.5 shrink-0" />}
     </>
   );
   return (

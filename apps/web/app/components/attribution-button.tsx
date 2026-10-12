@@ -1,6 +1,6 @@
-import { ArrowUpLeft } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { CreditsDialog } from "~/components/credits-dialog";
+import { Icon } from "~/components/ui/icon";
 import { attributionFor, attributionLine, type AttributionTiles } from "~/globe/street/core/attribution";
 import { MAP_CARD } from "~/lib/map-card";
 import { cn } from "~/lib/utils";
@@ -15,7 +15,7 @@ interface AttributionButtonProps {
 
 /**
  * The map's credits: ONE line of mono text with the main contributors ("© OpenStreetMap · OpenFreeMap · Natural Earth", from the
- * same list as the dialog, so it follows the tile configuration), then a middle dot (the same separator as between the credits) and a "See more" button with an up-left arrow that opens the
+ * same list as the dialog, so it follows the tile configuration), then a middle dot (the same separator as between the credits) and a "See more" button with an up-left arrow (`Icon`, inline size) that opens the
  * credits dialog (`CreditsDialog`). Both sit in the dev badge's card (`MAP_CARD`), bottom right of the map, left of the detail
  * panel's inset.
  *
@@ -68,7 +68,7 @@ export function AttributionButton({ tiles, insetRight, reducedMotion }: Attribut
           onClick={() => setOpen(true)}
         >
           See more
-          <ArrowUpLeft aria-hidden="true" className="size-3 shrink-0" strokeWidth={1.75} />
+          <Icon name="arrow-up-left" size="inline" />
         </button>
       </div>
       <CreditsDialog open={open} credits={credits} reducedMotion={reducedMotion} onClose={() => setOpen(false)} onClosed={() => buttonRef.current?.focus()} />
