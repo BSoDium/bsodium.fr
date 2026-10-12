@@ -130,3 +130,43 @@ export const SKY = {
 
 /** `cubic-bezier` control points of the app's standard easing (`--ease-standard`). */
 export const INSET_EASE = [0.2, 0, 0, 1] as const;
+
+/**
+ * The ring of type (engine/ring.ts, engine/ring-layer.ts; docs/web-architecture.md, "Ring of type"): one short line of the site's identity, set in
+ * the map's monospace, circling the planet like Saturn's ring (a circle round the globe in the globe's own perspective, a near arc in front of the
+ * planet and a far arc behind it) and turning slowly on its own clock. It exists only in the zoomed-OUT regime below the whole-globe fit and fades
+ * out as the camera comes in, so it is gone at the fit: the boxes and the labels of the world view never compete with it.
+ *
+ * Angles in degrees, sizes in earth radii or CSS px as named. Everything that can be tuned by eye is here.
+ */
+export const RING = {
+  /** Radius of the ring in earth radii (1 = the surface): the planet's own silhouette is 1 (a little more with the perspective). */
+  radiusRatio: 1.5,
+  /** The camera's elevation over the ring's plane: 0 = edge-on (a line), 90 = face-on (a circle). The ring's apparent height is `sin(elevation)` of its width. */
+  elevationDeg: 44,
+  /** How the letters stand on the ring: "flat" = in the ring's plane with their tops towards the planet (text on a path: readable all the way round), "standing" = on a band round the ring's axis (they turn edge-on at the two ends). */
+  lettering: "flat" as "flat" | "standing",
+  /** Turning speed, degrees a second. The globe's idle rotation is 4 (`SPIN.degPerSec`): the ring is gentler. */
+  degPerSec: 2.4,
+  /** `-1`: the near arc moves LEFT (a ticker: the text reads left to right and the next word arrives from the right; the planet's surface moves right under it); `1` the other way. */
+  direction: -1,
+  /** Where the ring is when it appears (degrees of its own turn). */
+  startDeg: 0,
+  /** The type: the weight, the tracking in em added to the monospace's 0.6 em advance (the nav's `.nav-link` is 0.14), and the em size (CSS px) the glyphs should have at the floor zoom: the number of times the line repeats around the ring is chosen to land nearest it. */
+  type: { weight: 500, tracking: 0.14, advanceEm: 0.6, targetEmPx: 11 },
+  /** Between the phrases (and after the last, which closes the loop). */
+  separator: " · ",
+  /**
+   * Zoom range. `floorBelowFit`: the lowest zoom is at least this many zoom levels below the whole-globe fit (0.5 levels = the globe 0.71 times its fit
+   * size), and lower still when the ring does not fit the free area with `fitMargin` of it left empty (a phone). `fade`: the ring's strength by the
+   * way from the fit (0) to the floor (1): gone up to `from`, full from `to`, a smoothstep between, quantised to palette tones.
+   */
+  zoom: { floorBelowFit: 0.5, fitMargin: 0.12, fade: { from: 0.08, to: 0.6 } },
+  /** Palette roles (engine/palette.ts) of the near arc (in front of the planet) and the far arc (behind it): neither louder than the coastline (`coast`), so a coast is never outshone. */
+  tones: { front: "coast", back: "strong" },
+  /** At most one frame every `frameMs` (30 fps: the ring is slow, the pixels it moves a frame are under one) and no step longer than `maxStepMs` (a stalled frame must not jump). */
+  frameMs: 32,
+  maxStepMs: 100,
+  /** Largest device pixel ratio the ring's canvas is drawn at (the type is crisp at 2; a phone's 3 would cost 2.25 times the pixels). */
+  maxDpr: 2,
+} as const;

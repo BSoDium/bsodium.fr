@@ -16,6 +16,8 @@ import { casesHierarchy, stressHierarchy } from "./engine/lod-stress";
 import { applyDebugLevels } from "./engine/palette";
 import { applySpinFlags } from "./engine/idle-spin";
 import { applySkyFlags } from "./engine/sky";
+import { applyRingFlags, ringText } from "./engine/ring";
+import { RING_PHRASES } from "./ring-text";
 import { applyDebugArtPixel } from "./engine/tuning";
 import { enablePerf, perfEnd, perfStart } from "./engine/perf";
 import { startsVeiled, type GlobeProps } from "./types";
@@ -94,6 +96,9 @@ function lodStressCount(): number {
   }
 }
 
+/** The line of the ring of type (engine/ring.ts): built once, from the site identity constant of `ring-text.ts`. */
+const RING_TEXT = ringText(RING_PHRASES);
+
 const isWebGLUnavailable = (e: unknown) => e instanceof Error && e.name === "WebGLUnavailableError";
 
 export default function GlobeCanvas({
@@ -162,6 +167,7 @@ export default function GlobeCanvas({
 
     applySpinFlags(); // `?no-rotate` works on any page, `?spin-idle=MS` in debug mode
     applySkyFlags(); // `?no-sky` works on any page, `?sky` turns it on in debug mode
+    applyRingFlags(); // `?no-ring` works on any page, `?ring` turns it on in debug mode
     if (debugEnabled()) {
       applyDebugLevels();
       applyDebugArtPixel();
@@ -188,6 +194,7 @@ export default function GlobeCanvas({
           reducedMotion: now.reducedMotion,
           insetRight: now.insetRight,
           tiles: tilesKey ? JSON.parse(tilesKey) : null,
+          ringText: RING_TEXT,
           onNotice: setNotice,
           onSelect: (slug) => latest.current.onSelect(slug),
           onViewChange: (view) => {

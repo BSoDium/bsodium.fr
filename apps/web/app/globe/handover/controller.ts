@@ -66,6 +66,8 @@ export interface HandoverOptions {
   onContextChange(lost: boolean): void;
   /** The small HUD notice: street detail is not available (null = nothing to say). */
   onNotice(notice: Notice | null): void;
+  /** The line of the ring of type round the planet when zoomed out (`engine/ring.ts`); absent = no ring. Handed to the globe unchanged. */
+  ringText?: string;
   /** Testing and tuning: street engine options (pinned source, timings ...). */
   streetOptions?: Record<string, unknown>;
   /** Testing: override `HANDOVER.dissolve` (true = the dither dissolve instead of the cut). */
@@ -216,6 +218,7 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     reducedMotion: opts.reducedMotion,
     insetRight: opts.insetRight,
     zoomLimit: restoring ? Infinity : GLOBE_MAX_ZOOM,
+    ringText: opts.ringText,
     onSelect: opts.onSelect,
     onSelectGroup: (slug) => selectGroup(slug),
     onHover: (slug) => street?.setHovered(slug),
