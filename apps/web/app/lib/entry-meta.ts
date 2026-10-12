@@ -2,6 +2,7 @@ import { KIND_LABELS, KIND_PLURALS, type EntryDetail } from "./entries";
 import { safeMediaSrc } from "./entry-blocks";
 import { entryJsonLd } from "./json-ld";
 import { pageMeta } from "./meta";
+import { archiveLine } from "./site";
 
 interface Base {
   origin?: string | undefined;
@@ -20,7 +21,7 @@ export function entryMeta(data: { entry: EntryDetail; origin?: string } | undefi
   const cover = entry.cover && safeMediaSrc(entry.cover.src) ? entry.cover : undefined;
   return pageMeta({
     title: entry.title,
-    description: entry.summary ?? `${KIND_LABELS[entry.kind]} from the Catalyst archive.`,
+    description: entry.summary ?? archiveLine(KIND_LABELS[entry.kind]),
     type: entry.kind === "article" ? "article" : "website",
     image: cover ? { src: cover.src, alt: cover.alt, width: cover.width, height: cover.height } : undefined,
     origin,
@@ -33,5 +34,5 @@ export function entryMeta(data: { entry: EntryDetail; origin?: string } | undefi
 
 /** Head tags of a list route (`/articles`, ...). */
 export function listMeta(kind: keyof typeof KIND_PLURALS, base: Base = {}) {
-  return pageMeta({ title: KIND_PLURALS[kind], description: `${KIND_PLURALS[kind]} from the Catalyst archive.`, origin: base.origin, path: base.path });
+  return pageMeta({ title: KIND_PLURALS[kind], description: archiveLine(KIND_PLURALS[kind]), origin: base.origin, path: base.path });
 }

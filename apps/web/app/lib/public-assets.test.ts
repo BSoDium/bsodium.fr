@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SHARE_IMAGE, THEME_COLORS } from "./site";
+import { DEFAULT_SHARE_IMAGE, SITE, SITE_DESCRIPTION, THEME_COLORS } from "./site";
 
 const pub = (name: string) => new URL(`../../public/${name}`, import.meta.url);
 const pngSize = (name: string) => {
@@ -23,8 +23,10 @@ describe("public/ brand assets", () => {
       name: string; short_name: string; display: string; start_url: string; theme_color: string; background_color: string;
       icons: { src: string; sizes: string; type: string; purpose?: string }[];
     };
-    expect(manifest.name).toBe("Catalyst");
-    expect(manifest.short_name).toBeTruthy();
+    expect(manifest.name).toBe(SITE.name);
+    expect(manifest.short_name).toBe(SITE.shortName);
+    expect(manifest.short_name.length).toBeLessThanOrEqual(12);
+    expect((manifest as unknown as { description: string }).description).toBe(SITE_DESCRIPTION);
     expect(manifest.display).toBe("standalone");
     expect(manifest.start_url).toBe("/");
     expect(manifest.theme_color).toBe(THEME_COLORS.dark);

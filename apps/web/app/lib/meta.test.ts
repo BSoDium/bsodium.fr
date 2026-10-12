@@ -9,15 +9,15 @@ const find = (tags: ReturnType<typeof pageMeta>, key: "name" | "property", value
 describe("pageMeta", () => {
   const ORIGIN = "https://v2.bsodium.fr";
   it("uses the title template, and the home title when there is no page name", () => {
-    expect(pageMeta({ title: "Demo" })[0]).toEqual({ title: "Demo · Catalyst" });
-    expect(pageMeta()[0]).toEqual({ title: "Catalyst · A personal archive organized around places" });
-    expect(find(pageMeta({ title: "Demo" }), "property", "og:title")?.content).toBe("Demo · Catalyst");
-    expect(find(pageMeta({ title: "Demo" }), "name", "twitter:title")?.content).toBe("Demo · Catalyst");
+    expect(pageMeta({ title: "Demo" })[0]).toEqual({ title: "Demo · Elliot Négrel-Jerzy" });
+    expect(pageMeta()[0]).toEqual({ title: "Elliot Négrel-Jerzy · Front-end and UX software engineer" });
+    expect(find(pageMeta({ title: "Demo" }), "property", "og:title")?.content).toBe("Demo · Elliot Négrel-Jerzy");
+    expect(find(pageMeta({ title: "Demo" }), "name", "twitter:title")?.content).toBe("Demo · Elliot Négrel-Jerzy");
   });
   it("has a description, with the site's as the default", () => {
     expect(find(pageMeta({ title: "Demo", description: "About it" }), "name", "description")?.content).toBe("About it");
-    expect(find(pageMeta(), "name", "description")?.content).toBe("A personal archive organized around places.");
-    expect(find(pageMeta(), "property", "og:description")?.content).toBe("A personal archive organized around places.");
+    expect(find(pageMeta(), "name", "description")?.content).toBe("Front-end and UX software engineer in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.");
+    expect(find(pageMeta(), "property", "og:description")?.content).toBe("Front-end and UX software engineer in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.");
   });
   it("makes the canonical URL and og:url from the origin and the path only (no query, no hash)", () => {
     const tags = pageMeta({ origin: ORIGIN, path: "/articles/a?view=full#x" });
@@ -84,7 +84,7 @@ describe("entryMeta", () => {
   });
   it("uses the summary as the description and a kind-based fallback", () => {
     expect(find(entryMeta({ entry: entry({ summary: "About it" }) }), "name", "description")?.content).toBe("About it");
-    expect(find(entryMeta({ entry: entry({ kind: "poem" }) }), "name", "description")?.content).toBe("Poem from the Catalyst archive.");
+    expect(find(entryMeta({ entry: entry({ kind: "poem" }) }), "name", "description")?.content).toBe("Poem from the archive of Elliot Négrel-Jerzy.");
   });
   it("is canonical on the entry's own path and carries JSON-LD when the origin is known", () => {
     const tags = entryMeta({ entry: entry({ date: "2024-04-02" }) }, { origin: ORIGIN });
@@ -111,7 +111,7 @@ describe("entryMeta", () => {
   });
   it("is a neutral, noindex not-found head without data", () => {
     const tags = entryMeta(undefined);
-    expect(tags[0]).toEqual({ title: "Not found · Catalyst" });
+    expect(tags[0]).toEqual({ title: "Not found · Elliot Négrel-Jerzy" });
     expect(find(tags, "name", "robots")?.content).toBe("noindex");
   });
 });
@@ -119,7 +119,7 @@ describe("entryMeta", () => {
 describe("listMeta", () => {
   it("names the collection and is canonical on its path", () => {
     const tags = listMeta("poem", { origin: "https://x.test", path: "/poems" });
-    expect(tags[0]).toEqual({ title: "Poems · Catalyst" });
+    expect(tags[0]).toEqual({ title: "Poems · Elliot Négrel-Jerzy" });
     expect(tags).toContainEqual({ tagName: "link", rel: "canonical", href: "https://x.test/poems" });
   });
 });

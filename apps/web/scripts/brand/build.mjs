@@ -6,7 +6,7 @@
 //   apple-touch-icon.png (180)           the mark on the dark tile (iOS fills the corners itself: no transparency)
 //   icon-192.png, icon-512.png           the manifest's icons
 //   icon-maskable-512.png                the same with a safe zone: the mark stays inside the central circle a launcher may crop to
-//   og-default.png (1200x630)            the share image, from scripts/brand/og.svg
+//   og-default.png (1200x630)            the share image, from scripts/brand/og.svg (the owner's name and who they are, in the display face)
 //
 //   CHROME_PATH=/path/to/chrome node scripts/brand/build.mjs            all of them
 //   CHROME_PATH=... node scripts/brand/build.mjs --only=icons|og         only the icons (and favicon files), or only the share image
@@ -53,6 +53,10 @@ const ICON_JOBS = [
   { file: "favicon-48.png", width: 48, height: 48, svg: iconSvg(48, 3), temp: true },
 ];
 const OG_JOB = { file: "og-default.png", width: 1200, height: 630, svg: readFileSync(here("./og.svg"), "utf8") };
+// The share image is set in the site's display face. The page below has no network and no file access, so the font file travels inside
+// it as a data URI (the variable font: weights 200 to 800, the optical size by the browser's default).
+const DISPLAY_FONT = readFileSync(publicPath("fonts/bricolage-grotesque-5.3.0-latin-wght-opsz.woff2")).toString("base64");
+const FONT_FACE = `@font-face{font-family:"Bricolage Grotesque";font-weight:200 800;font-style:normal;src:url(data:font/woff2;base64,${DISPLAY_FONT}) format("woff2")}`;
 
 const jobs = [...(only === "og" ? [] : ICON_JOBS), ...(only === "icons" ? [] : [OG_JOB])];
 
@@ -61,7 +65,8 @@ if (!existsSync(executablePath)) throw new Error("Set CHROME_PATH to a Chrome/Ch
 const browser = await chromium.launch({ executablePath, headless: true });
 for (const job of jobs) {
   const page = await browser.newPage({ viewport: { width: job.width, height: job.height }, deviceScaleFactor: 1 });
-  await page.setContent(`<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:${PAGE}}svg{display:block}</style>${job.svg}`);
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>${FONT_FACE}html,body{margin:0;background:${PAGE}}svg{display:block}</style>${job.svg}`);
+  await page.evaluate(() => document.fonts.load('800 104px "Bricolage Grotesque"').then(() => document.fonts.load('200 104px "Bricolage Grotesque"')).then(() => document.fonts.load('300 30px "Bricolage Grotesque"')));
   await page.screenshot({ path: publicPath(job.file), type: "png", clip: { x: 0, y: 0, width: job.width, height: job.height } });
   await page.close();
 }

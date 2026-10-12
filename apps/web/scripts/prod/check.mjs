@@ -32,6 +32,9 @@ const DEFAULT_SITE = "https://v2.bsodium.fr";
 const deployed = Boolean(opt("base"));
 const cdnCache = (value, pattern) => (deployed ? /public, max-age=0/.test(value ?? "") || pattern.test(value ?? "") : pattern.test(value ?? ""));
 
+/** The site's name (app/lib/site.ts, SITE.name): what titles, og:site_name and the manifest say. */
+const NAME = "Elliot Négrel-Jerzy";
+
 const failures = [];
 const ok = (cond, message) => {
   console.log(`${cond ? "PASS" : "FAIL"}  ${message}`);
@@ -123,6 +126,8 @@ const page = async (path, label, { status = 200, method = "GET" } = {}) => {
   ok(res.headers.get("cache-control") === "private, no-cache", `${label}: cache-control private, no-cache (${res.headers.get("cache-control")})`);
   staticHeaders(res, label);
   checkCsp(res, body, label);
+  // The project's code name is not the site's name: nothing a document says, in its markup, head tags, state or JSON-LD, may carry it.
+  ok(!/catalyst/i.test(body), `${label}: the code name appears nowhere in the document${/catalyst/i.test(body) ? ` (…${/.{0,40}catalyst.{0,40}/i.exec(body)?.[0]}…)` : ""}`);
   return { res, body };
 };
 
@@ -133,6 +138,7 @@ ok(sm.res.status === 200, "sitemap.xml: 200");
 ok(/^application\/xml/.test(sm.res.headers.get("content-type") ?? ""), `sitemap.xml: content-type application/xml (${sm.res.headers.get("content-type")})`);
 ok(cdnCache(sm.res.headers.get("cache-control"), /s-maxage=\d+/), `sitemap.xml: cache-control (${sm.res.headers.get("cache-control")})`);
 staticHeaders(sm.res, "sitemap.xml");
+ok(!/catalyst/i.test(sm.body), "sitemap.xml: the code name appears nowhere");
 const locs = [...sm.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 const lastmods = [...sm.body.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((m) => m[1]);
 ok(sm.body.startsWith('<?xml version="1.0" encoding="UTF-8"?>') && sm.body.includes('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'), "sitemap.xml: XML declaration and sitemap namespace");
@@ -171,7 +177,8 @@ async function document(path, label, expect) {
   const tags = headTags(body);
   const t = title(body);
   ok(/<html lang="en"/.test(body), `${label}: <html lang="en">`);
-  ok(expect.home ? /^Catalyst · /.test(t) : /^.+ · Catalyst$/.test(t), `${label}: title "${t}"`);
+  ok(expect.home ? t.startsWith(`${NAME} · `) : /^.+ · /.test(t) && t.endsWith(` · ${NAME}`), `${label}: title "${t}"`);
+  ok(metaContent(tags, "property", "og:site_name") === NAME, `${label}: og:site_name is the owner's name`);
   const description = metaContent(tags, "name", "description");
   ok(Boolean(description) && description.length <= 320, `${label}: meta description`);
   const canonical = linkHref(tags, "canonical");
@@ -264,6 +271,7 @@ section("robots.txt, manifest, icons");
   const m = await text("/manifest.webmanifest");
   ok(m.res.status === 200 && /json/.test(m.res.headers.get("content-type") ?? ""), `manifest: 200 (${m.res.headers.get("content-type")})`);
   const j = JSON.parse(m.body);
+  ok(j.name === NAME && !/catalyst/i.test(m.body), `manifest: the owner's name, and the code name nowhere in it (${j.name} / ${j.short_name})`);
   ok(j.name && j.short_name && j.display === "standalone" && j.start_url && /^#[0-9a-f]{6}$/i.test(j.theme_color) && /^#[0-9a-f]{6}$/i.test(j.background_color), "manifest: name, short_name, display standalone, start_url, colours");
   const sizes = j.icons.map((i) => i.sizes);
   ok(sizes.includes("192x192") && sizes.includes("512x512") && j.icons.every((i) => i.type === "image/png"), `manifest: PNG icons ${sizes.join(", ")}`);

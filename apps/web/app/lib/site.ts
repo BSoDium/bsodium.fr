@@ -1,11 +1,36 @@
 /**
  * The site's identity: what the head tags, the sitemap, the robots file and the share cards say about it. Pure (no environment access):
  * `site.server.ts` reads `CATALYST_SITE_URL` and calls these. Documented in docs/web-architecture.md, "Production readiness".
+ *
+ * ONE constant (`SITE`) holds what the site calls itself, and everything visible reads it: the home hero's name, the head tags, the
+ * manifest, the error pages, the share image's alt text. Facts only: nothing here is a claim the owner did not make. The code name of
+ * the project ("Catalyst") lives in the repository, the packages and the environment variables, and never in the site's own text
+ * (`lib/identity.test.ts` renders the main routes and the built manifest and fails if it shows up).
  */
-export const SITE_NAME = "Catalyst";
-export const SITE_DESCRIPTION = "A personal archive organized around places.";
-/** The home page's title: the template (`<Page> · Catalyst`) has no page to put first, so it says what the site is. */
-export const SITE_TITLE = `${SITE_NAME} · A personal archive organized around places`;
+export const SITE = {
+  /** The owner's name: the site's name, the home hero's headline, the title template's suffix. */
+  name: "Elliot Négrel-Jerzy",
+  /** The name's two halves: the hero sets the first at the thin end of the weight axis and the second at the heavy end. */
+  givenName: "Elliot",
+  familyName: "Négrel-Jerzy",
+  /** For tight spots (the home-screen label under an icon, 12 characters or fewer). */
+  shortName: "Elliot N.-J.",
+  /** Who: what the owner does, and where. The hero says "<role> based in <location>." */
+  role: "Front-end and UX software engineer",
+  location: "Paris",
+  /** What: the fields, in the owner's order. A sentence of its own. */
+  speciality: "Data visualisation, geospatial and cartography interfaces, design systems, computer graphics",
+} as const;
+
+/** The sentence under the name on the home page: the same facts as the description, in the owner's words. */
+export const SITE_TAGLINE = `${SITE.role} based in ${SITE.location}. ${SITE.speciality}.`;
+
+export const SITE_NAME = SITE.name;
+export const SITE_DESCRIPTION = `${SITE.role} in ${SITE.location}. ${SITE.speciality}.`;
+/** Where an entry or a list has no summary of its own: "Poems from the archive of <name>." */
+export const archiveLine = (what: string) => `${what} from the archive of ${SITE.name}.`;
+/** The home page's title: the template (`<Page> · <name>`) has no page to put first, so it says who the site belongs to and what they do. */
+export const SITE_TITLE = `${SITE_NAME} · ${SITE.role}`;
 /** The temporary main domain of the new site; `CATALYST_SITE_URL` overrides it (the owner's move to the final domain is that one variable). */
 export const DEFAULT_SITE_URL = "https://v2.bsodium.fr";
 
@@ -15,7 +40,7 @@ export const DEFAULT_SHARE_IMAGE = {
   width: 1200,
   height: 630,
   type: "image/png",
-  alt: "Catalyst: a wireframe globe with two places joined by a route, beside the words A personal archive organized around places.",
+  alt: `${SITE.name}, ${SITE.role.toLowerCase()} in ${SITE.location}: a wireframe globe with two places joined by a route.`,
 } as const;
 
 /** The page colours of the two schemes (`--background` in app.css; a test keeps them equal): the browser UI's `theme-color`. */
