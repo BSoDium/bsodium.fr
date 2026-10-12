@@ -97,6 +97,43 @@ export const SCENARIOS = [
     },
   },
   {
+    id: "ring-rest",
+    title: "ring of type: zoomed out to its lowest zoom at rest, the ring turning (5 s; no GL frame is wanted, the cost is the ring's own)",
+    ring: true,
+    async setup(page) {
+      await settleWorld(page);
+      await page.evaluate(() => {
+        const d = window.__globeDebug;
+        d.setView({ zoom: d.floorZoom() });
+        d.renderNow();
+      });
+      await waitQuiet(page, { quietMs: 600, minMs: 300 });
+    },
+    async run(page) {
+      const a = await page.evaluate(() => ({ r: window.__globeDebug.ring(), draws: window.__pf.drawsTotal }));
+      await sleep(5000);
+      const b = await page.evaluate(() => ({ r: window.__globeDebug.ring(), draws: window.__pf.drawsTotal }));
+      return { ringFrames: b.r.frames - a.r.frames, ringMs: b.r.totalMs - a.r.totalMs, glDraws: b.draws - a.draws, shown: b.r.shown, canvas: b.r.canvas };
+    },
+  },
+  {
+    id: "ring-wheel",
+    title: "ring of type: wheel zoom out from the fit to the lowest zoom and back (the ring fades in step with the globe's frames)",
+    ring: true,
+    async setup(page) {
+      await settleWorld(page);
+    },
+    async run(page) {
+      const c = centre(page);
+      await wheel(page, 40, 2500, c);
+      await sleep(600);
+      await wheel(page, -40, 2500, c);
+      await waitQuiet(page, { quietMs: 600, minMs: 200, maxMs: 4000 });
+      const r = await page.evaluate(() => window.__globeDebug.ring());
+      return { ringFrames: r.frames, ringMs: r.totalMs, shown: r.shown, zoom: await zoomNow(page) };
+    },
+  },
+  {
     id: "s1",
     title: "S1 world view, slow rotation by drag (street not mounted)",
     async setup(page) {

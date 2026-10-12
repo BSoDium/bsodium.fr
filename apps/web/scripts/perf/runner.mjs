@@ -18,6 +18,8 @@ export async function runScenarios({ base, scenarios, device = "desktop", scheme
     if (!sc) throw new Error(`unknown scenario ${id}`);
     for (let rep = 0; rep < repeat; rep++) {
       const flags = { "globe-debug": "1" };
+      // Debug pages have the ring OFF by default (engine/ring.ts `applyRingFlags`): its own scenarios turn it on, and RING=1 runs any scenario with it.
+      if (sc.ring || process.env.RING === "1") flags.ring = "1";
       const extra = streetOpts ?? {};
       if (!sc.primary || streetOpts) flags["street-opts"] = JSON.stringify({ ...(sc.primary ? {} : { forceSource: "fallback" }), ...extra });
       const { ctx, page, logs } = await openPage(browser, profile, new URL(sc.path ?? "/", base).toString(), { colorScheme: scheme, flags });

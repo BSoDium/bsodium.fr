@@ -69,6 +69,21 @@ The globe's skybox (`SKY` in `app/globe/engine/tuning.ts`; architecture in web-a
 | `eraDeg` | 70 | the earth rotation angle at load (the sky's one placement against the earth) |
 | `seed` | `0x5ca1ab1e` | every random choice (positions, tiers, keep ranks) |
 
+### Ring of type
+
+The ring that circles the planet when the globe is zoomed out below its whole-globe fit (`RING` in `app/globe/engine/tuning.ts`; web-architecture.md, "Ring of type") has no colour of its own either: palette tones, no alpha. The near arc (in front of the planet) is the `coast` role (3.1:1 dark / 3.2:1 light on the page: the loudest the MAP itself gets, never above a coastline), the far arc `strong` (1.8:1), its fade a staircase of tones; decorative and `aria-hidden`, so not held to WCAG, and below the boxes (5.2:1) and the labels (ink). Type: `--font-mono` (the labels' stack), weight 500, tracking 0.14 em like `.nav-link`, uppercase, about 11 px at the lowest zoom (it scales with the ring). No new token.
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `radiusRatio`, `elevationDeg` | 1.5 earth radii, 44 deg | the ring's radius and the camera's elevation over its plane (0 edge-on, 90 face-on) |
+| `lettering` | `"flat"` | letters in the ring's plane, tops towards the planet (`"standing"`: on a band round the axis) |
+| `degPerSec`, `direction` | 2.4, -1 | its own turn (the globe's idle rotation is 4); the near arc moves left, a ticker |
+| `type` | weight 500, tracking 0.14, advance 0.6 em, target 11 px | the line repeats a whole number of times round, nearest the target em at the lowest zoom |
+| `zoom.floorBelowFit`, `zoom.fitMargin` | 0.5 levels, 0.12 | the camera goes at least this far below the whole-globe fit and until the ring fits the free area with this margin |
+| `zoom.fade` | from 0.08, to 0.6 | strength by the way from the fit (0) to the lowest zoom (1): absent up to `from`, full from `to` |
+| `tones` | front `coast`, back `strong` | palette roles of the near and far arc |
+| `frameMs`, `maxStepMs`, `maxDpr` | 32, 100, 2 | at most 30 repaints a second, the largest step of its clock, the largest device pixel ratio its canvas is drawn at |
+
 Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251), because at those values it reads as the same barely-there haze as the dark one and the stipple does not compete with the boxes; `?no-sky` is the off switch.
 
 ### Map card and credits line
