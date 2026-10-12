@@ -526,7 +526,8 @@ parked until the fade is mastered; the code path is intact (`HANDOVER.dissolve =
 tests). In cut mode there is no blend at all: the street map is created opaque and shown or hidden as a whole.
 Past `cutZoom` (3.7; back below `cutBackZoom` 3.45, hysteresis) the controller renders the street map synchronously for
 the exact camera and waits until its tiles for it are loaded (`map.areTilesLoaded()`, polling frames; after
-`cutMaxWaitMs` = 1200 it swaps anyway, so the globe never stalls), then swaps in a single task, hence one paint:
+`cutMaxWaitMs` = 1200 it swaps anyway, so the globe never stalls; and never while the camera is past the globe's own maximum zoom
+6.5, see "One camera per frame" in `docs/street-architecture.md`), then swaps in a single task, hence one paint:
 street root visible, globe labels hidden, street markers and labels shown, Three.js suspended, all transitions off. The
 swap is a ~300 ms tone cross-fade of the picture (`HANDOVER.crossfadeMs`, `seedFrom` / `crossfadeTo`; instant under
 reduced motion), not a click. Going
@@ -647,7 +648,7 @@ world round trips, 3 live at street scale (Three + 2) and 1 after (43 created, 4
 
 ### Performance behaviour of the handover (see `docs/performance.md`)
 
-- The street map is created at unified zoom 2.6 (`mountZoom`, or at the click of a place) and released 2.5 s after the camera leaves its range. While the globe is the shown renderer the map is **inactive** (`StreetMap.setActive(false)`): tiles keep loading, but there is no canvas copy, no pass and no overlay work, and the camera is only pushed to it once the camera rests (140 ms debounce). From the cut it is pushed on every tick, snapped to the art-cell grid (`street/core/snap.ts`) while the zoom is steady.
+- The street map is created at unified zoom 2.6 (`mountZoom`, or at the click of a place) and released 2.5 s after the camera leaves its range. While the globe is the shown renderer the map is **inactive** (`StreetMap.setActive(false)`): tiles keep loading, but there is no canvas copy, no pass and no overlay work, and the camera is only pushed to it once the camera rests (140 ms debounce: invisible, so nothing on screen can disagree with the camera; a swap that waits for tiles pushes it, hidden, on every tick). From the cut it is pushed on every tick, snapped to the art-cell grid (`street/core/snap.ts`) while the zoom is steady.
 - The street map renders at native art resolution (3 map pixels per cell per axis), like the globe. `highResolution` follows `HANDOVER.revealFocus` (off).
 - The street chunk is fetched and evaluated in an idle period 2.5 s after the globe is up (not on data-saver/2g connections), so the first flight or zoom does not pay for it.
 - `engine/governor.ts` watches what frames COST while the camera moves and lowers the quality on a device that cannot keep up (street render scale 3 to 2, then a larger art pixel), with hysteresis; it recovers (see `docs/performance.md`, "Adaptive frame-budget governor"), logs every change (`console.info`) and keeps them in `history`; `__handoverDebug.quality()` / `forceQuality()`. The art pixel size is otherwise a function of the viewport only: `TUNING.pixelSize(minSide, dpr)` (test `engine/tuning.test.ts`).
