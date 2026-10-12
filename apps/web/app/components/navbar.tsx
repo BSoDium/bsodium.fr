@@ -4,6 +4,9 @@ import { parsePanelPath, parseView } from "~/lib/entries";
 import { SITE_NAME } from "~/lib/site";
 import { cn } from "~/lib/utils";
 
+/** The first item names the globe (the home page): the site's own name is the landing hero's wordmark and the document title, not the row's. */
+const HOME_LABEL = "Globe";
+
 const LINKS = [
   { to: "/projects", label: "Projects" },
   { to: "/articles", label: "Articles" },
@@ -12,15 +15,15 @@ const LINKS = [
 ] as const;
 
 /**
- * One row of text. 44 px tall targets; the horizontal padding follows the room the row has (the header is a size container, see below),
- * not the viewport: with the place panel open the row has half of it.
+ * One row of mono capitals (`.nav-link`, app.css: size, tracking and the gap between items follow the room the row has, because the header
+ * is a size container: with the place panel open the row has half of the viewport). 44 px tall targets. The current one is in the
+ * foreground and underlined, the others muted, and the pointer or the keyboard turns an item to the accent.
  */
-const linkClass =
-  "pointer-events-auto inline-flex min-h-11 items-center px-1 text-sm transition-colors duration-(--duration-fast) @min-[340px]:px-1.5 @min-[400px]:px-2 @lg:px-2.5";
+const linkClass = "nav-link pointer-events-auto inline-flex min-h-11 items-center";
 
 /**
- * The navigation, centred at the top of the viewport; no logo. Its parts, in reading and focus order: the site's name (a plain text link
- * home, the wordmark: semibold and tight, in the foreground colour, as quiet as the row), the four sections, the search trigger.
+ * The navigation, centred at the top of the viewport; no logo. Its parts, in reading and focus order: "Globe" (the way home: the globe is
+ * the home page; the site's name is the landing hero's wordmark), the four sections, the search trigger.
  *
  * Where it is centred. Over the whole viewport on every page, except while the place or entry panel sits beside the globe (desktop, `md`
  * and up): then the row is centred over the free left half, the map, so it neither crosses the panel's own header (close and expand) nor
@@ -29,7 +32,8 @@ const linkClass =
  * On a phone the panel is a dialog above this header, which stays centred over the whole screen.
  *
  * The header is a size container (`@container`): what the row shows depends on its own width. From 28 rem the search trigger is shown,
- * from 36 rem its key hint; below that the row is the name and the four sections (about 320 px, fits a 360 px phone).
+ * from 36 rem its key hint; below that the row is the five items and, in place of the icon, the one word "Search" (a 44 px target, fits a
+ * 360 px phone: `.nav-link` shrinks its size, tracking and gaps by container width).
  *
  * Readability. No background, border or blur of its own: where content scrolls under the row (the lists, the entries) `PageNavScrim`
  * fades it; over the globe and the map (the shell) the row brings a short fade of its own (`.nav-fade`, app.css): the page colour at 85 %
@@ -59,13 +63,11 @@ export function Navbar() {
           <NavLink
             to="/"
             end
-            aria-label={`${SITE_NAME}, home`}
-            className={cn(linkClass, "font-semibold tracking-tight text-foreground hover:underline hover:decoration-1 hover:underline-offset-8")}
+            aria-label={`${HOME_LABEL}, ${SITE_NAME} home`}
+            className={({ isActive }) => cn(linkClass, isActive ? "text-foreground underline decoration-1 underline-offset-8" : "text-muted-foreground")}
           >
-            {SITE_NAME}
+            {HOME_LABEL}
           </NavLink>
-          {/* A hairline between the name and the sections: the name is the way home, the rest are places to go. */}
-          <span aria-hidden="true" className="mx-1 h-4 w-px bg-border" />
           <ul className="flex items-center">
             {LINKS.map((link) => (
               <li key={link.to}>
@@ -77,7 +79,7 @@ export function Navbar() {
                       linkClass,
                       isActive
                         ? "text-foreground underline decoration-1 underline-offset-8"
-                        : "text-muted-foreground hover:text-foreground",
+                        : "text-muted-foreground",
                     )
                   }
                 >
