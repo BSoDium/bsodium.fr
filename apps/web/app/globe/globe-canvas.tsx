@@ -109,6 +109,7 @@ export default function GlobeCanvas({
   attribution: Attribution,
   onSelect,
   onViewChange,
+  onInteract,
 }: GlobeProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const streetRef = useRef<HTMLDivElement>(null);
@@ -129,10 +130,27 @@ export default function GlobeCanvas({
   const tilesKey = tiles && !(debugEnabled() && streetDisabledForTests()) ? JSON.stringify(tiles) : "";
   const viewRef = useRef(initialView);
   const appliedSelection = useRef(selectedSlug);
-  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, onSelect, onViewChange });
+  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, onSelect, onViewChange, onInteract });
   useEffect(() => {
-    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, onSelect, onViewChange };
+    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, onSelect, onViewChange, onInteract };
   });
+
+  // `onInteract`: a gesture that starts ON the globe (its stage holds the canvas; the labels and the street map ignore the pointer, the
+  // credits control and the app's overlays are outside the stage). Two passive listeners on the stage, nothing per frame, nothing when
+  // the app does not ask. Capture phase: it must not depend on what the canvas does with the event.
+  const wantsInteract = onInteract !== undefined;
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !wantsInteract) return;
+    const note = () => latest.current.onInteract?.();
+    const options = { passive: true, capture: true } as const;
+    stage.addEventListener("pointerdown", note, options);
+    stage.addEventListener("wheel", note, options);
+    return () => {
+      stage.removeEventListener("pointerdown", note, options);
+      stage.removeEventListener("wheel", note, options);
+    };
+  }, [wantsInteract]);
 
   useEffect(() => {
     const stage = stageRef.current;
