@@ -957,11 +957,12 @@ children that fits, the others come in as extras. Places whose own boxes overlap
 
 - **The label planner follows the cut**: the cut reserves a position for each box's label (`LodTree.plateSlot`), the planner takes it
   first (`PlanItem.pref`), so the labels keep the room the cut checked, and a label wanted again glides from where it was.
-- **Trade-off**: more room means some children come in later than before the rule. Measured on the owner's preview (`groups.mjs open`,
-  `OPEN_REPORT=1 ... vitest run open`): Western Europe opens 0.3 zoom levels later, Iberia, Central Europe, Italy and Morocco 0.5 to 0.6,
-  the Marrakesh region's second node 0.9 and the Laayoune area 1.8 (a dense cluster of coastal places that cannot fit with 24 px between
-  plates earlier). The Balkans and Iberia now open into one node earlier (a country stands in for the group). If a region looks late, lower
-  `gapPx` (the table above moves the other way) rather than special-casing it.
+- **Trade-off**: more room means some children come in later than before the rule. Opening zoom of the second node of each group on the
+  owner's preview, against its value before the rule (`groups.mjs open`): Western Europe 3.80 (+0.30), Central Europe 3.35 (+0.05),
+  Italy 4.80 (+0.50), Morocco 3.70 (+0.20), the Marrakesh region 5.10 (+1.6) and the Laayoune area 5.35 (+1.55): the last two are dense
+  clusters of nearby places that cannot keep 24 px between plates any earlier. Earlier than before: the Balkans 2.75 (-0.55) and Iberia
+  3.30 (-0.75), where a country now stands in for the group sooner (one node from zoom 2.20 and 3.20). If a region looks late, lower
+  `gapPx` rather than special-casing it.
 - **Checks**: `groups.mjs open` pins the opening zooms against their values before the rule; `groups.mjs crowd` zooms in and out on six view
   centres and counts overlaps and pairs under 12 and 24 px (preview: 0 overlaps, 0.27 pairs per view under 12 px, 2.65 under 24 px).
 - Not kept: a "wish" mechanism (a refused important node reserving room against its lesser neighbours over several runs of the cut) was
