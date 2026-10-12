@@ -33,16 +33,23 @@
   /* UI system (docs/design-system.md). Surfaces: the panel plate is a step off the page, never a shadow. */
   --surface: #f4f4f4;
   --line-faint: rgb(0 0 0 / 0.07);
-  /* The one accent: a signal cyan. Text and fills of it are AA on the page, the surface and the accent grey. */
-  --signal: #00698c;
-  --signal-foreground: #fbfbfb;
-  --signal-wash: rgb(0 105 140 / 0.08);
+  /*
+   * The one accent: orange (the owner's #f26a2e, deepened to #ea6024 in the light scheme so it reaches 3:1 on the page and the surface).
+   * `--signal` is for LARGE display text (24 px, or 18.66 px bold, and up), non-text marks (a tick, a rule, a cover's mark, an underline)
+   * and fills. Text of any smaller size takes `--signal-text`, which is AA (4.5:1) on the page, the surface and the hover grey.
+   * Text on a signal fill is `--signal-foreground`. The whole accent is these five lines (times the four copies of the list).
+   */
+  --signal: #ea6024;
+  --signal-text: #b8420f;
+  --signal-foreground: #0a0a0a;
+  --signal-wash: rgb(234 96 36 / 0.08);
   /* The opposite scheme's page tokens: what an inverted frame rebinds the tokens to (a cycle-free swap). */
   --inverse-background: #0a0a0a;
   --inverse-foreground: #fbfbfb;
   --inverse-muted: #a3a3a3;
   --inverse-border: rgb(255 255 255 / 0.3);
-  --inverse-signal: #38d4f5;
+  --inverse-signal: #f26a2e;
+  --inverse-signal-text: #f26a2e;
   /* Faint hue per entry kind: decorative and redundant (a glyph and a word always carry the kind); never used for text. */
   --kind-article: oklch(0.58 0.1 275);
   --kind-project: oklch(0.58 0.1 150);
@@ -106,14 +113,16 @@
 
     --surface: #121212;
     --line-faint: rgb(255 255 255 / 0.09);
-    --signal: #38d4f5;
+    --signal: #f26a2e;
+    --signal-text: #f26a2e;
     --signal-foreground: #0a0a0a;
-    --signal-wash: rgb(56 212 245 / 0.09);
+    --signal-wash: rgb(242 106 46 / 0.09);
     --inverse-background: #f5f5f5;
     --inverse-foreground: #0a0a0a;
     --inverse-muted: #595959;
     --inverse-border: rgb(0 0 0 / 0.3);
-    --inverse-signal: #00698c;
+    --inverse-signal: #ea6024;
+    --inverse-signal-text: #b8420f;
     --kind-article: oklch(0.76 0.1 275);
     --kind-project: oklch(0.76 0.1 150);
     --kind-artwork: oklch(0.76 0.1 55);
@@ -166,10 +175,64 @@
   --tracking-micro: 0.12em;
 }
 
+/*
+ * Typography tokens (docs/design-tokens.md, "Typography"). `static`: always emitted, because components and inline styles read
+ * them with var() outside what Tailwind scans. The three new families sit BESIDE the system ones, which stay untouched
+ * (`--font-sans`, `--font-mono`: the map's labels, the credits line and the label planner's measurement read `--font-mono`).
+ */
+@theme static {
+  /* Display: a very heavy weight against a very thin one, set large. Reading: long text, roman and italic. Meta: page metadata only, never map text. */
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque Fallback", var(--font-sans);
+  --font-reading: "Newsreader Variable", "Newsreader Fallback", ui-serif, Georgia, "Times New Roman", serif;
+  --font-meta: "JetBrains Mono Variable", var(--font-mono);
+
+  /* Weights. The display pair is thin against heavy ("Cata" 200, "lyst" 800); the rest serve the reading face and the small sizes. */
+  --weight-thin: 200;
+  --weight-light: 300;
+  --weight-reading: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+
+  /* The measure of a reading column: 28.5 em of the reading size is about 66 characters of running text (see `.type-reading`). */
+  --measure-reading: calc(var(--text-reading) * 28.5);
+
+  /*
+   * The roles (class `.type-<role>` sets the whole role; `text-<role>` plus `font-display` / `font-reading` / `font-meta` does it in
+   * utilities). Display sizes are fluid between a 390 px phone and a wide screen and never go under 3.5 rem for the wordmark.
+   */
+  --text-display-xl: clamp(3.5rem, 11vw, 10rem);
+  --text-display-xl--line-height: 0.88;
+  --text-display-xl--letter-spacing: -0.045em;
+  --text-display-xl--font-weight: 800;
+  --text-display-lg: clamp(2.25rem, 1.35rem + 3.7vw, 4.5rem);
+  --text-display-lg--line-height: 0.98;
+  --text-display-lg--letter-spacing: -0.035em;
+  --text-display-lg--font-weight: 800;
+  --text-display-md: clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem);
+  --text-display-md--line-height: 1.06;
+  --text-display-md--letter-spacing: -0.025em;
+  --text-display-md--font-weight: 700;
+  --text-standfirst: clamp(1.5rem, 1.25rem + 0.9vw, 1.9rem);
+  --text-standfirst--line-height: 1.3;
+  --text-standfirst--letter-spacing: -0.01em;
+  --text-standfirst--font-weight: 300;
+  --text-reading: clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem);
+  --text-reading--line-height: 1.65;
+  --text-reading--letter-spacing: 0;
+  --text-reading--font-weight: 400;
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1rem;
+  --text-meta--letter-spacing: 0.1em;
+  --text-meta--font-weight: 500;
+}
+
 @theme inline {
   --color-surface: var(--surface);
   --color-line-faint: var(--line-faint);
   --color-signal: var(--signal);
+  --color-signal-text: var(--signal-text);
   --color-signal-foreground: var(--signal-foreground);
   --color-signal-wash: var(--signal-wash);
   --color-kind-article: var(--kind-article);
@@ -202,14 +265,16 @@
   --globe-limb: rgb(0 0 0 / 0.3);
   --surface: #f4f4f4;
   --line-faint: rgb(0 0 0 / 0.07);
-  --signal: #00698c;
-  --signal-foreground: #fbfbfb;
-  --signal-wash: rgb(0 105 140 / 0.08);
+  --signal: #ea6024;
+  --signal-text: #b8420f;
+  --signal-foreground: #0a0a0a;
+  --signal-wash: rgb(234 96 36 / 0.08);
   --inverse-background: #0a0a0a;
   --inverse-foreground: #fbfbfb;
   --inverse-muted: #a3a3a3;
   --inverse-border: rgb(255 255 255 / 0.3);
-  --inverse-signal: #38d4f5;
+  --inverse-signal: #f26a2e;
+  --inverse-signal-text: #f26a2e;
   --kind-article: oklch(0.58 0.1 275);
   --kind-project: oklch(0.58 0.1 150);
   --kind-artwork: oklch(0.58 0.1 55);
@@ -235,19 +300,126 @@
   --globe-limb: rgb(255 255 255 / 0.34);
   --surface: #121212;
   --line-faint: rgb(255 255 255 / 0.09);
-  --signal: #38d4f5;
+  --signal: #f26a2e;
+  --signal-text: #f26a2e;
   --signal-foreground: #0a0a0a;
-  --signal-wash: rgb(56 212 245 / 0.09);
+  --signal-wash: rgb(242 106 46 / 0.09);
   --inverse-background: #f5f5f5;
   --inverse-foreground: #0a0a0a;
   --inverse-muted: #595959;
   --inverse-border: rgb(0 0 0 / 0.3);
-  --inverse-signal: #00698c;
+  --inverse-signal: #ea6024;
+  --inverse-signal-text: #b8420f;
   --kind-article: oklch(0.76 0.1 275);
   --kind-project: oklch(0.76 0.1 150);
   --kind-artwork: oklch(0.76 0.1 55);
   --kind-poem: oklch(0.76 0.1 340);
   --kind-place: var(--muted-foreground);
+}
+
+/*
+ * Self-hosted type (docs/design-tokens.md, "Typography"): three variable families from public/fonts/ (SIL OFL 1.1, licences beside
+ * the files), the file names carry the version so they are cached `immutable` for a year (vercel.json). Latin subset only: the
+ * `unicode-range` sends every other script (Vietnamese place names, Arabic ...) to the system stack glyph by glyph, which is what
+ * the fallback stacks below are for. `font-display: swap` shows the text at once in the metric-matched fallback face (below), so
+ * the swap moves nothing much. The weight range is the file's own: a request for 200 and for 800 is the same file, no synthesis.
+ */
+@font-face {
+  font-family: "Bricolage Grotesque Variable";
+  src: url("/fonts/bricolage-grotesque-5.3.0-latin-wght-opsz.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Newsreader Variable";
+  src: url("/fonts/newsreader-5.3.0-latin-wght.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Newsreader Variable";
+  src: url("/fonts/newsreader-5.3.0-latin-wght-italic.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  src: url("/fonts/jetbrains-mono-5.3.0-latin-wght.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * Fallback faces: a local system font scaled and re-spaced to the web font's metrics (size-adjust from the frequency-weighted
+ * average advance of English text measured in Chrome at the weights each face stands for; the overrides are the font's own
+ * hhea ascent / descent over its em, divided by size-adjust), so the text does not reflow when the real face arrives. Where the
+ * system font is missing, `local()` fails and the next family of the stack answers. Mono has none: every system monospace is
+ * 0.6 em wide, like JetBrains Mono, and the stack already ends in the right one.
+ * Display: Arial for 200-500 and Arial Bold for 600-800 (Bricolage: upm 1000, 930 / 270). Reading: Georgia (Newsreader: upm 2000,
+ * 1470 / 530), Georgia Bold, Georgia Italic.
+ */
+@font-face {
+  font-family: "Bricolage Grotesque Fallback";
+  src: local("Arial"), local("ArialMT");
+  font-weight: 200 500;
+  size-adjust: 99%;
+  ascent-override: 93.9%;
+  descent-override: 27.3%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT");
+  font-weight: 600 800;
+  size-adjust: 99%;
+  ascent-override: 93.9%;
+  descent-override: 27.3%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Newsreader Fallback";
+  src: local("Georgia");
+  font-weight: 200 500;
+  font-style: normal;
+  size-adjust: 95.3%;
+  ascent-override: 77.1%;
+  descent-override: 27.8%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Newsreader Fallback";
+  src: local("Georgia Bold"), local("Georgia-Bold");
+  font-weight: 600 800;
+  font-style: normal;
+  size-adjust: 87%;
+  ascent-override: 84.5%;
+  descent-override: 30.5%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Newsreader Fallback";
+  src: local("Georgia Italic"), local("Georgia-Italic");
+  font-weight: 200 800;
+  font-style: italic;
+  size-adjust: 86%;
+  ascent-override: 85.5%;
+  descent-override: 30.8%;
+  line-gap-override: 0%;
 }
 
 @layer base {
@@ -285,6 +457,168 @@
   }
 }
 
+/*
+ * Type roles (docs/design-system.md, "Type"; the tokens are in `@theme static` above). One class sets one whole role: family, size,
+ * leading, tracking, weight and wrapping. Components compose them; none of them names a family itself. The display roles are the
+ * studio-site voice: tight leading, negative tracking, a very heavy weight against a very thin one (`.type-thin` / `.type-heavy`
+ * switch a run of the same heading: "Cata" thin, "lyst" heavy). Colour is never part of a role.
+ */
+@layer components {
+  .type-display-xl,
+  .type-display-lg,
+  .type-display-md {
+    margin: 0;
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    /* Bricolage has no italic: an <em> in a headline stays upright rather than being slanted by the browser. */
+    font-synthesis: none;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  .type-display-xl {
+    font-size: var(--text-display-xl);
+    line-height: var(--text-display-xl--line-height);
+    letter-spacing: var(--text-display-xl--letter-spacing);
+    font-weight: var(--text-display-xl--font-weight);
+  }
+
+  .type-display-lg {
+    font-size: var(--text-display-lg);
+    line-height: var(--text-display-lg--line-height);
+    letter-spacing: var(--text-display-lg--letter-spacing);
+    font-weight: var(--text-display-lg--font-weight);
+  }
+
+  .type-display-md {
+    font-size: var(--text-display-md);
+    line-height: var(--text-display-md--line-height);
+    letter-spacing: var(--text-display-md--letter-spacing);
+    font-weight: var(--text-display-md--font-weight);
+  }
+
+  /* The pair: a run of a display heading at the thin end or the heavy end of the weight axis. */
+  .type-thin {
+    font-weight: var(--weight-thin);
+  }
+
+  .type-heavy {
+    font-weight: var(--weight-heavy);
+  }
+
+  /* Standfirst: the line under a headline. Thin italic of the reading face; wraps to even lines. */
+  .type-standfirst {
+    margin: 0;
+    font-family: var(--font-reading);
+    font-style: italic;
+    font-optical-sizing: auto;
+    font-size: var(--text-standfirst);
+    line-height: var(--text-standfirst--line-height);
+    letter-spacing: var(--text-standfirst--letter-spacing);
+    font-weight: var(--text-standfirst--font-weight);
+    text-wrap: balance;
+  }
+
+  /*
+   * Reading: the body of an entry. The reading face at 18 to 20 px, 1.65 leading, no widows (`pretty`), proportional figures. The
+   * column is `.type-measure`. `ch` is the width of a "0", which Newsreader draws wide, so the measure is written in em of the
+   * reading size instead: 28.5 em is about 66 characters of running text.
+   */
+  .type-reading {
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    font-size: var(--text-reading);
+    line-height: var(--text-reading--line-height);
+    letter-spacing: var(--text-reading--letter-spacing);
+    font-weight: var(--text-reading--font-weight);
+    font-variant-numeric: proportional-nums;
+    text-wrap: pretty;
+  }
+
+  .type-measure {
+    max-width: var(--measure-reading);
+  }
+
+  /* Meta: page metadata (a date, a place, a count, a reading time). Mono, small capitals-free uppercase, tracked, figures aligned. Not for the map's text. */
+  .type-meta {
+    font-family: var(--font-meta);
+    font-size: var(--text-meta);
+    line-height: var(--text-meta--line-height);
+    letter-spacing: var(--text-meta--letter-spacing);
+    font-weight: var(--text-meta--font-weight);
+    font-variant-numeric: tabular-nums;
+    /* No "->" or "!=" ligatures in a date or a code. */
+    font-feature-settings: "calt" 0;
+    text-transform: uppercase;
+  }
+
+  /* A link in running text: the text keeps its colour, the underline is the accent (a mark, 3:1 or more) and thickens under the pointer. */
+  .type-link {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.2em;
+    transition: text-decoration-thickness var(--duration-fast) var(--ease-standard);
+  }
+
+  .type-link:hover {
+    text-decoration-thickness: 0.16em;
+  }
+
+  /*
+   * Drop cap: the first letter of the first paragraph, in the heavy display weight and the accent (it is far past 24 px, which is
+   * what `--signal` as text needs). Three lines tall: `initial-letter` where it exists, a float elsewhere.
+   */
+  .drop-cap::first-letter {
+    float: left;
+    margin: 0.06em 0.09em 0 -0.03em;
+    font-family: var(--font-display);
+    font-weight: var(--weight-heavy);
+    font-size: 3.55em;
+    line-height: 0.76;
+    font-optical-sizing: auto;
+    font-synthesis: none;
+    color: var(--signal);
+  }
+
+  @supports (initial-letter: 3) or (-webkit-initial-letter: 3) {
+    .drop-cap::first-letter {
+      float: none;
+      margin: 0 0.1em 0 -0.03em;
+      font-size: inherit;
+      line-height: inherit;
+      -webkit-initial-letter: 3;
+      initial-letter: 3;
+    }
+  }
+
+  /* Pull quote: the reading face in thin italic, large, to even lines, between hairlines (`border` is the quiet one). */
+  .type-pullquote {
+    margin: 0;
+    padding-block: 1.25rem;
+    border-block: var(--hairline) solid var(--border);
+    font-family: var(--font-reading);
+    font-style: italic;
+    font-optical-sizing: auto;
+    font-size: clamp(1.375rem, 1.1rem + 1.2vw, 1.875rem);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    font-weight: var(--weight-light);
+    text-wrap: balance;
+  }
+
+  /* A hairline rule between sections of a text. */
+  .type-rule {
+    height: 0;
+    margin: 0;
+    border: 0;
+    border-top: var(--hairline) solid var(--border-strong);
+  }
+}
+
 @layer components {
   /* A quiet caption: sans, sentence case, muted (the places list's group names and regions). */
   .label {
@@ -314,7 +648,7 @@
   }
 
   .ds-micro[data-tone="signal"] {
-    color: var(--signal);
+    color: var(--signal-text);
   }
 
   /* Meta: a date or a coordinate pair. Mono (the face of figures), but plain case and untracked: it is a value, not a label. */
@@ -373,6 +707,7 @@
     --border-strong: var(--inverse-border);
     --ring: var(--inverse-foreground);
     --signal: var(--inverse-signal);
+    --signal-text: var(--inverse-signal-text);
     --surface: var(--inverse-background);
     --accent: color-mix(in srgb, var(--inverse-foreground) 14%, var(--inverse-background));
     --accent-foreground: var(--inverse-foreground);
@@ -529,7 +864,7 @@
   }
 
   .ds-status[data-tone="signal"] {
-    color: var(--signal);
+    color: var(--signal-text);
   }
 
   .ds-status[data-tone="solid"] {
@@ -926,11 +1261,20 @@
 
 /* Entry reading, filters and rows (docs/design-system.md, "Entry view", "Lists"). */
 @layer components {
-  /* Reading text: 18 / 28 on the 4 px grid; a measure of about 65 characters is set per block (`max-w-[60ch]`); no widows or orphans. */
+  /*
+   * Reading text: the reading face at its role size (`.type-reading`), blocks held to the measure (`--measure-reading`), no widows.
+   * Headings are the display face; the thin / heavy pair lives in the headline, so the section headings are heavy and the
+   * third level is light. A quote is the pull quote. The markup's own utilities (weight, tracking, size) still win where a
+   * component sets them: this is the base they sit on.
+   */
   .ds-prose {
-    font-size: 1.125rem;
-    line-height: 1.75rem;
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
     font-kerning: normal;
+    font-size: var(--text-reading);
+    line-height: var(--text-reading--line-height);
+    font-weight: var(--weight-reading);
+    font-variant-numeric: proportional-nums;
   }
 
   .ds-prose p,
@@ -938,6 +1282,55 @@
   .ds-prose blockquote {
     text-wrap: pretty;
     overflow-wrap: anywhere;
+  }
+
+  .ds-prose p,
+  .ds-prose ul,
+  .ds-prose ol {
+    max-width: var(--measure-reading);
+  }
+
+  .ds-prose h2,
+  .ds-prose h3,
+  .ds-prose h4 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-synthesis: none;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  .ds-prose h2 {
+    font-weight: var(--weight-heavy);
+    letter-spacing: -0.03em;
+  }
+
+  .ds-prose h3,
+  .ds-prose h4 {
+    font-weight: var(--weight-light);
+    letter-spacing: -0.02em;
+  }
+
+  .ds-prose blockquote {
+    font-style: italic;
+    font-weight: var(--weight-light);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  .ds-prose hr {
+    height: 0;
+    border: 0;
+    border-top: var(--hairline) solid var(--border-strong);
+  }
+
+  .ds-prose p a,
+  .ds-prose li a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.2em;
   }
 
   .ds-prose [data-slot="verse"] {
@@ -1265,6 +1658,7 @@ h1[tabindex="-1"]:focus-visible {
     --border: rgb(0 0 0 / 0.3);
     --border-strong: rgb(0 0 0 / 0.6);
     --signal: #000;
+    --signal-text: #000;
   }
 
   html,

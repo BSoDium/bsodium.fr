@@ -301,6 +301,17 @@ section("assets");
     ok(r.status === 200 && /immutable/.test(r.headers.get("cache-control") ?? ""), `${a}: 200, immutable (${r.headers.get("cache-control")})`);
     ok(r.headers.get("x-content-type-options") === "nosniff" || external === undefined, `${a}: nosniff (local server serves it without; Vercel adds it from vercel.json)`);
   }
+  // The display font: preloaded on the home page only (a CORS fetch, so `crossorigin`), served as woff2, cached for a year where
+  // vercel.json applies (a deployment: the local server has its own, shorter policy for files outside /assets).
+  const fontLink = headTags(body).find((t) => t.tag === "link" && t.rel === "preload" && t.as === "font");
+  ok(Boolean(fontLink) && fontLink.type === "font/woff2" && fontLink.crossorigin !== undefined && /^\/fonts\/[\w.-]+-\d+\.\d+\.\d+-latin-[\w-]+\.woff2$/.test(fontLink.href), `home: preloads one versioned woff2 display font with crossorigin (${fontLink?.href})`);
+  if (articlePath) ok(!headTags((await text(articlePath)).body).some((t) => t.rel === "preload" && t.as === "font"), "an entry page does not preload a font");
+  for (const file of readdirSync(`${webDir}build/client/fonts`).filter((f) => f.endsWith(".woff2"))) {
+    const r = await get(`/fonts/${file}`);
+    const buf = Buffer.from(await r.arrayBuffer());
+    ok(r.status === 200 && /^font\/woff2/.test(r.headers.get("content-type") ?? "") && buf.length > 20_000 && buf.toString("latin1", 0, 4) === "wOF2", `/fonts/${file}: 200 font/woff2, ${(buf.length / 1024).toFixed(0)} kB`);
+    ok(r.headers.get("cache-control") !== null && (!deployed || /immutable/.test(r.headers.get("cache-control") ?? "")), `/fonts/${file}: cache-control ${r.headers.get("cache-control")}${deployed ? " (immutable on a deployment)" : ""}`);
+  }
   const mediaPath = /\/media\/[\w./-]+\.(?:svg|png|jpe?g|webp)/.exec((await text(articlePath ?? "/")).body)?.[0];
   if (mediaPath) {
     const r = await get(mediaPath);

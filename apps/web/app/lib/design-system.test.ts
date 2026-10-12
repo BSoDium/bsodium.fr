@@ -42,7 +42,7 @@ function color(scheme: "light" | "dark", name: string): Rgba {
 
 describe("scheme blocks", () => {
   it("the dark media rule and the forced-scheme rules carry the same colour tokens as the root rule", () => {
-    const colorNames = [...light.keys()].filter((k) => /^--(background|foreground|muted-foreground|subtle-foreground|border|border-strong|ring|primary|primary-foreground|accent|accent-foreground|globe-grid|globe-limb|surface|line-faint|signal|signal-foreground|signal-wash|inverse-[a-z]+|kind-[a-z]+)$/.test(k));
+    const colorNames = [...light.keys()].filter((k) => /^--(background|foreground|muted-foreground|subtle-foreground|border|border-strong|ring|primary|primary-foreground|accent|accent-foreground|globe-grid|globe-limb|surface|line-faint|signal|signal-text|signal-foreground|signal-wash|inverse-[a-z-]+|kind-[a-z]+)$/.test(k));
     expect(colorNames.length).toBeGreaterThan(25);
     for (const name of colorNames) {
       expect(dark.has(name), `dark ${name}`).toBe(true);
@@ -69,14 +69,29 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
     const fg = color(scheme, "--foreground");
     const muted = color(scheme, "--muted-foreground");
     const subtle = color(scheme, "--subtle-foreground");
-    const signal = color(scheme, "--signal");
+    const signalText = color(scheme, "--signal-text");
     for (const under of [bg, surface, accentGrey]) {
       expect(contrastRatio(fg, under)).toBeGreaterThanOrEqual(7);
       expect(contrastRatio(muted, under)).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(signal, under)).toBeGreaterThanOrEqual(4.5);
+      // the accent as text of any size: its text variant is AA wherever muted text is
+      expect(contrastRatio(signalText, under)).toBeGreaterThanOrEqual(4.5);
     }
     // subtle text (the map credits) stays on the page and the surface only
     for (const under of [bg, surface]) expect(contrastRatio(subtle, under)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("the accent itself is for large display text and marks: 3:1 on the page and the surface (WCAG large text and graphics)", () => {
+    const signal = color(scheme, "--signal");
+    for (const under of [bg, surface]) expect(contrastRatio(signal, under)).toBeGreaterThanOrEqual(3);
+  });
+
+  it("the signal fill carries AA text, and the inverted frame's accent is as good against its own page", () => {
+    const signal = color(scheme, "--signal");
+    expect(contrastRatio(color(scheme, "--signal-foreground"), signal)).toBeGreaterThanOrEqual(4.5);
+    const inverseBg = color(scheme, "--inverse-background");
+    expect(contrastRatio(color(scheme, "--inverse-signal"), inverseBg)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(color(scheme, "--inverse-signal-text"), inverseBg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color(scheme, "--signal-foreground"), color(scheme, "--inverse-signal"))).toBeGreaterThanOrEqual(4.5);
   });
 
   it("fills with their text: primary, signal and the inverse pair are AA", () => {
@@ -85,7 +100,6 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
     const inverseBg = color(scheme, "--inverse-background");
     expect(contrastRatio(color(scheme, "--inverse-foreground"), inverseBg)).toBeGreaterThanOrEqual(7);
     expect(contrastRatio(color(scheme, "--inverse-muted"), inverseBg)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(color(scheme, "--inverse-signal"), inverseBg)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("the inverse tokens swap the page and the ink (the map's selected label); the muted tone is the other scheme's", () => {
@@ -166,8 +180,11 @@ describe("restraint (no decorative chrome)", () => {
       expect(body, rule).not.toMatch(/font-family:\s*var\(--font-mono\)/);
     }
   });
-  it("the micro-label stays the one uppercase mono unit and nothing else in the system sets uppercase", () => {
+  it("the micro-label stays the one uppercase mono unit of the UI components; the type roles add exactly one more, the metadata role", () => {
     expect([...ui.matchAll(/text-transform:\s*uppercase/g)].length).toBe(1);
+    const roles = css.slice(css.indexOf("Type roles (docs/design-system.md"), css.indexOf(".ds-micro {"));
+    expect([...roles.matchAll(/text-transform:\s*uppercase/g)].length).toBe(1);
+    expect(ruleBody(css, css.indexOf(".type-meta {"))).toMatch(/text-transform:\s*uppercase/);
   });
   it("the component sources carry no index code, numbered section or bracketed status", () => {
     const dirs = [new URL("../components/ui/", import.meta.url), new URL("../components/entry/", import.meta.url), new URL("../components/", import.meta.url)];
