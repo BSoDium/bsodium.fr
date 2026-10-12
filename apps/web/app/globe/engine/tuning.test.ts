@@ -1,18 +1,15 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { ART_PIXEL, QUALITY, TUNING } from "./tuning";
+import { describe, expect, it } from "vitest";
+import * as tuning from "./tuning";
+import { ART_PIXEL, TUNING } from "./tuning";
 
-afterEach(() => {
-  QUALITY.cellBoost = 0;
-});
-
-describe("art pixel size: a function of the viewport only, unless the documented degrade applies", () => {
-  it("at full quality it depends on (smaller side, device pixel ratio) and nothing else: no hidden state moves it", () => {
+describe("art pixel size: a function of the viewport and the device pixel ratio, nothing else", () => {
+  it("depends on (smaller side, device pixel ratio) only: repeated calls and call order change nothing, there is no runtime state to move it", () => {
     const table = () => [320, 519, 520, 900, 1440].flatMap((s) => [1, 1.25, 1.5, 2, 2.625, 3].map((d) => TUNING.pixelSize(s, d)));
     const first = table();
-    QUALITY.cellBoost = 1;
-    table();
-    QUALITY.cellBoost = 0; // a degrade that was undone leaves no trace
+    TUNING.pixelSize(100, 7);
+    TUNING.pixelSize(5000, 1);
     expect(table()).toEqual(first);
+    expect([...table()].reverse()).toEqual([...first].reverse());
     expect(TUNING.pixelSize(1440, 2)).toBe(2.5);
     expect(TUNING.pixelSize(400, 2)).toBe(2);
   });
@@ -26,11 +23,7 @@ describe("art pixel size: a function of the viewport only, unless the documented
       }
     }
   });
-  it("the only other input is the governor's one-CSS-pixel boost, and zero restores the size exactly", () => {
-    const full = TUNING.pixelSize(1440, 2);
-    QUALITY.cellBoost = 1;
-    expect(TUNING.pixelSize(1440, 2)).toBe(full + 1);
-    QUALITY.cellBoost = 0;
-    expect(TUNING.pixelSize(1440, 2)).toBe(full);
+  it("the module exports no mutable quality knob (the frame governor that moved the size at runtime is gone)", () => {
+    expect(Object.keys(tuning)).not.toContain("QUALITY");
   });
 });

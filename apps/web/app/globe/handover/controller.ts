@@ -17,8 +17,7 @@
  */
 import type { Polylines } from "@catalyst/geodata";
 import { createGlobe, type GlobeDebug, type GlobeHandle } from "../engine";
-import { QUALITY, TUNING } from "../engine/tuning";
-import { FrameGovernor } from "../engine/governor";
+import { TUNING } from "../engine/tuning";
 import { STREET_TUNING } from "../street/tuning";
 import { perfEnd, perfStart } from "../engine/perf";
 import { clamp } from "../engine/geo";
@@ -110,9 +109,6 @@ export interface HandoverDebug {
   framingZoom(slug: string): number | null;
   /** The renderer swap is a dissolve (true) or a cut (false). */
   dissolve(): boolean;
-  /** Frame governor level now (0 = full quality) and a measurement hook to force one. */
-  quality(): number;
-  forceQuality(level: number): void;
   /** Cuts so far: 0 to 1 swaps to the street map, 1 to 0 swaps back, and how many frames waited for tiles. */
   cuts(): { toStreet: number; toGlobe: number; waitedFrames: number };
   /** The cut to the street map is wanted but waits for its tiles (at most `cutMaxWaitMs`): the picture is about to change. */
@@ -162,10 +158,6 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
   let revealOn = false;
   let lastBlend = -1;
   let streetActive = true;
-  // Adaptive quality (engine/governor.ts): level 1 = street map at one fewer map pixel per art cell per axis, level 2 = a larger art pixel.
-  const governor = opts.streetOptions?.governor === false ? null : new FrameGovernor();
-  let qualityLevel = 0;
-  const renderScaleFor = (level: number) => (level >= 1 ? Math.max(1, STREET_TUNING.renderScale - 1) : STREET_TUNING.renderScale);
   /** Visible street map: pan in whole art cells (street/core/snap.ts). */
   const snapPan = STREET_TUNING.snapPanFromZoom > 0;
   let notice: Notice | null = null;
@@ -290,7 +282,6 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
         embedded: true,
         // Native art-resolution render unless the sharp reveal (which shows the device-resolution render) is on.
         highResolution: HANDOVER.revealFocus,
-        renderScale: renderScaleFor(qualityLevel),
         initialBlend: dissolve ? 0 : 1, // cut mode: always opaque, shown or hidden as a whole by `streetRoot`
         onSelect: opts.onSelect,
         onSelectGroup: (slug) => selectGroup(slug),
@@ -519,21 +510,6 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     }
   }
 
-  /** Apply a governor level to both renderers (the art pixel change re-fits the globe and the street grid). */
-  function applyQuality(level: number) {
-    if (level === qualityLevel) return;
-    const boost = level >= 2 ? 1 : 0;
-    qualityLevel = level;
-    street?.setRenderScale(renderScaleFor(level));
-    if (boost !== QUALITY.cellBoost) {
-      QUALITY.cellBoost = boost;
-      renderer.refit();
-      street?.resize();
-      lastPush = null;
-    }
-    renderer.requestRender();
-  }
-
   // ---- the cut as a tone cross-fade --------------------------------------------------------------------------------------------
   // Both renderers draw on the same art grid with the same palette, so a cut can be a cross-fade of TONES instead of an instant swap:
   // going in, the street map starts its presented image from the globe's last frame (`seedFrom`) and every cell steps to the street
@@ -576,10 +552,6 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
 
   function frameInner() {
     const now = performance.now();
-    if (governor) {
-      const next = governor.sample(now);
-      if (next !== null) applyQuality(next);
-    }
     const dt = lastFrameAt ? Math.min(60, now - lastFrameAt) : 16;
     lastFrameAt = now;
     const v = view();
@@ -823,11 +795,6 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
           return p ? placeFit(p) : null;
         },
         dissolve: () => dissolve,
-        quality: () => qualityLevel,
-        forceQuality(level) {
-          governor?.force(level, performance.now());
-          applyQuality(level);
-        },
         cuts: () => ({ ...cutStats }),
         cutPending: () => !dissolve && forced === null && cutSince > 0 && shown < 1,
         fly(v) {
@@ -840,7 +807,6 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     dispose() {
       if (disposed) return;
       disposed = true;
-      QUALITY.cellBoost = 0; // module state: a remount starts at full quality
       streetToken++;
       for (const t of [followTimer, unmountTimer, labelsOffTimer, revealTimer, restoreTimer, warmTimer, revealWaitTimer]) window.clearTimeout(t);
       street?.dispose();

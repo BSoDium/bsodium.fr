@@ -160,7 +160,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
   interface Grid { cols: number; rows: number; cssW: number; cssH: number; cell: number; pr: number }
   /** Map pixels per art cell per axis (native mode). 2 keeps short dashes alive; 1 is the cheapest. */
   const clampScale = (n: number) => (native ? Math.max(1, Math.min(3, Math.round(n))) : 1);
-  let scale = clampScale(opts.renderScale ?? STREET_TUNING.renderScale);
+  const scale = clampScale(opts.renderScale ?? STREET_TUNING.renderScale);
   const gridNow = (): Grid => {
     const w = Math.max(1, root.clientWidth);
     const h = Math.max(1, root.clientHeight);
@@ -787,13 +787,6 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     resize() {
       refreshGrid();
       map.resize();
-    },
-    setRenderScale(n) {
-      const next = clampScale(n);
-      if (next === scale) return;
-      scale = next;
-      compositorOptions.scale = next;
-      refreshGrid();
     },
     dispose() {
       if (disposed) return;

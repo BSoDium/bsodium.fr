@@ -1,7 +1,4 @@
 /** Tuned constants (see docs/renderer-decision.md for how they were chosen). */
-/** Runtime quality state moved by the frame governor (engine/governor.ts): extra CSS px per art pixel. */
-export const QUALITY = { cellBoost: 0 };
-
 /**
  * THE art pixel: the size in CSS px of one cell of the pixel grid that the globe, the street map and the pixel text all
  * draw on (one constant, shared by both renderers and the labels). Desktop 2.5 (was 3), phones 2: a modest increase in
@@ -28,13 +25,14 @@ export function applyDebugArtPixel(): void {
 
 export const TUNING = {
   /**
-   * Size of one art pixel in CSS px, as a function of the smaller viewport side (+1 when the frame governor stepped
-   * down): `ART_PIXEL`, rounded to a whole number of device pixels, because otherwise nearest-neighbour upscaling shimmers
+   * Size of one art pixel in CSS px, as a function of the smaller viewport side and the device pixel ratio ONLY (nothing
+   * measured at runtime moves it: no frame-time feedback, no module state): `ART_PIXEL`, rounded to a whole number of
+   * device pixels, because otherwise nearest-neighbour upscaling shimmers
    * (2.5 is 5 device px at DPR 2 but 2.5 at DPR 1: ties go DOWN, so DPR 1 gets 2 CSS px, never a coarser 3; Android's
    * 2.625 and Windows' 1.25 and 1.5 get the nearest whole device size).
    */
   pixelSize(minSide: number, dpr: number): number {
-    const base = (minSide < ART_PIXEL.phoneBelow ? ART_PIXEL.phone : ART_PIXEL.desktop) + QUALITY.cellBoost;
+    const base = minSide < ART_PIXEL.phoneBelow ? ART_PIXEL.phone : ART_PIXEL.desktop;
     return Math.max(1, Math.round(base * dpr - 1e-9)) / dpr;
   },
   /**

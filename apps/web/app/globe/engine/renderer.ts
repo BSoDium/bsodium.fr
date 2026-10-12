@@ -17,7 +17,6 @@ import type { GlobePlace, GlobeRoute } from "../types";
 import type { GlobeTheme } from "./colors";
 import { attachControls, type ControlsHost, type PointerKind } from "./controls";
 import { watchDevicePixelRatio } from "./dpr";
-import { FRAME_CLOCK } from "./governor";
 import { groupFitZoom, radiusFitZoom } from "./framing";
 import {
   DEG,
@@ -257,11 +256,6 @@ export class GlobeRenderer {
   }
 
   /* ------------------------------ sizing ------------------------------ */
-
-  /** Re-derive the art pixel size and the buffers (the frame governor changed `QUALITY`). */
-  refit(): void {
-    this.resize(true);
-  }
 
   private resize(redraw: boolean) {
     if (this.disposed) return;
@@ -916,15 +910,9 @@ export class GlobeRenderer {
     }
   }
 
-  /** Whether the last tick asked for another frame: the next tick is then part of a running animation (see `FRAME_CLOCK`). */
-  private chained = false;
-
   private tick = () => {
     this.raf = 0;
-    if (this.disposed || this.hidden || this.lost) {
-      this.chained = false;
-      return;
-    }
+    if (this.disposed || this.hidden || this.lost) return;
     const now = performance.now();
     // The rotation's own frame chain follows the display (a frame per refresh) but not faster than `SPIN.minFrameMs`: a frame that nothing else asked for is skipped when it is too soon.
     if (!this.forced && this.spin.spinning && !spinFrameDue(now, this.lastTickAt)) {
@@ -933,10 +921,6 @@ export class GlobeRenderer {
     }
     this.forced = false;
     this.lastTickAt = now;
-    // The frame governor (engine/governor.ts) must tell a slow device from a quiet one: a frame that is not part of a running
-    // animation was caused by an input event, and its interval says nothing about the device.
-    FRAME_CLOCK.live = true;
-    FRAME_CLOCK.continuous = this.chained;
     const flying = this.flight !== null;
     const moving = this.advance(now);
     if (moving) this.spin.settle(now); // a flight, inertia or the inset slide is camera motion: not idle (a turning globe coasts to rest)
@@ -944,13 +928,10 @@ export class GlobeRenderer {
     if (flying && this.flight === null) this.spin.activity(now);
     this.stepSpin(now);
     this.renderNow();
-    FRAME_CLOCK.continuous = false;
     // A timed transition of the boxes or of the borders (engine/fade.ts) that has not reached its end keeps the loop going, camera or not.
     // While the street map owns the view the globe draws nothing and its transitions are not advanced here (the street engine runs the
     // boxes' own), so they must not keep this loop spinning.
     const more = moving || (!this.suspended && (this.lod.animating || this.globe.animating || !!this.opts.labelsAnimating?.()));
-    // `chained` is about real animations only: the idle rotation's frames are decoration, and the frame governor must read them by their own cost, not their pace.
-    this.chained = more;
     if (more) this.keepGoing(moving);
     else if (this.spin.spinning) this.chainSpin();
     else this.armSpin();
@@ -960,11 +941,9 @@ export class GlobeRenderer {
   renderNow() {
     if (this.disposed || this.lost || !this.sized) return;
     this.cancelFrame();
-    const w0 = performance.now();
     if (this.suspended) {
       this.ticks++;
       this.opts.onFrame();
-      FRAME_CLOCK.workMs = performance.now() - w0;
       return;
     }
     const tp = perfStart();
@@ -982,7 +961,6 @@ export class GlobeRenderer {
     const t1 = perfStart();
     this.opts.onFrame();
     perfEnd("frame.callbacks", t1);
-    FRAME_CLOCK.workMs = performance.now() - w0;
     // Whoever drew this frame (the tick, a resize, a check), the transitions run to their end, and the idle rotation's chain (cancelled above) goes on.
     if (this.lod.animating || this.globe.animating || this.opts.labelsAnimating?.()) this.keepGoing(false);
     else if (this.spin.spinning) this.chainSpin();
