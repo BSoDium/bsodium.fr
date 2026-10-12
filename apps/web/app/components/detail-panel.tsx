@@ -60,8 +60,6 @@ interface DetailPanelProps {
   routeKey: string | null;
   /** The place whose link in the places list gets focus back when the panel closes; null (an entry) = the page's main. */
   returnSlug: string | null;
-  /** Names the panel on the phone's slide-over header ("Place", "Article"). */
-  label: string;
   /** `panel`: the right half. `full`: the whole viewport (desktop; the phone's slide-over is full screen already). */
   layout: EntryView;
   /** When given, the header has the panel / full-screen toggle (entries); the URL is the state (`?view=full`), so this navigates. */
@@ -77,11 +75,13 @@ interface DetailPanelProps {
  * widens to the whole viewport (a width transition on the motion tokens, nothing remounts) and becomes the page's `main`
  * landmark (the shell's own `main`, the globe, goes inert and gives up the `#main` id), so the skip link, the landmarks and
  * the one-h1 rule hold in both layouts.
- * Mobile: a full-height modal dialog above the page; the toggle is not offered (it is full screen already).
+ * Mobile: a full-height modal dialog above the page with a compact header (the close button alone, no box and no repeated title: the
+ * content's heading names the dialog); the toggle is not offered (it is full screen already). The globe is not mounted behind it (it is
+ * released while the dialog is open), so there is no map to peek at.
  * Markup and positioning are identical on the server (responsive classes);
  * only semantics (dialog role, inert, scroll lock) are applied after hydration.
  */
-export function DetailPanel({ open, isMobile, reducedMotion, routeKey, returnSlug, label, layout, onLayoutChange, intent, onClose, children }: DetailPanelProps) {
+export function DetailPanel({ open, isMobile, reducedMotion, routeKey, returnSlug, layout, onLayoutChange, intent, onClose, children }: DetailPanelProps) {
   const panelRef = useRef<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastReturn = useRef(returnSlug);
@@ -173,22 +173,20 @@ export function DetailPanel({ open, isMobile, reducedMotion, routeKey, returnSlu
           {/* Full screen: the panel reaches the page's left edge, where the navbar's logo floats above it, so the controls start after the logo. */}
           <div
             className={cn(
-              "flex min-h-16 shrink-0 items-center justify-between gap-4 px-6 pt-2 print:hidden md:absolute md:inset-x-0 md:top-0 md:z-20 md:h-(--navbar-height) md:min-h-0 md:justify-start md:pt-0",
+              "flex min-h-12 shrink-0 items-center justify-end gap-2 px-3 print:hidden md:absolute md:inset-x-0 md:top-0 md:z-20 md:h-(--navbar-height) md:min-h-0 md:justify-start md:px-6",
               full && "md:pl-[4.5rem]",
             )}
           >
-            <p className="label md:hidden">{label}</p>
-            <div className="flex items-center gap-2">
-              <IconButton icon="close" label="Close" size="sm" onClick={onClose} />
-              {onLayoutChange && !isMobile && (
-                <ExpandToggle
-                  expanded={shownLayout.current === "full"}
-                  onExpandedChange={(expanded) => onLayoutChange(expanded ? "full" : "panel")}
-                  size="sm"
-                  className="max-md:hidden"
-                />
-              )}
-            </div>
+            {/* No title here: the content's own heading names the dialog. The controls have no box until they are pointed at. */}
+            <IconButton icon="close" label="Close" size="sm" variant="ghost" onClick={onClose} className="md:-ml-2" />
+            {onLayoutChange && !isMobile && (
+              <ExpandToggle
+                expanded={shownLayout.current === "full"}
+                onExpandedChange={(expanded) => onLayoutChange(expanded ? "full" : "panel")}
+                size="sm"
+                className="max-md:hidden"
+              />
+            )}
           </div>
           <div
             ref={scrollRef}

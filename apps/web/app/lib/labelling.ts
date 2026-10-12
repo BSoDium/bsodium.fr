@@ -1,21 +1,8 @@
 /**
- * The annotation language of the UI system as pure formatters (docs/design-system.md, "Micro-labels"): index numbers, entry
- * codes, coordinates, timestamps and status brackets. Text only; the case and tracking are CSS (`.ds-micro`).
- * Every function is total: a bad input gives a visibly empty placeholder, never a throw or "NaN".
+ * The few formatters of figures and statuses the UI needs (docs/design-system.md, "Type"): coordinates, a date stamp, a status word.
+ * Text only; the face is CSS. Every function is total: a bad input gives a visibly empty placeholder, never a throw or "NaN".
+ * (Index numbers and entry codes such as `ARTICLE / 0042` are not shown any more: a list is ordered by its dates.)
  */
-import { ENTRY_KIND_LABEL, type EntryKind } from "./entry-kind";
-
-/** `42` -> `0042`. Whole numbers only (fractions are floored), never negative, never truncated when wider than `width`. */
-export function formatIndex(n: number, width = 4): string {
-  const whole = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-  return String(whole).padStart(Math.max(1, Math.floor(width)), "0");
-}
-
-/** `("article", 42)` -> `ARTICLE / 0042`. */
-export function entryCode(kind: EntryKind, index: number, width = 4): string {
-  return `${ENTRY_KIND_LABEL[kind].toUpperCase()} / ${formatIndex(index, width)}`;
-}
-
 const EMPTY_COORD = "--.---- / --.----";
 
 /** `(10.7769, 106.7009)` -> `10.7769° N / 106.7009° E`. Out-of-range or non-finite input gives the placeholder. */
@@ -24,6 +11,26 @@ export function formatCoordinates(lat: number, lon: number, digits = 4): string 
   const d = Math.min(8, Math.max(0, Math.floor(digits)));
   const part = (v: number, pos: string, neg: string) => `${Math.abs(v).toFixed(d)}° ${v < 0 ? neg : pos}`;
   return `${part(lat, "N", "S")} / ${part(lon, "E", "W")}`;
+}
+
+/** How many decimals a number is written with (`48.85` -> 2, `2` -> 0, `1e-7` -> 7), capped at 6 (a decimetre); not finite -> 0. */
+export function decimalsOf(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  const text = String(value);
+  const exp = /e-(\d+)$/i.exec(text);
+  const mantissa = text.replace(/e.*$/i, "").split(".")[1]?.length ?? 0;
+  return Math.min(6, exp ? mantissa + Number(exp[1]) : mantissa);
+}
+
+/**
+ * A place's coordinates at the precision they are stored with, never more: `(48.85, 2.35)` -> `48.85° N, 2.35° E`, `(48.8566, 2.3522)` ->
+ * `48.8566° N, 2.3522° E`. Each value keeps its own number of decimals (a stored `48.85` is not `48.8500`: that would claim a metre
+ * of precision it does not have). Out-of-range or non-finite input gives the placeholder.
+ */
+export function formatPlaceCoordinates(lat: number, lon: number): string {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return EMPTY_COORD;
+  const part = (v: number, pos: string, neg: string) => `${Math.abs(v).toFixed(decimalsOf(v))}° ${v < 0 ? neg : pos}`;
+  return `${part(lat, "N", "S")}, ${part(lon, "E", "W")}`;
 }
 
 /** An ISO date or `Date` -> `2026.10.08` (UTC, so the server and the browser agree). Invalid input gives `----.--.--`. */
@@ -37,16 +44,8 @@ export function formatStamp(value: string | Date): string {
 export const STATUSES = ["published", "draft", "live", "archived", "pending", "error"] as const;
 export type Status = (typeof STATUSES)[number];
 
-/** `published` -> `PUBLISHED`; the brackets are drawn around it by `StatusTag`. Plain text for logs and tests: `[ PUBLISHED ]`. */
-export function statusText(status: Status | string): string {
-  return status.trim().toUpperCase();
-}
-
-export function statusBracket(status: Status | string): string {
-  return `[ ${statusText(status)} ]`;
-}
-
-/** Joins non-empty parts with the slash separator of the annotation language: `["A", "", "B"]` -> `A / B`. */
-export function slashJoin(parts: readonly (string | null | undefined | false)[]): string {
-  return parts.filter((p): p is string => typeof p === "string" && p.length > 0).join(" / ");
+/** `PUBLISHED` or ` draft ` -> `Published` / `Draft`: the status as a plain word (first letter up, the rest down). */
+export function statusLabel(status: Status | string): string {
+  const word = status.trim().toLowerCase();
+  return word.charAt(0).toUpperCase() + word.slice(1);
 }

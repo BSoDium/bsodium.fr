@@ -6,7 +6,6 @@
 import type { ContentKind, PublishedProjection } from "@catalyst/schemas";
 import { COLLECTIONS, CONTENT_KINDS, entryPath, KIND_LABELS, KIND_PLURALS, placePath } from "./entries";
 import { formatEntryDate } from "./dates";
-import { entryCode } from "./labelling";
 
 export type SearchType = "place" | ContentKind;
 
@@ -18,7 +17,7 @@ export interface SearchItem {
   title: string;
   /** Where it goes. */
   href: string;
-  /** The second line: a place's region, an entry's code and date (`ARTICLE / 0004 2022`). */
+  /** The second line: a place's region, an entry's date (`2022.06`). The kind is the row's glyph and its group, so it is not repeated. */
   sub?: string;
   /** Extra words that match but are not shown: tags and the summary. */
   keywords?: string;
@@ -43,14 +42,15 @@ export function buildSearchIndex(projection: PublishedProjection): SearchItem[] 
     (p): SearchItem => ({ type: "place", title: p.name, href: placePath(p.slug), ...(p.region ? { sub: p.region } : {}), ...(p.summary ? { keywords: p.summary } : {}) }),
   );
   const entries = CONTENT_KINDS.flatMap((kind) =>
-    projection[COLLECTIONS[kind]].map((item, i): SearchItem => {
+    projection[COLLECTIONS[kind]].map((item): SearchItem => {
       const date = formatEntryDate(item.date);
-      const keywords = [...(item.tags ?? []), item.summary ?? ""].join(" ").trim();
+      // the kind's word stays findable ("poem" lists the poems) though the row no longer spells it out
+      const keywords = [KIND_LABELS[kind], ...(item.tags ?? []), item.summary ?? ""].join(" ").trim();
       return {
         type: kind,
         title: item.title,
         href: entryPath(kind, item.slug),
-        sub: `${entryCode(kind, i + 1)}${date ? ` · ${date.text}` : ""}`,
+        ...(date ? { sub: date.text } : {}),
         ...(keywords ? { keywords } : {}),
       };
     }),

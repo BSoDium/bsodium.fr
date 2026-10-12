@@ -11,7 +11,7 @@ import { useIsMobile } from "~/hooks/use-is-mobile";
 import { useViewportWidth } from "~/hooks/use-viewport-width";
 import { getProjection } from "~/lib/content.server";
 import { getTilesConfig } from "~/lib/tiles-config.server";
-import { countEntries, KIND_LABELS, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
+import { countEntries, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
 import { panelInset } from "~/lib/layout";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
 
@@ -143,7 +143,6 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
         reducedMotion={reducedMotion}
         routeKey={panelRoute ? location.pathname : null}
         returnSlug={slug}
-        label={panelRoute?.type === "entry" ? KIND_LABELS[panelRoute.kind] : "Place"}
         layout={view}
         onLayoutChange={panelRoute?.type === "entry" ? setView : undefined}
         intent={intent}

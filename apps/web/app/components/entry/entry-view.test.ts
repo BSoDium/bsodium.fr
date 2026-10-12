@@ -11,12 +11,13 @@ const render = (kind: "article" | "poem" | "project" | "artwork", slug: string, 
   renderToStaticMarkup(createElement(StaticRouter, { location: "/" }, createElement(EntryView, { entry: getEntryDetail(demo, kind, slug)!, layout, backTo })));
 
 describe("EntryView", () => {
-  it("has one h1 (the title, the focus target), the code, the date and the metadata", () => {
+  it("has one h1 (the title, the focus target), the kind and the date as one plain line, and the metadata", () => {
     const html = render("article", "demo-article", "panel");
     expect((html.match(/<h1/g) ?? []).length).toBe(1);
     expect(html).toContain('id="panel-heading"');
     expect(html).toContain('tabindex="-1"');
-    expect(html).toContain("ARTICLE / 0001");
+    expect(html).toContain('data-slot="entry-meta"');
+    expect(html).not.toMatch(/ARTICLE \/ 0001|№/);
     expect(html).toMatch(/datetime="2026-03-14"/i);
     expect(html).toContain("Publication");
     expect(html).toContain('aria-label="Tags"');
@@ -40,7 +41,7 @@ describe("EntryView", () => {
   it("takes a project's Status fact as its status tag and its external link as a safe, labelled button", () => {
     const html = render("project", "demo-project", "panel");
     expect(html).toContain('data-slot="status-tag"');
-    expect(html).toContain("ACTIVE");
+    expect(html).toContain(">Active<");
     expect(html).toContain('href="https://example.org/pixel-globe"');
     expect(html).toContain('rel="noopener noreferrer"');
     expect(html).toContain("opens in a new tab");

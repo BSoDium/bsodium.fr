@@ -1,6 +1,6 @@
 import { Fragment, useMemo } from "react";
 import type { PublishedBodyBlock } from "@catalyst/schemas";
-import { CopyButton, Divider, Frame, Glyph, MicroLabel } from "~/components/ui";
+import { CopyButton, Divider, Frame, Glyph } from "~/components/ui";
 import {
   buildOutline,
   dedupeKeys,
@@ -69,7 +69,7 @@ function BlockView({ block, heading }: { block: Exclude<Block, { type: "link" }>
   switch (block.type) {
     case "paragraph":
       return (
-        <p className="m-0 max-w-[48ch]">
+        <p className="m-0 max-w-[60ch]">
           <Lines text={block.text} />
         </p>
       );
@@ -79,13 +79,13 @@ function BlockView({ block, heading }: { block: Exclude<Block, { type: "link" }>
       return <ListView ordered={block.ordered} items={block.items} />;
     case "quote":
       return (
-        <figure className="m-0 max-w-[48ch] border-l border-border-strong pl-4">
+        <figure className="m-0 max-w-[60ch] border-l border-border-strong pl-4">
           <blockquote className="m-0 text-xl/8">
             <p className="m-0">
               <Lines text={block.text} />
             </p>
           </blockquote>
-          {block.cite && <figcaption className="ds-micro mt-2">&mdash; {block.cite}</figcaption>}
+          {block.cite && <figcaption className="mt-2 text-sm text-muted-foreground">&mdash; {block.cite}</figcaption>}
         </figure>
       );
     case "image":
@@ -95,7 +95,7 @@ function BlockView({ block, heading }: { block: Exclude<Block, { type: "link" }>
     case "code":
       return <CodeView block={block} />;
     case "divider":
-      return <Divider ticks decorative={false} className="my-1" />;
+      return <Divider decorative={false} className="my-2" />;
     default: {
       const unreachable: never = block;
       return unreachable;
@@ -109,13 +109,10 @@ function HeadingView({ item }: { item: OutlineItem }) {
     <Tag
       id={item.id}
       className={cn(
-        "ds-heading group m-0 flex max-w-[48ch] scroll-mt-24 items-baseline gap-3 font-semibold tracking-tight text-balance",
-        item.level === 2 ? "mt-4 border-t border-border pt-5 text-xl" : "mt-2 text-base",
+        "ds-heading group m-0 flex max-w-[60ch] scroll-mt-24 items-baseline gap-2 font-semibold tracking-tight text-balance",
+        item.level === 2 ? "mt-6 text-2xl" : "mt-3 text-xl",
       )}
     >
-      <span aria-hidden="true" className="ds-micro shrink-0" data-tone="signal">
-        &sect;&nbsp;{item.number}
-      </span>
       <span className="min-w-0">{item.text}</span>
       {/* A link to the section, for sharing and for the keyboard: always there for assistive tech, drawn on hover and focus (always on touch screens). */}
       <a href={`#${item.id}`} aria-label={`Link to section: ${item.text}`} className="ds-anchor print:hidden">
@@ -129,7 +126,7 @@ function ListView({ ordered, items }: { ordered: boolean; items: readonly string
   const Tag = ordered ? "ol" : "ul";
   const keys = dedupeKeys(items);
   return (
-    <Tag className={cn("m-0 flex max-w-[48ch] flex-col gap-2 pl-6", ordered ? "list-decimal marker:font-mono marker:text-sm" : "list-[square]", "marker:text-muted-foreground")}>
+    <Tag className={cn("m-0 flex max-w-[60ch] flex-col gap-2 pl-6", ordered ? "list-decimal" : "list-[square]", "marker:text-muted-foreground")}>
       {items.map((item, i) => (
         <li key={keys[i]} className="pl-1">
           <Lines text={item} />
@@ -156,18 +153,18 @@ function ImageView({ block }: { block: Extract<Block, { type: "image" }> }) {
           className={cn("block w-full", sized ? "h-auto" : "size-full object-contain")}
         />
       </div>
-      {block.caption && <figcaption className="ds-micro">{block.caption}</figcaption>}
+      {block.caption && <figcaption className="text-sm text-muted-foreground">{block.caption}</figcaption>}
     </figure>
   );
 }
 
 /**
- * Stanzas of lines, in the mono face so that indentation lines up: each stanza is a paragraph, each line a block of its own with its
+ * Stanzas of lines, in the page's own face (a poem is read, not coded): each stanza is a paragraph, each line a block of its own with its
  * authored leading spaces as a left offset in `ch` (capped) and a hanging indent of 2ch for a line that wraps on a narrow screen.
  */
 function VerseView({ stanzas }: { stanzas: readonly (readonly string[])[] }) {
   return (
-    <div data-slot="verse" className="flex flex-col gap-6 font-mono text-[0.9375rem] leading-[1.7]">
+    <div data-slot="verse" className="flex flex-col gap-6 text-[1.0625rem] leading-[1.7]">
       {stanzas.map((stanza, si) => {
         const keys = dedupeKeys(stanza);
         return (
@@ -191,7 +188,7 @@ function CodeView({ block }: { block: Extract<Block, { type: "code" }> }) {
   return (
     <Frame role="figure" aria-label={block.language ? `Code, ${block.language}` : "Code"} padding="none" className="min-w-0">
       <div className="flex min-h-9 items-center justify-between gap-3 border-b border-border pr-1 pl-3 md:min-h-10">
-        <MicroLabel tone="strong">{block.language ?? "code"}</MicroLabel>
+        <span className="font-mono text-xs text-muted-foreground">{block.language ?? "code"}</span>
         <CopyButton text={block.code} label="Copy code" announcement="Code copied to the clipboard">
           Copy
         </CopyButton>
@@ -212,7 +209,7 @@ function LinkCard({ block }: { block: Extract<Block, { type: "link" }> }) {
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="font-medium">{block.title}</span>
         {block.description && <span className="text-sm text-muted-foreground">{block.description}</span>}
-        {href && <MicroLabel>{displayHost(href)}</MicroLabel>}
+        {href && <span className="text-sm text-muted-foreground">{displayHost(href)}</span>}
       </span>
       {href && <Glyph name="arrow-up-right" size={16} className="mt-1 shrink-0" />}
     </>

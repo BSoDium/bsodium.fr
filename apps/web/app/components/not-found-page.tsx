@@ -10,7 +10,6 @@ export function NotFoundPage() {
       <StatePanel
         state="empty"
         headingLevel={1}
-        code="404 / NOT FOUND"
         title="Page not found"
         description="There is nothing at this address. It may have been moved or never existed."
         action={

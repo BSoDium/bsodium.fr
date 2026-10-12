@@ -19,7 +19,8 @@ describe("EntryListPage", () => {
     expect((html.match(/<article/g) ?? []).length).toBe(articles.length);
     expect(html).not.toContain("data-year=\"2026\"");
     expect(html).toContain('aria-label="Filter articles by tag"');
-    expect(html).toContain("005 entries");
+    expect(html).toContain(">5 articles<");
+    expect(html).not.toMatch(/Article \/ Index|005|№/i);
   });
   it("groups by year, newest first, when the years hold several entries", () => {
     const items = [make("a", "2022-01", ["x"]), make("b", "2024-05", ["x"]), make("c", "2024-02", ["y"]), make("d", "2022-09", ["y"])];
@@ -36,7 +37,7 @@ describe("EntryListPage", () => {
     const items = [make("a", "2022", ["rail"]), make("b", "2023", ["bus"]), make("c", "2024", ["Rail", "bus"])];
     const html = render(items, "?tag=rail");
     expect((html.match(/<article/g) ?? []).length).toBe(2);
-    expect(html).toContain("002 / 003 entries");
+    expect(html).toContain(">2 of 3 articles<");
     // case variants are one tag (the first spelling is kept), and exactly one chip is current
     expect(html).toMatch(/aria-current="true"[^>]*data-filter="rail"/);
     expect((html.match(/aria-current="true"/g) ?? []).length).toBe(1);

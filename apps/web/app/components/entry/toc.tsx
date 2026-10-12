@@ -14,12 +14,12 @@ function scrollParent(el: HTMLElement): HTMLElement | null {
 }
 
 /**
- * The table of contents of a long article (full screen only): the body's numbered headings as in-page links, the section being read marked
+ * The table of contents of a long article (full screen only): the body's headings as in-page links, the section being read marked
  * with `aria-current="location"` (scroll-spy). Plain anchors, so it works without scripts and from the keyboard; the scroll-spy is
  * an enhancement that reads the headings' positions on scroll. Sticky under the navbar from `md` up. Its position in the DOM is
  * before the body (the details column), so a keyboard user can jump to a section without tabbing through the text.
  */
-export function TableOfContents({ items, index = 1, className }: { items: readonly OutlineItem[]; index?: number; className?: string }) {
+export function TableOfContents({ items, className }: { items: readonly OutlineItem[]; className?: string }) {
   const [active, setActive] = useState<string | null>(items[0]?.id ?? null);
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function TableOfContents({ items, index = 1, className }: { items: readon
   if (items.length === 0) return null;
   return (
     <nav aria-labelledby="entry-toc" data-slot="entry-toc" className={cn("hidden md:block print:hidden", className)}>
-      <SectionHeader index={index} title="Contents" id="entry-toc" as="h2" meta={String(items.length).padStart(2, "0")} />
+      <SectionHeader title="Contents" id="entry-toc" as="h2" />
       <ol className="m-0 mt-2 list-none p-0">
         {items.map((item) => (
           <li key={item.id}>
@@ -61,11 +61,8 @@ export function TableOfContents({ items, index = 1, className }: { items: readon
               href={`#${item.id}`}
               aria-current={item.id === active ? "location" : undefined}
               data-level={item.level}
-              className="ds-toc-link flex min-h-9 items-baseline gap-3 py-1.5 text-sm no-underline"
+              className={cn("ds-toc-link flex min-h-9 items-baseline py-1.5 text-sm no-underline", item.level === 3 && "pl-4")}
             >
-              <span aria-hidden="true" className="ds-micro w-8 shrink-0">
-                {item.number}
-              </span>
               <span className={cn("min-w-0", item.level === 3 && "text-muted-foreground")}>{item.text}</span>
             </a>
           </li>

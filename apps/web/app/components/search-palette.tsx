@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { Frame, Glyph, KindTag, MicroLabel } from "~/components/ui";
+import { Frame, Glyph, KindTag } from "~/components/ui";
 import { groupResults, searchItems, SEARCH_LABELS, type SearchItem } from "~/lib/search";
 import { cn } from "~/lib/utils";
 
@@ -177,7 +177,7 @@ export function SearchPalette() {
                 onKeyDown={onInputKey}
                 className="min-h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
-              <button type="button" onClick={hide} aria-label="Close search" className="ds-micro min-h-11 min-w-11 shrink-0 border border-border-strong px-2 text-foreground hover:bg-accent">
+              <button type="button" onClick={hide} aria-label="Close search" className="ds-micro min-h-11 min-w-11 shrink-0 border border-border px-2 text-muted-foreground hover:bg-accent hover:text-foreground">
                 Esc
               </button>
             </div>
@@ -186,9 +186,8 @@ export function SearchPalette() {
                 {groups.map((group) => (
                   <li key={group.type} role="presentation">
                     <ul role="group" aria-label={group.label} className="m-0 list-none p-0">
-                      <li role="presentation" className="flex items-center gap-3 px-4 pt-3 pb-1" aria-hidden="true">
-                        <MicroLabel tone="strong">{SEARCH_LABELS[group.type]}</MicroLabel>
-                        <span className="ds-divider flex-1" />
+                      <li role="presentation" className="px-4 pt-4 pb-1 text-sm font-medium text-muted-foreground" aria-hidden="true">
+                        {SEARCH_LABELS[group.type]}
                       </li>
                       {group.items.map((item) => {
                         const i = flat.indexOf(item);
@@ -205,8 +204,8 @@ export function SearchPalette() {
                           >
                             <KindTag kind={item.type} iconOnly />
                             <span className="flex min-w-0 flex-1 flex-col">
-                              <span className="truncate text-sm">{item.title}</span>
-                              {item.sub && <MicroLabel className="truncate">{item.sub}</MicroLabel>}
+                              <span className="truncate text-base">{item.title}</span>
+                              {item.sub && <span className="ds-meta truncate">{item.sub}</span>}
                             </span>
                             <Glyph name="arrow-right" size={12} className={cn("shrink-0", selected ? "opacity-100" : "opacity-0")} />
                           </li>
@@ -223,12 +222,14 @@ export function SearchPalette() {
               {load.state === "loading" && <p className="m-0 px-4 py-6 text-sm text-muted-foreground">Loading&hellip;</p>}
               {load.state === "error" && <p className="m-0 px-4 py-6 text-sm text-muted-foreground">The search could not be loaded. Close it and try again.</p>}
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2">
-              <MicroLabel>
-                <span aria-hidden="true">↑↓ move / ↵ open / esc close</span>
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2 text-sm text-muted-foreground">
+              <span>
+                <span aria-hidden="true">↑↓ move · ↵ open · esc close</span>
                 <span className="sr-only">Up and Down move, Enter opens, Escape closes</span>
-              </MicroLabel>
-              <MicroLabel tone="strong">{hasQuery && load.state === "ready" ? String(results.length).padStart(2, "0") : ""}</MicroLabel>
+              </span>
+              <span aria-hidden="true" className="tabular-nums">
+                {hasQuery && load.state === "ready" ? status : ""}
+              </span>
             </div>
             <p role="status" className="sr-only">
               {status}
