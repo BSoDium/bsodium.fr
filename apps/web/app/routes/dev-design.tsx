@@ -141,7 +141,9 @@ const SWATCHES: { token: string; role: string }[] = [
   { token: "--border", role: "Hairline" },
   { token: "--border-strong", role: "Control line" },
   { token: "--line-faint", role: "Grid, texture" },
-  { token: "--signal", role: "The one accent" },
+  { token: "--signal", role: "The one accent: large text, marks, fills" },
+  { token: "--signal-text", role: "The accent as text under 24 px" },
+  { token: "--signal-foreground", role: "Text on a signal fill" },
   { token: "--signal-wash", role: "Active plate" },
   { token: "--kind-article", role: "Article hue" },
   { token: "--kind-project", role: "Project hue" },
@@ -156,7 +158,11 @@ const PAIRS: { fg: string; bg: string; need: number; use: string }[] = [
   { fg: "--muted-foreground", bg: "--surface", need: 4.5, use: "Secondary text on a frame" },
   { fg: "--muted-foreground", bg: "--accent", need: 4.5, use: "Secondary text on hover" },
   { fg: "--subtle-foreground", bg: "--surface", need: 4.5, use: "Credits on a frame" },
-  { fg: "--signal", bg: "--surface", need: 4.5, use: "Signal text" },
+  { fg: "--signal-text", bg: "--background", need: 4.5, use: "Accent text, any size" },
+  { fg: "--signal-text", bg: "--surface", need: 4.5, use: "Accent text on a frame" },
+  { fg: "--signal-text", bg: "--accent", need: 4.5, use: "Accent text on hover" },
+  { fg: "--signal", bg: "--background", need: 3, use: "Accent, large display text and marks" },
+  { fg: "--signal", bg: "--surface", need: 3, use: "Accent mark on a frame" },
   { fg: "--signal-foreground", bg: "--signal", need: 4.5, use: "Text on a signal fill" },
   { fg: "--border-strong", bg: "--background", need: 2.8, use: "Control outline" },
 ];
@@ -191,8 +197,8 @@ function Colour({ scheme }: { scheme: Scheme }) {
   return (
     <Stack gap={6}>
       <Note>
-        One grey family (the map's near-black and near-white) and one accent, which marks state: focus, the active thing, a link under the pointer. The
-        faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
+        One grey family (the map's near-black and near-white) and one accent, orange. The accent is large display text, a mark (a tick, an underline, a
+        cover's mark) or a fill; text under 24 px takes its darker text variant. The faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
       </Note>
       <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-5">
         {SWATCHES.map((s) => (
@@ -223,14 +229,95 @@ function Colour({ scheme }: { scheme: Scheme }) {
 
 /* -------------------------------------------------------------------- type */
 
+/**
+ * The type specimen (docs/design-system.md, "Type"): every role, set in the page's colours. Drawn once per scheme, so the thin / heavy pair,
+ * the accent sizes and the reading text can be compared in light and dark side by side. All text is made up.
+ */
+function TypeSpecimen() {
+  return (
+    <Stack gap={8}>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Display XL / the wordmark, 200 against 800</p>
+        <p className="type-display-xl">
+          <span className="type-thin">Cata</span>lyst
+        </p>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Display LG / an entry's headline</p>
+        <h3 className="type-display-lg">
+          Notes on a <span className="type-thin">quiet</span> compiler
+        </h3>
+        <p className="type-standfirst mt-4 max-w-[34ch]">
+          A made-up standfirst under the headline, in the reading face at a thin weight and in italic, to even lines.
+        </p>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Display MD / a card's title, a section</p>
+        <p className="type-display-md">Harbour at low tide, study 3</p>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Meta / metadata only</p>
+        <p className="type-meta m-0 text-muted-foreground">Placeholder Bay &middot; 2026.03.14 &middot; 6 min read</p>
+        <p className="type-meta m-0 mt-1 text-muted-foreground">0123456789 &middot; 12.35&deg; N, 65.43&deg; E</p>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Reading / drop cap, link, pull quote, rule (a column of 66 characters)</p>
+        <div className="ds-prose flex flex-col gap-5">
+          <p className="drop-cap m-0">
+            Every sentence on this page is a placeholder. The quick brown fox jumps over the lazy dog, in 1984 and again in 2026, at a size and a
+            leading chosen for long reading, with a measure that lets the eye return to the next line without searching.
+          </p>
+          <p className="m-0">
+            A second paragraph carries a <a href="#s2" className="type-link">link in running text</a>, its underline in the accent, and some
+            figures: 12.5 km, 7 p.m., 0123456789.
+          </p>
+          <h4 className="m-0 text-2xl">A third-level heading, light</h4>
+          <blockquote className="type-pullquote m-0">A pull quote is the reading face in a light italic, between two hairlines.</blockquote>
+          <hr className="type-rule" />
+          <p className="m-0">After the rule the text resumes, and a <em>word in italic</em> is the real italic, not a slanted roman.</p>
+        </div>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Accent / the one orange, by size</p>
+        <div className="flex flex-col gap-3">
+          <p className="type-display-lg m-0 text-signal">Display text in the accent</p>
+          <p className="m-0 text-2xl font-extrabold text-signal">24 px bold, large text (accent)</p>
+          <p className="m-0 text-xl font-bold text-signal">20 px bold, large text (accent)</p>
+          <p className="m-0 text-base text-signal-text">16 px in the text variant (AA on the page and the surface)</p>
+          <p className="type-meta m-0 text-signal-text">12 px meta in the text variant</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="inline-block h-1 w-16 bg-signal" />
+            <span className="ds-status" data-tone="signal-solid">New</span>
+            <span className="type-link text-base">Underline in the accent</span>
+          </div>
+        </div>
+      </div>
+    </Stack>
+  );
+}
+
 function Type() {
   return (
     <Stack gap={8}>
+      <Note>
+        Three self-hosted families (OFL, Latin subset, <code>public/fonts/</code>) and the system stack behind them: Bricolage Grotesque for display (a very
+        heavy weight against a very thin one), Newsreader for reading, JetBrains Mono for page metadata. The map's labels and credits stay the system mono.
+        Each role is a class (<code>.type-display-xl</code>, <code>.type-reading</code>, <code>.type-meta</code> ...) or the utilities
+        <code> font-display text-display-xl</code>.
+      </Note>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {(["light", "dark"] as const).map((scheme) => (
+          <div key={scheme} data-scheme={scheme} className="min-w-0 border border-border-strong bg-background p-6 text-foreground">
+            <p className="ds-meta m-0 mb-6">Scheme: {scheme}</p>
+            <TypeSpecimen />
+          </div>
+        ))}
+      </div>
       <Grid>
         <Col span={12} spanMd={7}>
           <Frame>
             <Stack gap={3}>
-              <p className="m-0 text-sm text-muted-foreground">Sans: titles, reading and every sentence (system grotesk stack)</p>
+              <p className="m-0 text-sm text-muted-foreground">System sans (the interface until a component takes a role)</p>
               <p className="m-0 text-4xl leading-[3.25rem] font-semibold tracking-tight">Display 48 / 52</p>
               <p className="m-0 text-3xl font-semibold tracking-tight">Page title 36 / 40</p>
               <p className="m-0 text-2xl font-semibold tracking-tight">Panel title 28 / 34</p>
@@ -244,7 +331,7 @@ function Type() {
         <Col span={12} spanMd={5}>
           <Frame>
             <Stack gap={3}>
-              <p className="m-0 text-sm text-muted-foreground">Mono: dates, coordinates, codes (system mono stack)</p>
+              <p className="m-0 text-sm text-muted-foreground">System mono: dates, coordinates, codes, the map's text</p>
               <p className="ds-meta m-0">{formatStamp("2026-10-08")}</p>
               <p className="ds-meta m-0">{SAMPLE_COORDS}</p>
               <p className="m-0 font-mono text-sm tabular-nums">const slashed0 = 0O; // tabular 1111</p>
@@ -254,10 +341,26 @@ function Type() {
           </Frame>
         </Col>
       </Grid>
-      <Note>
-        No web font is loaded: the system stacks give crisp, native-feeling grotesk and mono at zero bytes. Changing a face is one token (`--font-sans`, `--font-mono`).
-        Body is never under 16 px and secondary text never under 14 px; reading text is held to about 60 characters of measure.
-      </Note>
+      <DataList>
+        <DataRow label="display-xl" mono>
+          clamp(3.5rem, 11vw, 10rem) / 0.88 / -0.045em / 800
+        </DataRow>
+        <DataRow label="display-lg" mono>
+          clamp(2.25rem, 1.35rem + 3.7vw, 4.5rem) / 0.98 / -0.035em / 800
+        </DataRow>
+        <DataRow label="display-md" mono>
+          clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem) / 1.06 / -0.025em / 700
+        </DataRow>
+        <DataRow label="standfirst" mono>
+          clamp(1.5rem, 1.25rem + 0.9vw, 1.9rem) / 1.3 / italic 300
+        </DataRow>
+        <DataRow label="reading" mono>
+          clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem) / 1.65 / 400, 28.5 em measure
+        </DataRow>
+        <DataRow label="meta" mono>
+          0.75rem / 1rem / 0.1em / 500, uppercase
+        </DataRow>
+      </DataList>
     </Stack>
   );
 }
