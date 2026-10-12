@@ -28,7 +28,7 @@ for (const f of process.argv.slice(2)) {
         t ? `drop ${t.frames.dropped}/${t.frames.presented + t.frames.partial + t.frames.dropped}` : "",
         t?.longMainTasks ? `longMT ${t.longMainTasks.n}` : "",
         `heap ${x.heapMB.after}`,
-        x.quality !== null && x.quality !== undefined ? `quality L${x.quality}` : "",
+        x.cell !== null && x.cell !== undefined ? `cell ${x.cell}px` : "",
         x.extra && x.extra.draws !== undefined ? `IDLE draws ${x.extra.draws} raf ${x.extra.appRafCalls}` : "",
       ].filter(Boolean));
     });

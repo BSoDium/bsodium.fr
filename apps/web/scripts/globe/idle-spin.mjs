@@ -7,7 +7,7 @@
 //
 // start    zero frames and zero rAF before the delay; after it the globe EASES IN from rest (speed per 500 ms bin follows the smoothstep, monotonic, no jump),
 //          then turns EASTWARD at the configured speed, redrawn on every display refresh (one rAF per frame, none in between before the delay), the street map
-//          is not involved, the frame governor stays at level 0
+//          is not involved, the art cell never moves and no render-quality change is logged (there is no frame governor: the pixel density is constant)
 // cadence  steady turning, picture read back after every drawn frame: the gap between frames that change the picture has no step longer than 80 ms
 //          (before: a redraw every 227 ms), with the histogram and the size of the steps in art pixels
 // input    a pointer move, a key, a wheel notch, a held pointer and a click each stop it in the same task (the view does not move afterwards, no frame follows
@@ -194,8 +194,8 @@ try {
       return { p50: ms[15], max: ms[29] };
     });
     console.log(`     render() JS per frame: p50 ${cost.p50.toFixed(2)} ms, max ${cost.max.toFixed(2)} ms (GPU not measured)`);
-    const q = await page.evaluate(() => (window.__handoverDebug ? window.__handoverDebug.quality() : 0));
-    expect("the resolution governor is untouched (level 0) and nothing was logged as an error or warning", q === 0 && logs.length === 0, { q, logs });
+    const cell = await page.evaluate(() => window.__globeDebug.cell());
+    expect("the art cell is the one the viewport and the device pixel ratio give (2.5 CSS px at 1440x900@2) and nothing was logged as an error or warning", cell === 2.5 && logs.length === 0, { cell, logs });
     await page.context().close();
   }
 

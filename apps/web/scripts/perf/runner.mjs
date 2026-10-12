@@ -29,7 +29,7 @@ export async function runScenarios({ base, scenarios, device = "desktop", scheme
           continue;
         }
         if (throttle) {
-          // A slow device: the main thread runs `throttle` times slower (the GPU does not; the frame governor sees the main thread).
+          // A slow device: the main thread runs `throttle` times slower (the GPU does not). The pixel density does not react to it (no frame governor).
           const cdp = await ctx.newCDPSession(page);
           await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(throttle) });
         }
@@ -37,7 +37,8 @@ export async function runScenarios({ base, scenarios, device = "desktop", scheme
         const tracePath = out ? `${out}/${label}-${id}${repeat > 1 ? "-" + rep : ""}.trace.json` : null;
         const rep_ = await measure(browser, page, ctx, () => sc.run(page, {}), { trace, tracePath: trace ? tracePath : null });
         rep_.logs = logs.slice(0, 5);
-        rep_.quality = await page.evaluate(() => window.__handoverDebug?.quality?.() ?? null);
+        // The art cell at the end of the scenario: constant by design (scripts/globe/handover-perf.mjs `density` asserts it), recorded so a report shows it.
+        rep_.cell = await page.evaluate(() => window.__globeDebug?.cell?.() ?? null);
         const prev = results.scenarios[id];
         results.scenarios[id] = Array.isArray(prev) ? [...prev, rep_] : [rep_];
       } catch (e) {
