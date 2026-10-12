@@ -13,6 +13,7 @@ import {
   verseIndent,
   type OutlineItem,
 } from "~/lib/entry-blocks";
+import { dropCapIndex } from "~/lib/entry-typography";
 import { cn } from "~/lib/utils";
 
 type Block = PublishedBodyBlock;
@@ -25,10 +26,27 @@ type Block = PublishedBodyBlock;
  * outline numbering, ids) are in `lib/entry-blocks.ts` and tested there.
  *
  * Headings are level 2 and 3 under the entry's own level 1 (the view's title); a `lang` (the poem's `Language` fact) is set on the body.
+ * The type is the reading role's (`.ds-prose`, app.css): the markup carries no size, weight or measure of its own, so the entry
+ * pages can set the body at the board's scale. `dropCap` opens the body's first paragraph with a drop cap when it is long enough
+ * (`dropCapIndex`); images are numbered in the order they appear (`Fig. N` before a caption).
  */
-export function BlockRenderer({ blocks, lang, idPrefix = "body", className }: { blocks: readonly Block[]; lang?: string; idPrefix?: string; className?: string }) {
+export function BlockRenderer({
+  blocks,
+  lang,
+  idPrefix = "body",
+  className,
+  dropCap = false,
+}: {
+  blocks: readonly Block[];
+  lang?: string;
+  idPrefix?: string;
+  className?: string;
+  dropCap?: boolean;
+}) {
   const groups = useMemo(() => groupBlocks(blocks), [blocks]);
   const outline = useMemo(() => new Map(buildOutline(blocks, idPrefix).map((o) => [o.index, o])), [blocks, idPrefix]);
+  const figureNumbers = useMemo(() => figureNumbering(blocks), [blocks]);
+  const capped = dropCap ? dropCapIndex(blocks) : -1;
   if (groups.length === 0) return null;
   return (
     <div data-slot="entry-body" lang={lang} className={cn("ds-prose flex min-w-0 flex-col gap-6", className)}>
@@ -42,7 +60,7 @@ export function BlockRenderer({ blocks, lang, idPrefix = "body", className }: { 
             ))}
           </ul>
         ) : (
-          <BlockView key={group.key} block={group.block} heading={outline.get(group.index)} />
+          <BlockView key={group.key} block={group.block} heading={outline.get(group.index)} dropCap={group.index === capped} figure={figureNumbers.get(group.index)} />
         ),
       )}
     </div>
@@ -65,11 +83,30 @@ function Lines({ text }: { text: string }) {
   );
 }
 
-function BlockView({ block, heading }: { block: Exclude<Block, { type: "link" }>; heading: OutlineItem | undefined }) {
+/** The figure number of each image block, by the block's index: 1, 2, 3 in the order the images appear (an image that cannot be drawn is not counted). */
+function figureNumbering(blocks: readonly Block[]): Map<number, number> {
+  const out = new Map<number, number>();
+  blocks.forEach((block, index) => {
+    if (block.type === "image" && safeMediaSrc(block.src)) out.set(index, out.size + 1);
+  });
+  return out;
+}
+
+function BlockView({
+  block,
+  heading,
+  dropCap,
+  figure,
+}: {
+  block: Exclude<Block, { type: "link" }>;
+  heading: OutlineItem | undefined;
+  dropCap: boolean;
+  figure: number | undefined;
+}) {
   switch (block.type) {
     case "paragraph":
       return (
-        <p className="m-0 max-w-[60ch]">
+        <p className={cn("m-0", dropCap && "drop-cap")}>
           <Lines text={block.text} />
         </p>
       );
@@ -79,17 +116,17 @@ function BlockView({ block, heading }: { block: Exclude<Block, { type: "link" }>
       return <ListView ordered={block.ordered} items={block.items} />;
     case "quote":
       return (
-        <figure className="m-0 max-w-[60ch] border-l border-border-strong pl-4">
-          <blockquote className="m-0 text-xl/8">
+        <figure className="type-pullquote my-[0.4em]">
+          <blockquote className="m-0">
             <p className="m-0">
               <Lines text={block.text} />
             </p>
           </blockquote>
-          {block.cite && <figcaption className="mt-2 text-sm text-muted-foreground">&mdash; {block.cite}</figcaption>}
+          {block.cite && <figcaption className="ds-caption mt-3 not-italic">&mdash; {block.cite}</figcaption>}
         </figure>
       );
     case "image":
-      return <ImageView block={block} />;
+      return <ImageView block={block} number={figure} />;
     case "verse":
       return <VerseView stanzas={block.stanzas} />;
     case "code":
@@ -109,8 +146,8 @@ function HeadingView({ item }: { item: OutlineItem }) {
     <Tag
       id={item.id}
       className={cn(
-        "ds-heading group m-0 flex max-w-[60ch] scroll-mt-24 items-baseline gap-2 font-semibold tracking-tight text-balance",
-        item.level === 2 ? "mt-6 text-2xl" : "mt-3 text-xl",
+        "ds-heading group m-0 flex scroll-mt-24 items-baseline gap-2",
+        item.level === 2 ? "mt-6" : "mt-3",
       )}
     >
       <span className="min-w-0">{item.text}</span>
@@ -126,7 +163,7 @@ function ListView({ ordered, items }: { ordered: boolean; items: readonly string
   const Tag = ordered ? "ol" : "ul";
   const keys = dedupeKeys(items);
   return (
-    <Tag className={cn("m-0 flex max-w-[60ch] flex-col gap-2 pl-6", ordered ? "list-decimal" : "list-[square]", "marker:text-muted-foreground")}>
+    <Tag className={cn("m-0 flex flex-col gap-2 pl-6", ordered ? "list-decimal" : "list-[square]", "marker:text-muted-foreground")}>
       {items.map((item, i) => (
         <li key={keys[i]} className="pl-1">
           <Lines text={item} />
@@ -136,13 +173,14 @@ function ListView({ ordered, items }: { ordered: boolean; items: readonly string
   );
 }
 
-function ImageView({ block }: { block: Extract<Block, { type: "image" }> }) {
+/** An image in the body: the figure of the page (a rule, the picture, a mono caption that starts with its number). Also the column of figures of an article. */
+export function ImageView({ block, number }: { block: Extract<Block, { type: "image" }>; number?: number | undefined }) {
   const src = safeMediaSrc(block.src);
   if (!src) return null;
   const sized = block.width !== undefined && block.height !== undefined;
   return (
-    <figure className="m-0 flex min-w-0 flex-col gap-2">
-      <div className={cn("overflow-hidden border border-border bg-accent", !sized && "aspect-4/3")}>
+    <figure data-slot="entry-figure" className="entry-figure m-0 flex min-w-0 flex-col gap-2.5">
+      <div className={cn("overflow-hidden", !sized && "aspect-4/3 bg-accent")}>
         <img
           src={src}
           alt={block.alt}
@@ -153,8 +191,26 @@ function ImageView({ block }: { block: Extract<Block, { type: "image" }> }) {
           className={cn("block w-full", sized ? "h-auto" : "size-full object-contain")}
         />
       </div>
-      {block.caption && <figcaption className="text-sm text-muted-foreground">{block.caption}</figcaption>}
+      {block.caption && (
+        <figcaption className="ds-caption">
+          {number !== undefined && <span className="text-foreground">Fig. {number} </span>}
+          {block.caption}
+        </figcaption>
+      )}
     </figure>
+  );
+}
+
+/** The figures of an article or a project, set apart from the text (the board's third column): the images in their order, numbered from 1. */
+export function Figures({ blocks, className }: { blocks: readonly Extract<Block, { type: "image" }>[]; className?: string }) {
+  const drawn = blocks.filter((b) => safeMediaSrc(b.src));
+  if (drawn.length === 0) return null;
+  return (
+    <div data-slot="entry-figures" className={cn("entry-figures flex min-w-0 flex-col gap-8", className)}>
+      {drawn.map((block, i) => (
+        <ImageView key={`${block.src}-${i}`} block={block} number={i + 1} />
+      ))}
+    </div>
   );
 }
 
@@ -164,7 +220,7 @@ function ImageView({ block }: { block: Extract<Block, { type: "image" }> }) {
  */
 function VerseView({ stanzas }: { stanzas: readonly (readonly string[])[] }) {
   return (
-    <div data-slot="verse" className="flex flex-col gap-6 text-[1.0625rem] leading-[1.7]">
+    <div data-slot="verse" className="flex flex-col gap-[1.4em]">
       {stanzas.map((stanza, si) => {
         const keys = dedupeKeys(stanza);
         return (

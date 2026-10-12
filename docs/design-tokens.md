@@ -84,9 +84,11 @@ Three self-hosted font families sit beside the system stack. They are SIL Open F
 | Token | Stack | File (version in the name: cached `immutable` for a year) | Use |
 | --- | --- | --- | --- |
 | `--font-display` | `"Bricolage Grotesque Variable"`, `"Bricolage Grotesque Fallback"`, `--font-sans` | `bricolage-grotesque-5.3.0-latin-wght-opsz.woff2`, 77 kB, wght 200 to 800, opsz 12 to 96 | the wordmark, headlines, headings: heavy against thin |
-| `--font-reading` | `"Newsreader Variable"`, `"Newsreader Fallback"`, `ui-serif, Georgia, "Times New Roman", serif` | `newsreader-5.3.0-latin-wght.woff2` (58 kB) and `-italic` (65 kB), wght 200 to 800 | the body of an entry, the standfirst, pull quotes |
+| `--font-reading` | `"Newsreader Variable"`, `"Newsreader Fallback"`, `ui-serif, Georgia, "Times New Roman", serif` | `newsreader-5.3.0-latin-wght-opsz.woff2` (132 000 B) and `-italic` (146 872 B), wght 200 to 800 and opsz 6 to 72 | the body of an entry, an entry's headline (700), a poem's title and lines, the standfirst, pull quotes |
 | `--font-meta` | `"JetBrains Mono Variable"`, `--font-mono` | `jetbrains-mono-5.3.0-latin-wght.woff2`, 40 kB, wght 100 to 800 | page metadata (`.type-meta`) only |
 | `--font-sans`, `--font-mono` | the system stacks below, unchanged | none | the interface until a component takes a role; the map's labels, the credits line and the planner's measurement (`--font-mono`) |
+
+Newsreader's optical size (2026-10-12, with the entry pages): the owner's article and poem boards set the headline (132 px, 700) and the poem's title (128 px, 200 italic) at optical size 72, whose forms are finer, tighter and higher in contrast than the text cut (18) of the plain `wght` files. The two files that carry `opsz` replace the two `wght` ones: 132 000 and 146 872 bytes against 58 084 and 64 520, so an entry page that draws both the roman and the italic asks for 156 kB more (woff2, cached `immutable` for a year, not preloaded, requested only where a glyph is drawn). `font-optical-sizing: auto` (in every role) maps the font size in px to the axis, so no `font-variation-settings` is needed: 40 px asks for 40, anything above 72 px gets 72. The fallback faces are unchanged (same hhea metrics; the display cut is a little narrower than the text cut the `size-adjust` was measured on, a few percent at 130 px).
 
 Why the optical-size file: the plain `wght` file of Bricolage is frozen at its text cut (opsz 14). At display sizes the font's own display cut (opsz 96) is about 10 % narrower with finer joints and higher contrast: it is the cut the wordmark is designed in, and `font-optical-sizing: auto` picks it by itself as the size grows. The file is 36 kB larger than the `wght` one and replaces it (one display file, not two). Only this file is preloaded, and only on the home page (`routes/home.tsx`). The reading and metadata files load only where a glyph of them is drawn.
 
@@ -110,7 +112,7 @@ Roles. A class sets a whole role; `text-<role>` plus `font-display | font-readin
 | `reading` | `.type-reading` | `clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem)`: 18 to 20 px | 1.65 | 0 | 400 | `pretty`, proportional figures; column `.type-measure` |
 | `meta` | `.type-meta` | 12 px, mono | 16 px | 0.1em | 500 | uppercase, tabular figures, ligatures off |
 
-Modifiers: `.type-thin` / `.type-heavy` put a run of a display heading at either end of the weight axis (`Cata<span class="type-thin">`...). `.type-link` underlines in the accent (`.ds-prose` links do the same). `.drop-cap` sets the first letter of a paragraph three lines tall in the heavy display weight and the accent (`initial-letter` where it exists, a float elsewhere). `.type-pullquote` is the reading face in 300 italic between two hairlines; `.type-rule` and `.ds-prose hr` a 1 px rule in `--border-strong`.
+Modifiers: `.type-thin` / `.type-heavy` put a run of a display heading at either end of the weight axis (`Cata<span class="type-thin">`...). `.type-link` underlines in the accent (`.ds-prose` links do the same). `.drop-cap` sets the first letter of a paragraph as a float 5.33 em tall (4.2 em in a column under 40 rem), Newsreader 700 in the ink, line-height 0.8, padding 0.07 em 0.13 em 0 0 (the "Article on paper" board: 112 px against a 21 px body); a float and not `initial-letter`, because the board's letter sits on the third line and `initial-letter` sinks differently in each engine. `.type-pullquote` is the reading face in 300 italic, `clamp(1.5rem, 0.9rem + 1.9cqi, 2.5rem)` (40 px at 1328 px) / 1.15, -0.01em, between two 1 px rules of the ink with 18 px padding; `.type-rule` and `.ds-prose hr` a 1 px rule in `--border-strong`. Entry pages add (app.css, reading section, documented in design-system.md, "Entry pages"): `.entry-title` (the headline: Newsreader 700, `--entry-title`, 0.92, -0.03em, 8.95 em wide at most; `data-poem` makes it 200 italic at `--poem-title`, 0.95), `.entry-rule` (the double rule: 3 px, 3 px gap, 1 px), `.entry-dateline`, `.entry-margin`, `.entry-figure`, `.ds-caption` (mono 12 px / 1.6, muted: a figure's caption).
 
 Reading measure: `--measure-reading` is 28.5 em of the reading size, 570 px at 20 px: 66 characters of running text (measured in Chrome, 1440 and 390 px wide). It is em and not `ch` on purpose: the "0" of Newsreader is 0.5 em wide against a 0.43 em average letter, so 65 `ch` would be 75 characters. Figures in Newsreader are lining: the subset ships no old-style figures (`onum` is absent from the file), so `font-variant-numeric` only asks for proportional ones.
 
@@ -132,6 +134,21 @@ Older steps (system sans, still used by the interface):
 | `text-3xl` | 36 / 40 px | page headings |
 | `text-4xl` | 48 / 52 px | full-screen entry title |
 | `text-micro` | 11 / 16 px | short codes (mono, uppercase, 0.12em: `.ds-micro`), the floor for any text |
+
+## Reading surface
+
+The entry pages and the four lists sit on **paper** in the light scheme and on **night** in the dark: the colours of the "Article on paper" and "Poem at night" boards of the owner's canvas. Six tokens, in the four copies of the scheme blocks (root, dark media rule, both forced rules):
+
+| Token | Light (paper) | Dark (night) | Use |
+| --- | --- | --- | --- |
+| `--paper` | `#efeadf` | `#0b0c0f` | the page of an entry or a list |
+| `--paper-foreground` | `#16130f` | `#ece8df` | ink: text and the rules (15.4:1 / 16.0:1) |
+| `--paper-muted` | `#6b665b` | `#8d8a82` | secondary text and the mono marginalia (4.76:1 / 5.67:1; 4.5:1 or more on the hover grey) |
+| `--paper-hover` | `#ebe7dc` | `#17181b` | the hover grey (rows, contents links) |
+| `--paper-signal` | `#cf4f17` | `#f26a2e` | the accent as large text and marks: 3.66:1 on the paper (the page accent `#ea6024` is 2.82:1 there) / 6.4:1 |
+| `--paper-signal-text` | `#a93a0a` | `#f26a2e` | the accent as text under 24 px: 5.31:1 / 6.4:1 |
+
+They are bound, not used by name: for an entry's panel (`[data-panel]:has([data-surface="reading"])`), for the root of a list page (`:root:has(main[data-surface="reading"])`) and for one element (`[data-reading-surface]`, the styleguide), `--background`, `--surface`, `--foreground`, `--muted-foreground`, `--accent`, `--border`, `--border-strong`, `--ring`, `--signal`, `--signal-text` and `--primary` take these values, so every component inside follows (the navigation's scrim, the focus ring, the buttons). The rule is unlayered on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The map, the place panel and the home page keep the neutral page colours. `design-system.test.ts` ("reading surface") tests the pairs in both schemes.
 
 ## Spacing
 

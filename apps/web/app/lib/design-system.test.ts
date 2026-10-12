@@ -127,6 +127,54 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
   });
 });
 
+describe("reading surface (paper in the light scheme, night in the dark)", () => {
+  const PAPER = ["--paper", "--paper-foreground", "--paper-muted", "--paper-hover", "--paper-signal", "--paper-signal-text"] as const;
+
+  it("is declared in the root rule, the dark media rule and both forced-scheme rules, with the same values", () => {
+    for (const name of PAPER) {
+      expect(light.has(name), `light ${name}`).toBe(true);
+      expect(dark.has(name), `dark ${name}`).toBe(true);
+      expect(forcedLight.get(name), `forced light ${name}`).toBe(light.get(name));
+      expect(forcedDark.get(name), `forced dark ${name}`).toBe(dark.get(name));
+    }
+  });
+
+  it("rebinds the page tokens for an entry's panel and for the list pages' root, after the root rule (unlayered, so it wins)", () => {
+    const at = css.indexOf('[data-panel]:has([data-surface="reading"])');
+    expect(at).toBeGreaterThan(css.indexOf(":root {"));
+    const body = ruleBody(css, at);
+    for (const token of ["--background", "--foreground", "--muted-foreground", "--accent", "--border", "--signal", "--signal-text"]) expect(body, token).toContain(`${token}:`);
+    expect(css.slice(at, at + 200)).toContain(':root:has(main[data-surface="reading"])');
+  });
+
+  describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
+    const paper = color(scheme, "--paper");
+    const ink = color(scheme, "--paper-foreground");
+    const muted = color(scheme, "--paper-muted");
+    const hover = color(scheme, "--paper-hover");
+
+    it("the ink is body text (7:1) and the muted text is AA on the paper and on its hover grey", () => {
+      expect(contrastRatio(ink, paper)).toBeGreaterThanOrEqual(7);
+      expect(contrastRatio(ink, hover)).toBeGreaterThanOrEqual(7);
+      expect(contrastRatio(muted, paper)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(muted, hover)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it("the accent as text (small) is AA, and as large text or a mark it is 3:1, on the paper", () => {
+      expect(contrastRatio(color(scheme, "--paper-signal-text"), paper)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(color(scheme, "--paper-signal-text"), hover)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(color(scheme, "--paper-signal"), paper)).toBeGreaterThanOrEqual(3);
+    });
+
+    it("the hairlines are quiet (1.1 to 2:1) and the ink rules are the ink itself", () => {
+      const hairline = over([ink[0], ink[1], ink[2], 0.18], paper);
+      expect(contrastRatio(hairline, paper)).toBeGreaterThan(1.1);
+      expect(contrastRatio(hairline, paper)).toBeLessThan(2);
+      expect(contrastRatio(over([ink[0], ink[1], ink[2], 0.55], paper), paper)).toBeGreaterThanOrEqual(2.8);
+    });
+  });
+});
+
 describe("square edges", () => {
   it("every radius token is 0", () => {
     for (const name of ["--radius-sm", "--radius-md", "--radius-lg"]) expect(light.get(name)).toBe("0");

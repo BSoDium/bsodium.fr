@@ -50,10 +50,10 @@ The direction (2026-10-12): the pixel globe is the only illustrative element; ev
 | Role | Face | Where |
 | --- | --- | --- |
 | `display-xl` (`.type-display-xl`) | Bricolage Grotesque 800, "Cata" at 200 (`.type-thin`), tight (0.88 leading, -0.045em), 56 to 158 px | the wordmark on the home page |
-| `display-lg` | Bricolage 800, 36 to 72 px, 0.98 leading | an entry's headline; a run may be `.type-thin` |
+| `display-lg` | Bricolage 800, 36 to 72 px, 0.98 leading | a list's year numerals (`.type-thin`), specimens; an entry's headline is `.entry-title` (Newsreader 700, see "Entry pages") |
 | `display-md` | Bricolage 700, 26 to 36 px | a card's title, a section of a list |
 | `standfirst` | Newsreader italic 300, 24 to 30 px, balanced | the line under a headline |
-| `reading` (`.type-reading`, `.ds-prose`) | Newsreader 400, 18 to 20 px / 1.65, 66 characters per line (`--measure-reading`), `pretty`; `.drop-cap` for the first paragraph; links underlined in the accent; blockquote is a 300 italic pull quote; headings Bricolage (h2 800, h3 300) | the body of an entry, the place's text |
+| `reading` (`.type-reading`, `.ds-prose`) | Newsreader 400, 18 to 20 px / 1.65, 66 characters per line (`--measure-reading`), `pretty`; `.drop-cap` for the first paragraph (Newsreader 700, in the ink); links underlined in the accent; a quote is `.type-pullquote` (300 italic, 24 to 40 px, between two ink rules); headings Bricolage (h2 800, h3 300) | the body of an entry, the place's text; an entry page sets it at 18 to 21 px / 1.55 |
 | `meta` (`.type-meta`) | JetBrains Mono 500, 12 px, uppercase, 0.1em | page metadata: a date, a place, a count, a reading time. Never the map's text |
 | interface (existing) | system sans and mono as in the table below | buttons, filters, tags, controls, code blocks, the map and its credits |
 
@@ -129,40 +129,54 @@ All in `app/components/ui/`, importable from `~/components/ui` (barrel) or by fi
 
 Implemented: `components/entry/entry-view.tsx` (one component for both containers), `components/entry/blocks.tsx` (the body renderer),
 `components/place-detail.tsx` (the place), `components/entry-list-page.tsx` (the four list pages). Routes, URL scheme and focus rules:
-[web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme).
+[web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme). The typography and the grid are in "Entry pages" below.
 
-Same content, two layouts; `layout` only changes the grid, never the data, the DOM order or the focus order.
+Same content, two layouts; `layout` only changes the grid (CSS), never the data, the DOM order or the focus order.
 
 ```
-<article aria-labelledby="panel-heading">                          // panel: half the viewport; full screen: max-w-6xl column
+<article class="entry" data-surface="reading" aria-labelledby="panel-heading">   // a container: the type scales with its width (cqi)
   [Back to <place>]                                                // only when opened from a place panel
-  Article · 2026.03.14 · 6 min read · Draft                       // one muted line: the kind in words, the date (mono), reading time, status when it tells something
-  h1#panel-heading (text-2xl; text-3xl / 4xl full)                 // the view's one h1, focus target
-  summary (60ch)
-  [Copy link]
-  details: plain key / value rows, tags as muted text, "Open host" primary button (https only, new tab note)
-  Cover: authored image (width/height set) or CoverArt seeded by the slug, one hairline, always 1.91:1
-  Body: BlockRenderer (h2 / h3 plain, paragraphs, lists, quote, image, verse, code, link cards, divider)
-  Places (links to /locations/:slug: name and region)    Contents (full screen: sticky, scroll-spy)
-  Related (three EntryCards, the kind said)    Previous / Next of the kind (two plain links)
+  double rule                                                      // 3 px, 3 px gap, 1 px
+  ARTICLE · Ljubljana, Zagreb +2                       6 min read   // kicker (mono, uppercase): kind, places, status / reading time
+  h1#panel-heading                                                 // Newsreader 700; the clause after a comma / colon / dash at 300
+  summary                                                          // standfirst: Newsreader italic 300
+  2026.03.14   Ljubljana ↗ open on the globe              Copy link // dateline (mono), under an ink rule
+  Marginalia: Where, Written, Linked, the authored facts, tags, "Open host", Contents
+  Lead image (authored; a generated cover only for an artwork)
+  Text: BlockRenderer (drop cap, headings, pull quotes, lists, verse, code, link cards)
+  Figures (article, project): the images set apart from the text, numbered "Fig. N"
+  Related (three EntryCards)    Previous / Next of the kind
 ```
 
-Panel: one column. Full screen: title (8 columns) with the details (4), then reading column (8: cover and body) with the aside
-(4: places, then the sticky contents); the related cards and the neighbours close both layouts at full width. The header row of the container
+Both layouts are one column on a phone and in the half panel (header, dateline, marginalia in a compact grid, text, figures). A full screen from 1024 px is a 12-column grid with 28 px gutters: marginalia in columns 1 to 3 (sticky contents), text in 4 to 9, figures in 10 to 12 (an artwork: image and text in 4 to 12; a poem: title and lines in 4 to 10, marginalia beside the title). The header row of the container
 (Close, `ExpandToggle`, both ghost: no box until pointed at) is the panel's, not the view's: it must stay clear of the navbar's row (centred over the map while the panel is open, over the viewport in full screen: it is
 clear of both, see "Brand and header"). On a phone the panel is a dialog with a compact header (the close button alone; the content's heading names the
-dialog). Lists of entries use `EntryCard` (via `EntryListCard`) in a `Grid` (`Col spanMd={6}`); an empty list is one muted line (`StatePanel`,
+dialog). Lists of entries are hairline rows (`EntryRow`: "Entry pages" below); `EntryCard` (cover, title, summary) remains for the place panel and the related entries. An empty list is one muted line (`StatePanel`,
 `headingLevel` 2 under the page's h1).
 
 Body blocks (all plain text, no inner HTML anywhere; a test scans the components for it): `paragraph` (hard line breaks as `<br>`),
-`heading` (h2/h3 in sentence-case sans with a stable anchor id and a `#` link on hover; no numbering), `list` (square markers / numerals),
-`quote` (hairline rule, cite as a plain muted line), `image` (one hairline, width/height to avoid layout shift, lazy, caption as muted
-secondary text; an unsafe path is dropped), `verse` (the page's own sans face; one paragraph per stanza, a block per line with its leading
-spaces as a `ch` offset and a 2ch hanging indent when it wraps), `code` (a Frame with the language as a small mono label, a
+`heading` (h2/h3 in the display face, 800 / 300, sentence case, with a stable anchor id and a `#` link on hover; no numbering), `list` (square markers / numerals),
+`quote` (the pull quote role, cite as a mono caption), `image` (a figure under an ink rule, no box, width/height to avoid layout shift, lazy, a mono caption that starts with "Fig. N"; an unsafe path is dropped), `verse` (the reading face, 300 at the poem's scale; one paragraph per stanza, a block per line with its leading
+spaces as a `ch` offset and a 2ch hanging indent when it wraps, a 1.4 em stanza gap), `code` (a Frame with the language as a small mono label, a
 horizontally scrollable focusable `pre`, a copy button that exists only once hydrated and where the clipboard API does), `link`
 (consecutive links form one list of cards; https only, `rel="noopener noreferrer"`, new-tab note for assistive tech; an invalid URL
 is shown as plain text), `divider` (a plain `hr`; leading, trailing and repeated dividers are dropped). The pure parts live in
 `lib/entry-blocks.ts`.
+
+### Entry pages (typography)
+
+The grammar of the "Article on paper" and "Poem at night" boards of the owner's canvas (2026-10-12), in words. Tokens and numbers: `design-tokens.md`, "Typography" and "Reading surface"; code: `app.css` (reading section, `.entry-*`), `components/entry/`, `lib/entry-typography.ts` (tested). Live: `/dev/design`, section 13.
+
+- **Surface.** Paper (`#efeadf`, ink `#16130f`) in the light scheme, night (`#0b0c0f`, ink `#ece8df`) in the dark, for an entry (panel and full screen) and for the four lists; the map, the place panel and the home page keep the neutral page. One accent, `--paper-signal` for marks and large text, `--paper-signal-text` for small text.
+- **Heavy against thin.** A headline in Newsreader 700 at up to 132 px (0.92, -0.03em, optical size 72), its clause after a comma, a colon or a dash at 300; the standfirst thin italic (300, 24 to 30 px); a pull quote thin italic at up to 40 px between two ink rules; section headings Bricolage 800, third level 300; a list's year numerals Bricolage 200 at the headline scale against titles at 800. A poem's title is Newsreader italic 200 at up to 128 px over lines at 300 (up to 36 px, 1.38).
+- **Mono is the apparatus.** Kicker, dateline, marginalia, contents, captions, tags in the marginalia: JetBrains Mono 12 px, muted, the labels (Where, Written, Linked, the authored fact names) uppercase in the ink. Interface text (buttons, filters) stays sans.
+- **Rules, not boxes.** A double rule under the masthead (3 px, 3 px gap, 1 px) and 1 px ink rules over the dateline, the marginalia, the text, each figure and "Related". No cards, no borders, no brackets, no numbering except "Fig. N" before a caption.
+- **Computed, never invented.** The marginalia rows are the places (links, with their region as published), the month and year of the date, and the counts of linked places and entries (the entries count only when the list is not capped); an authored fact of the same name wins. There is no author line: none is published. Reading time is computed (`reading.ts`) unless the entry authors one.
+- **Figures.** In an article or a project the images are set apart from the text (third column; after the text on a phone, same DOM order) and numbered in the order they appear. An artwork's image stays the hero and its images stay in the text, wide. A generated cover stands in only for an artwork without an image: text is the page elsewhere, and a placeholder would be decoration.
+- **Drop cap.** The first paragraph of an article or a project when it is a paragraph of 200 characters or more starting with a letter: Newsreader 700, 5.33 em, in the ink.
+- **Poem.** Title and lines in columns 4 to 10, marginalia (place, date, "open on the globe", the note about the poem) beside the title, lines exactly as authored, one block per line, leading spaces kept; on a phone the title, the lines, then the marginalia.
+- **Lists.** The double rule, a mono count, the section's name at the headline scale, an ink rule, the tag filter (text links, the chosen one heavier and underlined), then hairline rows: a mono column (date, places, status), the title in Bricolage 800 over a summary in Newsreader 300, the image where there is one; years as thin numerals only where a year holds more than one entry.
+- **Scale.** The entry is a container: headline, body and poem scale with its width (`cqi`), so the half panel and the full screen are one design at two widths; the clamps are in `app.css` (`--entry-title`, `--entry-body`, `--poem-title`, `--poem-size`).
 
 ### The place panel
 
@@ -175,17 +189,17 @@ the cards h3). A place without entries shows nothing for them (no section, no em
 
 - **Reading.** Computed `N min read` in the meta line for articles without an authored `Reading time`; a **contents** (>= 3 headings, plain
   text, nested ones indented and muted) in the full view only (same markup in the panel, hidden by CSS), the current section marked
-  `aria-current="location"` with a signal tick, a "Jump to contents" skip link after the copy-link button; a `#` **anchor** on every heading
-  (hover, focus, always on touch); **Copy link** under the summary and **Copy** on code blocks (`CopyButton`); tags are links to the kind's
+  `aria-current="location"` with a signal tick, a "Jump to contents" skip link beside the copy-link button; a `#` **anchor** on every heading
+  (hover, focus, always on touch); **Copy link** in the dateline (a poem: in its marginalia) and **Copy** on code blocks (`CopyButton`); tags are links to the kind's
   filtered list.
-- **Lists.** A title and a plain count ("5 articles", "2 of 5 articles" filtered), then a **tag filter**: one row of text links (the chosen
-  one heavier and underlined, `aria-current`, no boxes, no counts) above a 1 / 2 / 3 column grid; **year headings** (a plain year) only where
+- **Lists.** A plain count ("5 articles", "2 of 5 articles" filtered) in mono over the section's name at the headline scale, then a **tag filter**: one row of text links (the chosen
+  one heavier and underlined, `aria-current`, no boxes, no counts) under an ink rule, above hairline rows; **year headings** (thin display numerals) only where
   years group entries. The state is the URL (`?tag=`); on a phone the row scrolls sideways.
-- **Empty states.** Home with no place: the globe stays and `ArchiveEmpty` (a small plate with one hairline, "Nothing on the globe yet", one
-  line and the four lists with their counts) sits bottom left; a list with no entries is one muted line ("Nothing here yet."); a place
+- **Empty states.** Home with no place: the globe stays and `ArchiveEmpty` (a small plate under one ink rule, "Nothing on the globe yet" in the display face, one
+  line in the reading face and the four lists with their counts in mono) sits bottom left; a list with no entries is one muted line ("Nothing here yet."); a place
   with none shows no entries section.
-- **Search.** A modal dialog on the surface Frame: a combobox input with the glyph, an `Esc` key cap, group headings in sans, rows of kind
-  glyph + title + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of key hints and the result count.
+- **Search.** A modal dialog on the surface Frame: a combobox input with the glyph, an `Esc` key cap, group headings in mono, rows of kind
+  glyph + title (display face, 700) + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of key hints and the result count.
   The trigger is a 44 px icon button with `⌘ K` / `Ctrl K` from `lg`.
 - **Print.** Ink on white, no globe, navigation, controls, contents, related cards or neighbours; external link addresses are written out.
 

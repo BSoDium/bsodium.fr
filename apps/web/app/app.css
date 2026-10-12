@@ -43,6 +43,13 @@
   --signal-text: #b8420f;
   --signal-foreground: #0a0a0a;
   --signal-wash: rgb(234 96 36 / 0.08);
+  /* Reading surface of the entries and their lists (docs/design-tokens.md, "Reading surface"): paper in the light scheme, night in the dark. */
+  --paper: #efeadf;
+  --paper-foreground: #16130f;
+  --paper-muted: #6b665b;
+  --paper-hover: #ebe7dc;
+  --paper-signal: #cf4f17;
+  --paper-signal-text: #a93a0a;
   /* The opposite scheme's page tokens: what an inverted frame rebinds the tokens to (a cycle-free swap). */
   --inverse-background: #0a0a0a;
   --inverse-foreground: #fbfbfb;
@@ -117,6 +124,12 @@
     --signal-text: #f26a2e;
     --signal-foreground: #0a0a0a;
     --signal-wash: rgb(242 106 46 / 0.09);
+    --paper: #0b0c0f;
+    --paper-foreground: #ece8df;
+    --paper-muted: #8d8a82;
+    --paper-hover: #17181b;
+    --paper-signal: #f26a2e;
+    --paper-signal-text: #f26a2e;
     --inverse-background: #f5f5f5;
     --inverse-foreground: #0a0a0a;
     --inverse-muted: #595959;
@@ -269,6 +282,12 @@
   --signal-text: #b8420f;
   --signal-foreground: #0a0a0a;
   --signal-wash: rgb(234 96 36 / 0.08);
+  --paper: #efeadf;
+  --paper-foreground: #16130f;
+  --paper-muted: #6b665b;
+  --paper-hover: #ebe7dc;
+  --paper-signal: #cf4f17;
+  --paper-signal-text: #a93a0a;
   --inverse-background: #0a0a0a;
   --inverse-foreground: #fbfbfb;
   --inverse-muted: #a3a3a3;
@@ -304,6 +323,12 @@
   --signal-text: #f26a2e;
   --signal-foreground: #0a0a0a;
   --signal-wash: rgb(242 106 46 / 0.09);
+  --paper: #0b0c0f;
+  --paper-foreground: #ece8df;
+  --paper-muted: #8d8a82;
+  --paper-hover: #17181b;
+  --paper-signal: #f26a2e;
+  --paper-signal-text: #f26a2e;
   --inverse-background: #f5f5f5;
   --inverse-foreground: #0a0a0a;
   --inverse-muted: #595959;
@@ -335,7 +360,7 @@
 
 @font-face {
   font-family: "Newsreader Variable";
-  src: url("/fonts/newsreader-5.3.0-latin-wght.woff2") format("woff2");
+  src: url("/fonts/newsreader-5.3.0-latin-wght-opsz.woff2") format("woff2");
   font-weight: 200 800;
   font-style: normal;
   font-display: swap;
@@ -344,7 +369,7 @@
 
 @font-face {
   font-family: "Newsreader Variable";
-  src: url("/fonts/newsreader-5.3.0-latin-wght-italic.woff2") format("woff2");
+  src: url("/fonts/newsreader-5.3.0-latin-wght-opsz-italic.woff2") format("woff2");
   font-weight: 200 800;
   font-style: italic;
   font-display: swap;
@@ -569,45 +594,46 @@
   }
 
   /*
-   * Drop cap: the first letter of the first paragraph, in the heavy display weight and the accent (it is far past 24 px, which is
-   * what `--signal` as text needs). Three lines tall: `initial-letter` where it exists, a float elsewhere.
+   * Drop cap: the first letter of the first paragraph, in the reading face at 700 and the ink (the "Article on paper" board), a
+   * float five lines of the body tall. A float and not `initial-letter` on purpose: the board's letter sits on the third line of the
+   * body, and `initial-letter` sinks differently in each engine. A narrow column (a phone, the half panel) takes a smaller letter.
    */
   .drop-cap::first-letter {
     float: left;
-    margin: 0.06em 0.09em 0 -0.03em;
-    font-family: var(--font-display);
-    font-weight: var(--weight-heavy);
-    font-size: 3.55em;
-    line-height: 0.76;
+    padding: 0.07em 0.13em 0 0;
+    font-family: var(--font-reading);
+    font-weight: 700;
+    font-size: 5.33em;
+    line-height: 0.8;
+    letter-spacing: 0;
     font-optical-sizing: auto;
     font-synthesis: none;
-    color: var(--signal);
+    color: var(--foreground);
   }
 
-  @supports (initial-letter: 3) or (-webkit-initial-letter: 3) {
+  @container (max-width: 40rem) {
     .drop-cap::first-letter {
-      float: none;
-      margin: 0 0.1em 0 -0.03em;
-      font-size: inherit;
-      line-height: inherit;
-      -webkit-initial-letter: 3;
-      initial-letter: 3;
+      font-size: 4.2em;
     }
   }
 
-  /* Pull quote: the reading face in thin italic, large, to even lines, between hairlines (`border` is the quiet one). */
+  /*
+   * Pull quote: the reading face in thin italic, large, to even lines, between two ink rules (the board: 40 px at 1328 px, 1.15
+   * leading). `cqi` is the width of the nearest container (the entry), the viewport where there is none.
+   */
   .type-pullquote {
     margin: 0;
-    padding-block: 1.25rem;
-    border-block: var(--hairline) solid var(--border);
+    padding-block: 1.125rem;
+    border-block: var(--hairline) solid var(--foreground);
     font-family: var(--font-reading);
     font-style: italic;
     font-optical-sizing: auto;
-    font-size: clamp(1.375rem, 1.1rem + 1.2vw, 1.875rem);
-    line-height: 1.3;
+    font-size: clamp(1.5rem, 0.9rem + 1.9cqi, 2.5rem);
+    line-height: 1.15;
     letter-spacing: -0.01em;
     font-weight: var(--weight-light);
     text-wrap: balance;
+    hanging-punctuation: first;
   }
 
   /* A hairline rule between sections of a text. */
@@ -1286,7 +1312,10 @@
 
   .ds-prose p,
   .ds-prose ul,
-  .ds-prose ol {
+  .ds-prose ol,
+  .ds-prose h2,
+  .ds-prose h3,
+  .ds-prose h4 {
     max-width: var(--measure-reading);
   }
 
@@ -1300,13 +1329,16 @@
     text-wrap: balance;
   }
 
+  /* The section heading is the heavy end of the display face, the third level its thin end. Sizes follow the body (em). */
   .ds-prose h2 {
+    font-size: 1.7em;
     font-weight: var(--weight-heavy);
     letter-spacing: -0.03em;
   }
 
   .ds-prose h3,
   .ds-prose h4 {
+    font-size: 1.3em;
     font-weight: var(--weight-light);
     letter-spacing: -0.02em;
   }
@@ -1316,6 +1348,13 @@
     font-weight: var(--weight-light);
     letter-spacing: -0.01em;
     text-wrap: balance;
+  }
+
+  /* A quote of the body is the pull quote role (`.type-pullquote` on its figure): its text is that role's, not the body's. */
+  .ds-prose .type-pullquote blockquote {
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
   }
 
   .ds-prose hr {
@@ -1336,6 +1375,18 @@
   .ds-prose [data-slot="verse"] {
     text-wrap: wrap;
     font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+
+  /* Figures and their captions: mono, small, muted, under a hairline of the ink (the boards' "Fig. N"). */
+  .ds-caption {
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "calt" 0;
+    color: var(--muted-foreground);
   }
 
   /* Heading anchor: the `#` link of a section. Drawn on hover and focus; always on devices without hover. */
@@ -1411,6 +1462,262 @@
   }
 
   /*
+   * Entry pages (docs/design-system.md, "Entry pages"): the "Article on paper" and "Poem at night" boards of the owner's canvas.
+   * The entry is a container (`cqi`): the headline, the body and the poem scale with the width of the column they sit in, so the half
+   * panel and the full screen are the same design at two widths. From 1024 px of a full screen the page is a 12-column grid with
+   * 28 px gutters: marginalia in 1-3, the text in 4-9, the figures in 10-12 (an article, a project); an artwork's image and a poem's
+   * lines take 4-12 and 4-10. Everything else is one column: header, dateline, marginalia (compact), text, figures. The markup order is
+   * the reading order in both; only the placement changes.
+   */
+  .entry {
+    container-type: inline-size;
+    --entry-title: clamp(2.375rem, 8cqi, 4.5rem);
+    --entry-body: clamp(1.125rem, 1rem + 0.6cqi, 1.25rem);
+    --poem-title: clamp(2.5rem, 9cqi, 5rem);
+    --poem-size: clamp(1.375rem, 0.9rem + 2.2cqi, 1.875rem);
+    --measure-reading: 31em;
+  }
+
+  .entry[data-layout="full"] {
+    --entry-title: clamp(2.375rem, 9.9cqi, 8.25rem);
+    --entry-body: clamp(1.125rem, 0.78rem + 0.9cqi, 1.3125rem);
+    --poem-title: clamp(2.75rem, 9.64cqi, 8rem);
+    --poem-size: clamp(1.375rem, 0.6rem + 2.2cqi, 2.25rem);
+  }
+
+  /* The page of an entry: one column; a 12-column grid from 1024 px of a full screen (below). */
+  .entry-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* The newspaper's double rule under the masthead: 3 px, a 3 px gap, 1 px. */
+  .entry-rule {
+    box-sizing: content-box;
+    height: 3px;
+    margin: 0;
+    border: 0;
+    border-top: 3px solid var(--foreground);
+    border-bottom: 1px solid var(--foreground);
+  }
+
+  /* The headline: the reading face at 700, balanced, tight (the board: 132 px, 0.92, -0.03em, optical size 72 by `auto`). */
+  .entry-title {
+    max-width: 8.95em;
+    margin: 0;
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    font-synthesis: none;
+    font-size: calc(var(--entry-title) * var(--title-scale, 1));
+    font-weight: 700;
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  /* The clause after a comma, a colon or a dash: the thin end of the same face against the heavy headline. */
+  .entry-title-tail {
+    font-weight: 300;
+  }
+
+  /* A poem's title: thin italic, much larger than the lines (the night board: 128 px, 200, 0.95). */
+  .entry-title[data-poem] {
+    max-width: none;
+    font-size: var(--poem-title);
+    font-style: italic;
+    font-weight: 200;
+    line-height: 0.95;
+  }
+
+  /* The meta row under the standfirst: a hairline of the ink, then mono 12 px. Not uppercase: it holds a date and a link. */
+  .entry-dateline {
+    border-top: 1px solid var(--foreground);
+    padding-top: 0.75rem;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "calt" 0;
+    color: var(--muted-foreground);
+  }
+
+  /* Marginalia: mono 12 px / 1.7 muted under a rule; the labels (`.type-meta` in the ink) are the markup's. A column from 1024 px of a full screen. */
+  .entry-margin {
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+    border-top: 1px solid var(--foreground);
+    padding-top: 0.75rem;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    font-feature-settings: "calt" 0;
+    color: var(--muted-foreground);
+  }
+
+  /* The facts: a label over its value, two or three to a row where the column is wide (a phone, the half panel), one to a row in the margin. */
+  .entry-margin dl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 1.125rem 1.5rem;
+  }
+
+  .entry-margin dd,
+  .entry-margin ul {
+    margin: 0;
+  }
+
+  .entry-margin a,
+  .entry-dateline a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.25em;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .entry-margin a:hover,
+  .entry-dateline a:hover {
+    color: var(--foreground);
+  }
+
+  /*
+   * A 44 px target for a 12 px link, below `md` (where fingers are): the rows of a list of links are as tall as the target, so the
+   * hit areas of neighbours do not overlap, and the link keeps its small text. From `md` the line is the target.
+   */
+  .entry-link {
+    position: relative;
+  }
+
+  @media (max-width: 767.98px) {
+    .entry-link::before {
+      content: "";
+      position: absolute;
+      inset: -0.8125rem -0.5rem;
+    }
+
+    .entry-margin li {
+      display: flex;
+      align-items: center;
+      min-height: 2.75rem;
+    }
+
+    /* The tags of the marginalia are 12 px mono (an 18 px line): their hit area is taller than the sans tags' to make 44 px. */
+    .entry-margin .ds-tags a::before,
+    .entry-row .ds-tags a::before {
+      inset: -0.875rem -0.25rem;
+    }
+  }
+
+  /* The body: the board's 21 px / 1.55 at full width, the reading role's size in the half panel and on a phone. */
+  .entry-text .ds-prose {
+    font-size: var(--entry-body);
+    line-height: 1.55;
+  }
+
+  .entry-text .ds-prose h2,
+  .entry-text .ds-prose h3 {
+    line-height: 1.08;
+  }
+
+  /* Figures: a rule of the ink, the image, a mono caption. */
+  .entry-figure {
+    border-top: 1px solid var(--foreground);
+    padding-top: 0.75rem;
+  }
+
+  /* A poem: the lines are the page's type (the night board: roman 300, 36 px / 1.38 at full width, one block per authored line). */
+  .entry[data-kind="poem"] .ds-prose [data-slot="verse"] {
+    font-size: var(--poem-size);
+    font-weight: var(--weight-light);
+    line-height: 1.38;
+    letter-spacing: -0.005em;
+  }
+
+  .entry[data-kind="poem"] .ds-prose p:not([data-slot="verse"] p) {
+    color: var(--muted-foreground);
+    font-style: italic;
+    font-weight: var(--weight-light);
+  }
+
+  @media (min-width: 1024px) {
+    .entry[data-layout="full"] .entry-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: 1.75rem;
+      row-gap: 2.5rem;
+      align-items: start;
+    }
+
+    .entry[data-layout="full"] .entry-margin dl {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-head,
+    .entry[data-layout="full"] .entry-grid > .entry-dateline {
+      grid-column: 1 / -1;
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-margin {
+      grid-column: 1 / span 3;
+      grid-row: span 2;
+      align-self: stretch;
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-cover {
+      grid-column: 4 / -1;
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-text {
+      grid-column: 4 / span 6;
+      border-top: 1px solid var(--foreground);
+      padding-top: 0.75rem;
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-figures {
+      grid-column: 10 / span 3;
+    }
+
+    /* An artwork: the image is the page, wide; the text keeps its measure on the left of the 9 columns. */
+    .entry[data-kind="artwork"][data-layout="full"] .entry-grid > .entry-text {
+      grid-column: 4 / -1;
+    }
+
+    /* A poem: the title and the lines in 4-10, the marginalia beside the title, 34 px down (the board). */
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid {
+      padding-top: 5.5rem;
+    }
+
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid > .entry-head {
+      grid-column: 4 / span 7;
+      grid-row: 1;
+    }
+
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid > .entry-margin {
+      grid-column: 1 / span 3;
+      grid-row: 1 / span 2;
+      border-top: 0;
+      padding-top: 2.125rem;
+    }
+
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid > .entry-text {
+      grid-column: 4 / span 7;
+      grid-row: 2;
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid > .entry-cover {
+      grid-column: 4 / span 7;
+    }
+  }
+
+  /*
    * The filter of a list: text toggles in one row, no boxes. The chosen one is set in the foreground at a heavier weight with an
    * underline (and `aria-current`); the others are muted and answer hover with the foreground colour.
    */
@@ -1473,6 +1780,32 @@
     align-items: baseline;
     gap: 0.75rem;
   }
+}
+
+/*
+ * Reading surface: an entry (in the panel or full screen) and the four lists sit on paper in the light scheme and on night in the
+ * dark (`--paper*`, design-tokens.md). UNLAYERED on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The page tokens are rebound for the subtree, so every component of it (rules, muted text, hover,
+ * focus ring, the accent) follows without naming a colour. The entry's panel is the element that is rebound, so its own `bg-background`
+ * (and the navigation scrim inside it) takes the paper; the list pages rebind the root, since the page is their surface; `data-reading-surface`
+ * does it for one element (the styleguide's specimens). Contrast is
+ * tested for the pairs that are used (`design-system.test.ts`, "reading surface").
+ */
+[data-panel]:has([data-surface="reading"]),
+:root:has(main[data-surface="reading"]),
+[data-reading-surface] {
+  --background: var(--paper);
+  --surface: var(--paper);
+  --foreground: var(--paper-foreground);
+  --muted-foreground: var(--paper-muted);
+  --subtle-foreground: var(--paper-muted);
+  --accent: var(--paper-hover);
+  --border: color-mix(in srgb, var(--paper-foreground) 18%, transparent);
+  --border-strong: color-mix(in srgb, var(--paper-foreground) 55%, transparent);
+  --ring: var(--paper-foreground);
+  --signal: var(--paper-signal);
+  --signal-text: var(--paper-signal-text);
+  --primary: var(--paper-foreground);
+  --primary-foreground: var(--paper);
 }
 
 /* Entry headings are focus targets by script, not controls: no ring on them (the panel announces the change). */

@@ -186,7 +186,7 @@ export function SearchPalette() {
                 {groups.map((group) => (
                   <li key={group.type} role="presentation">
                     <ul role="group" aria-label={group.label} className="m-0 list-none p-0">
-                      <li role="presentation" className="px-4 pt-4 pb-1 text-sm font-medium text-muted-foreground" aria-hidden="true">
+                      <li role="presentation" className="type-meta px-4 pt-4 pb-1 text-muted-foreground" aria-hidden="true">
                         {SEARCH_LABELS[group.type]}
                       </li>
                       {group.items.map((item) => {
@@ -204,7 +204,7 @@ export function SearchPalette() {
                           >
                             <KindTag kind={item.type} iconOnly />
                             <span className="flex min-w-0 flex-1 flex-col">
-                              <span className="truncate text-base">{item.title}</span>
+                              <span className="truncate font-display text-base font-bold tracking-[-0.01em]">{item.title}</span>
                               {item.sub && <span className="ds-meta truncate">{item.sub}</span>}
                             </span>
                             <Glyph name="arrow-right" size={12} className={cn("shrink-0", selected ? "opacity-100" : "opacity-0")} />

@@ -866,6 +866,118 @@ function Brand() {
   );
 }
 
+/* ------------------------------------------------------------ entry pages */
+
+/**
+ * The entry pages' grammar (docs/design-system.md, "Entry pages") at the width of a column, in both reading surfaces: the double rule, the
+ * kicker, a headline whose clause after a comma is thin, the standfirst, the dateline, the marginalia, the body with its drop cap and
+ * pull quote, a figure with its caption; then a poem. Made-up text. The surface is the page's reading surface (paper / night), bound
+ * for the element by `data-reading-surface`; the sizes follow the width of the block (`cqi`), as they do on the page.
+ */
+function EntrySpecimen({ scheme }: { scheme: "light" | "dark" }) {
+  return (
+    <div data-scheme={scheme} data-reading-surface data-layout="full" data-kind="article" className="entry min-w-0 border border-border bg-background p-6 text-foreground">
+      <p className="ds-meta m-0 mb-6">Surface: {scheme === "light" ? "paper" : "night"}</p>
+      <div className="entry-rule" aria-hidden="true" />
+      <p className="type-meta m-0 mt-[1.375rem] flex justify-between text-muted-foreground">
+        <span>Article &middot; Placeholder Bay</span>
+        <span>6 min read</span>
+      </p>
+      <h3 className="entry-title mt-[1.625rem]">
+        Notes on a quiet compiler<span className="entry-title-tail">, written on a slow train</span>
+      </h3>
+      <p className="type-standfirst mt-6 max-w-[25.4em]">One made-up sentence that says what the piece is, set thin and italic against the heavy headline.</p>
+      <div className="entry-dateline mt-8 flex flex-wrap gap-x-8">
+        <span>2026.03.14</span>
+        <span>Placeholder Bay &#8599; open on the globe</span>
+      </div>
+      <div className="entry-margin mt-8">
+        <div>
+          <p className="type-meta m-0 text-foreground">Where</p>
+          <p className="m-0">Placeholder Bay, Sample country</p>
+        </div>
+        <dl className="m-0">
+          <div>
+            <dt className="type-meta text-foreground">Written</dt>
+            <dd>March 2026</dd>
+          </div>
+          <div>
+            <dt className="type-meta text-foreground">Linked</dt>
+            <dd>1 place, 2 entries</dd>
+          </div>
+        </dl>
+      </div>
+      <div className="entry-text mt-8">
+        <div className="ds-prose flex flex-col gap-[1.1em]">
+          <p className="drop-cap m-0">
+            Every sentence here is a placeholder, set to show the measure and the rhythm of a reading column under a heavy headline, with a drop cap
+            that is the first letter of the text and nothing else. A second sentence follows to give the cap three lines of company.
+          </p>
+          <h4 className="m-0">A section heading, in the light end of the display face</h4>
+          <figure className="type-pullquote my-[0.4em]">
+            <blockquote className="m-0">
+              <p className="m-0">A pull quote is larger and thinner than anything else on the page.</p>
+            </blockquote>
+          </figure>
+          <p className="m-0">
+            A <a href="#s13" className="type-link">link in running text</a> is an underline in the accent, not a button.
+          </p>
+        </div>
+      </div>
+      <figure className="entry-figure m-0 mt-8">
+        <div className="aspect-video bg-accent" />
+        <figcaption className="ds-caption mt-2.5">
+          <span className="text-foreground">Fig. 1 </span>A made-up caption, in mono, under a rule of the ink.
+        </figcaption>
+      </figure>
+    </div>
+  );
+}
+
+/** The night board's poem: the title in thin italic, the lines in a light weight at the size of a page of verse, one block per line. */
+function PoemSpecimen({ scheme }: { scheme: "light" | "dark" }) {
+  return (
+    <div data-scheme={scheme} data-reading-surface data-layout="full" data-kind="poem" className="entry min-w-0 border border-border bg-background p-6 text-foreground">
+      <p className="type-meta m-0 mb-6 text-muted-foreground">Poem</p>
+      <h3 className="entry-title" data-poem="">
+        Low tide
+      </h3>
+      <div className="ds-prose mt-8">
+        <div data-slot="verse" className="flex flex-col gap-[1.4em]">
+          <p className="m-0 flex flex-col">
+            <span className="block">A first line, short, set thin</span>
+            <span className="block">and given the room a poem needs.</span>
+          </p>
+          <p className="m-0 flex flex-col">
+            <span className="block">A second stanza, breathing apart,</span>
+            <span className="block">where the page is mostly dark.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EntryPages() {
+  return (
+    <Stack gap={8}>
+      <Note>
+        The article and poem boards of the owner's canvas, as the entry pages build them: Newsreader 700 for the headline (its clause after a comma, a colon or
+        a dash at 300), thin italic for the standfirst and the pull quote, mono for the kicker, the dateline, the marginalia and the captions, a drop cap in the
+        ink, ink rules, and a poem set as its own page: a thin italic title over lines at 300. Paper in the light scheme, night in the dark.
+      </Note>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {(["light", "dark"] as const).map((scheme) => (
+          <div key={scheme} className="flex min-w-0 flex-col gap-6">
+            <EntrySpecimen scheme={scheme} />
+            <PoemSpecimen scheme={scheme} />
+          </div>
+        ))}
+      </div>
+    </Stack>
+  );
+}
+
 export default function DevDesign() {
   const [params] = useSearchParams();
   const initial = params.get("scheme");
@@ -930,6 +1042,9 @@ export default function DevDesign() {
       </Section>
       <Section index={12} title="Brand">
         <Brand />
+      </Section>
+      <Section index={13} title="Entry pages">
+        <EntryPages />
       </Section>
     </main>
   );

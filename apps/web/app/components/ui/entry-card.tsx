@@ -81,7 +81,7 @@ export function EntryCard({ kind, showKind, title, summary, href, image, seed, m
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         {showKind && <KindTag kind={kind} />}
-        <Heading data-slot="entry-card-title" className="m-0 text-xl font-semibold tracking-tight text-balance">
+        <Heading data-slot="entry-card-title" className="m-0 font-display text-xl leading-[1.1] font-bold tracking-[-0.02em] text-balance">
           {link}
         </Heading>
         {summary && <p className="m-0 line-clamp-3 text-base text-pretty text-muted-foreground">{summary}</p>}

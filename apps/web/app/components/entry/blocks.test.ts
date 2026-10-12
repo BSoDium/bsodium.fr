@@ -3,14 +3,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { PublishedBodyBlock } from "@catalyst/schemas";
-import { BlockRenderer } from "./blocks";
+import { BlockRenderer, Figures } from "./blocks";
 
 const render = (blocks: PublishedBodyBlock[], lang?: string) => renderToStaticMarkup(createElement(BlockRenderer, { blocks, lang }));
 
 describe("BlockRenderer", () => {
   it("renders paragraphs with hard line breaks and escapes everything", () => {
     const html = render([{ type: "paragraph", text: "one\ntwo <b>x</b> & \"q\"" }]);
-    expect(html).toContain("<p class=\"m-0 max-w-[60ch]\">one<br/>two &lt;b&gt;x&lt;/b&gt; &amp; &quot;q&quot;</p>");
+    expect(html).toContain("<p class=\"m-0\">one<br/>two &lt;b&gt;x&lt;/b&gt; &amp; &quot;q&quot;</p>");
     expect(html).not.toContain("<b>");
   });
   it("maps headings to h2/h3 with unique ids and no decorative numbering", () => {
@@ -81,6 +81,69 @@ describe("BlockRenderer", () => {
   });
   it("renders nothing for an empty body", () => {
     expect(render([])).toBe("");
+  });
+});
+
+describe("BlockRenderer typography", () => {
+  const long = "I did not plan to take the night train four times in one week. The first was a question of arithmetic: a late meeting in Ljubljana, a morning one in Zagreb, and a bed that moved at 120 kilometres an hour was cheaper than a hotel and a taxi.";
+  const renderWith = (blocks: PublishedBodyBlock[], dropCap: boolean) => renderToStaticMarkup(createElement(BlockRenderer, { blocks, dropCap }));
+
+  it("opens the body with a drop cap only when asked, and only the first block, and only a long paragraph", () => {
+    const blocks: PublishedBodyBlock[] = [{ type: "paragraph", text: long }, { type: "paragraph", text: long }];
+    const html = renderWith(blocks, true);
+    expect((html.match(/drop-cap/g) ?? []).length).toBe(1);
+    expect(html.indexOf("drop-cap")).toBeLessThan(html.indexOf("<p", html.indexOf("drop-cap") + 1));
+    expect(renderWith(blocks, false)).not.toContain("drop-cap");
+    expect(renderWith([{ type: "paragraph", text: "Short." }], true)).not.toContain("drop-cap");
+    // a paragraph that is not first in the body never takes one
+    expect(renderWith([{ type: "heading", level: 2, text: "H" }, { type: "paragraph", text: long }], true)).not.toContain("drop-cap");
+  });
+  it("sets a quote as the pull quote role, its cite as a mono caption, and carries no size of its own", () => {
+    const html = render([{ type: "quote", text: "Said", cite: "Someone" }]);
+    expect(html).toContain('class="type-pullquote');
+    expect(html).toMatch(/<figcaption class="ds-caption[^"]*">&mdash;|<figcaption class="ds-caption[^"]*">\u2014/);
+    expect(html).not.toMatch(/text-xl|border-l/);
+  });
+  it("leaves the measure, the weights and the sizes of the body to the reading role (no utility on headings, paragraphs or lists)", () => {
+    const html = render([
+      { type: "heading", level: 2, text: "Notes" },
+      { type: "paragraph", text: "a" },
+      { type: "list", ordered: false, items: ["x"] },
+    ]);
+    expect(html).not.toMatch(/max-w-\[60ch\]|font-semibold|tracking-tight|text-2xl|text-xl/);
+  });
+  it("numbers the images in the order they appear and says the number before the caption (not before a bare image)", () => {
+    const html = render([
+      { type: "image", src: "/media/a/one.svg", alt: "One", width: 10, height: 10, caption: "First" },
+      { type: "paragraph", text: "between" },
+      { type: "image", src: "/media/a/two.svg", alt: "Two", width: 10, height: 10 },
+      { type: "image", src: "/media/a/three.svg", alt: "Three", width: 10, height: 10, caption: "Third" },
+    ]);
+    expect(html).toContain("Fig. 1 ");
+    expect(html).toContain("Fig. 3 ");
+    expect(html).not.toContain("Fig. 2");
+    // the figure is set under a rule, the picture is not boxed
+    expect(html).toContain("entry-figure");
+    expect(html).not.toMatch(/border border-border/);
+  });
+  it("keeps one block per verse line and the stanza gap in em (a poem's lines are the page's type)", () => {
+    const html = render([{ type: "verse", stanzas: [["a", "b"], ["c"]] }]);
+    expect(html).toContain("gap-[1.4em]");
+    expect((html.match(/<span class="block"/g) ?? []).length).toBe(3);
+  });
+});
+
+describe("Figures", () => {
+  it("draws the figures set apart from the text, numbered from 1, and nothing for no drawable image", () => {
+    const blocks = [
+      { type: "image", src: "/media/a/one.svg", alt: "One", width: 10, height: 10, caption: "First" },
+      { type: "image", src: "/media/a/two.svg", alt: "Two", width: 10, height: 10, caption: "Second" },
+    ] as const;
+    const html = renderToStaticMarkup(createElement(Figures, { blocks }));
+    expect(html).toContain('data-slot="entry-figures"');
+    expect(html).toContain("Fig. 1 ");
+    expect(html).toContain("Fig. 2 ");
+    expect(renderToStaticMarkup(createElement(Figures, { blocks: [{ type: "image", src: "https://evil.test/x.png", alt: "x" } as never] }))).toBe("");
   });
 });
 

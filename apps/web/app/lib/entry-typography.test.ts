@@ -1,0 +1,94 @@
+import { describe, expect, it } from "vitest";
+import { dropCapIndex, DROP_CAP_MIN_LENGTH, formatMonthYear, headlineScale, linkedLine, splitFigures, splitHeadline } from "./entry-typography";
+
+describe("splitHeadline", () => {
+  it("leaves a title without a separator as one heavy run", () => {
+    expect(splitHeadline("Night trains through the Balkans")).toEqual({ lead: "Night trains through the Balkans", tail: "" });
+  });
+  it("splits at the first comma, colon or dash and keeps the separator in the thin run (lead + tail is the title)", () => {
+    for (const title of ["Collide, a label collision engine for maps", "Timetable Diff: the tool behind these notes", "Eleven hours \u2014 by bus", "Rain, then, more rain, again"]) {
+      const { lead, tail } = splitHeadline(title);
+      expect(tail, title).not.toBe("");
+      expect(lead + tail, title).toBe(title);
+    }
+    expect(splitHeadline("Collide, a label collision engine for maps")).toEqual({ lead: "Collide", tail: ", a label collision engine for maps" });
+    expect(splitHeadline("Rain, then, more rain").lead).toBe("Rain");
+  });
+  it("does not split when a half is too short to stand alone", () => {
+    expect(splitHeadline("A, B")).toEqual({ lead: "A, B", tail: "" });
+    expect(splitHeadline("Citadel, ")).toEqual({ lead: "Citadel, ", tail: "" });
+    expect(splitHeadline("No. 3: ?")).toEqual({ lead: "No. 3: ?", tail: "" });
+    expect(splitHeadline(", leading comma")).toEqual({ lead: ", leading comma", tail: "" });
+  });
+  it("splits at the earliest separator whatever its kind", () => {
+    expect(splitHeadline("One: two, three").lead).toBe("One");
+    expect(splitHeadline("One, two: three").lead).toBe("One");
+  });
+});
+
+describe("formatMonthYear", () => {
+  it("writes a month and a year, completing nothing", () => {
+    expect(formatMonthYear("2026-03-14")).toBe("March 2026");
+    expect(formatMonthYear("2024-06")).toBe("June 2024");
+    expect(formatMonthYear("2022")).toBe("2022");
+  });
+  it("gives null for anything that is not a partial ISO date", () => {
+    expect(formatMonthYear(undefined)).toBeNull();
+    expect(formatMonthYear("2026-13")).toBeNull();
+    expect(formatMonthYear("March 2026")).toBeNull();
+    expect(formatMonthYear("2026-3-1")).toBeNull();
+  });
+});
+
+describe("dropCapIndex", () => {
+  const long = "x".repeat(DROP_CAP_MIN_LENGTH);
+  it("is the first block when it is a long paragraph that starts with a letter", () => {
+    expect(dropCapIndex([{ type: "paragraph", text: `A${long}` }])).toBe(0);
+    expect(dropCapIndex([{ type: "paragraph", text: `\u201CA${long}` }])).toBe(0);
+    expect(dropCapIndex([{ type: "paragraph", text: `\u00C9t\u00E9${long}` }])).toBe(0);
+  });
+  it("is -1 for a short paragraph, a body that does not open with a paragraph, or a first character that is not a letter", () => {
+    expect(dropCapIndex([{ type: "paragraph", text: "Short." }])).toBe(-1);
+    expect(dropCapIndex([{ type: "heading", level: 2, text: "H" }, { type: "paragraph", text: `A${long}` }])).toBe(-1);
+    expect(dropCapIndex([{ type: "paragraph", text: `\u2014${long}` }])).toBe(-1);
+    expect(dropCapIndex([])).toBe(-1);
+  });
+});
+
+describe("splitFigures", () => {
+  it("separates the images, each side in its authored order", () => {
+    const image = (n: number) => ({ type: "image" as const, src: `/media/a/${n}.svg`, alt: String(n) });
+    const { text, figures } = splitFigures([{ type: "paragraph", text: "a" }, image(1), { type: "heading", level: 2, text: "h" }, image(2)]);
+    expect(text.map((b) => b.type)).toEqual(["paragraph", "heading"]);
+    expect(figures.map((f) => f.alt)).toEqual(["1", "2"]);
+  });
+});
+
+describe("linkedLine", () => {
+  it("counts what is there and says nothing when there is nothing", () => {
+    expect(linkedLine({ places: 4, entries: 3 })).toBe("4 places, 3 entries");
+    expect(linkedLine({ places: 1, entries: 1 })).toBe("1 place, 1 entry");
+    expect(linkedLine({ places: 2, entries: 0 })).toBe("2 places");
+    expect(linkedLine({ places: 0, entries: 2 })).toBe("2 entries");
+    expect(linkedLine({ places: 0, entries: 0 })).toBeNull();
+  });
+  it("leaves the entries out when their count is not known", () => {
+    expect(linkedLine({ places: 3, entries: null })).toBe("3 places");
+  });
+});
+
+describe("headlineScale", () => {
+  it("is 1 for a short title and 0.6 for a very long one", () => {
+    expect(headlineScale("A short title")).toBe(1);
+    expect(headlineScale("x".repeat(48))).toBe(1);
+    expect(headlineScale("x".repeat(200))).toBe(0.6);
+  });
+  it("shrinks monotonically in between", () => {
+    let last = 1;
+    for (let n = 48; n <= 120; n += 6) {
+      const v = headlineScale("x".repeat(n));
+      expect(v).toBeLessThanOrEqual(last);
+      last = v;
+    }
+  });
+});

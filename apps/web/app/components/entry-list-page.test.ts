@@ -51,4 +51,27 @@ describe("EntryListPage", () => {
     expect(html).toContain("Nothing here yet");
     expect(html).not.toContain('data-slot="tag-filter"');
   });
+  it("sets the entries as hairline rows of type: a mono dateline, the title in the display role, no card, box or generated cover for an article", () => {
+    const html = render(articles);
+    expect(html).toContain('data-surface="reading"');
+    expect(html).toMatch(/<h1[^>]*class="entry-title/);
+    expect(html).toContain('class="entry-rule"');
+    expect((html.match(/entry-row/g) ?? []).length).toBe(articles.length);
+    expect(html).toMatch(/<h2[^>]*class="type-display-md[^"]*"/);
+    expect(html).toContain("type-meta");
+    expect(html).not.toMatch(/ds-grid|ds-col|border-border-strong|rounded/);
+    // an article has no generated cover (type is the page); an authored one stays
+    const withoutImage = articles.map((a) => ({ ...a, cover: undefined }));
+    expect(render(withoutImage)).not.toContain('data-slot="cover-art"');
+    expect(html).toContain("<img");
+  });
+  it("gives an artwork without an image its generated cover (the image is the artwork)", () => {
+    const artworks = listEntries(demo, "artwork").map((a) => ({ ...a, cover: undefined }));
+    const html = renderToStaticMarkup(createElement(StaticRouter, { location: "/artworks" }, createElement(EntryListPage, { kind: "artwork", items: artworks })));
+    expect((html.match(/data-slot="cover-art"/g) ?? []).length).toBe(artworks.length);
+  });
+  it("says the year as a thin display numeral when years group entries", () => {
+    const items = [make("a", "2022-01", ["x"]), make("b", "2024-05", ["x"]), make("c", "2024-02", ["y"]), make("d", "2022-09", ["y"])];
+    expect(render(items)).toMatch(/<h2[^>]*class="ds-year type-display-lg type-thin[^"]*"/);
+  });
 });
