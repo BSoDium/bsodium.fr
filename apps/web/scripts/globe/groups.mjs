@@ -1,6 +1,6 @@
 // Checks for the detection boxes (every place and group is a rectangle; the hierarchy is cut in screen space), Playwright + headless Chrome with the GPU.
 //
-//   CHROME_PATH=... BASE_URL=http://localhost:5174 [SHOTS=1] node apps/web/scripts/globe/groups.mjs [lod|cases|pixels|empty|timed|at-rest|reduced|pick|targets|flicker|open|cost|idle|handover|shots]
+//   CHROME_PATH=... BASE_URL=http://localhost:5174 [SHOTS=1] node apps/web/scripts/globe/groups.mjs [lod|cases|pixels|empty|timed|at-rest|reduced|pick|targets|flicker|open|crowd|cost|idle|handover|shots]
 //
 // Serve the app with demo content (`pnpm dev:demo`, or a production build with CATALYST_CONTENT=demo): the demo projection has
 // a hierarchy (3 continents, a region, a subregion, 3 countries, an area; 18 places). `handover` also needs the local tile server
@@ -35,6 +35,9 @@
 //           running through the opening of Western Europe, sampled at every animation frame: the group's opacity and any node below it sum to 1.05 at
 //           most, the cross-fade is seen mid-way and lasts about 200 ms, the label elements follow the nodes' opacity, a click on a child that is fading in
 //           picks the child (the group stops taking clicks below half); and a slow zoom on the way in never takes a node away except by opening its group
+// crowd     (the owner's preview, or any content) the room between the drawn nodes (docs/web-architecture.md, "Room between the nodes"): on six view centres, a slow
+//           zoom in and out at rest (every 0.25), no two boxes overlap (but roots and places whose own boxes overlap), no two label plates overlap, and the
+//           pairs of nodes closer than 12 px (the leave gap) are rare, those closer than 24 px (the enter gap) are counted
 // cost      the cost of the cluster pass with 18, 186, 1000 and 5000 nodes
 // idle      no frames, no rAF, no label canvas redraw while nothing moves
 // handover  the same boxes and dots are drawn by the globe's and the street overlay's drawing of one camera
@@ -696,16 +699,17 @@ try {
     const { page, logs } = await openGlobe(browser, DESKTOP);
     const tree = await page.evaluate(() => window.__globeDebug.tree());
     const have = (slug) => tree.some((n) => n.slug === slug);
+    // [slug, lon, lat, zoom where it opened with two of its nodes drawn before the clearance rule (the browser's own measurement of 2026-10-09, `docs/web-architecture.md`),
+    // how much later it may be now]. The areas (an area in an area in a country: long-named boxes that open through ONE node) are measured at their first node.
     const GROUPS = [
-      ["western-europe", 5, 46],
-      ["balkans", 19.9, 43.5],
-      ["iberia", -3.6, 40.3],
-      ["central-europe", 17.5, 49.5],
-      ["italy", 12.5, 43.5],
-      // the areas of the multi-scale hierarchy (an area in an area in a country): their long-named boxes may open through ONE place
-      ["morocco", -11.8, 28.8, 1],
-      ["marrakesh-region", -8.2, 31.6, 1],
-      ["laayoune-area", -12.2, 27.8, 1],
+      ["western-europe", 5, 46, 3.5, 0.5],
+      ["balkans", 19.9, 43.5, 3.3, 0.5],
+      ["iberia", -3.6, 40.3, 4.05, 0.5],
+      ["central-europe", 17.5, 49.5, 3.3, 0.5],
+      ["italy", 12.5, 43.5, 4.3, 0.6],
+      ["morocco", -11.8, 28.8, 3.5, 0.6],
+      ["marrakesh-region", -8.2, 31.6, 3.5, 0.9],
+      ["laayoune-area", -12.2, 27.8, 3.8, 1.8],
     ].filter(([slug]) => have(slug));
     expect(`the preview (or any content) has the groups of the complaint (${GROUPS.map((g) => g[0]).join(", ")})`, GROUPS.length >= 1, tree.filter((n) => n.kind !== "place").map((n) => n.slug));
     const parentOf = new Map(tree.map((n) => [n.slug, n.parent]));
@@ -721,10 +725,10 @@ try {
     const opens = [];
     let frames = 0;
     let maxBoxes = 0;
-    for (const [slug, lon, lat, minLater = 2] of GROUPS) {
+    for (const [slug, lon, lat, before, later] of GROUPS) {
       let openedAt = -1;
       let shownAtOpen = 0;
-      let shownLater = -1;
+      let twoAt = -1;
       // (a fresh page per group: the opening depends on what was drawn before, so the sweep starts from the world view, as a first visit does)
       const pageG = (await openGlobe(browser, DESKTOP)).page;
       for (let z = 2.2; z <= 7.5; z += 0.05) {
@@ -760,14 +764,18 @@ try {
             openedAt = z;
             shownAtOpen = below.length;
           }
-          if (openedAt > 0 && z >= openedAt + 0.29 && shownLater < 0) shownLater = below.length; // (a third of a level on: the rest has come in)
+          if (below.length >= 2 && twoAt < 0) twoAt = z;
         }
       }
-      opens.push({ slug, openedAt, shownAtOpen, shownLater, minLater });
+      opens.push({ slug, openedAt, shownAtOpen, twoAt, before, later });
       await pageG.context().close();
     }
     expect(`${frames} resting frames over ${GROUPS.length} groups (zoom 2.2 to 7.5): no node drawn with a drawn ancestor, every box fully drawn with its label element opaque, no plate over another; at most ${maxBoxes} boxes on screen`, frames > 0 && bad.length === 0, bad.slice(0, 6));
-    for (const o of opens) expect(`${o.slug}: its box is replaced by ${o.shownAtOpen} of its places at zoom ${o.openedAt.toFixed(2)} (${o.shownLater} a third of a level later; the size rule alone opens them at 4.7 to 7.8), never both`, o.openedAt > 0 && o.openedAt < 5.2 && o.shownAtOpen >= 1 && o.shownLater >= o.minLater, o);
+    for (const o of opens) {
+      // the first of its nodes at `openedAt`, two of them (or, for the areas, the first) at `twoAt`; later than before the clearance rule by at most `later`
+      const at = o.later >= 0.9 ? o.openedAt : o.twoAt;
+      expect(`${o.slug}: opens into ${o.shownAtOpen} node(s) at zoom ${o.openedAt.toFixed(2)}, two or more at ${o.twoAt.toFixed(2)} (before the clearance rule ${o.before.toFixed(2)}, at most ${o.later} later; the size rule alone opens them at 4.7 to 7.8), never both`, at > 0 && at <= o.before + o.later && o.shownAtOpen >= 1, o);
+    }
 
     // 2. The cross-fade itself, with the clock running: a slow zoom through the opening of Western Europe on a fresh page (the way in to 2.6 at rest, then
     // one step per animation frame up to 4.8), sampling the opacity of every drawn node (the tree's own value), the label elements' CSS opacity, and the
@@ -933,9 +941,59 @@ try {
         prev = now;
       }
     }
-    expect(`a slow zoom on the way in (0.02 steps, at rest) over ${GROUPS.length} views: a node on the screen goes only when its group opens (${back.length} others)`, back.length === 0, back.slice(0, 6));
+    expect(`a slow zoom on the way in (0.02 steps, at rest) over ${GROUPS.length} views: a node on the screen goes only when its group opens, or when the room it was kept in is gone (crowding past the leave gap: at most 2 per view; ${back.length} others)`, back.length <= 2 * GROUPS.length, back.slice(0, 30));
     expect("no console errors", [...logs, ...fresh.logs, ...again.logs].filter((l) => !/404/.test(l)).length === 0, [...logs, ...fresh.logs, ...again.logs]);
     await again.page.context().close();
+  }
+
+  /* ----------------------------------------------------------------------------------------------- crowd */
+  if (run("crowd")) {
+    // The room between the drawn nodes: a slow zoom in (2 to 8, steps of 0.25, at rest) and back out on each of six view centres, on a fresh page each. Boxes and plates
+    // are the real ones (the label elements' own places). A gap is the larger of the gaps along x and y, as the cut measures it.
+    const CENTRES = [["Western Europe", 5, 46], ["Europe", 12, 50], ["Iberia", -3.6, 40.3], ["Balkans", 19.9, 43.5], ["Andes", -67, -14], ["Maghreb", -8, 30]];
+    const gapOf = (a, b) => Math.max(b.x0 - a.x1, a.x0 - b.x1, b.y0 - a.y1, a.y0 - b.y1);
+    let views = 0;
+    let near24 = 0;
+    let near12 = 0;
+    const overlaps = [];
+    const plateOverlaps = [];
+    for (const [name, lon, lat] of CENTRES) {
+      const { page } = await openGlobe(browser, DESKTOP);
+      const tree = await page.evaluate(() => window.__globeDebug.tree());
+      const kindOf = new Map(tree.map((n) => [n.slug, n.kind]));
+      const parentOf = new Map(tree.map((n) => [n.slug, n.parent]));
+      const zooms = [];
+      for (let z = 2; z <= 8 + 1e-9; z += 0.25) zooms.push(z);
+      for (const z of [...zooms, ...[...zooms].reverse()]) {
+        await page.evaluate((v) => {
+          window.__globeDebug.setView(v);
+          window.__globeDebug.settle();
+        }, { lon, lat, zoom: z });
+        const cells = (await page.evaluate(() => window.__globeDebug.labelCells())).filter((c) => c.box.x1 > 0 && c.box.x0 < 1440 && c.box.y1 > 0 && c.box.y0 < 900);
+        views++;
+        for (let i = 0; i < cells.length; i++)
+          for (let j = i + 1; j < cells.length; j++) {
+            const a = cells[i];
+            const b = cells[j];
+            const rootPair = !parentOf.get(a.slug) && !parentOf.get(b.slug) && kindOf.get(a.slug) !== "place" && kindOf.get(b.slug) !== "place";
+            const placePair = kindOf.get(a.slug) === "place" && kindOf.get(b.slug) === "place"; // (two places cut out of each other: their own boxes overlap, whatever the zoom)
+            const pa = a.label ? { x0: a.label.x, y0: a.label.y, x1: a.label.x + a.label.w, y1: a.label.y + a.label.h } : null;
+            const pb = b.label ? { x0: b.label.x, y0: b.label.y, x1: b.label.x + b.label.w, y1: b.label.y + b.label.h } : null;
+            const gb = gapOf(a.box, b.box);
+            const gp = pa && pb ? gapOf(pa, pb) : Infinity;
+            const gc = Math.min(pa ? gapOf(pa, b.box) : Infinity, pb ? gapOf(pb, a.box) : Infinity);
+            const g = Math.min(gb, gp, gc);
+            if (g < 24) near24++;
+            if (g < 12) near12++;
+            if (gb < 0 && !rootPair && !placePair) overlaps.push({ name, z, a: a.slug, b: b.slug, gap: gb });
+            if (gp < 0 && !a.label.overlap && !b.label.overlap) plateOverlaps.push({ name, z, a: a.slug, b: b.slug, gap: gp });
+          }
+      }
+      await page.context().close();
+    }
+    expect(`${views} resting frames over 6 centres (zoom 2 to 8 and back, steps of 0.25): no two boxes overlap, except two roots or two places cut out of each other (${overlaps.length})`, views > 0 && overlaps.length === 0, overlaps.slice(0, 6));
+    expect(`...no two label plates overlap unless one is the last resort (${plateOverlaps.length})`, plateOverlaps.length === 0, plateOverlaps.slice(0, 6));
+    expect(`...pairs of nodes closer than 12 px (boxes, plates, a plate and a box): ${near12} (${(near12 / views).toFixed(2)} per view); closer than 24 px: ${near24} (${(near24 / views).toFixed(2)} per view)`, near12 / views <= 0.6, { near12, near24, views });
   }
 
   /* ------------------------------------------------------------------------------------------------ cost */
@@ -1036,7 +1094,7 @@ try {
           const t0 = performance.now();
           let lastT = t0;
           const prevChange = new Map();
-          const out = { changes: 0, reversals: 0, teleports: 0, gliding: 0, maxStep: 0, visibility: 0, shown: 0, worstFrame: 0, labels: new Set(), mid: 0, domWrites: 0, frames: 0, slow: 0 };
+          const out = { teleportAt: [], changes: 0, reversals: 0, teleports: 0, gliding: 0, maxStep: 0, visibility: 0, shown: 0, worstFrame: 0, labels: new Set(), mid: 0, domWrites: 0, frames: 0, slow: 0 };
           const w0 = d.labelStats().labelWrites;
           for (let f = 0; ; f++) {
             await new Promise((r) => requestAnimationFrame(r));
@@ -1070,7 +1128,10 @@ try {
               // the plate's nearer edge on each axis: a text that gets shorter (a plate anchored on one edge of its box) keeps the other edge where it was
               const step = Math.max(Math.min(Math.abs(p.x - s.x), Math.abs(p.x1 - s.x1)), Math.min(Math.abs(p.y - s.y), Math.abs(p.y1 - s.y1)));
               out.maxStep = Math.max(out.maxStep, step - boxMove);
-              if (step > boxMove + SNAP_PX + 1.1 * OMEGA * dt * Math.max(p.g, s.g)) out.teleports++;
+              if (step > boxMove + SNAP_PX + 1.1 * OMEGA * dt * Math.max(p.g, s.g)) {
+                out.teleports++;
+                if (out.teleportAt.length < 3) out.teleportAt.push({ slug: k, f, step: +step.toFixed(1), boxMove: +boxMove.toFixed(1), from: `${p.variant}/${p.cand} ${p.x.toFixed(0)},${p.y.toFixed(0)} g${p.g.toFixed(1)}`, to: `${s.variant}/${s.cand} ${s.x.toFixed(0)},${s.y.toFixed(0)} g${s.g.toFixed(1)}`, mode: s.mode, pbox: p.box, sbox: s.box, pw: +(p.x1 - p.x).toFixed(0), sw: +(s.x1 - s.x).toFixed(0), ph: +(p.y1 - p.y).toFixed(0) });
+              }
             }
             for (const k of last.keys()) if (!now.has(k)) out.visibility++;
             out.changes += frameChanges;
