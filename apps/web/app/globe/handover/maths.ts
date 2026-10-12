@@ -126,8 +126,27 @@ export function selectionZoom(fit: number, lat: number, streetPossible: boolean,
  * that is not usable shows nothing, unless the camera is still up there (retreat), as for the dissolve.
  */
 export function cutWanted(showing: boolean, zu: number, streetOk: boolean): boolean {
-  if (!streetOk && !(zu > GLOBE_MAX_ZOOM + 1e-6)) return false;
+  if (!streetOk && globeDraws(zu)) return false;
   return showing ? zu >= HANDOVER.cutBackZoom : zu >= HANDOVER.cutZoom;
+}
+
+/**
+ * Whether the Three.js globe draws the camera as it is. Above its own maximum zoom it draws that maximum (`renderer.drawView`)
+ * while everything that follows the camera (boxes, labels, the street map) goes on: its picture is then the wrong scale.
+ */
+export function globeDraws(zu: number): boolean {
+  return zu <= GLOBE_MAX_ZOOM + 1e-6;
+}
+
+/**
+ * CUT mode: whether a swap that is wanted may keep waiting for the street map's tiles. The globe is what the user sees while it waits,
+ * so the wait is only honest while the globe draws the camera: past its maximum zoom it would be a frozen picture at the wrong scale
+ * under boxes that keep zooming (the owner's "the boxes zoom but the data stays in place and fades out"), and the swap happens at
+ * once with whatever tiles the street map has (the tile ease fades the rest in). While the stage is not shown yet (a direct load at
+ * street scale, `onReveal`) nobody sees the globe, so the wait stays.
+ */
+export function cutMayWait(zu: number, stageShown: boolean): boolean {
+  return !stageShown || globeDraws(zu);
 }
 
 /** Highest unified zoom the experience offers at a latitude: the street map's maximum, or the globe's when there is no street. */

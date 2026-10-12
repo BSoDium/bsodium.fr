@@ -166,8 +166,11 @@ export interface StreetMap {
    * The globe-to-street cut: start the presented image from the Three.js globe's canvas (same art grid, `grid` = where its cells sit, CSS
    * px from the container's corner, and its cell size), so the swap is a tone cross-fade instead of a pop. Call right after
    * `setActive(true)`, in the task that drew the canvas, before `setCamera`. False when it cannot (the swap is instant then).
+   * `drawn`: the camera the canvas was drawn for, when it is not the one `setCamera` is about to apply (the globe draws its own maximum
+   * zoom while the camera goes on): the ease then moves the seed to the new camera instead of showing it at the old scale. `inset` is
+   * the host's inset (CSS px) of that frame, as for `setCamera`.
    */
-  seedFrom(canvas: HTMLCanvasElement, grid: { cell: number; left: number; top: number }): boolean;
+  seedFrom(canvas: HTMLCanvasElement, grid: { cell: number; left: number; top: number }, drawn?: StreetView & { inset?: number }): boolean;
   /**
    * The street-to-globe cut: while the host keeps the camera in step, eases the presented image towards the globe's canvas (call after
    * every globe frame, same task). `crossfadeTo(null)` resumes following the map. `debug().easing()` is 0 once it has arrived.
@@ -208,6 +211,10 @@ export interface StreetDebug {
   readPresentedLevels(): Uint8Array | null;
   /** Fade ticks still pending (0 = presented is the target and the ease loop has stopped). */
   easing(): number;
+  /** How far the presented picture is from the map's camera now, in art cells (0: it is of the camera the map has; more: a hold is showing a frozen picture). */
+  staleCells(): number;
+  /** Test hook: hold the presented picture as a style swap does (true), or resume following the map (false). */
+  hold(on: boolean): void;
   /** Ease passes so far, the warp of the last map frame (kind, match radius, largest displacement in cells) and the CPU ms of its mesh. */
   easeStats(): { eases: number; warp: { kind: string; radius: number; maxShift: number }; meshMs: number };
   gpuSync(): void;
