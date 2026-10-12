@@ -21,6 +21,8 @@ import {
   Grid,
   IconButton,
   KindTag,
+  LogoMark,
+  LogoWordmark,
   MetadataStrip,
   MicroLabel,
   SectionHeader,
@@ -725,6 +727,42 @@ function Motion() {
   );
 }
 
+function Brand() {
+  return (
+    <Stack gap={6}>
+      <Note>
+        The mark: a square (the bounding box) and a disc (the globe) overlapping, the overlap knocked out, on a 16 px grid, one bit per cell. It
+        takes the text colour, so it follows the scheme; whole multiples of 16 px keep every pixel crisp. The wordmark is the same shapes beside
+        the site's name in semibold type. Neither is in the header (the header carries the name as text); the favicon, the home-screen icons and
+        the LogoMark component are all drawn from the same data (scripts/brand/mark.mjs).
+      </Note>
+      <div className="flex flex-wrap items-end gap-8">
+        {[16, 32, 64, 128].map((size) => (
+          <Spec key={size} caption={`${size} px`}>
+            <LogoMark size={size} />
+          </Spec>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end gap-8">
+        <Spec caption="Wordmark, 16 px mark">
+          <LogoWordmark size={16} />
+        </Spec>
+        <Spec caption="Wordmark, 32 px mark">
+          <LogoWordmark size={32} />
+        </Spec>
+        <Spec caption="Wordmark, 64 px mark">
+          <LogoWordmark size={64} />
+        </Spec>
+      </div>
+      <Spec caption="On the inverted frame">
+        <Frame variant="inverted" padding="sm" className="w-fit">
+          <LogoWordmark size={32} />
+        </Frame>
+      </Spec>
+    </Stack>
+  );
+}
+
 export default function DevDesign() {
   const [params] = useSearchParams();
   const initial = params.get("scheme");
@@ -786,6 +824,9 @@ export default function DevDesign() {
       </Section>
       <Section index={11} title="Motion">
         <Motion />
+      </Section>
+      <Section index={12} title="Brand">
+        <Brand />
       </Section>
     </main>
   );

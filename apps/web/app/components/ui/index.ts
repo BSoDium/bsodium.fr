@@ -9,6 +9,7 @@ export { Frame, type FrameVariant } from "./frame";
 export { Glyph, type GlyphName } from "./glyphs";
 export { IconButton } from "./icon-button";
 export { KindTag } from "./kind-tag";
+export { LogoMark, LogoWordmark } from "./logo-mark";
 export { Col, Grid, Stack } from "./layout";
 export { MetadataStrip } from "./metadata-strip";
 export { MicroLabel } from "./micro-label";

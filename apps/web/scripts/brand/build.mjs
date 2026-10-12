@@ -1,50 +1,67 @@
-// Renders the brand images (public/og-default.png, apple-touch-icon.png, icon-192.png, icon-512.png, icon-maskable-512.png) from
-// hand-written SVG with headless Chrome, so nothing is downloaded and no image library is needed. The sources: scripts/brand/og.svg and
-// the icon below (the navbar's Orbit glyph, lucide, ISC). public/favicon.svg is hand-written too (same glyph, adapts to the scheme).
+// Renders the brand files into public/ from hand-written data, with headless Chrome, so nothing is downloaded and no image library is
+// needed. Deterministic: same inputs, same bytes.
 //
-//   CHROME_PATH=/path/to/chrome node scripts/brand/build.mjs
+//   favicon.svg                          the mark (scripts/brand/mark.mjs), ink follows the colour scheme
+//   favicon.ico                          the mark on the dark tile, 16, 32 and 48 px (PNG entries)
+//   apple-touch-icon.png (180)           the mark on the dark tile (iOS fills the corners itself: no transparency)
+//   icon-192.png, icon-512.png           the manifest's icons
+//   icon-maskable-512.png                the same with a safe zone: the mark stays inside the central circle a launcher may crop to
+//   og-default.png (1200x630)            the share image, from scripts/brand/og.svg
 //
-// If `pngquant` is on the PATH the PNGs are palette-quantized afterwards (the share image stays small); without it they are kept as
-// Chrome wrote them.
+//   CHROME_PATH=/path/to/chrome node scripts/brand/build.mjs            all of them
+//   CHROME_PATH=... node scripts/brand/build.mjs --only=icons|og         only the icons (and favicon files), or only the share image
+//
+// The mark is drawn on a 16 px grid and every size below uses a whole number of device pixels per cell, so it is crisp everywhere.
+// If `pngquant` is on the PATH the PNGs are palette-quantized afterwards (they are two colours: a few hundred bytes); without it they
+// are kept as Chrome wrote them.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, unlinkSync, existsSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { DEFAULT_CHROME } from "../perf/lib.mjs";
+import { GRID, markPath, markSvg } from "./mark.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const publicPath = (name) => here(`../../public/${name}`);
 
-const ORBIT = `<path d="M20.341 6.484A10 10 0 0 1 10.266 21.85"/><path d="M3.659 17.516A10 10 0 0 1 13.74 2.152"/><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/>`;
+const only = process.argv.find((a) => a.startsWith("--only="))?.slice("--only=".length);
+if (only && only !== "icons" && only !== "og") throw new Error("--only takes icons or og");
 
-/** The app icon: the Orbit glyph (light) on the near-black page, the satellites in the signal cyan. `scale` < 1 leaves room for a maskable crop. */
-const iconSvg = (size, scale) => {
-  const s = (size * scale) / 24;
-  const o = (size - 24 * s) / 2;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" fill="#0a0a0a"/>
-  <g transform="translate(${o} ${o}) scale(${s})" fill="none" stroke="#f5f5f5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-    ${ORBIT.replace(/<circle cx="(19|5)" cy="(5|19)" r="2"\/>/g, '<circle cx="$1" cy="$2" r="2" stroke="#38d4f5" fill="#38d4f5"/>')}
-  </g>
+const PAGE = "#0a0a0a"; // --background, dark: the tile of every PNG icon
+const INK = "#f5f5f5"; // --foreground, dark
+
+/** The icon: the mark in the dark page's ink on its background, `cell` device pixels per grid cell, centred on a `size` square. */
+const iconSvg = (size, cell) => {
+  const o = (size - GRID * cell) / 2;
+  if (!Number.isInteger(o) || o < 0) throw new Error(`${size} px does not hold a ${GRID}-cell mark at ${cell} px per cell`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">
+  <rect width="${size}" height="${size}" fill="${PAGE}"/>
+  <g transform="translate(${o} ${o}) scale(${cell})"><path fill="${INK}" d="${markPath()}"/></g>
 </svg>`;
 };
 
-const JOBS = [
-  { file: "og-default.png", width: 1200, height: 630, svg: readFileSync(here("./og.svg"), "utf8") },
-  { file: "apple-touch-icon.png", width: 180, height: 180, svg: iconSvg(180, 0.62) },
-  { file: "icon-192.png", width: 192, height: 192, svg: iconSvg(192, 0.62) },
-  { file: "icon-512.png", width: 512, height: 512, svg: iconSvg(512, 0.62) },
-  { file: "icon-maskable-512.png", width: 512, height: 512, svg: iconSvg(512, 0.5) },
-  // Wrapped into favicon.ico below (a PNG inside an ICO container), then removed.
-  { file: "favicon-48.png", width: 48, height: 48, svg: iconSvg(48, 0.7) },
+const ICON_JOBS = [
+  // 180 and 192 px: 7 px per cell, 112 px of mark; 512 px: 20 px per cell, 320 px of mark (about 62 %).
+  { file: "apple-touch-icon.png", width: 180, height: 180, svg: iconSvg(180, 7) },
+  { file: "icon-192.png", width: 192, height: 192, svg: iconSvg(192, 7) },
+  { file: "icon-512.png", width: 512, height: 512, svg: iconSvg(512, 20) },
+  // Maskable: launchers crop to a circle of 80 % of the side (r = 205 px); the mark's corners are at 16 * 16 / 2 * sqrt(2) = 181 px.
+  { file: "icon-maskable-512.png", width: 512, height: 512, svg: iconSvg(512, 16) },
+  // The ICO's three entries (removed once wrapped). The tile is the icon: no margin, the square sits on its top-left corner and the disc reaches the bottom-right one.
+  { file: "favicon-16.png", width: 16, height: 16, svg: iconSvg(16, 1), temp: true },
+  { file: "favicon-32.png", width: 32, height: 32, svg: iconSvg(32, 2), temp: true },
+  { file: "favicon-48.png", width: 48, height: 48, svg: iconSvg(48, 3), temp: true },
 ];
+const OG_JOB = { file: "og-default.png", width: 1200, height: 630, svg: readFileSync(here("./og.svg"), "utf8") };
+
+const jobs = [...(only === "og" ? [] : ICON_JOBS), ...(only === "icons" ? [] : [OG_JOB])];
 
 const executablePath = process.env.CHROME_PATH ?? DEFAULT_CHROME;
 if (!existsSync(executablePath)) throw new Error("Set CHROME_PATH to a Chrome/Chromium executable");
 const browser = await chromium.launch({ executablePath, headless: true });
-for (const job of JOBS) {
+for (const job of jobs) {
   const page = await browser.newPage({ viewport: { width: job.width, height: job.height }, deviceScaleFactor: 1 });
-  await page.setContent(`<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#0a0a0a}svg{display:block}</style>${job.svg}`);
+  await page.setContent(`<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:${PAGE}}svg{display:block}</style>${job.svg}`);
   await page.screenshot({ path: publicPath(job.file), type: "png", clip: { x: 0, y: 0, width: job.width, height: job.height } });
   await page.close();
 }
@@ -56,28 +73,44 @@ try {
 } catch {
   quant = false;
 }
-
-// favicon.ico: ICONDIR + one ICONDIRENTRY + the PNG. Browsers and crawlers ask for /favicon.ico by default.
-{
-  const png = readFileSync(publicPath("favicon-48.png"));
-  const head = Buffer.alloc(22);
-  head.writeUInt16LE(0, 0); // reserved
-  head.writeUInt16LE(1, 2); // type: icon
-  head.writeUInt16LE(1, 4); // image count
-  head.writeUInt8(48, 6); // width
-  head.writeUInt8(48, 7); // height
-  head.writeUInt16LE(1, 10); // colour planes
-  head.writeUInt16LE(32, 12); // bits per pixel
-  head.writeUInt32LE(png.length, 14); // image size
-  head.writeUInt32LE(22, 18); // image offset
-  writeFileSync(publicPath("favicon.ico"), Buffer.concat([head, png]));
-  unlinkSync(publicPath("favicon-48.png"));
-  JOBS.pop();
-  console.log(`favicon.ico  48x48  ${(statSync(publicPath("favicon.ico")).size / 1024).toFixed(1)} kB`);
+for (const job of jobs) {
+  if (!quant) continue;
+  const path = publicPath(job.file);
+  try {
+    execFileSync("pngquant", ["--force", "--skip-if-larger", `--quality=${job === OG_JOB ? "70-95" : "70-100"}`, "--strip", "--output", path, path]);
+  } catch {
+    // exit 98 (not smaller) or 99 (quality too low): the file stays as Chrome wrote it
+  }
 }
 
-for (const job of JOBS) {
+if (only !== "og") {
+  // favicon.svg: the same mark, ink follows the scheme.
+  writeFileSync(publicPath("favicon.svg"), markSvg({ px: 32 }));
+  console.log(`favicon.svg  ${(statSync(publicPath("favicon.svg")).size / 1024).toFixed(1)} kB`);
+
+  // favicon.ico: ICONDIR + one ICONDIRENTRY per size + the PNGs. Browsers and crawlers ask for /favicon.ico by default.
+  const entries = ICON_JOBS.filter((j) => j.temp).map((j) => ({ size: j.width, png: readFileSync(publicPath(j.file)) }));
+  const head = Buffer.alloc(6 + 16 * entries.length);
+  head.writeUInt16LE(0, 0); // reserved
+  head.writeUInt16LE(1, 2); // type: icon
+  head.writeUInt16LE(entries.length, 4);
+  let offset = head.length;
+  entries.forEach((e, i) => {
+    const at = 6 + 16 * i;
+    head.writeUInt8(e.size, at); // width
+    head.writeUInt8(e.size, at + 1); // height
+    head.writeUInt16LE(1, at + 4); // colour planes
+    head.writeUInt16LE(32, at + 6); // bits per pixel
+    head.writeUInt32LE(e.png.length, at + 8); // image size
+    head.writeUInt32LE(offset, at + 12); // image offset
+    offset += e.png.length;
+  });
+  writeFileSync(publicPath("favicon.ico"), Buffer.concat([head, ...entries.map((e) => e.png)]));
+  for (const j of ICON_JOBS.filter((j) => j.temp)) unlinkSync(publicPath(j.file));
+  console.log(`favicon.ico  ${entries.map((e) => e.size).join(", ")} px  ${(statSync(publicPath("favicon.ico")).size / 1024).toFixed(1)} kB`);
+}
+
+for (const job of jobs.filter((j) => !j.temp)) {
   const path = publicPath(job.file);
-  if (quant) execFileSync("pngquant", ["--force", "--skip-if-larger", "--quality=70-95", "--strip", "--output", path, path]);
   console.log(`${job.file}  ${job.width}x${job.height}  ${(statSync(path).size / 1024).toFixed(1)} kB${quant ? " (pngquant)" : ""}`);
 }
