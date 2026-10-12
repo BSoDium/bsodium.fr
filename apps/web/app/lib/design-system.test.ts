@@ -42,7 +42,7 @@ function color(scheme: "light" | "dark", name: string): Rgba {
 
 describe("scheme blocks", () => {
   it("the dark media rule and the forced-scheme rules carry the same colour tokens as the root rule", () => {
-    const colorNames = [...light.keys()].filter((k) => /^--(background|foreground|muted-foreground|subtle-foreground|border|border-strong|ring|primary|primary-foreground|accent|accent-foreground|globe-grid|globe-limb|surface|line-faint|signal|signal-foreground|signal-wash|inverse-[a-z]+|kind-[a-z]+)$/.test(k));
+    const colorNames = [...light.keys()].filter((k) => /^--(background|foreground|muted-foreground|subtle-foreground|border|border-strong|ring|primary|primary-foreground|accent|accent-foreground|globe-grid|globe-limb|surface|line-faint|signal|signal-foreground|signal-wash|inverse-[a-z]+|kind-[a-z]+|label-plate-alpha)$/.test(k));
     expect(colorNames.length).toBeGreaterThan(25);
     for (const name of colorNames) {
       expect(dark.has(name), `dark ${name}`).toBe(true);

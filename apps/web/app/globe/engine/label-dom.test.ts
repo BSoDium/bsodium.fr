@@ -48,16 +48,13 @@ const frame = (fn: () => void) => {
   fn();
   layer.end();
 };
-/** The layer of the feathers is the root's FIRST child (below the boxes' canvas); the labels follow it. */
-const halos = () => root.children[0]!;
-const halo = (n = 0) => halos().children[n]!;
-const el = (n = 0) => root.children[n + 1]!;
+/** One element per label, in the root: no layer of feathers (the feather is the plate's own shadow). */
+const el = (n = 0) => root.children[n]!;
 
 describe("the label layer: real text in pooled elements, positioned by transform only", () => {
-  it("a plate with its name, positioned by translate3d and nothing else, and its feather in the layer below", () => {
+  it("a plate with its name, positioned by translate3d and nothing else, with a small feather of its own colour", () => {
     frame(() => layer.put(1, "paris", view()));
-    expect(root.children.length).toBe(2); // the feathers' layer, then the plate
-    expect(halos().className).toBe("map-halos");
+    expect(root.children.length).toBe(1); // the plate only: no second element, no layer below the boxes
     const e = el();
     expect(e.className).toBe("map-label");
     expect(e.children[0]!.textContent).toBe("Paris");
@@ -66,13 +63,8 @@ describe("the label layer: real text in pooled elements, positioned by transform
     expect(e.style.left).toBe("0"); // placement is the transform
     expect(e.style.display).toBe("");
     expect(e.dataset.slug).toBe("paris");
-    const h = halo();
-    expect(h.className).toBe("map-halo");
-    expect(h.style.transform).toBe(e.style.transform); // the feather follows the plate
-    expect([h.style.width, h.style.height]).toEqual(["60px", "24px"]);
-    expect(e.style.minWidth).toBe("60px"); // the plate is never narrower than what the plan reserved
-    expect(h.style.boxShadow).toBe(featherShadow());
-    expect(h.dataset.slug).toBeUndefined(); // only the plate is a label for the checks
+    expect([e.style.minWidth, e.style.minHeight]).toEqual(["60px", "24px"]); // the plate is never smaller than what the plan reserved
+    expect(e.style.boxShadow).toBe(featherShadow());
   });
   it("the type comes from LABEL_TYPE: two lines, the name 14 px / 500 and the second line 11 px / 400, block lines with their own line height", () => {
     frame(() => layer.put(1, "a", view()));
@@ -81,13 +73,25 @@ describe("the label layer: real text in pooled elements, positioned by transform
     expect([sub!.style.fontSize, sub!.style.fontWeight, sub!.style.lineHeight]).toEqual([`${LABEL_TYPE.sub.size}px`, String(LABEL_TYPE.sub.weight), `${LABEL_TYPE.sub.lineHeight}px`]);
     expect(el().style.padding).toBe(`${LABEL_TYPE.padY}px ${LABEL_TYPE.padX}px`);
   });
-  it("the feather is two stacked page-colour shadows from LABEL_TYPE.feather", () => {
+  it("the feather is ONE small shadow of the plate's own translucent colour, 1 to 2 px, from LABEL_TYPE.feather: it dims nothing around the text", () => {
     const { blur, spread } = LABEL_TYPE.feather;
-    expect(featherShadow()).toBe(`0 0 ${blur}px ${spread}px var(--background), 0 0 ${blur * 2}px ${spread}px var(--background)`);
+    expect(featherShadow()).toBe(`0 0 ${blur}px ${spread}px var(--map-label-plate)`);
+    expect(spread).toBeGreaterThanOrEqual(1);
+    expect(spread).toBeLessThanOrEqual(2);
+    expect(blur).toBeGreaterThanOrEqual(1);
+    expect(blur).toBeLessThanOrEqual(2);
+    expect(spread + blur).toBeLessThanOrEqual(4); // the whole falloff is a few px, never a halo
   });
   it("positions are rounded to whole DEVICE pixels (at 2x a half px is kept, a quarter is not)", () => {
     frame(() => layer.put(1, "a", view({ x: 10.3, y: 20.8 })));
     expect(el().style.transform).toBe("translate3d(10.5px,21px,0)");
+  });
+  it("the art-pixel lattice is already whole device pixels: a cell of 2.5 px at 2x lands on 5 device px, so a label that moves a cell moves 5 device px", () => {
+    frame(() => layer.put(1, "a", view({ x: 100, y: 50 })));
+    const a = el().style.transform;
+    frame(() => layer.put(1, "a", view({ x: 102.5, y: 52.5 })));
+    expect(a).toBe("translate3d(100px,50px,0)");
+    expect(el().style.transform).toBe("translate3d(102.5px,52.5px,0)");
   });
   it("the second line is its own line, and absent when there is none", () => {
     frame(() => layer.put(1, "eu", view({ name: "Europe", sub: "12 places" })));
@@ -105,16 +109,22 @@ describe("the label layer: real text in pooled elements, positioned by transform
     frame(() => layer.put(1, "a", view()));
     expect(layer.writes).toBe(w);
     frame(() => layer.put(1, "a", view({ x: 11 })));
-    expect(layer.writes).toBe(w + 1); // the plate and its feather move together: one write
+    expect(layer.writes).toBe(w + 1);
     frame(() => layer.put(1, "a", view({ x: 11, w: 70 })));
     expect(layer.writes).toBe(w + 2);
   });
-  it("the feather follows the plate's opacity and state; a selected plate has none (CSS hides it: the plate is inverted)", () => {
-    frame(() => layer.put(1, "a", view({ alpha: 0.5 })));
-    expect(halo().style.opacity).toBe("0.5");
+  it("a selected plate (inverted) and one drawn over other labels (the last resort) are opaque: no feather; at rest and hovered it has one", () => {
+    frame(() => layer.put(1, "a", view({ mode: "rest" })));
+    expect(el().style.boxShadow).toBe(featherShadow());
+    frame(() => layer.put(1, "a", view({ mode: "hover" })));
+    expect(el().style.boxShadow).toBe(featherShadow());
     frame(() => layer.put(1, "a", view({ mode: "selected" })));
-    expect(halo().dataset.mode).toBe("selected");
     expect(el().dataset.mode).toBe("selected");
+    expect(el().style.boxShadow).toBe("none");
+    frame(() => layer.put(1, "a", view({ mode: "rest", over: true })));
+    expect(el().style.boxShadow).toBe("none");
+    frame(() => layer.put(1, "a", view({ mode: "rest", over: false })));
+    expect(el().style.boxShadow).toBe(featherShadow());
   });
   it("state, plate and opacity are attributes and a style; a full opacity writes none", () => {
     frame(() => layer.put(1, "a", view({ mode: "selected", over: true, alpha: 0.5 })));
@@ -130,22 +140,20 @@ describe("the label layer: real text in pooled elements, positioned by transform
     frame(() => layer.put(1, "a", view()));
     frame(() => undefined);
     expect(el().style.display).toBe("none");
-    expect(halo().style.display).toBe("none");
     expect(layer.count).toBe(0);
     frame(() => layer.put(2, "b", view({ name: "Lyon" })));
-    expect(root.children.length).toBe(2); // the same elements
-    expect(halo().style.display).toBe("");
+    expect(root.children.length).toBe(1); // the same element
     expect(el().dataset.slug).toBe("b");
     expect(el().children[0]!.textContent).toBe("Lyon");
     expect(el().style.display).toBe("");
+    expect(el().style.boxShadow).toBe(featherShadow()); // a reused plate is rewritten
   });
 });
 
 describe("moving: only a transform, no CSS transition (the motion is computed per frame)", () => {
-  it("a moved label gets a new transform for the plate and its feather and no glide attribute or transition", () => {
+  it("a moved label gets a new transform (the feather is its own shadow) and no glide attribute or transition", () => {
     frame(() => layer.put(1, "a", view()));
     frame(() => layer.put(1, "a", view({ x: 50 })));
-    expect(el().style.transform).toBe(halo().style.transform);
     expect(el().style.transform).toContain("50px");
     expect("glide" in el().dataset).toBe(false);
     expect(el().style.transition ?? "").toBe("");

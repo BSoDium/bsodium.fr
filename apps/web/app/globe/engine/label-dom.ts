@@ -1,15 +1,15 @@
 /**
  * The labels of the boxes as HTML, in device pixels (the DOM half of engine/box-scene.ts; the only part of the labels that touches the DOM).
  *
- * Two pooled elements per drawn label, positioned by `transform: translate3d(x, y, 0)` ONLY (no layout, no paint: a moving label is a compositor
- * move), rounded to whole device pixels so the text stays sharp. There is no CSS transition: the motion of a label (its glide to a new slot)
- * is computed per frame (engine/label-track.ts) and arrives here as a position:
+ * One pooled element per drawn label, positioned by `transform: translate3d(x, y, 0)` ONLY (no layout, no paint: a moving label is a compositor
+ * move), rounded to whole device pixels so the text stays sharp (the positions arrive on the map's art-pixel lattice, engine/label-track.ts, a
+ * whole number of device pixels already). There is no CSS transition: the motion of a label (its stepped glide to a new slot) is computed per
+ * frame (engine/label-track.ts) and arrives here as a position:
  *  - `div.map-label`: the PLATE and its text, two lines (`span.map-label-name`, `span.map-label-sub`, sized by `LABEL_TYPE`, engine/label-text.ts).
- *    The plate is the page colour at rest and hovered, inverted (foreground colour) selected (app.css `.map-label`);
- *  - `div.map-halo`: the FEATHER, a transparent box of the plate's size whose shadow fades out around it (`LABEL_TYPE.feather`, app.css
- *    `.map-halo`), so the text stays legible over any map line. It is a separate element in a layer BELOW the box canvas: the soft edge dims the
- *    map (coastlines, graticule) but never the boxes' own outlines, which stay crisp right next to a label. A selected label has none (its
- *    inverted plate is high contrast already).
+ *    The plate is TRANSLUCENT, the page colour at `--label-plate-alpha` (app.css; the least that keeps the text AA over the loudest map tone,
+ *    engine/label-plate.ts), with a feather of 1 to 2 px (`LABEL_TYPE.feather`, a `box-shadow` of the plate's own colour, `featherShadow`) so
+ *    it is not a hard sticker and does not dim the map around the text. Selected (inverted, the foreground colour) and drawn over other
+ *    labels (the last resort) it is opaque, with no feather.
  * A write happens only when a value changed: an idle map, and a frame in which nothing moved, touch no element.
  *
  * Why DOM and not a canvas (measured, docs/web-architecture.md "Labels in device pixels"): the browser rasterises each label once and the
@@ -28,7 +28,7 @@ export interface LabelView {
   /** Top-left corner of the plate, CSS px in the layer's root. */
   x: number;
   y: number;
-  /** The plate's size as planned (engine/label-text.ts): the feather is drawn around exactly this. */
+  /** The plate's size as planned (engine/label-text.ts): the plate is exactly this big (at least). */
   w: number;
   h: number;
   name: string;
@@ -45,8 +45,6 @@ interface Slot {
   el: HTMLDivElement;
   nameEl: HTMLSpanElement;
   subEl: HTMLSpanElement;
-  /** The feather, in the layer below the boxes. */
-  halo: HTMLDivElement;
   /** What was written last. */
   x: number;
   y: number;
@@ -64,26 +62,22 @@ interface Slot {
 
 const POOL_KEEP = 400;
 
-/** The feather as a `box-shadow` (page colour): two stacked layers, a dense core and a long soft tail, so the edge has no visible step. */
+/**
+ * The feather as a `box-shadow` in the plate's own translucent colour (`--map-label-plate`, app.css `.map-label`): it sits OUTSIDE the plate
+ * only, `spread` px beyond it and fading out over `blur` px more, so the plate's edge goes from the plate's alpha to nothing in 2 to 3 px.
+ */
 export function featherShadow(f: { blur: number; spread: number } = LABEL_TYPE.feather): string {
-  return `0 0 ${f.blur}px ${f.spread}px var(--background), 0 0 ${f.blur * 2}px ${f.spread}px var(--background)`;
+  return `0 0 ${f.blur}px ${f.spread}px var(--map-label-plate)`;
 }
 
 export class LabelLayer {
   private live = new Map<number, Slot>();
   private pool: Slot[] = [];
   private dpr = 1;
-  /** The layer of the feathers: first child of the root, so below the boxes' canvas. */
-  private halos: HTMLDivElement;
   /** Element writes since creation (checks and tests: a still frame writes none). */
   writes = 0;
 
-  constructor(private root: HTMLElement) {
-    this.halos = document.createElement("div");
-    this.halos.className = "map-halos";
-    Object.assign(this.halos.style, { position: "absolute", inset: "0", pointerEvents: "none", userSelect: "none" } satisfies Partial<CSSStyleDeclaration>);
-    root.prepend(this.halos);
-  }
+  constructor(private root: HTMLElement) {}
 
   /** Start a frame: every label not `put` before `end` is released. */
   begin(): void {
@@ -109,7 +103,6 @@ export class LabelLayer {
     s.used = true;
     if (!s.shown) {
       s.el.style.display = "";
-      s.halo.style.display = "";
       s.shown = true;
       this.writes++;
     }
@@ -124,29 +117,26 @@ export class LabelLayer {
       s.sub = v.sub;
       this.writes++;
     }
-    if (v.mode !== s.mode) {
-      s.el.dataset.mode = v.mode;
-      s.halo.dataset.mode = v.mode;
+    if (v.mode !== s.mode || v.over !== s.over) {
+      if (v.mode !== s.mode) s.el.dataset.mode = v.mode;
+      if (v.over !== s.over) {
+        if (v.over) s.el.dataset.over = "";
+        else delete s.el.dataset.over;
+      }
+      // an opaque plate (selected: inverted; over other labels: the last resort) has no feather: a translucent shadow would show its own edge
+      s.el.style.boxShadow = v.mode === "selected" || v.over ? "none" : featherShadow();
       s.mode = v.mode;
-      this.writes++;
-    }
-    if (v.over !== s.over) {
-      if (v.over) s.el.dataset.over = "";
-      else delete s.el.dataset.over;
       s.over = v.over;
       this.writes++;
     }
     if (v.alpha !== s.alpha) {
-      const o = v.alpha === 1 ? "" : String(v.alpha);
-      s.el.style.opacity = o;
-      s.halo.style.opacity = o;
+      s.el.style.opacity = v.alpha === 1 ? "" : String(v.alpha);
       s.alpha = v.alpha;
       this.writes++;
     }
     if (v.w !== s.w || v.h !== s.h) {
-      s.el.style.minWidth = `${v.w}px`; // the plate is at least the planned size (the canvas measure of a mixed-script name can be a px wider than the DOM's): the feather and the hit hull are drawn around exactly that
-      s.halo.style.width = `${v.w}px`;
-      s.halo.style.height = `${v.h}px`;
+      s.el.style.minWidth = `${v.w}px`; // the plate is at least the planned size (the canvas measure of a mixed-script name can be a px wider than the DOM's, and a plate is a whole number of art cells): the hit hull is drawn around exactly that
+      s.el.style.minHeight = `${v.h}px`;
       s.w = v.w;
       s.h = v.h;
       this.writes++;
@@ -156,9 +146,7 @@ export class LabelLayer {
     const x = Math.round(v.x * d) / d;
     const y = Math.round(v.y * d) / d;
     if (x !== s.x || y !== s.y) {
-      const t = `translate3d(${x}px,${y}px,0)`;
-      s.el.style.transform = t;
-      s.halo.style.transform = t;
+      s.el.style.transform = `translate3d(${x}px,${y}px,0)`;
       s.x = x;
       s.y = y;
       this.writes++;
@@ -171,14 +159,10 @@ export class LabelLayer {
       if (s.used) continue;
       this.live.delete(id);
       s.el.style.display = "none";
-      s.halo.style.display = "none";
       delete s.el.dataset.over;
       s.shown = false;
       if (this.pool.length < POOL_KEEP) this.pool.push(s);
-      else {
-        s.el.remove();
-        s.halo.remove();
-      }
+      else s.el.remove();
       this.writes++;
     }
   }
@@ -207,11 +191,7 @@ export class LabelLayer {
     Object.assign(subEl.style, { display: "none", fontSize: `${t.sub.size}px`, fontWeight: String(t.sub.weight), letterSpacing: `${t.sub.tracking}em`, lineHeight: `${t.sub.lineHeight}px` } satisfies Partial<CSSStyleDeclaration>);
     el.append(nameEl, subEl);
     this.root.append(el);
-    const halo = document.createElement("div");
-    halo.className = "map-halo";
-    Object.assign(halo.style, { position: "absolute", left: "0", top: "0", display: "none", boxSizing: "border-box", boxShadow: featherShadow(), pointerEvents: "none", willChange: "transform" } satisfies Partial<CSSStyleDeclaration>);
-    this.halos.append(halo);
-    return { el, nameEl, subEl, halo, x: NaN, y: NaN, w: NaN, h: NaN, name: "", sub: null, mode: "", over: false, alpha: NaN, used: false, shown: false, slug: "" };
+    return { el, nameEl, subEl, x: NaN, y: NaN, w: NaN, h: NaN, name: "", sub: null, mode: "", over: false, alpha: NaN, used: false, shown: false, slug: "" };
   }
 
   /** Number of labels shown. */
@@ -225,7 +205,6 @@ export class LabelLayer {
       const r = s.el.getBoundingClientRect();
       const nameR = s.nameEl.getBoundingClientRect();
       const subR = s.subEl.getBoundingClientRect();
-      const h = s.halo.getBoundingClientRect();
       return {
         id,
         slug: s.slug,
@@ -236,24 +215,17 @@ export class LabelLayer {
         opacity: Number(s.el.style.opacity || 1),
         transform: s.el.style.transform,
         rect: { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom },
-        /** The name's and the second line's boxes (the text starts `padX` inside the plate), and the feather's element. */
+        /** The name's and the second line's boxes (the text starts `padX` inside the plate), and the feather (`box-shadow`) as written. */
         nameRect: { x0: nameR.left, y0: nameR.top, x1: nameR.right, y1: nameR.bottom },
         subRect: { x0: subR.left, y0: subR.top, x1: subR.right, y1: subR.bottom },
-        halo: { x0: h.left, y0: h.top, x1: h.right, y1: h.bottom, transform: s.halo.style.transform, mode: s.halo.dataset.mode ?? "" },
+        feather: s.el.style.boxShadow,
       };
     });
   }
 
   dispose(): void {
-    for (const s of this.live.values()) {
-      s.el.remove();
-      s.halo.remove();
-    }
-    for (const s of this.pool) {
-      s.el.remove();
-      s.halo.remove();
-    }
-    this.halos.remove();
+    for (const s of this.live.values()) s.el.remove();
+    for (const s of this.pool) s.el.remove();
     this.live.clear();
     this.pool.length = 0;
   }
