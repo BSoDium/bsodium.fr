@@ -7,7 +7,7 @@ Tailwind 4 reads them through `@theme` / `@theme inline`. Light and dark follow 
 (no toggle for visitors; `[data-scheme="light"|"dark"]` forces a scheme on a subtree and is set only by the dev styleguide). Names match shadcn/ui's contract so selectively added components work unchanged.
 
 Principles: monochrome with one accent, generous spacing, clear hierarchy. System fonts only (no remote font requests).
-The navbar has no surface of its own: it floats over the page and a gradient scrim keeps it readable (see "Nav scrim").
+The navbar has no surface of its own: it floats over the page and a gradient (a scrim over content, a fade over the globe) keeps it readable (see "Nav scrim").
 
 ## Color
 
@@ -90,7 +90,8 @@ Layout variables:
 | Token | Value |
 | --- | --- |
 | `--navbar-height` | `3.5rem` |
-| `--scrim-height` | `calc(var(--navbar-height) + 2.5rem)` |
+| `--scrim-height` | `calc(var(--navbar-height) + 2.5rem)` (the page and panel scrim) |
+| `--fade-height` | `calc(var(--navbar-height) + 3.5rem)` (the row's own fade over the globe, `.nav-fade`) |
 | `--list-width` | `18rem` (the places list when revealed by keyboard focus) |
 | `--panel-pad`, `--grid-gap` | `1.5rem`, `1rem` (panel padding; the 12-column grid's gutter) |
 | `--control-h`, `--control-h-sm` | `2.75rem` below md (44 px touch rule); `2.25rem` / `2rem` from md |
@@ -134,9 +135,26 @@ a scrim dims whatever passes beneath it. It is `.nav-scrim` in `app.css`, render
   tapers to nothing: a progressive blur without a hard edge.
 - `prefers-reduced-transparency: reduce`: the spans are hidden and the gradient stays opaque longer (solid for the
   first half, then fading), so the text stays readable without any blur.
-- Where it applies: every route except the globe screen (`/` and `/locations/:slug`), where the page colour is the
-  ocean and dimming the map would be a defect. The open desktop detail panel has an `absolute` copy scoped to the
-  panel (the panel is its own backdrop root), which covers only the panel's width. The panel's scroll area starts
-  `navbar-height + 1rem` from the top so its first line is not dimmed at rest.
+- Where it applies: every route except the globe screen (`/`, `/locations/:slug` and the entries beside it), where the page colour is
+  the ocean and a band the width of the screen would dim the map for nothing: there the row has its own fade (below). The open desktop
+  detail panel has an `absolute` copy scoped to the panel (the panel is its own backdrop root), which covers only the panel's width. The
+  panel's scroll area starts `navbar-height + 1rem` from the top so its first line is not dimmed at rest.
+
+## Nav fade
+
+The row of the navigation over the globe and the map (`.nav-fade` in `app.css`, a `span` inside the `<nav>`, `aria-hidden`).
+
+- Geometry: `position: absolute` behind the links (`z-index: -1` inside the header's stacking context), `top: 0`, 6 rem wider than the
+  row on each side, height `--fade-height` (navbar height + 3.5rem = 112 px; the row itself is 56 px), `pointer-events: none`.
+- Colour: the page colour (`--background`) through `color-mix` at 85 % from 0 to 20 % of the height (the row's text is centred at
+  25 %: it sits on 83 % or more, the `readability.test.ts` figure for nav links is 80 %), then a smoothstep fall through 81, 72, 58, 43,
+  27, 13, 4 % to transparent at 100 %. Both schemes follow with no token of their own.
+- Horizontal: a `mask-image` with the same easing over the first and last 6 rem, so the band melts into the map on either side. The
+  fade has no `backdrop-filter` (and so no backdrop-root problem with the mask): the gradient alone keeps the text readable and costs no
+  extra layer over the WebGL canvas.
+- `prefers-reduced-transparency: reduce`: solid page colour for 40 %, then the fall (nothing is translucent that was not before).
+  `forced-colors: active`: `Canvas` to transparent. Print: hidden with the header.
+- Not rendered in the full-screen entry view (the panel's scrim covers the viewport there) and on the pages that have the page scrim.
+
 - Content pages start `navbar-height + 3rem` from the top; `:target` scroll margins use `navbar-height + 1.5rem`.
 - Tuning knobs for the owner: `--scrim-height`, the stop list, and the three blur radii and mask ends.

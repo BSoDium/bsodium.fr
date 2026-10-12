@@ -36,7 +36,7 @@ Run from the repo root with `pnpm --filter @catalyst/web <script>` or inside `ap
 
 ```
 app/
-  root.tsx            html shell (`lang`, theme-color per scheme, icons, manifest), SkipLinks, page-wide nav scrim, Navbar, NavProgress, MotionConfig, root ErrorBoundary (404 page, error page); loader returns `siteUrl`; dev-only content badge (the mode only when import.meta.env.DEV)
+  root.tsx            html shell (`lang`, theme-color per scheme, icons, manifest), SkipLinks, page nav scrim (lists), Navbar, NavProgress, MotionConfig, root ErrorBoundary (404 page, error page); loader returns `siteUrl`; dev-only content badge (the mode only when import.meta.env.DEV)
   entry.server.tsx    per-response CSP nonce, security headers, cache policy, X-Robots-Tag off the production host (lib/security-headers.ts); `handleDataRequest`, `handleError`
   entry.client.tsx    the stock hydration entry
   routes.ts           pathless layout (shell) wrapping `/`, `/locations/:slug` and the entries `/{articles,projects,artworks,poems}/:slug`;
@@ -119,10 +119,11 @@ What a deployment needs beyond the features, in one place. Everything here is ve
 - `lib/site.ts` holds the name, the description, the home title (`Catalyst · A personal archive organized around places`), the default share image and the theme colours; `CATALYST_SITE_URL` (server env, default `https://v2.bsodium.fr`) is the origin of every absolute URL. The root loader returns it as `siteUrl`, so a route's `meta` (server and client) reads it from `matches` (`metaBase(args)` in `lib/meta.ts`) and the two agree.
 - Every route's `meta` goes through `pageMeta`: title `<Page> · Catalyst`, description, `<link rel="canonical">` (origin + path, never the query: `?view=full` is the same page), `og:site_name/type/title/description/url/locale/image(+type,width,height,alt)`, `twitter:card summary_large_image/title/description/image/image:alt`. An entry is `og:type article` (+ `article:published_time`, `article:tag`) when it is an article, `website` otherwise.
 - The share image of an entry is its authored cover when scrapers can read the format (png, jpg, gif, webp: never SVG, which Facebook, X, LinkedIn and Slack do not render), absolute; else `public/og-default.png` (1200x630, 28 kB). A place uses its first raster image the same way. Covers are authored paths under `/media/` (the contract), never external URLs.
-- `<html lang="en">`, `color-scheme`, `theme-color` for each scheme (`#fbfbfb` / `#0a0a0a`, kept equal to `--background` by a test), the SVG and `.ico` favicons, `apple-touch-icon.png` (180), `manifest.webmanifest` (192, 512 and a maskable 512 PNG; dark theme and background colours: a manifest cannot vary by scheme).
+- `<html lang="en">`, `color-scheme`, `theme-color` for each scheme (`#fbfbfb` / `#0a0a0a`, kept equal to `--background` by a test), the SVG and `.ico` favicons, `apple-touch-icon.png` (180), `manifest.webmanifest` (192, 512 and a maskable 512 PNG; dark theme and background colours: a manifest cannot vary by scheme). All of them show the site's mark (below).
 - JSON-LD, from published fields only (no author, publisher or invented date): the home page is a `WebSite`; an article an `Article` (`headline` capped at 110 characters); a project `SoftwareSourceCode` when its `url` is a repository on a known forge, else `CreativeWork`; an artwork `CreativeWork`; a poem `CreativeWork` with `genre: "Poem"`. Each has `url`, `datePublished` (the authored partial ISO date), `image` (raster covers only), `keywords` (tags), `contentLocation` (its places) and `isPartOf` the site. `lib/json-ld.ts`; React Router escapes the script's content.
 - Not-found and error pages carry `noindex` (their status is 404/5xx anyway).
-- The brand files are drawn, not downloaded: `apps/web/scripts/brand/og.svg` is hand-written in the language of `design-system.md` (near-black page, 16 px grid, hairline globe, corner brackets, mono micro-labels, one cyan route); the icons are the navbar's Orbit glyph (lucide, ISC) with cyan satellites. `pnpm --filter @catalyst/web brand` renders them with headless Chrome and, if `pngquant` is installed, palette-quantizes them. Edit the SVG, run it, commit the PNGs.
+- The brand files are drawn, not downloaded: `apps/web/scripts/brand/og.svg` is hand-written in the language of `design-system.md` (near-black page, 16 px grid, hairline globe, corner brackets, mono micro-labels, one cyan route); the icons are the site's mark (next point). `pnpm --filter @catalyst/web brand` renders them with headless Chrome and, if `pngquant` is installed, palette-quantizes them (`-- --only=icons` or `--only=og` renders one set; the output is byte-for-byte reproducible). Edit the SVG or the mark, run it, commit the files.
+- **The mark** (2026-10-12, replaces a lucide `Orbit` glyph that read as an icon-set icon; redrawn the same day when the owner described the look as a design studio's: heavy type, hairlines, restraint): `scripts/brand/mark.mjs` holds it as data, a 16 x 16 one-bit grid: a square (the bounding box) and a disc (the globe) overlapping, the overlap knocked out. Two solid shapes, no outline, texture or curve beyond the disc's pixel steps: legible at 16 px, and it sits beside a wordmark as it is (`LogoWordmark`: the mark and the site's name as text, semibold and tight). `build.mjs` writes `favicon.svg` (ink follows `prefers-color-scheme`: `#0a0a0a` / `#f5f5f5`, the two page colours), `favicon.ico` (PNG entries at 16, 32 and 48 px, each a whole number of device pixels per cell, under 0.5 kB), `apple-touch-icon.png` (180), `icon-192.png`, `icon-512.png` and `icon-maskable-512.png` (the mark on the dark page colour at 7, 7, 20 and 16 px per cell; the maskable one is 256 px of mark, its corners 181 px from the centre, inside a launcher's 205 px safe circle). Monochrome on purpose: the cyan accent is for state. The default share image does not carry it (it never used the old glyph; its own drawing is unchanged). `components/ui/logo-mark.tsx` (`LogoMark`, `currentColor`, `size` a multiple of 16) carries the same path; `logo-mark.test.ts` fails when the component, the favicon and `mark.mjs` differ, and `lib/public-assets.test.ts` checks the files. The header does not show the mark (see "Floating navbar and scrim"); `/dev/design` section 12 does.
 
 ### Crawlers: sitemap.xml and robots.txt
 
@@ -197,14 +198,35 @@ Not verified: how Vercel merges the `vercel.json` headers with the ones our serv
 
 ### Floating navbar and scrim
 
-- `Navbar` has no background, border or blur. Left: the `Orbit` icon (lucide-react, shadcn's icon set) as a link home,
-  accessible name "Catalyst, home". Right: text links Projects, Articles, Artworks, Poems (`aria-current="page"` on the
-  active one via `NavLink`). The `<header>` is `pointer-events-none`; only the links take the pointer. 44px targets.
-- Readability over scrolling content comes from `NavScrim` (`.nav-scrim` in `app.css`, documented in
-  `docs/design-tokens.md`): a fixed, `pointer-events-none` band between content (z 30) and the nav (z 40).
-  `PageNavScrim` (in `root.tsx`) renders it on every route except the globe shell, where the page colour is the ocean
-  and the map must not be dimmed. The open detail panel renders its own `absolute` scrim, scoped to the panel, so the
-  nav links over the panel stay legible while its content scrolls beneath them.
+- `Navbar` has no background, border or blur and **no logo** (owner, 2026-10-12: the icon in the top-left corner went; the mark is
+  not in the header for now). One row of text, centred at the top of the viewport, in reading and focus order: the site's name
+  (`SITE_NAME`, a plain text link home in the foreground colour, accessible name "Catalyst, home", `aria-current="page"` on the home
+  page; semibold and tight: the wordmark as text), a hairline, Projects, Articles, Artworks, Poems (`aria-current="page"` on the active one, underlined, via `NavLink`), the search
+  trigger. The `<header>` is `pointer-events-none`; only the links take the pointer. 44 px targets (links 44 px tall, at least 52 px
+  wide; the search trigger 44 x 44).
+- **Where the row is centred.** Over the whole viewport (home, lists, 404, the full-screen entry view); **over the map** while the place
+  or entry panel is open beside the globe (desktop, `md` and up): the header's right edge goes to 50 % (`md:right-1/2`, decided in
+  `Navbar` from the path and `?view`, so the server renders the final position and a reload does not jump), with a `right`
+  transition on the panel's duration and easing, so the row glides with the panel. Why the map and not the whole viewport: a row centred
+  on the viewport would cross the panel's left edge and its Close and expand controls (they sit at the panel's left, 24 px in);
+  centred over the map it is clear of them at every width (measured: 156 px at 1440, 69 px at 1024, 46 px at 768) and it sits over the
+  globe, which the panel re-centres onto the same half. In the full-screen entry view the panel's controls are at the page's left edge
+  (17 to 89 px) and the row is centred on the viewport (410 px clear at 1440, 74 px at 768). On a phone the panel is a dialog above
+  the header, which stays centred over the whole screen.
+- **What the row shows follows its own width** (the header is an `@container`; Tailwind `@md`, `@xl`, `@min-[...]`): below 28 rem the
+  name and the four sections only (about 305 px at 320, 325 px at 360 to 390: they fit, with 44 px targets, down to a 320 px phone,
+  the padding between links going 4, 6, 8, 10 px per side at 0, 340, 400 px and 32 rem); from 28 rem the search trigger; from 36 rem its
+  `Ctrl K` hint. So a phone has no search trigger (as before: it was hidden below `sm`; `Ctrl K` and the
+  search dialog are unchanged), a phone in landscape and a half-width map have the icon, a desktop the hint.
+- Readability: **lists, 404, error pages** (content scrolls under the row) have `NavScrim` (`.nav-scrim` in `app.css`, documented in
+  `docs/design-tokens.md`): a fixed, `pointer-events-none` band between content (z 30) and the nav (z 40), rendered by `PageNavScrim`
+  (in `root.tsx`) on every route except the shell. **The globe and the map** (the shell: home, place, entry beside the globe) have
+  `.nav-fade`, a child of the row behind the links (`z-index: -1` inside the header): the page colour at 85 % from the top edge past the
+  row's text, then an eased fall to nothing over `--fade-height` (112 px), as wide as the row plus 6 rem each side with the same easing
+  in a mask, so the globe is not dimmed across the whole width and no edge shows. No blur there. Over the page colour (dark or light
+  ocean) it is invisible; over the street map it quiets lines under the links. **The full-screen entry view** has the panel's own
+  `absolute` scrim (full width of the panel), and the page-wide ones are off there. The open detail panel keeps its scrim over the panel's
+  width so its header controls stay legible while content scrolls beneath them.
 - Stacking: content 0, panel 30, page scrim 35, navbar 40, places list overlay 45, mobile slide-over 50, skip links 60.
 
 ### Places list (keyboard path)
@@ -303,7 +325,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   summary, date and cover so a tile needs no other fetch. Tags on an entry link to the kind's list filtered by that tag.
 - **Navigation feedback.** While another entry or place loads, the panel's content stays, dimmed and `aria-busy` (only when the
   path changes: a `?view` toggle is not a page); the top line of `NavProgress` shows after 150 ms.
-- **Quick search.** `components/search-palette.tsx`, mounted by the navbar (a trigger button from `sm` up, and Cmd/Ctrl-K anywhere): a
+- **Quick search.** `components/search-palette.tsx`, mounted by the navbar (a trigger button from 28 rem of header width up, and Cmd/Ctrl-K anywhere): a
   modal `<dialog>` with an ARIA combobox (the input keeps the focus, `aria-activedescendant` follows the highlighted option, arrows /
   Home / End move, Enter opens, Escape closes), results grouped into places and the four kinds, with the same glyphs. The index
   (`/search-index.json`, built from the projection by `buildSearchIndex`: titles, kind, region or code and date, tags and summaries, never
@@ -1022,7 +1044,7 @@ Measured behaviour (same build, same environment):
 | Panel, reduced motion | after two frames: inset 720 at once and the panel at x = 720 (no animation) |
 | Panel, idle | 0 rAF over 2.5 s with the panel open |
 | Panel, picking | a click at the marker's shifted position keeps the place selected (no navigation elsewhere) |
-| Keyboard flow | Tab order: Skip to content, Skip to places, logo, Projects, Articles, Artworks, then the places (list revealed, 288x528 px); Enter on Reykjavík opens it and focus moves to its heading (list hidden again); Escape closes and focus returns to its link (list revealed); tabbing out hides it |
+| Keyboard flow | Tab order: Skip to content, Skip to places, Catalyst (home), Projects, Articles, Artworks, Poems, Search, then the places (list revealed, 288x528 px); Enter on Reykjavík opens it and focus moves to its heading (list hidden again); Escape closes and focus returns to its link (list revealed); tabbing out hides it |
 | Reduced transparency | with `prefers-reduced-transparency: reduce` (CDP) the blur layers are `display: none` and the gradient is the longer solid one |
 | Mobile (390x844) | panel is a modal dialog (`aria-modal`, body scroll locked, focus on the heading), globe unmounted |
 | Console | no errors or warnings in any scenario, no hydration warnings (production and dev server) |

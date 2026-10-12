@@ -136,8 +136,8 @@ Same content, two layouts; `layout` only changes the grid, never the data, the D
 
 Panel: one column. Full screen: title (8 columns) with the details (4), then reading column (8: cover and body) with the aside
 (4: places, then the sticky contents); the related cards and the neighbours close both layouts at full width. The header row of the container
-(Close, `ExpandToggle`, both ghost: no box until pointed at) is the panel's, not the view's: it must stay clear of the navbar's links (and, in
-full screen, of its logo). On a phone the panel is a dialog with a compact header (the close button alone; the content's heading names the
+(Close, `ExpandToggle`, both ghost: no box until pointed at) is the panel's, not the view's: it must stay clear of the navbar's row (centred over the map while the panel is open, over the viewport in full screen: it is
+clear of both, see "Brand and header"). On a phone the panel is a dialog with a compact header (the close button alone; the content's heading names the
 dialog). Lists of entries use `EntryCard` (via `EntryListCard`) in a `Grid` (`Col spanMd={6}`); an empty list is one muted line (`StatePanel`,
 `headingLevel` 2 under the page's h1).
 
@@ -175,6 +175,32 @@ the cards h3). A place without entries shows nothing for them (no section, no em
   glyph + title + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of key hints and the result count.
   The trigger is a 44 px icon button with `⌘ K` / `Ctrl K` from `lg`.
 - **Print.** Ink on white, no globe, navigation, controls, contents, related cards or neighbours; external link addresses are written out.
+
+## Brand and header
+
+**The mark** (2026-10-12; `scripts/brand/mark.mjs`, `components/ui/logo-mark.tsx`, section 12 of `/dev/design`): a square and a disc
+overlapping, the overlap knocked out. The square is the bounding box, the disc is the globe: the two things the map is made of. 16 x 16
+grid, one bit per cell, solid shapes, no outline, no gradient, `currentColor`; whole multiples of 16 px stay crisp, and it is legible
+at 16 px. It says nothing in words, so it survives a rename; the name sits beside it as the **wordmark** (`LogoWordmark`: the mark and
+the site's name as text in the display weight, semibold and tight, the mark at the height of the capitals). Both are monochrome: the
+cyan stays for state. The look of the site is a studio's (heavy typographic work, big bold display type against thin text, mono
+accents, hairline grids, restraint) over the pixel-art globe: the mark is the one geometric shape of that language and it never
+carries texture. Where it is used: the favicon (SVG, follows the scheme; ICO at 16, 32, 48 px on the dark tile), the home-screen and
+manifest icons, the styleguide, and `LogoMark` / `LogoWordmark` for the places that want them (neither is in the header). To change it,
+edit `MARK` in `mark.mjs`, run `pnpm --filter @catalyst/web brand`, paste the new path into `logo-mark.tsx`; the test says when they
+differ. Alternatives that were drawn and set aside: a pixel sphere with a dithered shadow side inside a dashed bounding box (the first
+choice: it carried the globe's own look, but its texture is noise at 16 px and it does not sit beside a wordmark); a solid disc with
+a bounding box cut out of it (bold, but a round silhouette like any button); a C-shaped globe holding a place (a monogram that ties the
+mark to the name "Catalyst"); a disc with one squared corner (a leaf shape, generic).
+
+**The header** (`components/navbar.tsx`): one centred row of text and no logo (owner: the icon in the corner went). In order: the
+site's name as a plain text link home (the wordmark as text: foreground colour, semibold, tight; a hairline after it), Projects, Articles, Artworks, Poems (muted; the
+current one in the foreground and underlined, `aria-current="page"`), the search trigger. Centred over the viewport; while the place
+or entry panel is open beside the globe it is centred over the map (the left half), so it never meets the panel's Close and expand
+controls, and it glides with the panel. Its width decides what it shows (container query): the name and the four sections always,
+the search trigger from 28 rem, its key hint from 36 rem. 44 px targets. Over content that scrolls (lists, 404, errors) it has the
+page scrim; over the globe and the map a soft fade of its own, 85 % of the page colour at the top edge easing to nothing, only as wide
+as the row (design-tokens.md, "Nav fade"). Details and measurements: [web-architecture.md](web-architecture.md#floating-navbar-and-scrim).
 
 ## Accessibility rules
 

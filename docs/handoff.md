@@ -25,6 +25,17 @@ are shown at full column width (a cap may be wanted once real covers exist); Saf
 Added: site identity and head tags on every route (canonical, Open Graph, Twitter card, JSON-LD), a default 1200x630 share image, favicons and a web manifest, `sitemap.xml` and `robots.txt` (open only on the production host), an enforced nonce-based CSP and the other security headers (`entry.server.tsx`, `vercel.json`), a root error boundary with a real 500 page, a pending-navigation line, a no-JS note on the globe, and `pnpm --filter @catalyst/web check:prod`. The schema library no longer ships in the browser bundle (-29 kB gzip). Details and the header tables: [web-architecture.md, Production readiness](web-architecture.md#production-readiness).
 Owner: nothing is required (the default site URL is `https://v2.bsodium.fr`); set `CATALYST_SITE_URL` only when the domain changes. Not verified: Vercel's own merging of `vercel.json` headers, Safari and Firefox, real link previews.
 
+## Brand and header (branch `feat/brand-header`, on `feat/ui-restraint`)
+
+Owner feedback 2026-10-12: the logo looked like an icon-set icon, and the top-left icon was to go with the nav centred and kept readable
+by a soft fade. Done: an original mark (a square and a disc overlapping, the overlap knocked out: bounding box and globe; `apps/web/scripts/brand/mark.mjs`, one
+source for the favicons, the home-screen icons, `LogoMark` and `LogoWordmark`), the header without a logo (the site name as a text link, then the four
+sections, then search; centred over the viewport, over the map while the panel is open), a fade of its own over the globe. Details:
+[design-system.md, Brand and header](design-system.md#brand-and-header), [design-tokens.md, Nav fade](design-tokens.md#nav-fade),
+[web-architecture.md](web-architecture.md#floating-navbar-and-scrim). Not done on purpose: the landing hero (waits for the owner's
+references and copy). Open: a phone has no search trigger (no room in the row at 390 px; the same as before, it was hidden below `sm`),
+the owner may want a menu button or a second row; the mark is not on any page yet.
+
 ## Where the details are
 
 | Topic | Doc |
