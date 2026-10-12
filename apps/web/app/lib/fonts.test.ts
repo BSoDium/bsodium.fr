@@ -20,7 +20,8 @@ describe("self-hosted fonts", () => {
       const url = publicFile(`fonts/${file}`);
       expect(existsSync(url), file).toBe(true);
       expect(readFileSync(url).toString("latin1", 0, 4), `${file} is woff2`).toBe("wOF2");
-      expect(statSync(url).size, file).toBeLessThan(100 * 1024);
+      // The two Newsreader files carry the optical-size axis (about 129 and 143 kB): the headline is set at opsz 72, the body at 18.
+      expect(statSync(url).size, file).toBeLessThan(160 * 1024);
     }
     for (const name of ["bricolage-grotesque", "newsreader", "jetbrains-mono"]) {
       const licence = readFileSync(publicFile(`fonts/LICENSE-${name}.txt`), "utf8");
