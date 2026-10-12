@@ -695,6 +695,8 @@ try {
         for (const [what, cx, cy] of probes) {
           if (inOthers(c, cx, cy) || cx < 15 || cy < 15 || cx > 1440 - 15 || cy > 900 - 15) continue; // another node shares the point, or it is at the edge of the viewport
           const p = ptOf(cx, cy);
+          // (a control of the header over the point takes the pointer: a label drawn under it is not a probe of the globe)
+          if (await page.evaluate(([x, y]) => !!document.elementFromPoint(x, y)?.closest("header"), [p.x, p.y])) continue;
           await page.mouse.move(p.x, p.y);
           await sleep(60);
           const cursor = await page.evaluate(() => document.querySelector("canvas").style.cursor);
@@ -876,7 +878,10 @@ try {
     expect(`a frame with the group fading out and a child at least a third there was sampled (${cross.length})`, cross.length >= 1, null);
     {
       // replay the middle of the cross-fade with the clock paused: set the camera, advance by hand, ask `pick` at the children's centres
-      const probe = await page2.evaluate(
+      // (on a page of its own: the tree remembers what a group was open for, and a page that has been to zoom 4.8 and back has its groups still open)
+      await page2.context().close();
+      const page3 = (await openGlobe(browser, DESKTOP)).page;
+      const probe = await page3.evaluate(
         async ({ lon, lat, from, to }) => {
           const d = window.__globeDebug;
           const parentOfSlug = new Map(d.tree().map((n) => [n.slug, n.parent]));
@@ -916,10 +921,10 @@ try {
       // that is fading out, or nothing)
       const wrong = probe.filter((p) => p.picked === null || p.picked === p.parent);
       expect(`a click on a child that is fading in (at least 0.3 there) never picks the group fading out nor nothing (${probe.length} probes)`, probe.length >= 1 && wrong.length === 0, wrong.slice(0, 4));
+      await page3.context().close();
     }
 
     // 4. A slow zoom, every 0.02 at rest: nothing on the screen goes away again on the way in except a group that opens.
-    await page2.context().close();
     const again = await openGlobe(browser, DESKTOP);
     const back = [];
     for (const [slug, lon, lat] of GROUPS) {
