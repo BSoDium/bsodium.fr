@@ -45,8 +45,11 @@ describe("label size (CSS px, measured once per string)", () => {
     expect(LABEL_TYPE.boxGap).toBe(3);
     expect(LABEL_TYPE.bleed).toBe(0);
     expect(LABEL_TYPE.padX).toBeGreaterThanOrEqual(5);
-    expect(LABEL_TYPE.feather.blur + LABEL_TYPE.feather.spread).toBeGreaterThanOrEqual(6);
-    expect(LABEL_TYPE.feather.blur + LABEL_TYPE.feather.spread).toBeLessThanOrEqual(12);
+    // the feather of the translucent plate is 1 to 2 px: no halo that dims the map around the text
+    expect(LABEL_TYPE.feather.blur).toBeGreaterThanOrEqual(1);
+    expect(LABEL_TYPE.feather.blur).toBeLessThanOrEqual(2);
+    expect(LABEL_TYPE.feather.spread).toBeGreaterThanOrEqual(1);
+    expect(LABEL_TYPE.feather.spread).toBeLessThanOrEqual(2);
     expect(runFont("name", "system-ui")).toBe(`${LABEL_TYPE.name.weight} ${LABEL_TYPE.name.size}px system-ui`);
     expect(runFont("sub", "system-ui")).toBe(`${LABEL_TYPE.sub.weight} ${LABEL_TYPE.sub.size}px system-ui`);
   });
@@ -62,22 +65,55 @@ describe("label size (CSS px, measured once per string)", () => {
   });
 });
 
-describe("shorter ways of writing a label: the entries first, then the country, then an ellipsis, never below MIN_LABEL_CHARS", () => {
+describe("shorter ways of writing a label: the entries first, then the second line's height, then an ellipsis that keeps the second line, never below MIN_LABEL_CHARS", () => {
   const whole = placeSub("France", { article: 2, artwork: 1 });
-  it("a place with a country and entries: whole, without the entries, without the country, then truncations; each smaller than the one before", () => {
+  it("a place with a country and entries: whole, one line (the whole name, the same width, a line lower), then truncations that keep the country before they lose it", () => {
     setTextMeter(fixed);
     const v = labelVariants("Extraordinarily long place name", whole);
     expect(v[0]).toMatchObject({ name: "Extraordinarily long place name", sub: "France · 2 articles · 1 artwork", h: LABEL_H_TWO });
     // the name is wider than every second line: dropping the entries alone would change nothing (same plate), so that step is skipped
     expect(v[1]).toMatchObject({ name: "Extraordinarily long place name", sub: null, h: LABEL_H_ONE });
     expect(v[0]!.w).toBe(v[1]!.w); // the second line's height is what the first step frees
-    for (let k = 1; k < v.length; k++) {
-      expect(v[k]!.w).toBeLessThanOrEqual(v[k - 1]!.w);
-      expect(v[k]!.h).toBeLessThanOrEqual(v[k - 1]!.h);
-      expect(v[k]!.w < v[k - 1]!.w || v[k]!.h < v[k - 1]!.h).toBe(true);
+    // no variant is beaten by an earlier one in both width and height (a variant at least as wide AND as high as one before it is never kept)
+    for (let k = 1; k < v.length; k++) for (let j = 0; j < k; j++) expect(v[j]!.w <= v[k]!.w && v[j]!.h <= v[k]!.h).toBe(false);
+    // the whole name goes on one line before it is truncated at all: the second line is the last thing the whole name gives up
+    const firstCut = v.findIndex((x) => x.name.endsWith("…"));
+    expect(v.slice(0, firstCut).every((x) => x.name === "Extraordinarily long place name")).toBe(true);
+    expect(v.slice(firstCut).every((x) => x.name.endsWith("…"))).toBe(true);
+    // a truncated name keeps its second line (the country, its entries gone first) at every length where the plate is no wider for it, before it loses it
+    const cuts = v.slice(firstCut);
+    expect(cuts[0]).toMatchObject({ sub: "France", h: LABEL_H_TWO });
+    for (const names of new Set(cuts.map((x) => x.name))) {
+      const same = cuts.filter((x) => x.name === names);
+      if (same.length > 1) {
+        expect(same[0]!.sub).toBe("France");
+        expect(same[1]!.sub).toBeNull();
+        expect(same[1]!.w).toBe(same[0]!.w);
+      }
     }
     expect(v[v.length - 1]!.name.endsWith("…")).toBe(true);
-    expect(v[v.length - 1]!.sub).toBeNull();
+  });
+  it("a shortened name never loses its second line while the plate is narrower with it: the one-line way of a name comes right after the way with the line", () => {
+    setTextMeter(fixed);
+    const v = labelVariants("Barcelona del Vallès", placeSub("Spain"));
+    const cuts = v.filter((x) => x.name.endsWith("…"));
+    expect(cuts.length).toBeGreaterThan(4);
+    expect(cuts[0]!.sub).toBe("Spain");
+    // every truncated name that has a one-line way also has the two-line way, before it
+    for (const x of cuts.filter((c) => c.sub === null)) {
+      const twin = v.findIndex((c) => c.name === x.name && c.sub === "Spain");
+      expect(twin).toBeGreaterThan(-1);
+      expect(twin).toBeLessThan(v.indexOf(x));
+    }
+  });
+  it("when the second line is wider than the shortened name it adds nothing: the truncations that follow are one line", () => {
+    setTextMeter(fixed);
+    const v = labelVariants("Extraordinary", placeSub("A very long second line that is wider than the name"));
+    expect(v[0]!.sub).not.toBeNull();
+    expect(v[1]).toMatchObject({ name: "Extraordinary", sub: null });
+    const rest = v.slice(2);
+    expect(rest.length).toBeGreaterThan(2);
+    expect(rest.every((x) => x.sub === null && x.name.endsWith("…"))).toBe(true);
   });
   it("a short name over a long second line: the second line's parts go first and each step really narrows the plate", () => {
     setTextMeter(fixed);

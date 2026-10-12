@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CLEAR, MIXED, PixelBuffer } from "./pixel-buffer";
-import { ALPHA_STEPS, BOX_STYLE, LABEL_PAD, MIN_LABEL_CHARS, SPOT, TEXT_GAP, chipText, dashingFor, drawBox, drawLabel, edgeLit, labelCandidates, labelLayout, labelTones, labelVariants, quantAlpha } from "./pixel-labels";
+import { ALPHA_STEPS, BOX_STYLE, LABEL_PAD, MIN_LABEL_CHARS, SPOT, TEXT_GAP, chipText, dashingFor, drawBox, drawLabel, edgeLit, labelCandidates, labelLayout, labelTones, labelVariants, quantAlpha, snapToLattice, spotAt } from "./pixel-labels";
 import { FONT_CAP, FONT_DESCENT, measureText } from "./pixel-font/pixel-font";
 import { buildRamp, textFloorLevel } from "./palette";
 
@@ -432,5 +432,59 @@ describe("labels: one weight, a dimmer counter", () => {
   it("only palette levels are ever drawn at full opacity (no grey between)", () => {
     const { buf } = draw("Nikšić", chipText(3));
     for (let y = 0; y < buf.rows; y++) for (let x = 0; x < buf.cols; x++) expect([0, T.rest.name, T.rest.count, CLEAR]).toContain(buf.get(x, y));
+  });
+});
+
+describe("the art-pixel lattice: plates sit on the grid of the box they are anchored to", () => {
+  const grid = { cols: 800, rows: 600 };
+  const cell = 2.5;
+  const lat = { cell, ox: -1, oy: -2 };
+  const on = (v: number, o: number) => Math.abs((v - o) / cell - Math.round((v - o) / cell)) < 1e-9;
+  it("snapToLattice: to the nearest point, or down when asked, from the origin of the grid (not of the page)", () => {
+    expect(snapToLattice(10.9, -1, 2.5)).toBe(11.5);
+    expect(snapToLattice(10.9, -1, 2.5, true)).toBe(9);
+    expect(snapToLattice(9, -1, 2.5, true)).toBe(9); // already on it: not pushed down by float noise
+    expect(snapToLattice(-1, -1, 2.5)).toBe(-1);
+  });
+  it("every candidate of a box of whole cells is a lattice point, whatever the size of the plate", () => {
+    const rect = { c0: -1 + 40 * cell, r0: -2 + 30 * cell, c1: -1 + 60 * cell, r1: -2 + 50 * cell };
+    for (const [w, h] of [[83.5, 38], [61, 24], [120.5, 25]] as const) {
+      const spots = labelCandidates(rect, w, h, grid, { inset: 5, quant: cell, gap: 2.5, bleed: 0, lattice: lat });
+      expect(spots.length).toBeGreaterThan(4);
+      for (const s of spots) {
+        expect(on(s.x, lat.ox)).toBe(true);
+        expect(on(s.y, lat.oy)).toBe(true);
+      }
+    }
+  });
+  it("a plate above or beside its box is rounded away from it: the clear room is the gap or up to a cell more, never less", () => {
+    const rect = { c0: -1 + 40 * cell, r0: -2 + 30 * cell, c1: -1 + 60 * cell, r1: -2 + 50 * cell };
+    const out = { x: 0, y: 0, inside: false };
+    for (const h of [24, 25, 38, 39.5]) {
+      expect(spotAt(SPOT.aboveLeft, rect, 80, h, grid, { gap: 2.5, lattice: lat }, out)).toBe(true);
+      const room = rect.r0 - (out.y + h);
+      expect(room).toBeGreaterThanOrEqual(2.5 - 1e-9);
+      expect(room).toBeLessThan(2.5 + cell);
+    }
+    for (const w of [60, 61.5, 83]) {
+      expect(spotAt(SPOT.left, rect, w, 24, grid, { gap: 2.5, lattice: lat }, out)).toBe(true);
+      const room = rect.c0 - (out.x + w);
+      expect(room).toBeGreaterThanOrEqual(2.5 - 1e-9);
+      expect(room).toBeLessThan(2.5 + cell);
+    }
+  });
+  it("a position that slides along its box at the screen's edge stays on the lattice and on the screen", () => {
+    // a box whose right part is off the screen: the right-aligned plate is pulled back inside by whole cells
+    const rect = { c0: 790, r0: 200, c1: 840, r1: 240 };
+    const out = { x: 0, y: 0, inside: false };
+    expect(spotAt(SPOT.aboveRight, rect, 83.5, 24, grid, { gap: 2.5, lattice: lat, slide: true }, out)).toBe(true);
+    expect(on(out.x, lat.ox)).toBe(true);
+    expect(out.x + 83.5).toBeLessThanOrEqual(grid.cols);
+    expect(out.x).toBeGreaterThan(grid.cols - 83.5 - cell - 1e-9); // as far right as the lattice allows
+  });
+  it("without a lattice the positions are exact (the pixel text, other callers)", () => {
+    const out = { x: 0, y: 0, inside: false };
+    expect(spotAt(SPOT.aboveLeft, { c0: 101, r0: 203.3, c1: 140, r1: 240 }, 80, 24, grid, { gap: 3 }, out)).toBe(true);
+    expect(out).toMatchObject({ x: 101, y: 203.3 - 24 - 3 });
   });
 });

@@ -250,7 +250,7 @@ export const JITTER: readonly (readonly [number, number, number])[] = [
 
 /**
  * Slot changes and cut flips of a small camera jitter around a view: the tree is evaluated at each step (it keeps its memory, as in the app), the
- * labels are planned by the real planner with the previous step's choice as `prev` (what the tracker's plan does between frames), and the choices
+ * labels are planned by the real planner with the previous step's choice as `prev`, held (what the tracker's plan does between frames), and the choices
  * and the drawn sets are compared step to step. A stable layout has none.
  */
 export function flickerAt(tree: LodTree, screen: Screen, lon: number, lat: number, zoom: number): Flicker {
@@ -277,6 +277,9 @@ export function flickerAt(tree: LodTree, screen: Screen, lon: number, lat: numbe
       prev: memory.get(n.slug) ?? null,
       avoid: boxesToAvoid(boxPlates, k, labelVariants(n.name, n.sub)[0]!.w + labelVariants(n.name, n.sub)[0]!.h + 2 * pad),
       pref: n.pref,
+      // (the tracker keeps a young choice while the camera moves, `TRACK.dwellMs`: a jitter is shorter than that; the plates snap to the art-pixel lattice
+      // one by one, so the bare planner would otherwise trade a slot for a better one that came free by a cell)
+      hold: memory.has(n.slug),
     }));
     const res = planLabels(items, { cols: screen.width, rows: screen.height }, pxUnits(SWEEP.cell));
     const next = new Map<string, Prev>();

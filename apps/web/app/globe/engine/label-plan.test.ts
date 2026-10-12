@@ -250,3 +250,74 @@ describe("the position the cut reserved (PlanItem.pref)", () => {
     expect(plan[0]!.cand).not.toBe(SPOT.aboveLeft);
   });
 });
+
+describe("on the art-pixel lattice (pxUnits): every distance is a whole number of cells, so a plate moves with its box cell for cell", () => {
+  const onGrid = (v: number, origin: number, cell: number) => Math.abs((v - origin) / cell - Math.round((v - origin) / cell)) < 1e-9;
+  it("the units: the gap, the nested inset, the snap along an edge and the last resort's step are whole cells of the art pixel (2.5 px on a desktop, 2 px on a phone)", () => {
+    for (const cell of [2.5, 2, 2.667, 3]) {
+      const u = pxUnits(cell, -1, 0);
+      for (const d of [u.gap, u.inset, u.quant, u.shiftStep]) expect(onGrid(d, 0, cell)).toBe(true);
+      expect(u.gap).toBeGreaterThanOrEqual(cell - 1e-9);
+      expect(u.gap).toBeLessThanOrEqual(3 + cell); // `LABEL_TYPE.boxGap` (3 px) to the nearest cell, never none
+      expect(u.lattice).toEqual({ cell, ox: -1, oy: 0 });
+    }
+    expect(pxUnits(2.5).gap).toBe(2.5);
+    expect(pxUnits(2.5).inset).toBe(5); // the outline's cell plus one more
+  });
+  it("every position of a plan is on the lattice, whatever the size of the plate and the origin of the grid (a canvas offset by a pixel)", () => {
+    const u = pxUnits(2.5, -1, -2);
+    const items = Array.from({ length: 30 }, (_, k) => {
+      const w = 12.5 + (k % 5) * 7.5;
+      const x = -1 + Math.round((60 + k * 31) / 2.5) * 2.5;
+      const y = -2 + Math.round((40 + (k * 53) % 300) / 2.5) * 2.5;
+      return { score: 50 + (k % 7), area: w * w, key: `n${k}`, rect: { c0: x, r0: y, c1: x + w, r1: y + w }, variants: [{ w: 83.5 + (k % 4), h: 38 }, { w: 61.5, h: 24 }], prev: null };
+    });
+    const plan = planLabels(items, GRID, u);
+    for (const p of plan) {
+      expect(onGrid(p.x, -1, 2.5)).toBe(true);
+      expect(onGrid(p.y, -2, 2.5)).toBe(true);
+    }
+  });
+  it("a plate above its box leaves at least the gap and less than the gap and one more cell (it is rounded away from the box, never onto it)", () => {
+    const u = pxUnits(2.5, 0, 0);
+    for (const h of [24, 38, 25, 40]) {
+      const rect = { c0: 100, r0: 200, c1: 140, r1: 230 };
+      const [p] = planLabels([{ score: 1, area: 1200, key: "a", rect, variants: [{ w: 90, h }], prev: null }], GRID, u);
+      expect(p!.cand).toBe(SPOT.aboveLeft);
+      const room = rect.r0 - (p!.y + p!.h);
+      expect(room).toBeGreaterThanOrEqual(u.gap - 1e-9);
+      expect(room).toBeLessThan(u.gap + 2.5);
+    }
+  });
+  it("a plate whose size is whole cells has exactly the gap, on every side", () => {
+    const u = pxUnits(2.5, 0, 0);
+    const rect = { c0: 100, r0: 200, c1: 140, r1: 230 };
+    const [p] = planLabels([{ score: 1, area: 1200, key: "a", rect, variants: [{ w: 90, h: 40 }], prev: null }], GRID, u);
+    expect(rect.r0 - (p!.y + p!.h)).toBe(u.gap);
+    expect(p!.x).toBe(rect.c0);
+  });
+});
+
+describe("the last resort: a label that has to be drawn over others keeps its second line unless losing it gets it off another plate", () => {
+  const whole = { w: 90, h: 38, sub: "France" };
+  const narrow = { w: 60, h: 38, sub: "France" };
+  const shortest = { w: 40, h: 24, sub: null };
+  const grid = { cols: 200, rows: 100 };
+  const rect = { c0: 80, r0: 40, c1: 100, r1: 60 };
+  /** Every plate position of the plan overlaps this wall: the label is a last resort whichever way it is written. */
+  const wall = (x0: number, x1: number) => [{ x0, y0: 0, x1, y1: 100 }];
+  it("it loses it when that is what gets it off another plate: the shortest way fits the 80 px lane left, the others do not", () => {
+    const [p] = planLabels([{ score: 1, area: 400, key: "a", rect, variants: [whole, narrow, shortest], prev: null }], grid, pxUnits(1), [...wall(0, 50), ...wall(130, 200)]);
+    expect(p!.variant).toBe(2);
+    expect(p!.overlap).toBe(false); // (it fits in the lane that is left: no last resort at all)
+  });
+  it("it keeps it when the second line costs no more: every way overlaps the wall by the same, the one with the line wins", () => {
+    // a wall wider than every way of writing, over the whole grid but the box: all positions overlap by the plate's own area, the taller plate by more
+    // (area first), so make the plates the same height: the line is the only difference between the last two ways
+    const a = { w: 60, h: 24, sub: "France" };
+    const b = { w: 60, h: 24, sub: null };
+    const [p] = planLabels([{ score: 1, area: 400, key: "a", rect, variants: [{ w: 90, h: 24, sub: "France" }, a, b], prev: null }], grid, pxUnits(1), [{ x0: 0, y0: 0, x1: 200, y1: 100 }]);
+    expect(p!.overlap).toBe(true);
+    expect(p!.variant).not.toBe(2); // not the way without its line: same overlap, so the one that keeps it
+  });
+});

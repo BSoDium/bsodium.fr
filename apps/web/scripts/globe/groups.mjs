@@ -26,7 +26,8 @@
 //           unless one is the last resort) and is at full opacity, no node is half-faded, and hovering a box, its label and the gap between them
 //           shows the pointer and the node's hover state; the label is a real DOM element (text, opacity, place) for every drawn box; at rest every label is exactly at its target (no glide left)
 // flicker   a scripted pan and zoom of 3 s over a crowded view: the labels move all the time and never teleport (a plate that moves by more
-//           than its box plus a small glide step in one frame: 0), a slot change is a glide (slot changes per label, the worst frame), the plan runs at
+//           than its box plus the glide it had left in one frame: 0), a slot change is a stepped glide of whole art cells (slot changes per label, the
+//           worst frame), every plate is on the art-pixel lattice and moves exactly as its box does while its slot is kept, the plan runs at
 //           a bounded rate, the loop is quiet after the labels arrived (none gliding, none owed), and hovering label after label re-plans nothing
 // open      (the owner's preview, or any content with a group of several places) a group OPENS EARLY into its most important places and cross-fades with
 //           them (docs/web-architecture.md, "Opening a group into its most important children"). At Western Europe, the Balkans, Iberia, Central Europe
@@ -526,8 +527,8 @@ try {
     });
     const lab = tab?.label;
     expect(
-      `the label reads "${tab?.text}" over "${tab?.subWhole}", HTML text above the box's top-left corner (3 px of clear room, the plate's left edge on the box's left edge), the whole label at its first position`,
-      !!tab && !!lab && tab.text === "Crowd" && tab.subWhole === "10 places" && lab.text === "Crowd" && lab.sub === "10 places" && Math.abs(lab.x - tab.box.x0) < 0.01 && Math.abs(lab.y + lab.h + 3 - tab.box.y0) < 0.01 && !lab.inside && lab.variant === 0 && lab.cand === 0,
+      `the label reads "${tab?.text}" over "${tab?.subWhole}", HTML text above the box's top-left corner (one art cell of clear room, the plate's left edge on the box's left edge), the whole label at its first position`,
+      !!tab && !!lab && tab.text === "Crowd" && tab.subWhole === "10 places" && lab.text === "Crowd" && lab.sub === "10 places" && Math.abs(lab.x - tab.box.x0) < 0.01 && Math.abs(lab.y + lab.h + (tab.box.x1 - tab.box.x0) / (tab.rect.c1 - tab.rect.c0) - tab.box.y0) < 0.01 && !lab.inside && lab.variant === 0 && lab.cand === 0,
       tab,
     );
     const dom = (await page.evaluate(() => window.__globeDebug.labelsDom())).find((l) => l.slug === "case-crowd");
@@ -609,16 +610,23 @@ try {
               })();
         if (wrong) domBad.push({ slug: c.slug, wrong, el, l });
         else {
-          // the plate's edge is the box's outer edge (above its top-left corner), 3 px of clear room above the box, the text starts after the padding,
-          // two lines when there is a second line, and the feather is the plate's twin in the layer below
+          // the plate's edge is the box's outer edge (above its top-left corner), one art cell of clear room above the box (the plate is a whole
+          // number of cells high), on the art-pixel lattice of the box, the text starts after the padding, two lines when there is a second line,
+          // and the feather is the plate's own small shadow
+          const cell = (c.box.x1 - c.box.x0) / (c.rect.c1 - c.rect.c0);
+          const left = c.box.x0 - c.rect.c0 * cell;
+          const top = c.box.y0 - c.rect.r0 * cell;
+          const onCell = (v, o) => Math.abs((v - o) / cell - Math.round((v - o) / cell)) < 1e-6;
+          const lattice = !l.overlap && (!onCell(l.x, left) || !onCell(l.y, top)) ? `plate (${l.x}, ${l.y}) not on the ${cell} px lattice` : null;
           const alignedLeft = l.cand === 0 && !l.overlap && Math.abs(l.x - c.box.x0) > 0.01 ? "plate not on the box's left edge" : null;
-          const gap = l.cand === 0 && !l.overlap && Math.abs(l.y + l.h + 3 - c.box.y0) > 0.01 ? "gap above the box is not 3 px" : null;
+          const gap = l.cand === 0 && !l.overlap && Math.abs(l.y + l.h + cell - c.box.y0) > 0.01 ? `gap above the box is not one cell (${cell} px)` : null;
           const pad = Math.abs(el.nameRect.x0 - el.rect.x0 - 6) > 0.6 ? "text not 6 px inside the plate" : null;
           const lines = l.sub ? (el.subRect.y1 - el.subRect.y0 > 0 && el.subRect.y0 >= el.nameRect.y1 - 0.5 ? null : "second line not under the name") : el.subRect.y1 - el.subRect.y0 > 0.5 ? "second line shown without text" : null;
-          const halo = !el.halo || el.halo.transform !== el.transform || Math.abs(el.halo.x1 - el.halo.x0 - l.w) > 1 || Math.abs(el.halo.y1 - el.halo.y0 - l.h) > 1 ? "feather not the plate's twin" : null;
+          // (a label drawn over others, the last resort, has an opaque plate and no feather)
+          const halo = l.overlap ? (el.feather === "none" ? null : `last resort has a feather: ${el.feather}`) : el.feather !== "0 0 2px 1px var(--map-label-plate)" ? `feather is ${el.feather}` : null;
           const size = Math.abs(el.rect.x1 - el.rect.x0 - l.w) > 0.01 || Math.abs(el.rect.y1 - el.rect.y0 - l.h) > 1.01 ? "the plate is not the planned size" : null;
-          const why = alignedLeft || gap || pad || lines || halo || size;
-          if (why) layoutBad.push({ slug: c.slug, why, l, el: { rect: el.rect, nameRect: el.nameRect, subRect: el.subRect, halo: el.halo } });
+          const why = lattice || alignedLeft || gap || pad || lines || halo || size;
+          if (why) layoutBad.push({ slug: c.slug, why, l, el: { rect: el.rect, nameRect: el.nameRect, subRect: el.subRect, feather: el.feather } });
         }
       }
       // plates are disjoint (a cell of clearance) unless one of the two is the last resort
@@ -633,7 +641,20 @@ try {
     }
     expect(`at rest, over ${views.length} views (world, continents, Europe, the Balkans, a city cluster, a lon/lat/zoom sweep) and ${seen} drawn boxes: 100 % have their label (${unlabelled.length} without), none half-faded or dimmed (${shortened} labels shortened, ${overlapped} drawn over another as the last resort, ${nested} nested inside their box)`, seen > 20 && unlabelled.length === 0 && halfState.length === 0, { unlabelled: unlabelled.slice(0, 5), halfState: halfState.slice(0, 5) });
     expect("at rest, no two label plates overlap unless one of them is the last resort", collisions.length === 0, collisions.slice(0, 5));
-    expect(`every label's layout in the real DOM: plate on the box's left edge, 3 px above it, text 6 px inside the plate, second line under the name, the planner's size equal to the element's, the feather the plate's twin (${layoutBad.length} wrong)`, layoutBad.length === 0, layoutBad.slice(0, 5));
+    expect(`every label's layout in the real DOM: plate on the art-pixel lattice and on the box's left edge, one cell above it, text 6 px inside the plate, second line under the name, the planner's size equal to the element's, the feather the plate's own small shadow (${layoutBad.length} wrong)`, layoutBad.length === 0, layoutBad.slice(0, 5));
+    // The plate is TRANSLUCENT: the computed background of a label at rest is the page colour at the stylesheet's --label-plate-alpha (the least
+    // that keeps the 11 px second line AA over the loudest map tone, engine/label-plate.ts), opaque when selected or drawn over others.
+    const plate = await page.evaluate(() => {
+      const el = document.querySelector(".map-label");
+      if (!el) return null;
+      const cs = getComputedStyle(el);
+      const root = getComputedStyle(document.documentElement);
+      return { bg: cs.backgroundColor, shadow: cs.boxShadow, alpha: root.getPropertyValue("--label-plate-alpha").trim(), page: root.getPropertyValue("--background").trim() };
+    });
+    // computed colours come back as `rgba(r, g, b, a)` or `color(srgb r g b / a)`
+    const m = plate && (/rgba\([^)]*,\s*([\d.]+)\)/.exec(plate.bg) ?? /\/\s*([\d.]+)\)/.exec(plate.bg));
+    const a = m ? m[1] : plate ? "1" : null;
+    expect(`the label plate is translucent: background alpha ${a} = --label-plate-alpha ${plate?.alpha}, a 1 to 2 px feather in its own colour (${plate?.shadow})`, !!plate && Math.abs(Number(a) - Number(plate.alpha)) < 0.01 && Number(plate.alpha) < 1 && /2px 1px/.test(plate.shadow) && /rgba?\(|color\(srgb/.test(plate.shadow), plate);
     expect(`at rest every drawn box has its label as a REAL element in the DOM: its text, fully opaque (no half-fade), at the planned place, EXACTLY at its target offset (${domBad.length} wrong); and no element without a box`, domBad.length === 0, domBad.slice(0, 5));
 
     // Hover: the box, its label and the gap between them are one target; the hovered node is drawn solid.
@@ -1070,12 +1091,12 @@ try {
     // A scripted camera on the real app: a pan that swings both ways while the zoom breathes, one synchronous frame at a time (60 per second
     // of the page's own clock), over a crowded view of the preview or the demo. Per frame the labels are read back (candidate position, way of
     // writing it, plate as DRAWN, glide left) and the FLICKER METRIC is counted as in `label-track.test.ts`: a TELEPORT is a plate that moved
-    // in one frame (its nearer edge on each axis) by more than its box did plus `SNAP_PX` (6 px) plus what its own glide may move it by (1.1 x omega x dt x the glide left); a CHANGE is a
+    // in one frame (its nearer edge on each axis) by more than its box did plus `SNAP_PX` (6 px) plus the glide it had left (a stepped glide never
+    // moves a plate by more than what is left of it); a CHANGE is a
     // label shown in two consecutive frames with another slot (a change is a glide, not a flicker); VISIBILITY a label that appeared or
     // disappeared (the camera and the cut decide it).
     const { page, logs } = await openGlobe(browser, DESKTOP);
     const minZoom = await page.evaluate(() => window.__globeDebug.minZoom());
-    const OMEGA = 14; // TRACK.omega (engine/label-track.ts)
     // Slack of the teleport test beyond what the box moved: the box is snapped to art cells (2.5 to 3 px) and the plate to device pixels, and a plate
     // whose wording changes in a plan (whole -> truncated) is put at its slot's place for the new width. The sweep moves a large box up to 30 px in a
     // frame; a left-anchored label whose text got shorter was seen 4.5 px beyond the box in 1 of 3 sweeps (2026-10-09; was 4, which made the check flap:
@@ -1083,7 +1104,7 @@ try {
     const SNAP_PX = 6;
     const run1 = (start) =>
       page.evaluate(
-        async ({ start, minZoom, OMEGA, SNAP_PX }) => {
+        async ({ start, minZoom, SNAP_PX }) => {
           const d = window.__globeDebug;
           d.setView(start);
           d.settle();
@@ -1094,23 +1115,30 @@ try {
           const t0 = performance.now();
           let lastT = t0;
           const prevChange = new Map();
-          const out = { teleportAt: [], changes: 0, reversals: 0, teleports: 0, gliding: 0, maxStep: 0, visibility: 0, shown: 0, worstFrame: 0, labels: new Set(), mid: 0, domWrites: 0, frames: 0, slow: 0 };
+          const out = { teleportAt: [], changes: 0, reversals: 0, teleports: 0, gliding: 0, maxStep: 0, visibility: 0, shown: 0, worstFrame: 0, labels: new Set(), mid: 0, domWrites: 0, frames: 0, slow: 0, offLattice: 0, lockstep: 0, lockstepErrors: 0, cell: 0, glideSteps: 0, glideStepsOffCell: 0 };
           const w0 = d.labelStats().labelWrites;
           for (let f = 0; ; f++) {
             await new Promise((r) => requestAnimationFrame(r));
             const now0 = performance.now();
-            const dt = Math.min(0.05, (now0 - lastT) / 1000);
             lastT = now0;
             const u = Math.min(1, (now0 - t0) / DURATION);
             d.setView({ lon: start.lon + 14 * Math.sin(2 * Math.PI * u * 1.5), lat: start.lat + 5 * Math.sin(2 * Math.PI * u), zoom: start.zoom + 0.45 * (0.5 - 0.5 * Math.cos(2 * Math.PI * u)) });
             d.renderNow();
             const now = new Map();
-            for (const c of d.labelCells()) now.set(c.slug, { cand: c.label.cand, variant: c.label.variant, text: c.label.text, x: c.label.x, y: c.label.y, x1: c.label.x + c.label.w, y1: c.label.y + c.label.h, g: c.label.glide, box: c.box, mode: c.label.mode });
+            for (const c of d.labelCells()) {
+              // the art cell (CSS px) and the origin of the lattice, from the box in cells and in px
+              const cell = (c.box.x1 - c.box.x0) / (c.rect.c1 - c.rect.c0);
+              out.cell = cell;
+              now.set(c.slug, { cand: c.label.cand, variant: c.label.variant, text: c.label.text, x: c.label.x, y: c.label.y, x1: c.label.x + c.label.w, y1: c.label.y + c.label.h, g: c.label.glide, box: c.box, mode: c.label.mode, cell, left: c.box.x0 - c.rect.c0 * cell, top: c.box.y0 - c.rect.r0 * cell, overlap: c.label.overlap });
+            }
             let frameChanges = 0;
             for (const [k, s] of now) {
               out.labels.add(k);
               out.shown++;
               if (s.g > 0) out.gliding++;
+              // every plate (but the last resort's, which sits where it overlaps least) is on the art-pixel lattice of the grid its box is on
+              const on = (v, o) => Math.abs((v - o) / s.cell - Math.round((v - o) / s.cell)) < 1e-6;
+              if (!s.overlap && (!on(s.x, s.left) || !on(s.y, s.top))) out.offLattice++;
               const p = last.get(k);
               if (!p) {
                 if (f > 0) out.visibility++;
@@ -1128,9 +1156,22 @@ try {
               // the plate's nearer edge on each axis: a text that gets shorter (a plate anchored on one edge of its box) keeps the other edge where it was
               const step = Math.max(Math.min(Math.abs(p.x - s.x), Math.abs(p.x1 - s.x1)), Math.min(Math.abs(p.y - s.y), Math.abs(p.y1 - s.y1)));
               out.maxStep = Math.max(out.maxStep, step - boxMove);
-              if (step > boxMove + SNAP_PX + 1.1 * OMEGA * dt * Math.max(p.g, s.g)) {
+              if (step > boxMove + SNAP_PX + Math.max(p.g, s.g)) {
                 out.teleports++;
                 if (out.teleportAt.length < 3) out.teleportAt.push({ slug: k, f, step: +step.toFixed(1), boxMove: +boxMove.toFixed(1), from: `${p.variant}/${p.cand} ${p.x.toFixed(0)},${p.y.toFixed(0)} g${p.g.toFixed(1)}`, to: `${s.variant}/${s.cand} ${s.x.toFixed(0)},${s.y.toFixed(0)} g${s.g.toFixed(1)}`, mode: s.mode, pbox: p.box, sbox: s.box, pw: +(p.x1 - p.x).toFixed(0), sw: +(s.x1 - s.x).toFixed(0), ph: +(p.y1 - p.y).toFixed(0) });
+              }
+              // LOCKSTEP: the same slot and no glide before or after, plate and box wholly on the screen: the plate moved exactly as a corner of its box did
+              // (the corner it is aligned with: left or right edge, top or bottom), and whole cells at a time
+              if (p.cand === s.cand && p.variant === s.variant && p.g === 0 && s.g === 0 && s.cand >= 0 && !s.overlap && !(s.cand >= 5 && s.cand <= 7) && !(s.cand >= 13 && s.cand <= 15)) {
+                const clear = (q) => q.x > s.cell && q.y > s.cell && q.x1 < 1440 - s.cell && q.y1 < 900 - s.cell && q.box.x0 > 0 && q.box.y0 > 0 && q.box.x1 < 1440 && q.box.y1 < 900;
+                if (clear(p) && clear(s)) {
+                  out.lockstep++;
+                  const dx = s.x - p.x;
+                  const dy = s.y - p.y;
+                  const xs = [s.box.x0 - p.box.x0, s.box.x1 - p.box.x1];
+                  const ys = [s.box.y0 - p.box.y0, s.box.y1 - p.box.y1];
+                  if (!xs.some((d1) => Math.abs(d1 - dx) < 1e-6) || !ys.some((d1) => Math.abs(d1 - dy) < 1e-6) || Math.abs(dx / s.cell - Math.round(dx / s.cell)) > 1e-6 || Math.abs(dy / s.cell - Math.round(dy / s.cell)) > 1e-6) out.lockstepErrors++;
+                }
               }
             }
             for (const k of last.keys()) if (!now.has(k)) out.visibility++;
@@ -1144,7 +1185,7 @@ try {
           out.labels = out.labels.size;
           return out;
         },
-        { start, minZoom, OMEGA, SNAP_PX },
+        { start, minZoom, SNAP_PX },
       );
     const stat = async () => page.evaluate(() => window.__globeDebug.labelStats());
     const starts = [
@@ -1180,6 +1221,7 @@ try {
       // frame changes more than max(16, 55 percent of the labels) as before. A plate that jumps is `teleports`, below.
       expect(`${name}: over a scripted pan and zoom of 3 s a label changes its slot less than four times on average (${(r.changes / Math.max(1, r.labels)).toFixed(2)}; each change is a glide), at most 25 percent of the changes go back to the slot just left (${r.reversals} of ${r.changes}) and no frame changes more than max(16, 55 percent of the labels)`, r.labels > 5 && r.changes / r.labels < 4 && r.reversals <= 0.25 * r.changes && r.worstFrame <= Math.max(16, Math.ceil(r.labels * 0.55)), r);
       expect(`${name}: no plate teleports against its box (${r.teleports}), the labels move (${r.gliding} label-frames gliding)`, r.teleports === 0, r);
+      expect(`${name}: every plate is on the art-pixel lattice (${r.offLattice} off it of ${r.shown} label-frames, cell ${r.cell} px) and a plate whose slot is kept moves exactly as its box does, in whole cells (${r.lockstepErrors} of ${r.lockstep} label-frames out of step)`, r.shown > 100 && r.offLattice === 0 && r.lockstep > 50 && r.lockstepErrors === 0, r);
       expect(`${name}: re-planned at a bounded rate (${after.replans - before.replans} plans in ${seconds.toFixed(1)} s: at most one per 100 ms) and the loop is quiet ${quietAfter} ms after the camera stopped`, after.replans - before.replans >= 1 && (after.replans - before.replans) <= seconds * 10 + 8 && quietAfter >= 0 && quietAfter < 2500 && !(await page.evaluate(() => window.__globeDebug.isAnimating())), { before, after, seconds, quietAfter });
       expect(`${name}: at rest no label is gliding and none is owed a plan`, after.gliding === 0 && !after.owed, after);
       // at rest, after the last plan and the glides: every box has its label in the DOM, none left half way, and no two plates overlap unless one is the last resort

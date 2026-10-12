@@ -2,26 +2,27 @@
  * Where every label goes (pure, unit tested): the rule that EVERY drawn box shows its label. There is no dimmed box, no box without a name.
  *
  * The input is the set of nodes the cut WANTS drawn (binary: a node is in or out, engine/lod-tree.ts), each with the rectangle it is drawn in
- * and the ways its label can be written (`labelVariants` in engine/label-text.ts: the whole label, without its counter, truncated with an
- * ellipsis down to six characters). Nodes are placed in priority order (the higher score, then the bigger box, then the key, so the result
+ * and the ways its label can be written (`labelVariants` in engine/label-text.ts: the whole label, without its entries, without its second
+ * line, then truncated with an ellipsis down to six characters, a truncation keeping its second line before it loses it). Nodes are placed in priority order (the higher score, then the bigger box, then the key, so the result
  * never depends on the order of the input). For each node, widest label first:
  *   1. the first of its candidate positions (`labelCandidates`: above the top-left corner; else nested in the top-left corner; then, as last
  *      resorts, above-right, shifted along the top edge, the other inner corners, below, left, right) whose plate collides with no plate already
  *      placed (`clearance` of room) wins; no position ever covers the node's own outline, and one that touches a neighbour's box is taken only when no wording has a position that does not;
  *   2. if none is free the next, shorter way of writing the label is tried at all the positions;
- *   3. if the shortest is not free anywhere the label is drawn ANYWAY, on top, on a plate of the page colour: the position (of the whole label or of
- *      the shortest one) that overlaps the placed plates least, shifted from the first candidate by the smallest displacement that reduces the
- *      overlap.
+ *   3. if the shortest is not free anywhere the label is drawn ANYWAY, on top, on an opaque plate: the position (of the whole label, of the
+ *      narrowest way that still has its second line, or of the shortest one) that overlaps the placed plates least, at equal overlap the one
+ *      that keeps its second line, shifted from the first candidate by the smallest displacement that reduces the overlap.
  *
  * Stable between plans: a node's previous choice is kept while it is still free, and only given up for a better one (a wider label, an earlier
  * position) when that one is free with `upgradeMargin` extra room (and not at all while the choice is a moment old: `PlanItem.hold`), so a
  * camera that moves a plate by a pixel cannot flip two labels back and forth. A choice that stops being free is replaced at once. (Between plans, when the plan runs at all, is engine/label-track.ts.)
  *
- * Units: the geometry is unit-free. The labels of the boxes plan in CSS px (`PX_UNITS`, with the box line's thickness as `inset`); the pixel
+ * Units: the geometry is unit-free. The labels of the boxes plan in CSS px on the art-pixel lattice (`pxUnits(cell, left, top)`: every
+ * distance a whole number of cells, positions snapped to the grid of the boxes; `PX_UNITS` is the same without a lattice); the pixel
  * text of the map keeps the whole-cell version (`CELL_UNITS`), used by the tests of the planner as well.
  */
 import { LABEL_TYPE } from "./label-text";
-import { coversBox, labelCandidates, type CellRect, type GridSize, type LabelSpot } from "./pixel-labels";
+import { clampOn, coversBox, labelCandidates, snapToLattice, type CellRect, type GridSize, type LabelSpot, type Lattice } from "./pixel-labels";
 
 /** The distances the plan works with, in the unit of its geometry. */
 export interface PlanUnits {
@@ -39,6 +40,8 @@ export interface PlanUnits {
   gap: number;
   /** How far a plate aligned with a box edge sticks out past it (0: its edge is the box's outer edge). */
   bleed: number;
+  /** The art-pixel lattice the plates sit on (`pxUnits`): every position is a whole number of cells from its origin, like the boxes. */
+  lattice?: Lattice | undefined;
 }
 
 /** Whole art cells (the pixel text). */
@@ -50,8 +53,25 @@ export const CELL_UNITS: PlanUnits = { clearance: 1, upgradeMargin: 2, shiftStep
  */
 export const PX_UNITS: PlanUnits = { clearance: 4, upgradeMargin: 10, shiftStep: 6, inset: 2.5 + LABEL_TYPE.nestInset, quant: 0.5, gap: LABEL_TYPE.boxGap, bleed: LABEL_TYPE.bleed };
 
-/** The units of a plan on a map whose art cell is `cell` CSS px (the box outline is one cell thick). */
-export const pxUnits = (cell: number): PlanUnits => ({ ...PX_UNITS, inset: cell + LABEL_TYPE.nestInset });
+/**
+ * The units of a plan on a map whose art cell is `cell` CSS px (the box outline is one cell thick) and whose grid has its cell (0, 0) at
+ * (`left`, `top`) in the container: every distance is a WHOLE number of cells so that a plate lies on the box's own lattice and moves with it
+ * in whole cells. The clear room to a box is `LABEL_TYPE.boxGap` rounded to cells (one cell: 2.5 px on a desktop, 2 px on a phone), a nested
+ * plate sits the outline (one cell) plus `nestInset` rounded to cells inside, the positions along an edge snap to a cell, the last resort's
+ * displacements step by `PX_UNITS.shiftStep` rounded to cells. The clearance between two plates and the margin before a better position is taken
+ * are not lattice distances and stay in px.
+ */
+export const pxUnits = (cell: number, left = 0, top = 0): PlanUnits => {
+  const cells = (px: number) => Math.max(1, Math.round(px / cell - 1e-9));
+  return {
+    ...PX_UNITS,
+    inset: (1 + cells(LABEL_TYPE.nestInset)) * cell,
+    gap: cells(LABEL_TYPE.boxGap) * cell,
+    quant: cell,
+    shiftStep: cells(PX_UNITS.shiftStep) * cell,
+    lattice: { cell, ox: left, oy: top },
+  };
+};
 
 /** Kept for the cell version's tests and docs. */
 export const CLEARANCE = CELL_UNITS.clearance;
@@ -65,10 +85,11 @@ export interface Prev {
   dy: number;
 }
 
-/** A way of writing a label, for the plan: its size. */
+/** A way of writing a label, for the plan: its size, and whether it has a second line (`LabelText.sub`; absent: one line). */
 export interface Sized {
   w: number;
   h: number;
+  sub?: string | null | undefined;
 }
 
 export interface PlanItem {
@@ -132,6 +153,8 @@ interface Best {
   inside: boolean;
   area: number;
   shift: number;
+  /** The way of writing it has a second line. */
+  second: boolean;
 }
 
 /** Placement order of the items: score, then the bigger box, then the key. */
@@ -154,7 +177,7 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
   const free = (x: number, y: number, w: number, h: number, pad: number) => !placed.some((p) => hits(p, x, y, w, h, pad));
   const rank = (v: number, id: number) => v * 64 + id;
   const { clearance, upgradeMargin, shiftStep } = units;
-  const spotUnits = { inset: units.inset, quant: units.quant, gap: units.gap, bleed: units.bleed };
+  const spotUnits = { inset: units.inset, quant: units.quant, gap: units.gap, bleed: units.bleed, lattice: units.lattice };
 
   for (const n of order) {
     const t = items[n]!;
@@ -210,9 +233,13 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
       continue;
     }
 
-    // The last resort: on top of the others, where it overlaps the least. The whole label and the shortest are weighed; every candidate
-    // position and the displacements of the first one are tried.
-    const vs = count > 1 ? [0, count - 1] : [0];
+    // The last resort: on top of the others, where it overlaps the least. The whole label, the narrowest way that still has its second line
+    // and the shortest are weighed (every candidate position and the displacements of the first one are tried for each): the one that
+    // overlaps the placed plates least wins, and on a tie the one with more of the label, so a plate that has to be drawn over others keeps its
+    // country (or number of places) when that costs no more overlap, and loses it when that is what gets it off another plate.
+    let narrowest = count - 1;
+    if (t.variants[0]!.sub) while (narrowest > 0 && !t.variants[narrowest]!.sub) narrowest--;
+    const vs = [...new Set([0, narrowest, count - 1])];
     let best: Best | null = null;
     const consider = (v: number, x: number, y: number, cand: number, inside: boolean, shift: number) => {
       const { w, h } = t.variants[v]!;
@@ -226,14 +253,21 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
       let area = 0;
       for (const p of placed) area += overlapArea(p, x, y, w, h);
       const b = best;
-      if (!b || area < b.area || (area === b.area && (shift < b.shift || (shift === b.shift && v < b.v)))) best = { v, x, y, cand, inside, area, shift };
+      const second = !!t.variants[v]!.sub;
+      // least overlap first; at the same overlap the way that keeps its second line; then the smallest displacement, then the longest wording
+      if (!b || area < b.area || (area === b.area && (second !== b.second ? second : shift < b.shift || (shift === b.shift && v < b.v)))) best = { v, x, y, cand, inside, area, shift, second };
     };
     for (const v of vs) {
       const { w, h } = t.variants[v]!;
       const sp = spotsOf(v);
       const home = sp[0];
       for (const s of sp) consider(v, s.x, s.y, s.id, s.inside, home ? Math.abs(s.x - home.x) + Math.abs(s.y - home.y) : 0);
-      if (home) for (let dy = -h; dy <= h; dy += shiftStep) for (let dx = -w; dx <= w; dx += shiftStep) if (dx || dy) consider(v, home.x + dx, home.y + dy, -1, false, Math.abs(dx) + Math.abs(dy));
+      if (home) {
+        // displacements are whole steps from the first position (so on the lattice when the first position is)
+        const ry = Math.floor(h / shiftStep) * shiftStep;
+        const rx = Math.floor(w / shiftStep) * shiftStep;
+        for (let dy = -ry; dy <= ry; dy += shiftStep) for (let dx = -rx; dx <= rx; dx += shiftStep) if (dx || dy) consider(v, home.x + dx, home.y + dy, -1, false, Math.abs(dx) + Math.abs(dy));
+      }
     }
     const found = best as Best | null;
     let pick: Best;
@@ -247,12 +281,17 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
         area = 0;
         for (const p of placed) area += overlapArea(p, x, y, w, h);
       }
-      pick = area <= found.area ? { v: prev.variant, x, y, cand: -1, inside: false, area, shift: 0 } : found;
+      pick = area <= found.area ? { v: prev.variant, x, y, cand: -1, inside: false, area, shift: 0, second: !!t.variants[prev.variant]!.sub } : found;
     } else if (found) pick = found;
     else {
       // nothing fits the grid at all (a label wider than the screen): the shortest, clamped
       const { w, h } = t.variants[count - 1]!;
-      pick = { v: count - 1, x: Math.max(0, Math.min(grid.cols - w, t.rect.c0)), y: Math.max(0, Math.min(grid.rows - h, t.rect.r0 - h)), cand: -1, inside: false, area: 0, shift: 0 };
+      const lat = units.lattice;
+      const fit = (v: number, hi: number, origin?: number): number => {
+        const r = Math.max(0, Math.min(Math.max(0, hi), v));
+        return lat && origin !== undefined ? clampOn(snapToLattice(r, origin, lat.cell, true), 0, Math.max(0, hi), origin, lat.cell) : r;
+      };
+      pick = { v: count - 1, x: fit(t.rect.c0, grid.cols - w, lat?.ox), y: fit(t.rect.r0 - h, grid.rows - h, lat?.oy), cand: -1, inside: false, area: 0, shift: 0, second: !!t.variants[count - 1]!.sub };
     }
     const { w, h } = t.variants[pick.v]!;
     placed.push({ x0: pick.x, y0: pick.y, x1: pick.x + w, y1: pick.y + h });

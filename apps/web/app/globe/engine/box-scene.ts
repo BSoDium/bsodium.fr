@@ -7,9 +7,10 @@
  *    nearest-neighbour): a rectangle one cell thick, corners solid and the rest of each edge dashed (anchored to the box's edges), its colour
  *    its STATE (the `peak` level at rest, the ink hovered or focused) and the selected one a solid line in the ink; its interior masked in the
  *    page colour while it is clamped to the minimum size, hollow once it is bigger. They are part of the map.
- *  - the LABELS are HTML text in device pixels (engine/label-dom.ts): the UI font on a plate of the page colour with a feathered edge (app.css
- *    `.map-label`, `.map-halo`; the feather sits BELOW the box canvas so it never dims a box's outline). Labels are not part of the map's
- *    pixels; the pixel text pipeline stays for text that is (route labels, later).
+ *  - the LABELS are HTML text in device pixels (engine/label-dom.ts): the UI font on a translucent plate of the page colour with a 1 to 2 px
+ *    feather (app.css `.map-label`, `--label-plate-alpha`, engine/label-plate.ts). The text is not part of the map's pixels, but where it
+ *    sits is: plates are a whole number of art cells in size and on the box's own lattice, and move in whole cells. The pixel text pipeline
+ *    stays for text that is part of the map (route labels, later).
  *
  * From the cut of the hierarchy (engine/lod-tree.ts) and the rectangle every drawn node was given (`NodeScreen`, whole cells), per frame,
  * O(drawn nodes):
@@ -100,6 +101,9 @@ function memoryFor(lod: LodTree): SlotMemory {
   return m;
 }
 
+/** `px` rounded UP to a whole number of cells (a plate is never smaller than its text). */
+const wholeCells = (px: number, cell: number): number => (cell > 0 ? Math.ceil(px / cell - 1e-6) * cell : px);
+
 const strHash = (s: string): number => {
   let h = 2166136261;
   for (let k = 0; k < s.length; k++) h = Math.imul(h ^ s.charCodeAt(k), 16777619);
@@ -130,6 +134,8 @@ export class BoxScene {
   // per node, computed on first use
   private variantsOf: (readonly LabelText[] | undefined)[];
   private vkeyOf: Int32Array;
+  /** The art cell the cached variants are sized for (their plates are whole cells): a change drops the cache. */
+  private variantsCell = 0;
 
   constructor(
     root: HTMLElement,
@@ -306,9 +312,17 @@ export class BoxScene {
     return i < 0 ? null : this.lod.slug[i]!;
   }
 
-  /** The ways node `i`'s label can be written at rest (cached). */
-  private variants(i: number): readonly LabelText[] {
-    return (this.variantsOf[i] ??= labelVariants(this.lod.text[i]!, this.lod.sub[i]!));
+  /**
+   * The ways node `i`'s label can be written at rest (cached per art cell): the plate is a WHOLE number of art cells wide and high (the text
+   * keeps its measure; the plate is at most one cell larger than it needs), so its edges, like its position, are on the map's own grid and the
+   * clear room to its box is the same for every label.
+   */
+  private variants(i: number, cell: number): readonly LabelText[] {
+    if (cell !== this.variantsCell) {
+      this.variantsOf.fill(undefined);
+      this.variantsCell = cell;
+    }
+    return (this.variantsOf[i] ??= labelVariants(this.lod.text[i]!, this.lod.sub[i]!).map((v) => ({ ...v, w: wholeCells(v.w, cell), h: wholeCells(v.h, cell) })));
   }
 
   private vkey(i: number): number {
@@ -372,7 +386,7 @@ export class BoxScene {
     const cell = grid.cell;
     this.overlay.layout(grid.cols, grid.rows, cell, grid.left, grid.top);
     const view = this.view();
-    const units = pxUnits(cell);
+    const units = pxUnits(cell, grid.left, grid.top);
     const items: Item[] = [];
     for (let k = 0; k < lod.count; k++) {
       const i = lod.visible[k]!;
@@ -388,7 +402,7 @@ export class BoxScene {
         rect,
         px: { c0: screen.bx0[i]!, r0: screen.by0[i]!, c1: screen.bx1[i]!, r1: screen.by1[i]! },
         wanted: lod.life.target[i] === 1,
-        variants: this.variants(i),
+        variants: this.variants(i, cell),
         place: { x: 0, y: 0, gx: 0, gy: 0, variant: 0, cand: 0, inside: false, overlap: false, moved: false, fresh: false },
         score: (i === this.selected ? 1000 : 0) + lod.priority[i]! + (lod.isGroup[i] ? 0 : LOD.placePriorityBonus),
       });
@@ -409,7 +423,7 @@ export class BoxScene {
       avoid: () => boxesToAvoid(boxPlates, n, t.variants[0]!.w + t.variants[0]!.h + 2 * AVOID_PAD),
       pref: CUT_SPOT[lod.plateSlot(t.i)],
     }));
-    const placed: Placed[] = this.tracker.step(now, track, view, units.inset);
+    const placed: Placed[] = this.tracker.step(now, track, view, units);
     if (this.tracker.info.full) this.replans++;
     this.partials += this.tracker.info.partial;
     planned.forEach((t, n) => {
@@ -426,7 +440,7 @@ export class BoxScene {
         return { id: t.i, rect: t.px, size: t.variants[v]! };
       }),
       view,
-      units.inset,
+      units,
     );
     fading.forEach((t, k) => {
       const p = followed[k]!;

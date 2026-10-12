@@ -319,6 +319,36 @@ export interface SpotUnits {
   bleed?: number;
   /** A plate that would stick out of the grid is pulled back inside it (it slides along its box's edge, or stays at the screen's edge over the box) instead of being refused: the position of a label that is kept while its box moves. */
   slide?: boolean;
+  /**
+   * The art-pixel lattice: every position is a whole number of `cell` from (`ox`, `oy`) (the grid's own origin), so a plate moves only in
+   * whole art cells, in lockstep with the box it is anchored to (which is on the same lattice). A plate above or to the left of its box, and
+   * one nested against its bottom or right edge, is rounded DOWN (away from the box: the clear room is never smaller than asked for), the
+   * others to the nearest cell. Absent: the positions are exact (the pixel text, tests).
+   */
+  lattice?: Lattice;
+}
+
+/** The art-pixel grid as a lattice of positions: `cell` CSS px, with a lattice point at (`ox`, `oy`). */
+export interface Lattice {
+  cell: number;
+  ox: number;
+  oy: number;
+}
+
+const EPS = 1e-6;
+/** `v` on the lattice of step `cell` through `origin`: rounded down when `down`, else to the nearest point. */
+export function snapToLattice(v: number, origin: number, cell: number, down = false): number {
+  const k = (v - origin) / cell;
+  return origin + (down ? Math.floor(k + EPS) : Math.round(k)) * cell;
+}
+
+/** `v` clamped to `lo .. hi`, on the lattice (`origin`, `cell`) when there is one: the nearest lattice point inside the range (the range itself when it holds none). */
+export function clampOn(v: number, lo: number, hi: number, origin?: number, cell?: number): number {
+  const r = Math.max(lo, Math.min(hi, v));
+  if (origin === undefined || cell === undefined || r === v) return r;
+  const k = (r - origin) / cell;
+  const inside = r === lo ? origin + Math.ceil(k - EPS) * cell : origin + Math.floor(k + EPS) * cell;
+  return inside >= lo - EPS && inside <= hi + EPS ? inside : r;
 }
 
 /** The plate `x, y, w, h` overlaps the box `rect` (its outline is the ring along the rectangle's edge, so any overlap covers an arm or a dash). */
@@ -337,6 +367,10 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
   const quant = units.quant ?? 1;
   const gap = units.gap ?? 0;
   const bleed = units.bleed ?? 0;
+  const lat = units.lattice;
+  // which way a coordinate is rounded on the lattice: down (away from the box) for plates above or beside it
+  let downX = false;
+  let downY = false;
   const xl = Math.max(rect.c0, 0);
   const xr = Math.min(rect.c1, grid.cols);
   const yt = Math.max(rect.r0, 0);
@@ -348,18 +382,22 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
     case SPOT.aboveLeft:
       x = rect.c0 - bleed;
       y = rect.r0 - h - gap;
+      downY = true;
       break;
     case SPOT.aboveRight:
       x = rect.c1 - w + bleed;
       y = rect.r0 - h - gap;
+      downY = true;
       break;
     case SPOT.aboveVisibleLeft:
       x = xl - bleed;
       y = rect.r0 - h - gap;
+      downY = true;
       break;
     case SPOT.aboveVisibleRight:
       x = xr - w + bleed;
       y = rect.r0 - h - gap;
+      downY = true;
       break;
     case SPOT.insideTopLeft:
     case SPOT.insideBottomLeft:
@@ -369,6 +407,8 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
       inside = true;
       x = id === SPOT.insideTopLeft || id === SPOT.insideBottomLeft ? xl + inset : xr - inset - w;
       y = id === SPOT.insideTopLeft || id === SPOT.insideTopRight ? yt + inset : yb - inset - h;
+      downX = id === SPOT.insideTopRight || id === SPOT.insideBottomRight;
+      downY = id === SPOT.insideBottomLeft || id === SPOT.insideBottomRight;
       break;
     case SPOT.belowLeft:
       x = rect.c0 - bleed;
@@ -381,6 +421,7 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
     case SPOT.left:
       x = rect.c0 - w - gap;
       y = rect.r0;
+      downX = true;
       break;
     case SPOT.right:
       x = rect.c1 + gap;
@@ -393,10 +434,15 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
       if (!(span > 2 * inset)) return false;
       x = xl + Math.round((span * (k + 1)) / 4 / quant) * quant;
       y = id >= SPOT.belowShift ? rect.r1 + gap : rect.r0 - h - gap;
+      downY = id < SPOT.belowShift;
     }
   }
-  if (units.slide && w <= grid.cols) x = Math.max(0, Math.min(grid.cols - w, x));
-  if (units.slide && !inside && h <= grid.rows) y = Math.max(0, Math.min(grid.rows - h, y)); // a plate above a box that is near the top of the screen slides back on screen...
+  if (lat) {
+    x = snapToLattice(x, lat.ox, lat.cell, downX);
+    y = snapToLattice(y, lat.oy, lat.cell, downY);
+  }
+  if (units.slide && w <= grid.cols) x = clampOn(x, 0, grid.cols - w, lat?.ox, lat?.cell);
+  if (units.slide && !inside && h <= grid.rows) y = clampOn(y, 0, grid.rows - h, lat?.oy, lat?.cell); // a plate above a box that is near the top of the screen slides back on screen...
   // ...but never over its own box's outline: a plate that is not nested and would cover the box (the slide pulled it over the edge) is not a position, the label takes another slot
   if (!inside && coversBox(x, y, w, h, rect)) return false;
   if (x < 0 || y < 0 || x + w > grid.cols || y + h > grid.rows) return false;
