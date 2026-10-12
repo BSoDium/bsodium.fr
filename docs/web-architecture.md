@@ -946,6 +946,27 @@ The unit sweeps (`open.test.ts`, label sizes estimated, zoom 2 to 9 in steps of 
 
 **Not verified** (open through, 2026-10-09): (`groups.mjs flicker` is settled: see "Flicker check recalibrated (2026-10-09)" under "Inertia and flicker", 5 of 5 runs on the preview;) a group left open through one place at the world view when its box cannot fit with the newcomer's gap (Western Europe at the minimum zoom of the browser, reached by zooming out from 7.5: Paris, Mannheim and Toulouse area instead of the box; a fresh page shows the box when it fits); the cost of the through trials (not run, no performance run asked; the trial is one more `fits` per nested group). Also: Safari/iOS, a real touch screen and phones (the budget scales to 8 boxes on a 390 px wide free area, by arithmetic; not driven), the cost on a real device (the CPU numbers above are Node on the laptop; no GPU or phone performance run), the street scale and `groups.mjs handover` (they need the local tile server; the shared `BoxScene` path is the same), the label widths of other fonts than the app's monospace stack, content other than the owner's preview (the Western Europe of a real publication has other places and priorities). An opening depends on history (a group is tried against what was drawn when it was tried, and a drawn node is kept): the same zoom reached by a jump, a slow zoom and a fine one can differ by up to about a level for a group that sits next to others (Western Europe 3.5 to 4.25 in the two kinds of sweep above).
 
+### Room between the nodes (2026-10-12)
+
+The owner's complaint: labels crowd and look erratic, and a region or country should take over from its cities sooner. The cut therefore
+asks for **room**, not only for fit. A child is taken when its box and its label plate keep `LOD.open.gapPx.enter` (24 px; the plate
+`plateGapRatio` of it) from every other drawn box and plate, and kept down to `leave` (12 px). The clearance relaxes with the zoom
+(`gapRelaxedPx`, 8 and 3 px from zoom 6.5 to 9) and is not asked from `crowdOffZoom` (10), where a cluster of overlapping places is drawn as
+it is. A group that does not fit as a box and cannot open into two children is replaced by the first of its `throughTop` (3) most important
+children that fits, the others come in as extras. Places whose own boxes overlap are not asked for room between them.
+
+- **The label planner follows the cut**: the cut reserves a position for each box's label (`LodTree.plateSlot`), the planner takes it
+  first (`PlanItem.pref`), so the labels keep the room the cut checked, and a label wanted again glides from where it was.
+- **Trade-off**: more room means some children come in later than before the rule. Measured on the owner's preview (`groups.mjs open`,
+  `OPEN_REPORT=1 ... vitest run open`): Western Europe opens 0.3 zoom levels later, Iberia, Central Europe, Italy and Morocco 0.5 to 0.6,
+  the Marrakesh region's second node 0.9 and the Laayoune area 1.8 (a dense cluster of coastal places that cannot fit with 24 px between
+  plates earlier). The Balkans and Iberia now open into one node earlier (a country stands in for the group). If a region looks late, lower
+  `gapPx` (the table above moves the other way) rather than special-casing it.
+- **Checks**: `groups.mjs open` pins the opening zooms against their values before the rule; `groups.mjs crowd` zooms in and out on six view
+  centres and counts overlaps and pairs under 12 and 24 px (preview: 0 overlaps, 0.27 pairs per view under 12 px, 2.65 under 24 px).
+- Not kept: a "wish" mechanism (a refused important node reserving room against its lesser neighbours over several runs of the cut) was
+  tried and dropped; it added about 500 lines for the two worst regions.
+
 ### Checks of the boxes (`scripts/globe/groups.mjs`, `markers.mjs`)
 
 `idle-spin.mjs [start|cadence|input|coast|blocked|reduced|hidden|flags|mobile]` checks the idle rotation (above; any content). `groups.mjs [lod|cases|pixels|empty|timed|at-rest|reduced|pick|targets|flicker|open|cost|idle|handover|shots]` (demo content: `pnpm dev:demo`, `lod`, `cases` and `handover` need it; `targets` and `at-rest` run on any content, your preview included; `handover` also
