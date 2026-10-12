@@ -278,22 +278,28 @@ export interface LabelSpot {
   inside: boolean;
 }
 
-/** The candidate positions, in priority order: the ids are stable, so a frame can say "same as last time". */
+/**
+ * The candidate positions, in priority order: the ids are stable, so a frame can say "same as last time", and a lower id is a better
+ * position (the planner ranks by it). ONE anchor is preferred everywhere: outside, above the box's top-left corner, so a visitor learns
+ * where to look; when that does not fit (the box is at the top of the screen, a neighbour's plate is there) the label goes inside the
+ * box's top-left corner (the same corner, the other side of the line); the other places (right-aligned above, shifted along the top
+ * edge, the other inner corners, below, beside) are the last resorts, in that order.
+ */
 export const SPOT = {
   aboveLeft: 0,
-  aboveRight: 1,
-  aboveVisibleLeft: 2,
-  aboveVisibleRight: 3,
-  insideTopLeft: 4,
-  insideBottomLeft: 5,
-  insideTopRight: 6,
-  insideBottomRight: 7,
-  belowLeft: 8,
-  belowRight: 9,
-  left: 10,
-  right: 11,
-  aboveShift: 12, // 12, 13, 14
-  belowShift: 15, // 15, 16, 17
+  aboveVisibleLeft: 1,
+  insideTopLeft: 2,
+  aboveRight: 3,
+  aboveVisibleRight: 4,
+  aboveShift: 5, // 5, 6, 7
+  insideTopRight: 8,
+  insideBottomLeft: 9,
+  insideBottomRight: 10,
+  belowLeft: 11,
+  belowRight: 12,
+  belowShift: 13, // 13, 14, 15
+  left: 16,
+  right: 17,
 } as const;
 /** Number of candidate ids. */
 export const SPOT_COUNT = 18;
@@ -313,6 +319,11 @@ export interface SpotUnits {
   bleed?: number;
   /** A plate that would stick out of the grid is pulled back inside it (it slides along its box's edge, or stays at the screen's edge over the box) instead of being refused: the position of a label that is kept while its box moves. */
   slide?: boolean;
+}
+
+/** The plate `x, y, w, h` overlaps the box `rect` (its outline is the ring along the rectangle's edge, so any overlap covers an arm or a dash). */
+export function coversBox(x: number, y: number, w: number, h: number, rect: CellRect): boolean {
+  return x < rect.c1 && x + w > rect.c0 && y < rect.r1 && y + h > rect.r0;
 }
 
 /**
@@ -385,7 +396,9 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
     }
   }
   if (units.slide && w <= grid.cols) x = Math.max(0, Math.min(grid.cols - w, x));
-  if (units.slide && !inside && h <= grid.rows) y = Math.max(0, Math.min(grid.rows - h, y)); // a plate above a box that is near the top of the screen stays on screen, over the box's edge, instead of changing slot
+  if (units.slide && !inside && h <= grid.rows) y = Math.max(0, Math.min(grid.rows - h, y)); // a plate above a box that is near the top of the screen slides back on screen...
+  // ...but never over its own box's outline: a plate that is not nested and would cover the box (the slide pulled it over the edge) is not a position, the label takes another slot
+  if (!inside && coversBox(x, y, w, h, rect)) return false;
   if (x < 0 || y < 0 || x + w > grid.cols || y + h > grid.rows) return false;
   out.x = x;
   out.y = y;
@@ -395,12 +408,12 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
 
 /**
  * The places a label plate of `w x h` can go for a box, in priority order, each entirely on the grid (a position that would leave it
- * is not a candidate): above the box's top-left corner (the first choice: flush on the edge, left-aligned), above its top-right corner,
- * above the visible part of the top edge when the corner is off screen, nested inside the box in each of its inner corners (flush inside the
- * outline, so the text has room to the border on both sides: only when the plate fits inside), below, to the left and to the
- * right of the box, and shifted along the top and the bottom edges (a quarter, a half and three quarters of the way). Positions are
- * relative to the VISIBLE part of the box where its corners are off the grid, so a big box zoomed into always has a label on screen.
- * Two ids that land on the same place are one candidate (the first id).
+ * is not a candidate) and never over the box's own outline (`coversBox`): above the box's top-left corner (the one anchor: flush on the
+ * edge, left-aligned), the same above the visible part of the top edge when the corner is off screen, nested inside the box's top-left
+ * corner (flush inside the outline, so the text has room to the border on both sides: only when the plate fits inside), then, as
+ * last resorts, above the top-right corner, shifted along the top edge (a quarter, a half and three quarters of the way), nested in the
+ * other inner corners, below, to the left and to the right. Positions are relative to the VISIBLE part of the box where its corners are
+ * off the grid, so a big box zoomed into always has a label on screen. Two ids that land on the same place are one candidate (the first id).
  */
 export function labelCandidates(rect: CellRect, w: number, h: number, grid: GridSize, units: SpotUnits = {}): LabelSpot[] {
   const out: LabelSpot[] = [];

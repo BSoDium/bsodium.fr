@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "~/lib/utils";
 import { Frame } from "./frame";
-import { Glyph } from "./glyphs";
 import { StatusTag } from "./status-tag";
 
 /** A grey block with a slow scan sweep (`.ds-skeleton`). Sized by `className`. Decorative: the parent announces the loading. */
@@ -15,7 +14,7 @@ interface StatePanelProps {
   title?: string;
   /** One calm sentence: what happened and what to do. */
   description?: ReactNode;
-  /** The micro code line, e.g. `ERR / 500` or `NO DATA / 000`. */
+  /** A short code worth keeping on an error page (`500`, `404`), set in the mono face above the headline. Empty states have none. */
   code?: string;
   /** A recovery action (a retry button, a link home). */
   action?: ReactNode;
@@ -27,39 +26,45 @@ interface StatePanelProps {
 }
 
 /**
- * The three non-content states of a data view (docs/design-system.md, "States"). Loading is a polite live region with a
- * skeleton of the content's shape; empty says what is missing; error is an alert with a code, a plain sentence and a way out.
- * None of them blames the user, and none relies on colour.
+ * The three non-content states of a data view (docs/design-system.md, "States"). Loading is a polite live region with a skeleton of
+ * the content's shape; empty is one muted line (no box, no icon, no code: nothing is wrong); error is an alert with a plain sentence
+ * and a way out. None of them blames the user, and none relies on colour.
  */
 export function StatePanel({ state, title, description, code, action, headingLevel = 3, titleId, className }: StatePanelProps) {
   const Heading = `h${headingLevel}` as "h1" | "h2" | "h3" | "h4";
   if (state === "loading") {
     return (
-      <Frame role="status" aria-busy="true" data-state="loading" className={cn("flex flex-col gap-3", className)}>
-        <span className="ds-micro">{code ?? "LOADING / ----"}</span>
+      <div role="status" aria-busy="true" data-state="loading" className={cn("flex flex-col gap-3", className)}>
         <span className="sr-only">{title ?? "Loading"}</span>
         <Skeleton className="h-3 w-2/5" />
         <Skeleton className="h-6 w-4/5" />
         <Skeleton className="h-3 w-full" />
         <Skeleton className="h-3 w-11/12" />
         <Skeleton className="h-3 w-3/5" />
-      </Frame>
+      </div>
     );
   }
-  const isError = state === "error";
+  if (state === "empty") {
+    return (
+      <div data-state="empty" className={cn("flex flex-col items-start gap-3", className)}>
+        <Heading id={titleId} tabIndex={titleId ? -1 : undefined} className={cn("m-0 outline-offset-4", headingLevel === 1 ? "text-2xl font-semibold tracking-tight" : "text-base font-normal text-muted-foreground")}>
+          {title}
+        </Heading>
+        {description && <p className="m-0 text-base text-muted-foreground">{description}</p>}
+        {action}
+      </div>
+    );
+  }
   return (
-    <Frame role={isError ? "alert" : undefined} data-state={state} variant={isError ? "active" : "plain"} className={cn("flex flex-col items-start gap-3", className)}>
+    <Frame role="alert" data-state="error" variant="active" padding="lg" className={cn("flex flex-col items-start gap-3", className)}>
       <div className="flex w-full items-center justify-between gap-3">
-        <span className="ds-micro">{code ?? (isError ? "ERR / ---" : "NO DATA / 000")}</span>
-        {isError && <StatusTag status="error" />}
+        {code ? <span className="ds-meta">{code}</span> : <span />}
+        <StatusTag status="error" />
       </div>
-      <div className="ds-grid-bg flex h-16 w-full items-center justify-center border border-border text-muted-foreground">
-        <Glyph name={isError ? "close" : "place"} size={24} />
-      </div>
-      <Heading id={titleId} tabIndex={titleId ? -1 : undefined} className="m-0 text-lg font-medium tracking-tight outline-offset-4">
+      <Heading id={titleId} tabIndex={titleId ? -1 : undefined} className="m-0 text-2xl font-semibold tracking-tight outline-offset-4">
         {title}
       </Heading>
-      {description && <p className="m-0 text-sm text-muted-foreground">{description}</p>}
+      {description && <p className="m-0 text-base text-muted-foreground">{description}</p>}
       {action}
     </Frame>
   );

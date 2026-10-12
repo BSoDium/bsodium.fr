@@ -152,3 +152,30 @@ describe("reduced motion", () => {
     expect(css).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.ds-skeleton::after\s*\{\s*animation: none/);
   });
 });
+
+describe("restraint (no decorative chrome)", () => {
+  const ui = css.slice(css.indexOf(".ds-micro {"), css.indexOf(".nav-scrim {"));
+  it("frames and cards have no corner brackets", () => {
+    expect(ui).not.toMatch(/data-brackets|--ds-bracket|--bracket-/);
+    expect(light.has("--bracket-len")).toBe(false);
+  });
+  it("buttons, filters, tags and statuses are plain sans: no tracked uppercase on them", () => {
+    for (const rule of [".ds-button {", ".ds-filter {", ".ds-tags {", ".ds-status {"]) {
+      const body = ruleBody(css, css.indexOf(rule));
+      expect(body, rule).not.toMatch(/text-transform:\s*uppercase|letter-spacing/);
+      expect(body, rule).not.toMatch(/font-family:\s*var\(--font-mono\)/);
+    }
+  });
+  it("the micro-label stays the one uppercase mono unit and nothing else in the system sets uppercase", () => {
+    expect([...ui.matchAll(/text-transform:\s*uppercase/g)].length).toBe(1);
+  });
+  it("the component sources carry no index code, numbered section or bracketed status", () => {
+    const dirs = [new URL("../components/ui/", import.meta.url), new URL("../components/entry/", import.meta.url), new URL("../components/", import.meta.url)];
+    for (const dir of dirs) {
+      for (const file of readdirSync(dir).filter((f) => f.endsWith(".tsx"))) {
+        const source = readFileSync(new URL(file, dir), "utf8");
+        expect(source, file).not.toMatch(/formatIndex|entryCode|№|`\[ |"\[ "/);
+      }
+    }
+  });
+});

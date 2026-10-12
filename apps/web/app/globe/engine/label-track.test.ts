@@ -84,7 +84,7 @@ describe("the plan runs continuously, at a bounded rate", () => {
       expect(fulls[k]! - fulls[k - 1]!).toBeLessThanOrEqual(TRACK.replanMs + 16);
     }
   });
-  it("a change after the last plan is owed: due replanMs after that plan (a timer, an idle map draws no frames), run once, then nothing is owed", () => {
+  it("a change after the last plan is owed: due replanMs after that plan (a timer, an idle map draws no frames), then one more at rest, then nothing is owed", () => {
     const t = new LabelTracker(new SlotMemory(100), PX_UNITS, { ...TRACK, dwellMs: 0 });
     let items = [box(1, 100, 100), box(2, 130, 100)];
     t.step(0, items, VIEW, INSET);
@@ -97,9 +97,30 @@ describe("the plan runs continuously, at a bounded rate", () => {
     expect(t.info.full).toBe(false);
     t.step(TRACK.replanMs, items, VIEW, INSET);
     expect(t.info.full).toBe(true);
-    expect(t.dueAt).toBeNull();
+    // the camera moved 70 ms ago: this plan was made on the move, so the settling plan is owed once it has been still for restMs
+    expect(t.dueAt).toBe(TRACK.replanMs * 2);
     t.step(TRACK.replanMs + 16, items, VIEW, INSET);
     expect(t.info.full).toBe(false);
+    t.step(TRACK.replanMs * 2, items, VIEW, INSET);
+    expect(t.info.full).toBe(true);
+    expect(t.dueAt).toBeNull();
+    t.step(TRACK.replanMs * 2 + 16, items, VIEW, INSET);
+    expect(t.info.full).toBe(false);
+  });
+  it("the plan at rest takes a better position without room to spare, so labels end on their first free position", () => {
+    const mem = new SlotMemory(100);
+    const t = new LabelTracker(mem, PX_UNITS, { ...TRACK, dwellMs: 0 });
+    // mine sits above-right of a wide box because the blocker's plate was in the way; the blocker then moves off by less than the upgrade margin
+    const blocker = box(2, 100 + FULL.w + PX_UNITS.clearance - 1, 200, { score: 500 });
+    const mine = box(1, 100, 200, { w: 300 });
+    t.step(0, [blocker, mine], VIEW, INSET);
+    expect(t.mem.cand[1]).not.toBe(SPOT.aboveLeft);
+    // the blocker's label is `margin - 1` px further: free, but without the room the margin asks for
+    const moved = box(2, 100 + FULL.w + PX_UNITS.clearance + PX_UNITS.upgradeMargin - 1, 200, { score: 500 });
+    t.step(1000, [moved, mine], VIEW, INSET);
+    t.settleNow();
+    t.step(2000, [moved, mine], VIEW, INSET);
+    expect(t.mem.cand[1]).toBe(SPOT.aboveLeft);
   });
   it("a plan on an unchanged camera is sticky: nothing moves when nothing is wrong", () => {
     const t = tracker();
@@ -392,23 +413,32 @@ describe("a box that appears is labelled at once, in the gaps of the labels that
 });
 
 describe("a slot that becomes impossible is replaced at once", () => {
-  it("a label above a box that reaches the top of the screen stays in its slot, pinned at the screen's edge over the box, instead of hopping to another position", () => {
+  it("a label above a box that reaches the top of the screen leaves its slot for the inside of the box's top-left corner, never over the box's outline", () => {
     const t = tracker();
-    let items = [box(1, 300, 200), box(2, 500, 400)];
+    let items = [box(1, 300, 200, { w: 200, h: 120 }), box(2, 600, 400)];
     const first = t.step(0, items, VIEW, INSET);
     expect(first[0]!.cand).toBe(SPOT.aboveLeft);
     let now = 0;
+    let nested = false;
     for (const dy of [-60, -60, -60, -9]) {
       items = [move(items[0]!, 0, dy), items[1]!];
       const out = t.step((now += 16), items, VIEW, INSET);
-      expect(out[0]!.cand).toBe(SPOT.aboveLeft);
-      expect(out[0]!.y).toBeGreaterThanOrEqual(0);
+      const rect = items[0]!.rect;
+      const slot = out[0]!;
+      // the plate stays on screen, and is either entirely outside the box or nested inside its outline: it never covers an arm or a dash
+      const slotY = slot.y - slot.gy; // the slot's place (the plate itself glides there from where it was)
+      const slotX = slot.x - slot.gx;
+      expect(slotY).toBeGreaterThanOrEqual(0);
+      const covers = slotX < rect.c1 && slotX + slot.w > rect.c0 && slotY < rect.r1 && slotY + slot.h > rect.r0;
+      if (covers) expect(slot.inside).toBe(true);
+      if (slot.inside) nested = true;
       expect(out[1]!.cand).toBe(first[1]!.cand);
       expect(t.info.full).toBe(false);
     }
-    expect(items[0]!.rect.r0).toBeLessThan(0 + 40); // the box is at the top edge: the plate is pinned at y = 0
+    expect(items[0]!.rect.r0).toBeLessThan(0 + 40); // the box is at the top edge
+    expect(nested).toBe(true);
     const pinned = t.step((now += 16), items, VIEW, INSET);
-    expect(pinned[0]!.y).toBe(0);
+    expect(pinned[0]!.cand).toBe(SPOT.insideTopLeft);
   });
   it("at the left and right edges the plate slides along its box and stays in its slot", () => {
     const t = tracker();
@@ -641,9 +671,10 @@ describe("flicker metric over a camera sweep: labels move all the time and never
     expect(old.teleports).toBeGreaterThan(40);
     expect(snap.teleports).toBeGreaterThan(20);
   });
-  it("reduced motion: no glide, and the labels do not hop while the camera moves (plans only at rest): no teleports, far fewer changes", () => {
+  it("reduced motion: no glide, and the labels do not hop while the camera moves (plans only at rest): few teleports (the labels forced off the screen's edge), far fewer changes", () => {
     expect(reduced.glidingFrames).toBe(0);
-    expect(reduced.teleports).toBe(0);
+    // the only hops are the labels whose slot became impossible at the screen's edge (a plate is never pinned over its box's outline any more): a handful, against the every-frame plan's
+    expect(reduced.teleports).toBeLessThan(old.teleports / 4);
     expect(reduced.changes).toBeLessThan(now.changes / 3);
   });
   it("with the glide NO plate teleports over the sweep, and the plates do move (they glide, they are not frozen)", () => {

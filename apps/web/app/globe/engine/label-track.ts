@@ -24,6 +24,8 @@
  *     TARGETS): a drawn box always has its label, and a new label never displaces another. A new label has no glide (the node's fade shows it).
  *  5. Appearing and disappearing stays binary and timed (the node's own fade, engine/fade.ts); the text variants (whole / shortened) have the
  *     planner's hysteresis (`upgradeMargin`) and change only in a plan.
+ *  5b. The last plan of a move runs at rest (the camera stopped for `restMs`): the dwell is over and the upgrade margin is 0, so every label
+ *     ends on its FIRST free position (above its top-left corner, else inside it), never on a worse one it kept for want of room to spare.
  *  6. At rest (every glide is below `TRACK.restPx`) the glide is exactly 0: every label is at its target. `gliding` counts the labels that are
  *     not yet there; the host keeps its frame loop going while it is not 0 and not a frame longer.
  *
@@ -323,7 +325,9 @@ export class LabelTracker {
         const it = items[n]!;
         return { score: it.score, area: it.area, key: it.key, rect: it.rect, variants: it.variants, prev: mem.prev(it.id), hold: moving && mem.set[it.id] === 1 && t - mem.since[it.id]! < this.opts.dwellMs, avoid: it.avoid?.() };
       });
-      const res = planLabels(sub, grid, units, full ? [] : fixed);
+      // At rest nothing moves, so a better place needs no room to spare to be taken: labels settle on their first free position (the one anchor)
+      const planUnits: PlanUnits = full && !moving ? { ...units, upgradeMargin: 0 } : units;
+      const res = planLabels(sub, grid, planUnits, full ? [] : fixed);
       plan.forEach((n, k) => {
         const it = items[n]!;
         const p = res[k]!;
@@ -346,6 +350,8 @@ export class LabelTracker {
       });
     }
     if (held) this.owed = true;
+    // a plan that ran while the camera was still moving (and kept slots from before) is followed by one at rest (the dwell is over, the upgrade margin is 0): every label ends on its best place
+    if (full && moving && before.some((b) => b !== null)) this.owed = true;
     this.info = { changed, full, partial: full ? 0 : plan.length };
     return out;
   }

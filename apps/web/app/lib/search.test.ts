@@ -22,7 +22,9 @@ describe("buildSearchIndex", () => {
     expect(index.slice(0, demo.places.length).every((i) => i.type === "place" && i.href.startsWith("/locations/"))).toBe(true);
     const article = index.find((i) => i.href === "/articles/demo-article");
     expect(article).toMatchObject({ type: "article", title: "Night trains through the Balkans" });
-    expect(article!.sub).toContain("ARTICLE / 0001");
+    expect(article!.sub).toBe("2026.03.14");
+    expect(article!.sub).not.toMatch(/ARTICLE|\d{4} \/|№/);
+    expect(article!.keywords).toContain("Article"); // the kind's word still finds it
     expect(article!.keywords).toContain("night-trains");
   });
   it("carries no body text", () => {

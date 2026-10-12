@@ -158,6 +158,13 @@ describe("getPlaceDetail", () => {
     // Vancouver: the poem lists no place there, the place names the poem
     expect(getPlaceDetail(demo, "vancouver")?.entries.map((g) => [g.kind, g.entries.map((e) => e.slug)])).toEqual([["poem", ["demo-poem"]]]);
   });
+  it("derives the country's name from the country code (and writes a name without its own country)", () => {
+    expect(getPlaceDetail(demo, "lisbon")?.country).toBe("Portugal");
+    const withCountryInName = { ...demo, places: demo.places.map((p) => (p.slug === "lisbon" ? { ...p, name: "Lisbon, Portugal" } : p)) };
+    expect(getPlaceDetail(withCountryInName, "lisbon")?.name).toBe("Lisbon");
+    const noCode = { ...demo, places: demo.places.map((p) => (p.slug === "lisbon" ? { ...p, countryCode: undefined } : p)) };
+    expect(getPlaceDetail(noCode, "lisbon")).not.toHaveProperty("country");
+  });
   it("leaves optional sections empty rather than inventing them", () => {
     const place = getPlaceDetail(demo, "reykjavik");
     expect(place).toMatchObject({ dates: null, body: [], images: [] });

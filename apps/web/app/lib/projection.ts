@@ -11,7 +11,7 @@ import type {
   PublishedPlace,
   PublishedProjection,
 } from "@catalyst/schemas";
-import { stripCountry } from "~/globe/engine/country-names";
+import { countryName, stripCountry } from "~/globe/engine/country-names";
 import { bboxExtentsKm, bboxFitRadiusKm } from "~/globe/engine/framing";
 import type { GlobeEntryRef, GlobeGroup, GlobePlace, GlobeRoute } from "~/globe/types";
 import { formatDates, type FormattedDates } from "./dates";
@@ -155,6 +155,8 @@ export interface PlaceDetailData {
   slug: string;
   name: string;
   region?: string;
+  /** The country's English name, derived from the place's country code when it has one. */
+  country?: string;
   coordinates: Coordinates;
   summary?: string;
   dates: FormattedDates | null;
@@ -170,8 +172,10 @@ export function getPlaceDetail(projection: PublishedProjection, slug: string): P
   if (!place) return null;
   return {
     slug: place.slug,
-    name: place.name,
+    // the panel says the country on its own line, so a name that ends in it ("London, United Kingdom") is written without it, as on the map
+    name: stripCountry(place.name, place.countryCode),
     ...(place.region !== undefined ? { region: place.region } : {}),
+    ...(countryName(place.countryCode) ? { country: countryName(place.countryCode)! } : {}),
     coordinates: place.coordinates,
     ...(place.summary !== undefined ? { summary: place.summary } : {}),
     dates: formatDates(place.dates),

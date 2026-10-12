@@ -66,12 +66,3 @@ export function Glyph({ name, size = 12, ...rest }: GlyphProps) {
     </svg>
   );
 }
-
-/** A registration mark: a crosshair with a centre gap. Pure decoration for corners and edges of frames and covers. */
-export function RegMark({ size = 11, className, ...rest }: Omit<SVGProps<SVGSVGElement>, "name"> & { size?: number }) {
-  return (
-    <svg viewBox="0 0 11 11" width={size} height={size} aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth={1} className={className} {...rest}>
-      <path d="M5.5 0v4M5.5 7v4M0 5.5h4M7 5.5h4" vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
-}

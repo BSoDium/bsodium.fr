@@ -10,11 +10,8 @@ import {
   CoverArt,
   DataList,
   DataRow,
-  Frame,
   Glyph,
   Grid,
-  KindTag,
-  MicroLabel,
   SectionHeader,
   Stack,
   StatusTag,
@@ -25,7 +22,6 @@ import { formatEntryDate } from "~/lib/dates";
 import { entryLanguage, KIND_LABELS, KIND_PATHS, KIND_PLURALS, splitMeta, type EntryDetail, type EntryRef, type EntryView as EntryViewMode } from "~/lib/entries";
 import { displayHost, safeExternalUrl, safeMediaSrc } from "~/lib/entry-blocks";
 import { tagSearch } from "~/lib/entry-list";
-import { entryCode, formatIndex } from "~/lib/labelling";
 import { formatReadingTime, readingMinutes, tocItems } from "~/lib/reading";
 import { cn } from "~/lib/utils";
 
@@ -64,13 +60,9 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
   const reading = entry.kind === "article" && !authoredReading ? formatReadingTime(readingMinutes(entry.body)) : null;
   const hasPlaces = entry.places.length > 0;
   const hasMore = entry.related.length > 0 || !!entry.prev || !!entry.next;
-  let n = 0;
-  const placesIndex = hasPlaces ? ++n : 0;
-  const tocIndex = toc.length > 0 ? ++n : 0;
-  const relatedIndex = ++n;
 
   const details = hasDetails && (
-    <Frame padding="md" data-slot="entry-details">
+    <div data-slot="entry-details">
       <Stack gap={4}>
         {facts.length > 0 && (
           <DataList>
@@ -92,9 +84,9 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
           </Button>
         )}
       </Stack>
-    </Frame>
+    </div>
   );
-  const places = hasPlaces && <PlacesSection entry={entry} index={placesIndex} />;
+  const places = hasPlaces && <PlacesSection entry={entry} />;
   const body = (
     <Stack gap={6}>
       <Cover entry={entry} />
@@ -116,7 +108,7 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
             {backTo && (
               <Link
                 to={backTo.href}
-                className="ds-micro -ml-1 inline-flex min-h-11 w-fit items-center gap-2 px-1 text-foreground no-underline hover:underline print:hidden"
+                className="-ml-1 inline-flex min-h-11 w-fit items-center gap-2 px-1 text-sm text-muted-foreground no-underline hover:text-foreground hover:underline print:hidden"
               >
                 <Glyph name="arrow-left" size={12} />
                 <span>
@@ -125,19 +117,29 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
                 </span>
               </Link>
             )}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <KindTag kind={entry.kind} iconOnly />
-              <MicroLabel tone="strong" data-slot="entry-code">
-                {entryCode(entry.kind, entry.index)}
-              </MicroLabel>
+            <p data-slot="entry-meta" className="m-0 flex flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground">
+              <span data-slot="entry-kind">{KIND_LABELS[entry.kind]}</span>
               {date && (
-                <MicroLabel as="time" dateTime={date.dateTime}>
-                  {date.text}
-                </MicroLabel>
+                <>
+                  <span aria-hidden="true">&middot;</span>
+                  <time dateTime={date.dateTime} className="ds-meta">
+                    {date.text}
+                  </time>
+                </>
               )}
-              {reading && <MicroLabel data-slot="entry-reading">{reading}</MicroLabel>}
-              {status && <StatusTag status={status} />}
-            </div>
+              {reading && (
+                <>
+                  <span aria-hidden="true">&middot;</span>
+                  <span data-slot="entry-reading">{reading}</span>
+                </>
+              )}
+              {status && (
+                <>
+                  <span aria-hidden="true">&middot;</span>
+                  <StatusTag status={status} />
+                </>
+              )}
+            </p>
             <h1
               id={headingId}
               tabIndex={-1}
@@ -145,13 +147,13 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
             >
               {entry.title}
             </h1>
-            {entry.summary && <p className="m-0 max-w-[48ch] text-base text-pretty text-muted-foreground md:text-lg">{entry.summary}</p>}
+            {entry.summary && <p className="m-0 max-w-[60ch] text-lg text-pretty text-muted-foreground">{entry.summary}</p>}
             <div className="-ml-2 flex items-center gap-1 print:hidden">
               <CopyButton text={() => shareUrl(window.location.origin, entry.href)} label={`Copy link to ${entry.title}`} announcement="Link copied to the clipboard" glyph="link">
                 Copy link
               </CopyButton>
               {toc.length > 0 && (
-                <a href="#entry-toc" className="ds-toc-skip ds-micro sr-only focus:not-sr-only focus:inline-flex focus:min-h-11 focus:items-center focus:px-2 focus:text-foreground">
+                <a href="#entry-toc" className="ds-toc-skip sr-only text-sm focus:not-sr-only focus:inline-flex focus:min-h-11 focus:items-center focus:px-2 focus:text-foreground">
                   Jump to contents
                 </a>
               )}
@@ -173,14 +175,14 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
           <Col span={12} spanMd={full ? 4 : 12}>
             <Stack gap={8} className="h-full">
               {places}
-              {toc.length > 0 && <TableOfContents items={toc} index={tocIndex} className="md:sticky md:top-[calc(var(--navbar-height)+1rem)]" />}
+              {toc.length > 0 && <TableOfContents items={toc} className="md:sticky md:top-[calc(var(--navbar-height)+1rem)]" />}
             </Stack>
           </Col>
         )}
 
         {hasMore && (
           <Col span={12} className="print:hidden">
-            <KeepReading entry={entry} index={relatedIndex} full={full} />
+            <KeepReading entry={entry} full={full} />
           </Col>
         )}
       </Grid>
@@ -195,30 +197,26 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
 function Cover({ entry }: { entry: EntryDetail }) {
   const src = entry.cover ? safeMediaSrc(entry.cover.src) : null;
   return (
-    <figure data-slot="entry-cover" className="m-0">
-      <Frame padding="none">
-        {entry.cover && src ? (
-          <img src={src} alt={entry.cover.alt} width={entry.cover.width} height={entry.cover.height} decoding="async" className="block aspect-[1.91/1] w-full object-cover" />
-        ) : (
-          <CoverArt seed={entry.slug} kind={entry.kind} cols={96} rows={50} />
-        )}
-      </Frame>
+    <figure data-slot="entry-cover" className="m-0 overflow-hidden outline outline-1 -outline-offset-1 outline-border">
+      {entry.cover && src ? (
+        <img src={src} alt={entry.cover.alt} width={entry.cover.width} height={entry.cover.height} decoding="async" className="block aspect-[1.91/1] w-full object-cover" />
+      ) : (
+        <CoverArt seed={entry.slug} kind={entry.kind} cols={96} rows={50} />
+      )}
     </figure>
   );
 }
 
-function PlacesSection({ entry, index }: { entry: EntryDetail; index: number }) {
+function PlacesSection({ entry }: { entry: EntryDetail }) {
   return (
     <section aria-labelledby="entry-places" data-slot="entry-places">
-      <SectionHeader index={index} title="Places" id="entry-places" as="h2" meta={formatIndex(entry.places.length, 2)} />
+      <SectionHeader title="Places" id="entry-places" as="h2" />
       <ul className="m-0 mt-2 list-none p-0">
         {entry.places.map((place) => (
-          <li key={place.slug} className="border-b border-border last:border-b-0">
-            <Link to={place.href} className="ds-row flex min-h-11 items-center gap-3 py-2 text-sm no-underline">
-              <KindTag kind="place" iconOnly />
-              <span className="min-w-0 flex-1 truncate">{place.name}</span>
-              {place.region && <MicroLabel className="hidden truncate sm:inline">{place.region}</MicroLabel>}
-              <Glyph name="arrow-right" size={12} />
+          <li key={place.slug}>
+            <Link to={place.href} className="ds-row flex min-h-11 items-baseline gap-3 py-2 text-base no-underline hover:underline">
+              <span className="min-w-0 truncate">{place.name}</span>
+              {place.region && <span className="hidden min-w-0 truncate text-sm text-muted-foreground sm:inline">{place.region}</span>}
             </Link>
           </li>
         ))}
@@ -228,15 +226,15 @@ function PlacesSection({ entry, index }: { entry: EntryDetail; index: number }) 
 }
 
 /** The end of an entry: the entries most related to it (shared places and tags) as cards, then the previous and the next of its kind. */
-function KeepReading({ entry, index, full }: { entry: EntryDetail; index: number; full: boolean }) {
+function KeepReading({ entry, full }: { entry: EntryDetail; full: boolean }) {
   const label = KIND_LABELS[entry.kind];
   const related = entry.related.slice(0, 3);
   return (
-    <div data-slot="entry-more" className="flex flex-col gap-6 @container">
+    <div data-slot="entry-more" className="flex flex-col gap-10 @container">
       {related.length > 0 && (
         <section aria-labelledby="entry-related">
-          <SectionHeader index={index} title="Related" id="entry-related" as="h2" meta={formatIndex(entry.related.length, 2)} />
-          <ul className={cn("m-0 mt-4 grid list-none grid-cols-1 gap-4 p-0", full ? "md:grid-cols-3" : "@lg:grid-cols-2")}>
+          <SectionHeader title="Related" id="entry-related" as="h2" />
+          <ul className={cn("m-0 mt-5 grid list-none grid-cols-1 gap-8 p-0", full ? "md:grid-cols-3" : "@lg:grid-cols-2")}>
             {related.map((ref) => (
               <li key={`${ref.kind}:${ref.slug}`} className="min-w-0">
                 <EntryRefCard entry={ref} headingLevel={3} />
@@ -246,8 +244,8 @@ function KeepReading({ entry, index, full }: { entry: EntryDetail; index: number
         </section>
       )}
       {(entry.prev || entry.next) && (
-        <nav aria-label={`More ${KIND_PLURALS[entry.kind].toLowerCase()}`} data-slot="entry-neighbours">
-          <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 @md:grid-cols-2">
+        <nav aria-label={`More ${KIND_PLURALS[entry.kind].toLowerCase()}`} data-slot="entry-neighbours" className="border-t border-border pt-6">
+          <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 @md:grid-cols-2">
             <li className="min-w-0">{entry.prev && <Neighbour direction="prev" entry={entry.prev} label={label} />}</li>
             <li className="min-w-0">{entry.next && <Neighbour direction="next" entry={entry.next} label={label} />}</li>
           </ul>
@@ -260,16 +258,14 @@ function KeepReading({ entry, index, full }: { entry: EntryDetail; index: number
 function Neighbour({ direction, entry, label }: { direction: "prev" | "next"; entry: EntryRef; label: string }) {
   const prev = direction === "prev";
   return (
-    <Frame interactive padding="none" className="h-full">
-      <Link to={entry.href} rel={direction} className={cn("flex min-h-16 items-center gap-3 p-4 no-underline focus-visible:outline-offset-4", !prev && "flex-row-reverse text-right")}>
-        <Glyph name={prev ? "arrow-left" : "arrow-right"} size={16} className="shrink-0" />
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <MicroLabel>
-            {prev ? "Previous" : "Next"} {label.toLowerCase()} / {formatIndex(entry.index)}
-          </MicroLabel>
-          <span className="truncate text-sm font-medium">{entry.title}</span>
+    <Link to={entry.href} rel={direction} className={cn("group flex min-h-11 items-start gap-3 no-underline", !prev && "flex-row-reverse text-right")}>
+      <Glyph name={prev ? "arrow-left" : "arrow-right"} size={16} className="mt-1 shrink-0 text-muted-foreground" />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-sm text-muted-foreground">
+          {prev ? "Previous" : "Next"} {label.toLowerCase()}
         </span>
-      </Link>
-    </Frame>
+        <span className="text-base font-medium text-balance group-hover:underline">{entry.title}</span>
+      </span>
+    </Link>
   );
 }

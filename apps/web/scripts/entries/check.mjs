@@ -13,7 +13,7 @@ import { BASE_URL, OUT_DIR, DESKTOP, MOBILE, launch } from "../globe/_lib.mjs";
 // title, long verse line, wide code, many tags, no cover) goes through the layout checks below.
 const FIXTURE = JSON.parse(readFileSync(new URL("../../../../packages/published/fixtures/demo.json", import.meta.url), "utf8"));
 const COLLECTIONS = [["article", "articles"], ["project", "projects"], ["artwork", "artworks"], ["poem", "poems"]];
-const ALL_ENTRIES = COLLECTIONS.flatMap(([kind, key]) => FIXTURE[key].map((e, i) => ({ kind, key, slug: e.slug, title: e.title, path: `/${key}/${e.slug}`, code: `${kind.toUpperCase()} / ${String(i + 1).padStart(4, "0")}` })));
+const ALL_ENTRIES = COLLECTIONS.flatMap(([kind, key]) => FIXTURE[key].map((e) => ({ kind, key, slug: e.slug, title: e.title, path: `/${key}/${e.slug}` })));
 const ENTRIES = ["demo-article", "demo-poem", "demo-project", "demo-artwork"].map((slug) => ALL_ENTRIES.find((e) => e.slug === slug));
 
 const failures = [];
@@ -60,7 +60,8 @@ for (const entry of ENTRIES) {
 
   const text = await page.locator("[data-panel] h1").innerText();
   ok(text === entry.title, `${t}: the panel's h1 is the title`);
-  ok((await page.locator("[data-slot=entry-code]").innerText()).toUpperCase() === entry.code, `${t}: index code ${entry.code}`);
+  const metaLine = await page.locator("[data-slot=entry-meta]").innerText();
+  ok(new RegExp(`^${entry.kind}`, "i").test(metaLine) && !/\/\s*\d{4}|№/.test(metaLine), `${t}: the meta line says the kind in plain words and carries no index code (${metaLine.replace(/\n/g, " ")})`);
   const p0 = await panelState(page);
   ok(p0.layout === "panel" && p0.role === "complementary" && Math.abs(p0.left - 720) <= 2, `${t}: the panel is the right half, a complementary landmark`);
   ok(outline(await headingLevels(page)), `${t}: one h1, headings never skip a level (${(await headingLevels(page)).join("")})`);
@@ -135,7 +136,7 @@ for (const entry of ENTRIES) {
   await page.waitForTimeout(800);
   ok((await page.locator("[data-panel] h1").innerText()) === "Lisbon", "place: panel h1 is the place");
   ok(outline(await headingLevels(page)), `place: headings in order (${(await headingLevels(page)).join("")})`);
-  const groups = await page.locator("[data-slot=place-entries] h3").allInnerTexts();
+  const groups = await page.locator("[data-slot=place-entries] h2").allInnerTexts();
   ok(groups.length === 2 && /articles/i.test(groups[0]) && /projects/i.test(groups[1]), `place: entries grouped by kind (${groups.join(" | ").replace(/\n/g, " ")})`);
   await page.screenshot({ path: `${OUT_DIR}/place-dark.png` });
   await page.evaluate(() => {
@@ -348,7 +349,7 @@ if (process.env.BASE_URL_EMPTY) {
   await waitGlobeMounted(page);
   await page.waitForTimeout(800);
   ok((await page.locator("[data-slot=archive-empty]").count()) === 1 && (await page.locator("[data-globe]").count()) === 1, "empty home: the globe stays and the archive card is there");
-  ok(/ARCHIVE \/ 000 ENTRIES/i.test(await page.locator("[data-slot=archive-empty]").innerText()), "empty home: the card says 000 entries");
+  ok(/Nothing on the globe yet/.test(await page.locator("[data-slot=archive-empty]").innerText()), "empty home: the card says there is nothing on the globe yet");
   ok((await page.locator("[data-slot=archive-empty] a").count()) === 4, "empty home: the card opens the four lists");
   ok((await page.locator("h1").count()) === 1, "empty home: one h1");
   await page.screenshot({ path: `${OUT_DIR}/home-empty-dark.png` });
@@ -360,7 +361,7 @@ if (process.env.BASE_URL_EMPTY) {
   const { ctx, page } = await newPage(DESKTOP);
   await page.goto(`${BASE_URL}/locations/bangkok`);
   await waitPanel(page);
-  ok(/Nothing is linked to this place/.test(await page.locator("[data-slot=place-entries]").innerText()), "a place without entries says so");
+  ok((await page.locator("[data-slot=place-entries]").count()) === 0 && (await page.locator("[data-panel] h2").count()) === 0, "a place without entries has no entries section and no empty box at all");
   // print: the chrome goes, the entry stays
   await page.goto(`${BASE_URL}/poems/cuesta-arriba?view=full`);
   await waitPanel(page);

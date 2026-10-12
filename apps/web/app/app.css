@@ -55,10 +55,8 @@
   --radius-md: 0;
   --radius-lg: 0;
 
-  /* Frames and marks. */
+  /* Lines and marks. */
   --hairline: 1px;
-  --bracket-len: 10px;
-  --bracket-w: 1px;
   --tick-step: 8px;
 
   /* Motion. Mirrored in app/lib/tokens.ts (seconds); a test keeps them in sync. */
@@ -161,7 +159,7 @@
   --text-3xl--line-height: 2.5rem;
   --text-4xl: 3rem;
   --text-4xl--line-height: 3.25rem;
-  /* Micro-labels: codes, coordinates, timestamps, status brackets (mono, uppercase, tracked). 11 px is the floor. */
+  /* Micro-labels: short codes only (mono, uppercase, tracked). 11 px is the floor. */
   --text-micro: 0.6875rem;
   --text-micro--line-height: 1rem;
   --tracking-micro: 0.12em;
@@ -287,13 +285,10 @@
 }
 
 @layer components {
-  /* Small caps / label style: mono, uppercase, tracked. */
+  /* A quiet caption: sans, sentence case, muted (the places list's group names and regions). */
   .label {
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    line-height: var(--text-xs--line-height);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
     color: var(--muted-foreground);
   }
 
@@ -321,6 +316,15 @@
     color: var(--signal);
   }
 
+  /* Meta: a date or a coordinate pair. Mono (the face of figures), but plain case and untracked: it is a value, not a label. */
+  .ds-meta {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    font-variant-numeric: tabular-nums slashed-zero;
+    color: var(--muted-foreground);
+  }
+
   /* Kind coding: each kind binds one faint hue; the glyph and the word carry the meaning, never the hue. */
   [data-kind="article"] {
     --kind: var(--kind-article);
@@ -343,42 +347,23 @@
   }
 
   /*
-   * Frame: a hairline box with corner brackets. The brackets are one pseudo-element painting eight 1 px strokes (two per
-   * corner) over the border, so there is no extra markup. Variants: plain, active (strong line, signal brackets, faint
-   * signal wash), inverted (the opposite scheme's tokens, rebound for the subtree so every child reads correctly).
+   * Frame: a hairline box on the surface, for the few things that are a box (a code block, a link card, the search dialog, the
+   * active state). No brackets, no shadow. Variants: plain, active (strong line and a faint signal wash: the selected thing),
+   * inverted (the opposite scheme's tokens, rebound for the subtree so every child reads correctly).
    */
   .ds-frame {
-    --ds-bracket: var(--foreground);
     position: relative;
     border: var(--hairline) solid var(--border);
     background: var(--surface);
     color: var(--foreground);
   }
 
-  .ds-frame[data-brackets]::after {
-    content: "";
-    position: absolute;
-    inset: calc(var(--hairline) * -1);
-    pointer-events: none;
-    background:
-      linear-gradient(var(--ds-bracket), var(--ds-bracket)) top left / var(--bracket-len) var(--bracket-w) no-repeat,
-      linear-gradient(var(--ds-bracket), var(--ds-bracket)) top left / var(--bracket-w) var(--bracket-len) no-repeat,
-      linear-gradient(var(--ds-bracket), var(--ds-bracket)) top right / var(--bracket-len) var(--bracket-w) no-repeat,
-      linear-gradient(var(--ds-bracket), var(--ds-bracket)) top right / var(--bracket-w) var(--bracket-len) no-repeat,
-      linear-gradient(var(--ds-bracket), var(--ds-bracket)) bottom left / var(--bracket-len) var(--bracket-w) no-repeat,
-      linear-gradient(var(--ds-bracket), var(--ds-bracket)) bottom left / var(--bracket-w) var(--bracket-len) no-repeat,
-      linear-gradient(var(--ds-bracket), var(--ds-bracket)) bottom right / var(--bracket-len) var(--bracket-w) no-repeat,
-      linear-gradient(var(--ds-bracket), var(--ds-bracket)) bottom right / var(--bracket-w) var(--bracket-len) no-repeat;
-  }
-
   .ds-frame[data-variant="active"] {
-    --ds-bracket: var(--signal);
     border-color: var(--border-strong);
     background: linear-gradient(var(--signal-wash), var(--signal-wash)), var(--surface);
   }
 
   .ds-frame[data-variant="inverted"] {
-    --ds-bracket: var(--inverse-foreground);
     --background: var(--inverse-background);
     --foreground: var(--inverse-foreground);
     --muted-foreground: var(--inverse-muted);
@@ -396,28 +381,46 @@
     border-color: var(--inverse-background);
   }
 
-  /* The plate has no border to overprint, so its brackets sit 4 px inside it, like a viewfinder. */
-  .ds-frame[data-variant="inverted"][data-brackets]::after {
-    inset: 4px;
-  }
-
   .ds-frame[data-variant="inverted"]::selection,
   .ds-frame[data-variant="inverted"] ::selection {
     background: var(--inverse-foreground);
     color: var(--inverse-background);
   }
 
-  /* Interactive frames (cards): the line and the brackets answer the pointer, no movement. */
+  /* Interactive frames (a link card): the line answers the pointer and the keyboard focus, no movement. */
   .ds-frame[data-interactive] {
     transition:
       border-color var(--duration-fast) var(--ease-standard),
       background-color var(--duration-fast) var(--ease-standard);
   }
 
-  .ds-frame[data-interactive]:hover,
-  .ds-frame[data-interactive]:has(:focus-visible) {
+  .ds-frame[data-interactive]:hover {
     border-color: var(--border-strong);
-    --ds-bracket: var(--signal);
+  }
+
+  .ds-frame[data-interactive]:has(:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /*
+   * Entry card: no box. The cover and the spacing make the card; the title is the one link and its hit area is the whole card
+   * (a stretched pseudo-element), so the pointer and the keyboard focus are drawn on the card: an underlined title on hover, the
+   * focus ring around the card when the link is focused with the keyboard.
+   */
+  .ds-card {
+    position: relative;
+  }
+
+  .ds-card:hover [data-slot="entry-card-title"] a {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  .ds-card:has(:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 6px;
   }
 
   /* Divider: a hairline, optionally hung with a tick scale (minor every 8 px, major every 40 px). */
@@ -442,114 +445,90 @@
       0 0;
   }
 
-  /* Data row: KEY ........ value. The leader is the key's own ::after, so the markup stays a plain dl > div > dt + dd. */
+  /* Data row: a key and its value on one line, plain. The markup is a `dl > div > dt + dd`. */
   .ds-data-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(5rem, 7.5rem) minmax(0, 1fr);
     align-items: baseline;
-    gap: 0.5rem;
-    min-height: 1.5rem;
+    gap: 0.75rem;
+    min-height: 1.75rem;
   }
 
   .ds-data-row > dt {
-    display: flex;
-    flex: 1 1 auto;
-    align-items: baseline;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-
-  .ds-data-row > dt::after {
-    content: "";
-    flex: 1 1 0.75rem;
-    min-width: 0.75rem;
-    border-bottom: 1px dotted var(--border-strong);
-    transform: translateY(-0.2em);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--muted-foreground);
   }
 
   .ds-data-row > dd {
-    flex: 0 1 auto;
-    max-width: 65%;
     margin: 0;
-    text-align: right;
     overflow-wrap: anywhere;
   }
 
-  /* Metadata strip: items separated by hairlines, wrapping on narrow screens. */
-  .ds-strip {
+  /* Tags: plain muted text separated by middle dots, links where they go somewhere. No chips, no boxes. */
+  .ds-tags {
     display: flex;
     flex-wrap: wrap;
     margin: 0;
-    border-block: var(--hairline) solid var(--border);
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--muted-foreground);
   }
 
-  .ds-strip > div {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 0.125rem;
-    padding: 0.5rem 0.75rem;
-    border-inline-end: var(--hairline) solid var(--border);
-  }
-
-  .ds-strip > div:first-child {
-    padding-inline-start: 0;
-  }
-
-  .ds-strip > div:last-child {
-    border-inline-end: 0;
-  }
-
-  .ds-strip dd {
-    margin: 0;
-  }
-
-  /* Tag: a square outlined chip. */
-  .ds-tag {
+  .ds-tags > li {
     display: inline-flex;
     align-items: center;
-    min-height: 1.5rem;
-    padding-inline: 0.5rem;
-    border: var(--hairline) solid var(--border-strong);
-    background: transparent;
-    color: var(--foreground);
   }
 
-  a.ds-tag {
+  .ds-tags > li + li::before {
+    content: "·";
+    content: "·" / "";
+    padding-inline: 0.5ch;
+  }
+
+  .ds-tags a {
     position: relative;
-    transition: background-color var(--duration-fast) var(--ease-standard);
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-standard);
   }
 
-  a.ds-tag:hover {
-    background: var(--accent);
+  .ds-tags a:hover {
+    color: var(--foreground);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
-  /* 44 px touch target without making the chip taller. */
-  a.ds-tag::before {
+  /* 44 px touch target without making the line taller. */
+  .ds-tags a::before {
     content: "";
     position: absolute;
-    inset: -0.625rem -0.25rem;
+    inset: -0.75rem -0.25rem;
   }
 
   @media (min-width: 768px) {
-    a.ds-tag::before {
+    .ds-tags a::before {
       inset: -0.25rem;
     }
   }
 
-  /* Status: bracketed text. The word carries the state; the tone only adds. */
+  /* Status: a plain word. The word carries the state; the tone only adds. */
   .ds-status {
     display: inline-flex;
     align-items: center;
-    gap: 0.5ch;
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--muted-foreground);
+  }
+
+  .ds-status[data-tone="default"] {
     color: var(--foreground);
   }
 
   .ds-status[data-tone="signal"] {
     color: var(--signal);
-  }
-
-  .ds-status[data-tone="muted"] {
-    color: var(--muted-foreground);
   }
 
   .ds-status[data-tone="solid"] {
@@ -564,25 +543,21 @@
     color: var(--signal-foreground);
   }
 
-  /* Kind tag: a square glyph cell and the kind's word. */
+  /* Kind tag: the kind's glyph, drawn plain beside its word. */
   .ds-kind-glyph {
     display: inline-grid;
     place-items: center;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1rem;
+    height: 1rem;
     flex: none;
-    border: var(--hairline) solid var(--border-strong);
-    background: color-mix(in srgb, var(--kind, transparent) 18%, transparent);
-    color: var(--foreground);
+    color: var(--muted-foreground);
   }
 
   .ds-kind-glyph[data-solid] {
-    border-color: var(--foreground);
-    background: var(--foreground);
-    color: var(--background);
+    color: var(--foreground);
   }
 
-  /* Buttons (components/ui/button.tsx). Square, mono caps, 1 px lines, no shadow. */
+  /* Buttons (components/ui/button.tsx). Square, sans, 1 px lines, no shadow. */
   .ds-button {
     --ds-button-bg: transparent;
     --ds-button-fg: var(--foreground);
@@ -597,11 +572,9 @@
     border: var(--hairline) solid var(--ds-button-line);
     background: var(--ds-button-bg);
     color: var(--ds-button-fg);
-    font-family: var(--font-mono);
-    font-size: var(--text-xs);
-    line-height: var(--text-xs--line-height);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    line-height: var(--text-sm--line-height);
     white-space: nowrap;
     cursor: pointer;
     transition:
@@ -657,6 +630,14 @@
 
   .ds-button[data-pressed="true"]:hover {
     --ds-button-bg: color-mix(in srgb, var(--foreground) 82%, var(--background));
+  }
+
+  /* A ghost toggle (the panel's full-screen switch) shows its state quietly: the hover grey stays on, the glyph has already swapped. */
+  .ds-button[data-variant="ghost"][data-pressed="true"],
+  .ds-button[data-variant="ghost"][data-pressed="true"]:hover {
+    --ds-button-bg: var(--accent);
+    --ds-button-fg: var(--foreground);
+    --ds-button-line: transparent;
   }
 
   .ds-button:disabled,
@@ -774,11 +755,6 @@
   }
 
   @media (forced-colors: active) {
-    .ds-frame[data-brackets]::after {
-      background: none;
-      border: 1px solid CanvasText;
-    }
-
     .ds-button {
       border-color: ButtonText;
     }
@@ -890,7 +866,7 @@
 
 /* Entry reading, filters and rows (docs/design-system.md, "Entry view", "Lists"). */
 @layer components {
-  /* Reading text: 18 / 28 on the 4 px grid; a measure of about 65 characters is set per block (`max-w-[48ch]`); no widows or orphans. */
+  /* Reading text: 18 / 28 on the 4 px grid; a measure of about 65 characters is set per block (`max-w-[60ch]`); no widows or orphans. */
   .ds-prose {
     font-size: 1.125rem;
     line-height: 1.75rem;
@@ -906,7 +882,7 @@
 
   .ds-prose [data-slot="verse"] {
     text-wrap: wrap;
-    font-size: 0.9375rem;
+    font-size: 1.0625rem;
   }
 
   /* Heading anchor: the `#` link of a section. Drawn on hover and focus; always on devices without hover. */
@@ -981,28 +957,43 @@
     background: var(--signal);
   }
 
-  /* The filter chips of a list: a tag that selects. Selected = inverted fill (and aria-current), like a pressed toggle. */
+  /*
+   * The filter of a list: text toggles in one row, no boxes. The chosen one is set in the foreground at a heavier weight with an
+   * underline (and `aria-current`); the others are muted and answer hover with the foreground colour.
+   */
   .ds-filter {
     display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-height: 2.75rem;
-    padding-inline: 0.75rem;
-    border: var(--hairline) solid var(--border-strong);
-    background: transparent;
-    color: var(--foreground);
-    text-decoration: none;
-    transition:
-      background-color var(--duration-fast) var(--ease-standard),
-      color var(--duration-fast) var(--ease-standard);
-  }
-
-  .ds-filter {
     flex: none;
+    align-items: center;
+    min-height: 2.75rem;
+    padding-inline: 0.125rem;
+    color: var(--muted-foreground);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    text-decoration: none;
     white-space: nowrap;
+    transition: color var(--duration-fast) var(--ease-standard);
   }
 
-  /* The chips: one row that scrolls sideways on a phone (it bleeds to the screen edges), wrapped from md. */
+  .ds-filter > span {
+    padding-block: 0.125rem;
+    border-bottom: 2px solid transparent;
+  }
+
+  .ds-filter:hover {
+    color: var(--foreground);
+  }
+
+  .ds-filter[aria-current="true"] {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  .ds-filter[aria-current="true"] > span {
+    border-bottom-color: var(--foreground);
+  }
+
+  /* The toggles: one row that scrolls sideways on a phone (it bleeds to the screen edges), wrapped from md. */
   .ds-filter-row {
     margin: 0 calc(var(--panel-pad) * -1);
     padding: 0 var(--panel-pad) 0.25rem;
@@ -1017,38 +1008,13 @@
       padding: 0;
       overflow-x: visible;
     }
-  }
 
-  .ds-filter:hover {
-    background: var(--accent);
-  }
-
-  .ds-filter[aria-current="true"] {
-    background: var(--foreground);
-    border-color: var(--foreground);
-    color: var(--background);
-  }
-
-  .ds-filter .ds-micro {
-    color: inherit;
-  }
-
-  .ds-filter [data-count] {
-    opacity: 1;
-    color: var(--muted-foreground);
-  }
-
-  .ds-filter[aria-current="true"] [data-count] {
-    color: inherit;
-  }
-
-  @media (min-width: 768px) {
     .ds-filter {
       min-height: 2rem;
     }
   }
 
-  /* A year heading of a list: `2026 ---------------- 02`, the year in the signal colour. */
+  /* A year heading of a list: the year, set quietly above its cards. */
   .ds-year {
     display: flex;
     align-items: baseline;

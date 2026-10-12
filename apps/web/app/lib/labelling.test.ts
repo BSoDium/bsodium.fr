@@ -1,29 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ENTRY_KINDS, ENTRY_KIND_LABEL, isEntryKind } from "./entry-kind";
-import { entryCode, formatCoordinates, formatIndex, formatStamp, slashJoin, statusBracket, statusText } from "./labelling";
-
-describe("formatIndex", () => {
-  it("pads to four digits by default", () => {
-    expect(formatIndex(42)).toBe("0042");
-    expect(formatIndex(0)).toBe("0000");
-    expect(formatIndex(7, 2)).toBe("07");
-  });
-  it("never truncates, floors fractions and tolerates bad input", () => {
-    expect(formatIndex(123456)).toBe("123456");
-    expect(formatIndex(3.9)).toBe("0003");
-    expect(formatIndex(-5)).toBe("0000");
-    expect(formatIndex(Number.NaN)).toBe("0000");
-    expect(formatIndex(Number.POSITIVE_INFINITY)).toBe("0000");
-    expect(formatIndex(5, 0)).toBe("5");
-  });
-});
-
-describe("entryCode", () => {
-  it("is KIND / NNNN for every kind", () => {
-    expect(entryCode("article", 42)).toBe("ARTICLE / 0042");
-    for (const kind of ENTRY_KINDS) expect(entryCode(kind, 1)).toBe(`${ENTRY_KIND_LABEL[kind].toUpperCase()} / 0001`);
-  });
-});
+import { ENTRY_KINDS, isEntryKind } from "./entry-kind";
+import { decimalsOf, formatCoordinates, formatPlaceCoordinates, formatStamp, statusLabel } from "./labelling";
 
 describe("formatCoordinates", () => {
   it("writes hemispheres instead of signs", () => {
@@ -49,14 +26,31 @@ describe("formatStamp", () => {
   });
 });
 
-describe("status and joins", () => {
-  it("brackets the word", () => {
-    expect(statusText(" published ")).toBe("PUBLISHED");
-    expect(statusBracket("draft")).toBe("[ DRAFT ]");
+describe("decimalsOf and formatPlaceCoordinates", () => {
+  it("counts the decimals a value is stored with", () => {
+    expect(decimalsOf(48.85)).toBe(2);
+    expect(decimalsOf(2)).toBe(0);
+    expect(decimalsOf(-33.9249)).toBe(4);
+    expect(decimalsOf(1e-7)).toBe(6); // capped: a decimetre is the finest a place is stored at
+    expect(decimalsOf(Number.NaN)).toBe(0);
   });
-  it("slashJoin drops empty parts", () => {
-    expect(slashJoin(["A", "", null, undefined, false, "B"])).toBe("A / B");
-    expect(slashJoin([])).toBe("");
+  it("writes each value at its own precision, never more (a 2-decimal value is not 4 decimals)", () => {
+    expect(formatPlaceCoordinates(48.85, 2.35)).toBe("48.85° N, 2.35° E");
+    expect(formatPlaceCoordinates(48.8566, 2.3522)).toBe("48.8566° N, 2.3522° E");
+    expect(formatPlaceCoordinates(-33.9, -18)).toBe("33.9° S, 18° W");
+    expect(formatPlaceCoordinates(0, 0)).toBe("0° N, 0° E");
+  });
+  it("answers the placeholder for impossible values", () => {
+    expect(formatPlaceCoordinates(91, 0)).toBe("--.---- / --.----");
+    expect(formatPlaceCoordinates(0, Number.NaN)).toBe("--.---- / --.----");
+  });
+});
+
+describe("statusLabel", () => {
+  it("is one plain word", () => {
+    expect(statusLabel(" published ")).toBe("Published");
+    expect(statusLabel("DRAFT")).toBe("Draft");
+    expect(statusLabel("")).toBe("");
   });
 });
 

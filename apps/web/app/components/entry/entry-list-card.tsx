@@ -10,7 +10,13 @@ function placeLine(places: EntrySummary["places"]): string | undefined {
   return places.length > 2 ? `${shown.join(", ")} +${places.length - 2}` : shown.join(", ");
 }
 
-/** The card of an entry in a list: shared by the four list pages (and the same facts the place panel shows). */
+const dateValue = (date: { dateTime?: string | undefined; text: string }) => (
+  <time dateTime={date.dateTime} className="ds-meta">
+    {date.text}
+  </time>
+);
+
+/** The card of an entry in a list: shared by the four list pages (and the same facts the place panel shows). The kind is not said: those lists are already of one kind. */
 export function EntryListCard({
   entry,
   linkState,
@@ -32,14 +38,13 @@ export function EntryListCard({
     <EntryCard
       id={entry.slug}
       kind={entry.kind}
-      index={entry.index}
       title={entry.title}
       summary={entry.summary}
       href={entry.href}
       image={cover}
       seed={entry.slug}
       status={status}
-      meta={[...(date ? [{ label: "Date", value: <time dateTime={date.dateTime}>{date.text}</time> }] : []), ...(place ? [{ label: "Place", value: place }] : [])]}
+      meta={[...(date ? [{ label: "Date", value: dateValue(date) }] : []), ...(place ? [{ label: "Place", value: place }] : [])]}
       tags={entry.tags}
       linkState={linkState}
       headingLevel={headingLevel}
@@ -50,19 +55,19 @@ export function EntryListCard({
   );
 }
 
-/** A compact card of a pointer to another entry (related entries): cover, kind and code, title, date. No tags: a ref carries none. */
+/** A compact card of a pointer to another entry (related entries, which are of mixed kinds, so it says the kind): cover, kind, title, date. No tags: a ref carries none. */
 export function EntryRefCard({ entry, linkState, headingLevel = 3 }: { entry: EntryRef; linkState?: unknown; headingLevel?: 2 | 3 | 4 }) {
   const date = formatEntryDate(entry.date);
   const cover = entry.cover && safeMediaSrc(entry.cover.src) ? { src: entry.cover.src, alt: entry.cover.alt } : undefined;
   return (
     <EntryCard
       kind={entry.kind}
-      index={entry.index}
+      showKind
       title={entry.title}
       href={entry.href}
       image={cover}
       seed={entry.slug}
-      meta={date ? [{ label: "Date", value: <time dateTime={date.dateTime}>{date.text}</time> }] : undefined}
+      meta={date ? [{ label: "Date", value: dateValue(date) }] : undefined}
       linkState={linkState}
       headingLevel={headingLevel}
       className="h-full [&_h2]:text-lg [&_h3]:text-lg [&_h4]:text-lg"

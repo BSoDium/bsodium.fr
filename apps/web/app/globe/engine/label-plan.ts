@@ -5,8 +5,9 @@
  * and the ways its label can be written (`labelVariants` in engine/label-text.ts: the whole label, without its counter, truncated with an
  * ellipsis down to six characters). Nodes are placed in priority order (the higher score, then the bigger box, then the key, so the result
  * never depends on the order of the input). For each node, widest label first:
- *   1. the first of its candidate positions (`labelCandidates`: above-left, above-right, nested in each inner corner, below, left, right,
- *      shifted along the edges) whose plate collides with no plate already placed (`clearance` of room) wins;
+ *   1. the first of its candidate positions (`labelCandidates`: above the top-left corner; else nested in the top-left corner; then, as last
+ *      resorts, above-right, shifted along the top edge, the other inner corners, below, left, right) whose plate collides with no plate already
+ *      placed (`clearance` of room) wins; no position ever covers the node's own outline, and one that touches a neighbour's box is taken only when no wording has a position that does not;
  *   2. if none is free the next, shorter way of writing the label is tried at all the positions;
  *   3. if the shortest is not free anywhere the label is drawn ANYWAY, on top, on a plate of the page colour: the position (of the whole label or of
  *      the shortest one) that overlaps the placed plates least, shifted from the first candidate by the smallest displacement that reduces the
@@ -20,7 +21,7 @@
  * text of the map keeps the whole-cell version (`CELL_UNITS`), used by the tests of the planner as well.
  */
 import { LABEL_TYPE } from "./label-text";
-import { labelCandidates, type CellRect, type GridSize, type LabelSpot } from "./pixel-labels";
+import { coversBox, labelCandidates, type CellRect, type GridSize, type LabelSpot } from "./pixel-labels";
 
 /** The distances the plan works with, in the unit of its geometry. */
 export interface PlanUnits {
@@ -85,7 +86,8 @@ export interface PlanItem {
   /**
    * Rectangles this node's plate must stay clear of, as well as the plates already placed: the BOXES of the other nodes (`boxesToAvoid`; the
    * planner otherwise looks at plates only, and a label would land on a neighbour's outline). A position that touches one comes after every
-   * position of the same wording that does not; it is still taken, rather than shortening the label or going over other plates.
+   * position of every wording that does not (a shorter label beside a box beats the whole label over its outline); with none, the first position of
+   * the whole wording is still taken, rather than going over other plates.
    */
   avoid?: readonly Plate[] | undefined;
 }
@@ -155,23 +157,23 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
     const spotsOf = (v: number) => (spots[v] ??= labelCandidates(t.rect, t.variants[v]!.w, t.variants[v]!.h, grid, spotUnits));
     /**
      * The first (variant, candidate) in priority order, ranked below `before`, that is free with `pad` more room, or null. A position that touches
-     * one of the boxes to `avoid` is taken only when no position of the same wording keeps clear of them (the label is not shortened for it).
+     * one of the boxes to `avoid` (a neighbour's outline) is taken only when no position of ANY wording keeps clear of them: a shorter label
+     * beside the box is better than the whole label over a neighbour's outline (and then the whole label's first such position wins).
      */
     const avoid = t.avoid;
     const clearOfBoxes = (x: number, y: number, w: number, h: number) => !avoid || !avoid.some((p) => hits(p, x, y, w, h, 0));
     const first = (pad: number, before = Infinity): { v: number; s: LabelSpot } | null => {
+      let touching: { v: number; s: LabelSpot } | null = null;
       for (let v = 0; v < count; v++) {
         const { w, h } = t.variants[v]!;
-        let touching: { v: number; s: LabelSpot } | null = null;
         for (const s of spotsOf(v)) {
           if (rank(v, s.id) >= before) return touching;
           if (!free(s.x, s.y, w, h, clearance + pad)) continue;
           if (clearOfBoxes(s.x, s.y, w, h)) return { v, s };
           touching ??= { v, s };
         }
-        if (touching) return touching;
       }
-      return null;
+      return touching;
     };
     let chosen: { v: number; s: LabelSpot } | null = first(0);
     const prev = t.prev;
@@ -179,8 +181,15 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
       const { w, h } = t.variants[prev.variant]!;
       const same = spotsOf(prev.variant).find((s) => s.id === prev.cand);
       if (same && free(same.x, same.y, w, h, clearance) && rank(chosen.v, chosen.s.id) < rank(prev.variant, prev.cand)) {
-        // a better choice exists: take it only when it is free with room to spare, and not at all while the choice is a moment old
-        chosen = t.hold ? { v: prev.variant, s: same } : (first(upgradeMargin, rank(prev.variant, prev.cand)) ?? { v: prev.variant, s: same });
+        // a better choice exists: take it only when it is free with room to spare, and not at all while the choice is a moment old...
+        const better = chosen;
+        const keep = { v: prev.variant, s: same };
+        chosen = t.hold ? keep : (first(upgradeMargin, rank(prev.variant, prev.cand)) ?? keep);
+        // ...unless the kept position lies over another node's box and the better one does not: a plate never stays on a neighbour's outline for want of room to spare
+        if (chosen === keep) {
+          const bw = t.variants[better.v]!;
+          if (!clearOfBoxes(same.x, same.y, w, h) && clearOfBoxes(better.s.x, better.s.y, bw.w, bw.h)) chosen = better;
+        }
       }
     }
     if (chosen) {
@@ -197,6 +206,12 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
     const consider = (v: number, x: number, y: number, cand: number, inside: boolean, shift: number) => {
       const { w, h } = t.variants[v]!;
       if (x < 0 || y < 0 || x + w > grid.cols || y + h > grid.rows) return;
+      // never over the node's own outline: a displaced plate is outside the box or fully nested inside it
+      if (!inside && coversBox(x, y, w, h, t.rect)) {
+        const r = t.rect;
+        const nested = x >= r.c0 + units.inset && y >= r.r0 + units.inset && x + w <= r.c1 - units.inset && y + h <= r.r1 - units.inset;
+        if (cand >= 0 || !nested) return;
+      }
       let area = 0;
       for (const p of placed) area += overlapArea(p, x, y, w, h);
       const b = best;

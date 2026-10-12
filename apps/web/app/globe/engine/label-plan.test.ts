@@ -98,6 +98,34 @@ describe("every drawn box has its label: there is no label that loses and no dim
   });
 });
 
+describe("one anchor: above the top-left corner, then inside it, the rest are last resorts", () => {
+  it("a plate in the way of the above-left position sends the label inside the box's top-left corner, not to the right or below", () => {
+    // the blocker's plate sits above its own box, exactly where mine's above-left plate would go
+    const blocker = item("blocker", 200, 190, { score: 500, name: "Blocker with a wide name", w: 30, h: 20 });
+    const mine = item("mine", 200, 190, { w: 200, h: 120, name: "Mine" });
+    const plan = planLabels([blocker, mine], GRID);
+    expect(plan[1]!.cand).toBe(SPOT.insideTopLeft);
+    expect(plan[1]!.inside).toBe(true);
+    expect(plan[1]!.overlap).toBe(false);
+  });
+  it("the order of the ids is the order of preference: above-left, visible above-left, inside top-left, then the rest", () => {
+    expect([SPOT.aboveLeft, SPOT.aboveVisibleLeft, SPOT.insideTopLeft]).toEqual([0, 1, 2]);
+    for (const other of [SPOT.aboveRight, SPOT.aboveShift, SPOT.insideTopRight, SPOT.insideBottomLeft, SPOT.belowLeft, SPOT.left, SPOT.right]) expect(other).toBeGreaterThan(SPOT.insideTopLeft);
+    expect(SPOT.left).toBeGreaterThan(SPOT.belowShift);
+  });
+  it("no plate covers its own box's outline, not even the last resort (a plate over other plates is displaced outside the box or nested in it)", () => {
+    const items: PlanItem[] = [];
+    for (let k = 0; k < 12; k++) items.push(item(`n${k}`, 20 + (k % 4) * 22, 20 + Math.floor(k / 4) * 22, { w: 10, h: 10, name: "A long name here", score: 100 - k }));
+    const plan = planLabels(items, { cols: 100, rows: 90 });
+    expect(plan.some((p) => p.overlap)).toBe(true);
+    plan.forEach((p, n) => {
+      const r = items[n]!.rect;
+      const covers = p.x < r.c1 && p.x + p.w > r.c0 && p.y < r.r1 && p.y + p.h > r.r0;
+      if (covers) expect(p.inside).toBe(true);
+    });
+  });
+});
+
 describe("stable between frames: the previous choice is kept with hysteresis", () => {
   it("a label whose previous choice is still free keeps it unless a better one is free with room to spare", () => {
     const keep = planLabels([item("a", 200, 200, { prev: { variant: 0, cand: SPOT.aboveLeft, dx: 0, dy: -30 } })], GRID)[0]!;
@@ -173,6 +201,16 @@ describe("a label keeps clear of the other nodes' boxes (PlanItem.avoid, boxesTo
     expect(walled.overlap).toBe(false);
     expect(walled.cand).toBe(free.cand);
     expect(walled.variant).toBe(0);
+  });
+  it("a kept position that lies over another node's box is given up for a clear one even when the clear one has no room to spare", () => {
+    const Y = rect.r0;
+    const right = { variant: 0, cand: SPOT.right, dx: rect.c1 - rect.c0 + 3, dy: 0 };
+    // a plate of another node close to the above-left position (free, but within the upgrade margin) and a box on the kept right position
+    const blocker = { score: 500, area: 1, key: "b", rect: { c0: 560, r0: Y + 30, c1: 575, r1: Y + 45 }, variants: labelVariants("Valencia", null).map((v) => v.layout), prev: null };
+    const covered = [{ x0: rect.c1 + 5, y0: Y + 2, x1: rect.c1 + 30, y1: Y + 20 }];
+    const out = planLabels([blocker, { score: 1, area: 1, key: "p", rect, variants, prev: right, avoid: covered }], PX, pxUnits(2.5));
+    expect(out[1]!.cand).not.toBe(SPOT.right);
+    expect(out[1]!.overlap).toBe(false);
   });
   it("boxesToAvoid: the other boxes within reach of a node's own box, never its own", () => {
     const boxes = [

@@ -7,27 +7,24 @@ interface Tag {
   href?: string;
 }
 
-/** A wrapped list of square outlined tags. Link tags keep a 44 px touch target on phones (the chip stays 24 px tall). */
+/**
+ * Tags as plain muted text separated by middle dots (the dots are CSS, so the list reads as a list). Link tags keep a 44 px touch
+ * target on phones (the line stays as tall as the text). No chips, no outlines.
+ */
 export function TagList({ tags, label, className }: { tags: readonly Tag[]; label: string; className?: string }) {
   if (tags.length === 0) return null;
   return (
-    <ul aria-label={label} data-slot="tag-list" className={cn("m-0 flex list-none flex-wrap gap-2 p-0", className)}>
+    <ul aria-label={label} data-slot="tag-list" className={cn("ds-tags", className)}>
       {tags.map((tag) => (
         <li key={tag.label}>
           {tag.href ? (
             tag.href.startsWith("/") ? (
-              <Link to={tag.href} className="ds-tag ds-micro" data-tone="strong">
-                {tag.label}
-              </Link>
+              <Link to={tag.href}>{tag.label}</Link>
             ) : (
-              <a href={tag.href} className="ds-tag ds-micro" data-tone="strong">
-                {tag.label}
-              </a>
+              <a href={tag.href}>{tag.label}</a>
             )
           ) : (
-            <span className="ds-tag ds-micro" data-tone="strong">
-              {tag.label}
-            </span>
+            <span>{tag.label}</span>
           )}
         </li>
       ))}
