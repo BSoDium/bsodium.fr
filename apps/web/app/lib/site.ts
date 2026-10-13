@@ -17,7 +17,7 @@ export const SITE = {
   shortName: "Elliot N.-J.",
   /** Who: what the owner does, and where. The hero says "<role> based in <location>." */
   role: "Front-end and UX software engineer",
-  location: "Paris",
+  location: "Warsaw",
   /** What: the fields, in the owner's order. A sentence of its own. */
   speciality: "Data visualisation, geospatial and cartography interfaces, design systems, computer graphics",
 } as const;
