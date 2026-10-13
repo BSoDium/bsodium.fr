@@ -56,7 +56,7 @@ map.flyTo / jumpTo / setSelected(slug, { fly }) / setFocused / setInset / setRed
 map.setReveal(on, { center }) / setSharp(0..1) / setBlend(0..1)   // capabilities, return a Promise
 map.setCamera(view, { inset, sync, snap }) / hit(x, y, kind) / covers(lon, lat)   // embedded use, see below
 map.setActive(false)        // keep loading tiles, copy and draw nothing (the handover while the globe is shown)
-map.seedFrom(globeCanvas, grid) / map.crossfadeTo(globeCanvas | null, grid)   // the cut as a tone cross-fade, both ways (see "Temporal ease")
+map.seedFrom(globeCanvas, grid, drawnCamera?) / map.crossfadeTo(globeCanvas | null, grid)   // the cut as a tone cross-fade, both ways (see "Temporal ease"); drawnCamera: see "One camera per frame"
 map.getView() / getTileStatus() / getMaxZoom() / dispose() / debug()
 ```
 React: `<StreetMapCanvas places routes selectedSlug focusedSlug initialView reducedMotion tiles insetRight onSelect onViewChange onTileStatus onReady engineOptions />`. `onReady(map)` hands the handle to the parent (null on dispose). The engine is rebuilt only when `places`, `routes` or the tile URLs change; the camera is kept.
@@ -240,6 +240,7 @@ node apps/web/scripts/street/tile-fade.mjs        # temporal ease: no ghost in m
 node apps/web/scripts/street/ease-twin.mjs        # GPU ease pass against its CPU twin (core/ease.ts) on random frames
 node apps/web/scripts/street/warp-check.mjs       # the camera warp (core/warp.ts) against MapLibre's projection
 node apps/web/scripts/street/cut-fade.mjs         # the globe <-> street cut as a cross-fade (needs the app route, SOURCE=primary for the slow-tile drill)
+node apps/web/scripts/street/desync.mjs           # fast wheel and trackpad gestures through the cut and at street scale: picture, overlay and camera agree every frame; the hold follows the camera
 node apps/web/scripts/street/cut-seam.mjs         # globe vs street coast / borders around the cut zoom, contact sheets
 node apps/web/scripts/street/fade-sheet.mjs       # docs/street-zoom/fade-paris-*.png: consecutive frames, slow first load / pan / departure
 node apps/web/scripts/street/city-frames.mjs --tag=after   # Paris, Lisbon, Bucharest, HCMC at the framing of a click (the road hierarchy)
@@ -307,6 +308,26 @@ Measured fact, 2026-10-09 (verification pass): `tile-fade.mjs ghostlow` at `z4.5
 
 Limits: a line that moves by more than the match radius between two frames (a very fast flick that is not a jump) fades out where it was and in where it is rather than moving; dashes that slide along a road are the limit of the "louder than its target" check (264 cells worst frame); a fill pattern edge that moves by more than 4 cells in a frame fades. Native art-resolution mode only. Not run on Safari / iOS or a real phone.
 
+
+### One camera per frame: the picture follows the camera it is drawn for (2026-10-12)
+
+Owner: "when you zoom in or out rather fast onto a location, sometimes the bounding boxes and some of the content continue zooming in or out, but the actual data on the map stays in place and fades out ... it breaks the illusion and the understanding of where the camera is located."
+
+**Cause** (found with real wheel input, `scripts/street/desync.mjs`; not any of the camera-push hypotheses: the street map's camera is the controller's to within 0.4 px in every visible frame, the 140 ms debounce only applies while the map is hidden, the ease's warp and ghosts are one frame long in a fast zoom, MapLibre's own wheel easing is not in the product path, `snapPan` costs under half a cell):
+
+1. **The cut waited behind a globe that cannot draw the camera.** Going in, the swap at `cutZoom` 3.7 waits up to `cutMaxWaitMs` 1200 ms for the street map's tiles for the exact camera, and a gesture moving at 10 zoom levels a second never has them (the map only starts loading for the camera when the swap is wanted; `areTilesLoaded()` is false while the camera moves). The Three.js globe stays on screen meanwhile, and `renderer.drawView()` caps it at its own maximum zoom 6.5 while the boxes, labels and the street map follow the uncapped camera. Past 6.5 the globe is a frozen picture at the wrong scale (the screen corner is `r (2^(z-6.5) - 1)` off: 290 px at z 7.3, 2.0 levels past it more than a screen) under boxes that keep zooming; then the swap seeded the cross-fade from that globe frame, so it "faded out in place" while the street map came in at the right scale. Measured before (1440x900, Paris and Lisbon on OpenFreeMap, 30 to 60 wheel events 8 to 16 ms apart, deltas 60 to 300 with inertia): the globe was the shown renderer past 6.5 for 213 to 581 ms (up to 1.9 zoom levels past it) in the cases that started from the globe; with tiles delayed 900 ms and a fast burst the swap came at zoom 11.96 and the stale picture lasted 799 ms.
+2. **The hold of a style swap froze the presented picture while the camera moved.** `compositor.hold(true)` (a tile source transition: failover, recovery) keeps the last presented frame until the map is `idle` (2.5 s at most), and a moving camera is never idle; the overlay boxes updated from the map's `render` event meanwhile. Measured before: the picture frozen 700 px off the camera for 1.3 s of a zoom.
+
+**Fix.**
+
+- `handover/maths.ts`: `globeDraws(zu)` (zoom at most the globe's maximum) and `cutMayWait(zu, stageShown)`; the controller's `cutTarget` ends the wait as soon as the camera passes what the globe draws (the street map takes over with the tiles it has; the ease fades the rest in; while the stage is not shown yet, a direct load at street scale behind `onReveal`, nobody sees the globe and the wait stays). Within 6.5 the wait is unchanged: the globe is faithful there.
+- `seedFrom(canvas, grid, drawn)`: a swap in the first frame past 6.5 seeds from a globe frame that was drawn at 6.5, so the controller passes the camera it was drawn for and the first map frame looks the seed up through the camera delta (`prevCam` of the compositor; a jump above `EASE.jumpCells` drops it, a cut and not a double exposure).
+- `compositor.ts`: a hold ends when the camera has moved more than `HOLD_MOVE_CELLS` (0.75 art cell, largest displacement over the screen, `core/warp.ts cameraShift`); the held picture then eases out through the warp like any departing content (a small step) or is dropped (a large one), and the map's own frames are presented. A camera at rest keeps the hold as before (no flash of unloaded layers). `hold(false)` after an automatic release does nothing (it used to stop a settle loop that had started).
+- `StreetDebug.staleCells()` (how far the presented picture is from the map's camera, in art cells) and `hold(on)` (test hook).
+
+**Check**: `node scripts/street/desync.mjs [--only=cut-in,cut-trackpad,cut-out,street,hold] [--place=paris|lisbon] [--delay=900]` on the dev server (SOURCE=fallback: the local archive with HCMC, tiles delayed by Playwright routing so that the cut cannot be ready; SOURCE=primary: OpenFreeMap). Real wheel events; per frame, after the frame's work: registration of the map's camera against the controller's at five landmarks, `staleCells`, and, while the globe is shown, whether the camera is past 6.5. Fails when any frame after the first of a gesture is more than one art cell off the camera, when the globe is the shown renderer past 6.5, when the picture at rest is not the classified one, or when a hold at rest changes. Before the fix it fails on `cut-in` (48 frames, 799 ms) and `cut-trackpad` (51 frames, 847 ms) and `hold` (80 frames, 1315 ms, 700 px); after: 0 frames in every case, registration at most 0.4 px (the pan snap).
+
+Not changed, by design: ghosts of screen-anchored fill patterns (water dashes, park dots) fade in place when their polygon shrinks (they are a function of the screen cell, rule 4 above); in a fast zoom (a frame moves content more than `jumpCells`) tiles arriving pop in instead of fading, as before.
 
 ### Binary layers: nothing rests half way (2026-10-08)
 

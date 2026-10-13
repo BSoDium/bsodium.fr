@@ -29,7 +29,9 @@ import {
   GLOBE_MAX_ZOOM,
   HANDOVER,
   blendTarget,
+  cutMayWait,
   cutWanted,
+  globeDraws,
   mountWanted,
   overlayOwner,
   selectionZoom,
@@ -467,7 +469,9 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
 
   /**
    * Cut mode: the target is 0 (globe) or 1 (street), applied at once. Going to the street waits (up to `cutMaxWaitMs`)
-   * until the street map has its tiles for the exact camera, rendering it synchronously while it waits.
+   * until the street map has its tiles for the exact camera, rendering it synchronously while it waits. The wait ends the moment the
+   * camera passes what the globe can draw (`cutMayWait`): from there the globe is a frozen picture at the wrong scale under boxes
+   * that follow the camera, so the street map takes over with the tiles it has and the ease fades the rest in.
    */
   function cutTarget(zoom: number, ok: boolean, now: number): number {
     const showing = shown >= 1;
@@ -478,7 +482,7 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     if (showing) return 1;
     if (!cutSince) cutSince = now;
     pushCamera(true); // invisible but exact (deduplicated while the camera rests)
-    if (streetFramed() || now - cutSince >= HANDOVER.cutMaxWaitMs) return 1;
+    if (streetFramed() || now - cutSince >= HANDOVER.cutMaxWaitMs || !cutMayWait(zoom, revealed)) return 1;
     cutStats.waitedFrames++;
     renderer.requestRender(); // frames are on demand: keep polling until the tiles are in (or the wait is over)
     return 0;
@@ -640,7 +644,12 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
       street.setActive(streetActive);
     }
     // The globe drew this frame in this task (it is not suspended while shown < 1): the street map starts from it.
-    if (seedWanted && streetActive) street.seedFrom(renderer.canvas, globeGrid());
+    // The globe frame is of this camera, except past its own maximum zoom (a swap in the first frame past it): it was drawn at the maximum, so
+    // the seed says which camera it was drawn for and the ease carries it to the street map's (a small step), or drops it (a large one).
+    if (seedWanted && streetActive) {
+      const drawn = globeDraws(v.zoom) ? undefined : { lon: v.lon, lat: v.lat, zoom: toMapZoom(GLOBE_MAX_ZOOM, v.lat), inset: renderer.getInset() };
+      street.seedFrom(renderer.canvas, globeGrid(), drawn);
+    }
     const following = v.zoom >= HANDOVER.followZoom - 1e-9;
     // Hidden, the street map only follows once the camera rests (debounced below), except while a dissolve is about to start.
     if (shown > 0 || crossfading() || (dissolve && v.zoom >= HANDOVER.blendStart - 0.02)) {

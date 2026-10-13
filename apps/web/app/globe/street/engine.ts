@@ -300,6 +300,15 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
   let reportedLost = false;
   const waiters: { value: EasedValue; resolve(): void }[] = [];
 
+  /** The camera of a frame for the ease's warp. The projection centre moves with the padding (the host's inset, the grid's overhang): the same maths as MapLibre's edge insets. */
+  const warpCameraAt = (v: StreetView, pd: { left?: number; right?: number; top?: number; bottom?: number }): WarpCamera => ({
+    lon: v.lon,
+    lat: v.lat,
+    zoom: v.zoom,
+    cx: (artGrid.cssW + (pd.left ?? 0) - (pd.right ?? 0)) / 2,
+    cy: (artGrid.cssH + (pd.top ?? 0) - (pd.bottom ?? 0)) / 2,
+    cell: mapCell(),
+  });
   const compositorOptions = { native, scale };
   const tComp = perfStart();
   const compositor = new Compositor(
@@ -314,17 +323,8 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
         return { w, h, cssW: w / dpr, cssH: h / dpr };
       },
       camera: (): WarpCamera => {
-        // The projection centre moves with the padding (the host's inset, the grid's overhang): the same maths as MapLibre's edge insets.
         const c = map.getCenter();
-        const pd = map.getPadding();
-        return {
-          lon: c.lng,
-          lat: c.lat,
-          zoom: map.getZoom(),
-          cx: (artGrid.cssW + (pd.left ?? 0) - (pd.right ?? 0)) / 2,
-          cy: (artGrid.cssH + (pd.top ?? 0) - (pd.bottom ?? 0)) / 2,
-          cell: mapCell(),
-        };
+        return warpCameraAt({ lon: c.lng, lat: c.lat, zoom: map.getZoom() }, map.getPadding());
       },
       params(outW: number, outH: number): PassParams {
         const dpr = native ? 1 : dprNow();
@@ -780,7 +780,10 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
       compositor.suspend(!on);
       if (on) map.triggerRepaint();
     },
-    seedFrom: (canvas, g) => compositor.seed(canvas, g),
+    seedFrom(canvas, g, drawn) {
+      const camera = drawn && warpCameraAt(drawn, padObj(2 * insetShiftBuf(clampInset(drawn.inset ?? inset, root.clientWidth || 1), cellCss) * cellCss));
+      return compositor.seed(canvas, g, camera);
+    },
     crossfadeTo: (canvas, g) => compositor.crossfadeTo(canvas, g),
     getTileStatus: () => manager.status,
     getMaxZoom: () => manager.status.maxZoom,
@@ -825,6 +828,8 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
         readCodes: () => compositor.readCodes(),
         readPresentedLevels: () => compositor.readPresentedLevels(),
         easing: () => compositor.easing,
+        staleCells: () => compositor.staleCells(),
+        hold: (on) => compositor.hold(on),
         easeStats: () => ({ eases: compositor.stats.eases, warp: { ...compositor.stats.lastWarp }, meshMs: compositor.stats.lastMeshMs }),
         gpuSync: () => compositor.sync(),
         profile: (on) => compositor.profile(on),
