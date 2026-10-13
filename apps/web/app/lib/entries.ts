@@ -72,6 +72,8 @@ export interface EntrySummary {
   date?: string;
   url?: string;
   cover?: PublishedCover;
+  /** Mature content: the entry's images are drawn blurred (`lib/sensitive.ts`). Only ever `true`: absent means not sensitive. */
+  sensitive?: true;
   tags: string[];
   meta: PublishedMetaEntry[];
   places: EntryPlaceLink[];
@@ -88,6 +90,8 @@ export interface EntryRef {
   summary?: string;
   date?: string;
   cover?: PublishedCover;
+  /** Mature content: a tile of the entry blurs its image. Only ever `true`. */
+  sensitive?: true;
 }
 
 export interface EntryDetail extends EntrySummary {
@@ -161,6 +165,7 @@ function toSummary(kind: ContentKind, item: PublishedContentItem, position: numb
     ...(item.date !== undefined ? { date: item.date } : {}),
     ...(item.url !== undefined ? { url: item.url } : {}),
     ...(item.cover !== undefined ? { cover: item.cover } : {}),
+    ...(item.sensitive === true ? { sensitive: true as const } : {}),
     tags: item.tags ?? [],
     meta: item.meta ?? [],
     places: placeLinks(kind, item, l.byPlace, l.relating),
@@ -176,6 +181,7 @@ const toRef = (kind: ContentKind, item: PublishedContentItem, position: number):
   ...(item.summary !== undefined ? { summary: item.summary } : {}),
   ...(item.date !== undefined ? { date: item.date } : {}),
   ...(item.cover !== undefined ? { cover: item.cover } : {}),
+  ...(item.sensitive === true ? { sensitive: true as const } : {}),
 });
 
 /** Weights of `relatedScore`: a shared place says more than a shared tag; the same kind only breaks a tie. */

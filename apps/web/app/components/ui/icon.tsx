@@ -9,6 +9,8 @@ import {
   Command,
   Copy,
   CornerDownLeft,
+  Eye,
+  EyeOff,
   Feather,
   FileText,
   Hash,
@@ -55,6 +57,8 @@ export const ICONS = {
   link: Link2,
   hash: Hash,
   search: Search,
+  eye: Eye,
+  "eye-off": EyeOff,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

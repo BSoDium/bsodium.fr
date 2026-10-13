@@ -4,6 +4,7 @@
  */
 import type { EntryDetail } from "./entries";
 import { isScrapableImage, absoluteUrl } from "./meta";
+import { shareableCover } from "./sensitive";
 import { SITE_DESCRIPTION, SITE_NAME } from "./site";
 
 type Json = Record<string, unknown>;
@@ -36,7 +37,9 @@ export function websiteJsonLd(origin: string): Json {
 export function entryJsonLd(entry: EntryDetail, origin: string): Json {
   const url = absoluteUrl(entry.href, origin);
   const type = entry.kind === "article" ? "Article" : entry.kind === "project" && isCodeRepository(entry.url) ? "SoftwareSourceCode" : "CreativeWork";
-  const cover = entry.cover && isScrapableImage(entry.cover.src) ? absoluteUrl(entry.cover.src, origin) : undefined;
+  // a sensitive entry has no `image` at all: structured data is what a search result is built from
+  const shareable = shareableCover(entry);
+  const cover = shareable && isScrapableImage(shareable.src) ? absoluteUrl(shareable.src, origin) : undefined;
   return {
     "@context": "https://schema.org",
     "@type": type,

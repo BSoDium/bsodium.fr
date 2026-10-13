@@ -211,3 +211,53 @@ describe("EntryView", () => {
     });
   });
 });
+
+describe("EntryView of a sensitive entry (mature content)", () => {
+  const cover = demo.artworks.find((a) => a.slug === "figure-study-two")!.cover!;
+  const sensitive = (layout: "panel" | "full") => render("artwork", "figure-study-two", layout);
+  it("blurs the cover and every image block from the server render, in the panel and in full screen, each with its control slot", () => {
+    for (const layout of ["panel", "full"] as const) {
+      const html = sensitive(layout);
+      expect(html, layout).toContain('data-sensitive=""');
+      expect((html.match(/data-slot="sensitive-media"/g) ?? []).length, layout).toBe(2); // the cover and the one image block
+      expect((html.match(/data-slot="sensitive-media"[^>]*data-state="hidden"/g) ?? []).length, layout).toBe(2);
+      expect(html.match(/data-state="revealed"/g) ?? [], layout).toEqual([]);
+      expect((html.match(/Mature content/g) ?? []).length, layout).toBeGreaterThanOrEqual(2);
+      // the sharp picture is only ever inside a frame: no <img> of this entry is outside one
+      const body = html.slice(0, html.indexOf('data-slot="entry-more"') === -1 ? undefined : html.indexOf('data-slot="entry-more"'));
+      for (const img of body.matchAll(/<img\b[^>]*>/g)) {
+        const at = img.index!;
+        expect(body.slice(Math.max(0, at - 40), at), `${layout}: ${img[0]}`).toContain('class="sensitive-media-content">');
+      }
+      // the alt text is as authored
+      expect(html).toContain(`alt="${cover.alt}"`);
+    }
+  });
+  it("does not blur the generated cover art (it is not a picture of anything) nor an ordinary artwork", () => {
+    const generated = renderToStaticMarkup(
+      createElement(StaticRouter, { location: "/" }, createElement(EntryView, { entry: { ...getEntryDetail(demo, "artwork", "figure-study-two")!, cover: undefined }, layout: "panel" })),
+    );
+    expect(generated).toContain('data-slot="cover-art"');
+    // the image block is still blurred
+    expect((generated.match(/data-slot="sensitive-media"/g) ?? []).length).toBe(1);
+    const ordinary = render("artwork", "altiplano-sediment", "panel");
+    expect(ordinary).not.toContain("sensitive-media");
+    expect(ordinary).not.toContain("Mature content");
+    expect(ordinary).not.toContain("data-sensitive");
+  });
+  it("blurs the card of a sensitive entry among the related ones of another, with no control", () => {
+    const html = render("artwork", "demo-artwork", "panel");
+    const more = html.slice(html.indexOf('data-slot="entry-more"'));
+    expect(more).toContain("/artworks/figure-study-two");
+    expect((more.match(/data-slot="sensitive-media"/g) ?? []).length).toBe(1);
+    expect(more).not.toContain("<button");
+    // the entry's own cover (not sensitive) is untouched
+    expect(html.slice(0, html.indexOf('data-slot="entry-more"'))).not.toContain("sensitive-media");
+  });
+  it("keeps the whole text of the page (only the images are guarded) and says each image is hidden where there is no control yet", () => {
+    const text = sensitive("panel").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    expect(text).toContain("Figure Study in Charcoal");
+    expect(text).toContain("Made in a single three-hour session");
+    expect((text.match(/Image hidden/g) ?? []).length).toBe(2);
+  });
+});

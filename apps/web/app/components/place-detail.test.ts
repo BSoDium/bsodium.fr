@@ -33,4 +33,16 @@ describe("PlaceDetail", () => {
     expect(html).not.toMatch(/Nothing is linked|Entries/);
     expect(html).not.toContain("ds-frame");
   });
+  it("blurs the card of a sensitive entry in the place's list, with no control, and not its neighbour", () => {
+    const html = render("kyoto");
+    expect((html.match(/data-slot="sensitive-media"/g) ?? []).length).toBe(1);
+    expect(html).toContain("Mature content");
+    expect(html).not.toContain("<button");
+    const sensitive = html.slice(html.indexOf('id="figure-study-two"'));
+    expect(sensitive.slice(0, sensitive.indexOf("</article>"))).toContain('data-state="hidden"');
+    // the other card of the same place is an ordinary one
+    const ordinary = html.slice(html.indexOf('id="demo-artwork"'));
+    expect(ordinary.slice(0, ordinary.indexOf("</article>"))).not.toContain("sensitive-media");
+    expect(render("lisbon")).not.toContain("sensitive-media");
+  });
 });

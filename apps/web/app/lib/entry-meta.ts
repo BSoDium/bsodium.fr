@@ -2,6 +2,7 @@ import { KIND_LABELS, KIND_PLURALS, type EntryDetail } from "./entries";
 import { safeMediaSrc } from "./entry-blocks";
 import { entryJsonLd } from "./json-ld";
 import { pageMeta } from "./meta";
+import { isSensitive, shareableCover } from "./sensitive";
 import { archiveLine } from "./site";
 
 interface Base {
@@ -11,14 +12,16 @@ interface Base {
 
 /**
  * Head tags of an entry route: title, summary as the description, canonical, Open Graph and Twitter tags, JSON-LD and the share image
- * (the entry's authored cover when it sits on a safe `/media/` path and is a format scrapers read, else the site's default). `base` is
- * `metaBase(args)`: the site origin and the page path.
+ * (the entry's authored cover when it sits on a safe `/media/` path and is a format scrapers read, else the site's default; never
+ * the cover of a sensitive entry, which also asks search engines not to index the page's images). `base` is `metaBase(args)`: the
+ * site origin and the page path.
  */
 export function entryMeta(data: { entry: EntryDetail; origin?: string } | undefined, base: Base = {}) {
   if (!data) return pageMeta({ title: "Not found", description: "There is nothing at this address.", noindex: true });
   const { entry } = data;
   const origin = base.origin ?? data.origin;
-  const cover = entry.cover && safeMediaSrc(entry.cover.src) ? entry.cover : undefined;
+  const shareable = shareableCover(entry);
+  const cover = shareable && safeMediaSrc(shareable.src) ? shareable : undefined;
   return pageMeta({
     title: entry.title,
     description: entry.summary ?? archiveLine(KIND_LABELS[entry.kind]),
@@ -28,6 +31,7 @@ export function entryMeta(data: { entry: EntryDetail; origin?: string } | undefi
     path: entry.href,
     publishedTime: entry.date,
     tags: entry.tags,
+    noImageIndex: isSensitive(entry),
     jsonLd: origin ? entryJsonLd(entry, origin) : undefined,
   });
 }
