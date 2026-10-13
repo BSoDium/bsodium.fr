@@ -30,39 +30,29 @@ export function openSearch(): void {
 }
 
 /**
- * The header's two forms of the trigger (the icon with the key hint from 28 rem of header width, the one word "Search" under it: a
- * phone). They only send the open event: the palette itself (`SearchPalette`) is mounted once, next to the header and not inside it, so
- * that the header can come and go (the home page's header is absent while the hero is at rest) without closing a palette that is open.
+ * The header's search trigger, one control at every width: the search icon, the word "Search" and the key hint (command icon + K, or
+ * Ctrl K) as one run of the header's own type (`.nav-link`, mono capitals), so it reads as the sixth item of the row and not as an icon
+ * apart. The two glyphs are the SAME size, 1.1 em of that type (both `inline`; `.nav-search .ds-kbd` takes the row's size, not the hint's
+ * own 13 px), and the row centres them on the capitals' middle. Under 22 rem of header (a 320 px phone) the icon is not drawn and the
+ * row keeps the one word; the hint is drawn from 36 rem. It only
+ * sends the open event: the palette itself (`SearchPalette`) is mounted once, next to the header and not inside it, so that the header
+ * can come and go (the home page's header is absent while the hero is at rest) without closing a palette that is open.
  */
 export function SearchTriggers() {
   return (
-    <>
-      {/* Where the icon trigger below is not shown (the header is under 28 rem: a phone), the same control as one quiet word: a 44 px target. */}
-      <button
-        type="button"
-        onClick={openSearch}
-        aria-keyshortcuts="Control+K Meta+K"
-        aria-haspopup="dialog"
-        data-slot="search-trigger-compact"
-        data-needs-script=""
-        className="nav-link pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground @md:hidden"
-      >
-        Search
-      </button>
-      <button
-        type="button"
-        onClick={openSearch}
-        aria-label="Search"
-        aria-keyshortcuts="Control+K Meta+K"
-        aria-haspopup="dialog"
-        data-slot="search-trigger"
-        data-needs-script=""
-        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2.5 px-2 text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground @md:inline-flex"
-      >
-        <Icon name="search" size="control" />
-        <KeyHint className="hidden @xl:inline-flex" />
-      </button>
-    </>
+    <button
+      type="button"
+      onClick={openSearch}
+      aria-keyshortcuts="Control+K Meta+K"
+      aria-haspopup="dialog"
+      data-slot="search-trigger"
+      data-needs-script=""
+      className="nav-link nav-search pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground"
+    >
+      <Icon name="search" size="inline" />
+      <span>Search</span>
+      <KeyHint className="hidden @xl:inline-flex" />
+    </button>
   );
 }
 

@@ -13,7 +13,7 @@ import {
   verseIndent,
   type OutlineItem,
 } from "~/lib/entry-blocks";
-import { dropCapIndex } from "~/lib/entry-typography";
+import { dropCapIndex, dropCapKind } from "~/lib/entry-typography";
 import { cn } from "~/lib/utils";
 
 type Block = PublishedBodyBlock;
@@ -106,7 +106,7 @@ function BlockView({
   switch (block.type) {
     case "paragraph":
       return (
-        <p className={cn("m-0", dropCap && "drop-cap")}>
+        <p className={cn("m-0", dropCap && "drop-cap")} data-drop-cap={dropCap ? (dropCapKind(block.text) ?? "plain") : undefined}>
           <Lines text={block.text} />
         </p>
       );

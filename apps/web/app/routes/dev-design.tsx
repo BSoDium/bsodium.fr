@@ -279,6 +279,15 @@ function Icons() {
           <KeyHint />
         </div>
       </Spec>
+      <Spec caption="The header's search trigger: icon, word and hint in the header's mono capitals; the icon and the command key are one size (inline, 1.1 em of 12 px)">
+        <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
+          <span className="nav-link nav-search inline-flex min-h-11 items-center">
+            <Icon name="search" size="inline" />
+            <span>Search</span>
+            <KeyHint />
+          </span>
+        </div>
+      </Spec>
     </Stack>
   );
 }

@@ -69,13 +69,19 @@ describe("EntryListPage", () => {
   it("shows the empty state and no filter for no entries", () => {
     const html = render([]);
     expect(html).toContain("Nothing here yet");
+    expect(html).toContain(">0 articles<");
+    expect(html).not.toContain("list-standfirst");
     expect(html).not.toContain('data-slot="tag-filter"');
   });
   it("sets the entries as hairline rows of type: a mono dateline, the title in the display role, no card, box or generated cover for an article", () => {
     const html = render(articles);
     expect(html).toContain('data-surface="reading"');
-    expect(html).toMatch(/<h1[^>]*class="entry-title/);
-    expect(html).toContain('class="entry-rule"');
+    // the head is a journal's: a running head over one hairline, the title, a computed standfirst; no masthead double rule
+    expect(html).toMatch(/<h1[^>]*class="list-title"/);
+    expect(html).toMatch(/<p class="list-running[^"]*">.*?Elliot N\u00E9grel-Jerzy.*?data-slot="list-count"/s);
+    expect(html).toContain('data-slot="list-standfirst"');
+    expect(html).not.toContain("entry-rule");
+    expect((html.match(/<h1/g) ?? []).length).toBe(1);
     expect((html.match(/entry-row/g) ?? []).length).toBe(articles.length);
     expect(html).toMatch(/<h2[^>]*class="type-display-md[^"]*"/);
     expect(html).toContain("type-meta");

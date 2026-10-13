@@ -18,7 +18,7 @@ async function render(url: string, { shell = true, heroResting }: { shell?: bool
 describe("Navbar", () => {
   it("has no logo: the first item is \"Globe\" as plain text, a link home; then the four sections, in order, then the search", async () => {
     const html = await render("/articles", { shell: false });
-    // the only drawing in the header is the search icon, after the links: no mark, no icon in front of the name
+    // the only drawing in the header is the search icon (before its word), after the links: no mark, no icon in front of the name
     expect(html.indexOf("<svg")).toBeGreaterThan(html.indexOf('href="/poetry"'));
     expect(html.match(/<svg/g)).toHaveLength(1);
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
@@ -66,22 +66,30 @@ describe("Navbar", () => {
     }
   });
 
-  it("offers the search as one word where the icon trigger is not shown (a phone), after the links, with no drawing", async () => {
+  it("offers the search as one control at every width: the icon, the word \"Search\" and the key hint, in the type of the other items, after the links", async () => {
     const html = await render("/articles", { shell: false });
-    const compact = html.indexOf('data-slot="search-trigger-compact"');
-    expect(compact).toBeGreaterThan(html.indexOf('href="/poetry"'));
-    expect(html.slice(compact, html.indexOf("</button>", compact))).toMatch(/>Search$/);
-    expect(html.slice(compact, html.indexOf("</button>", compact))).not.toContain("<svg");
-    expect(html.slice(compact, html.indexOf("</button>", compact))).toContain("@md:hidden");
+    const at = html.indexOf('data-slot="search-trigger"');
+    expect(at).toBeGreaterThan(html.indexOf('href="/poetry"'));
+    expect(html.match(/data-slot="search-trigger/g)).toHaveLength(1);
+    const button = html.slice(at, html.indexOf("</button>", at));
+    // the icon, then the word, then the hint (empty until hydrated: its place is held), as one run of the nav type
+    expect(button.indexOf("<svg")).toBeGreaterThan(-1);
+    expect(button.indexOf("<svg")).toBeLessThan(button.indexOf("<span>Search</span>"));
+    expect(button.indexOf("<span>Search</span>")).toBeLessThan(button.indexOf("<kbd"));
+    // the glyph is an inline icon (1.1 em of the nav type), like the command key it sits beside: one size, not 20 px against 14 px
+    expect(button).toContain('data-size="inline"');
+    expect(button).not.toContain('data-size="control"');
+    const opening = html.slice(html.lastIndexOf("<button", at), at + 400);
+    expect(opening).toMatch(/class="nav-link nav-search[^"]*min-h-11 min-w-11/);
+    expect(opening).toContain('aria-keyshortcuts="Control+K Meta+K"');
   });
 
-  it("marks the search triggers as needing a script (not drawn without one: a dead control), keeps the links, and gives every item a 44 px target", async () => {
+  it("marks the search trigger as needing a script (not drawn without one: a dead control), keeps the links, and gives every item a 44 px target", async () => {
     const html = await render("/articles", { shell: false });
-    expect(html.match(/data-needs-script=""/g)).toHaveLength(2);
-    expect(html).toMatch(/data-slot="search-trigger-compact"[^>]*data-needs-script=""/);
+    expect(html.match(/data-needs-script=""/g)).toHaveLength(1);
     expect(html).toMatch(/data-slot="search-trigger"[^>]*data-needs-script=""/);
-    // the shortest word ("Globe") is as wide as it is tall at the smallest phone
-    expect(html.match(/class="nav-link[^"]*min-h-11 min-w-11[^"]*"/g)?.length).toBeGreaterThanOrEqual(5);
+    // the shortest word ("Globe") is as wide as it is tall at the smallest phone, and the trigger is the same height as the links
+    expect(html.match(/class="nav-link[^"]*min-h-11 min-w-11[^"]*"/g)?.length).toBeGreaterThanOrEqual(6);
   });
 
   it("marks the current page with aria-current on the name (when it is shown) or the section", async () => {

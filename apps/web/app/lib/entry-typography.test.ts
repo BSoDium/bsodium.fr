@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dropCapIndex, DROP_CAP_MIN_LENGTH, formatMonthYear, headlineScale, linkedLine, splitFigures, splitHeadline } from "./entry-typography";
+import { dropCapIndex, dropCapKind, DROP_CAP_MIN_LENGTH, formatMonthYear, headlineScale, linkedLine, splitFigures, splitHeadline } from "./entry-typography";
 
 describe("splitHeadline", () => {
   it("leaves a title without a separator as one heavy run", () => {
@@ -42,9 +42,9 @@ describe("formatMonthYear", () => {
 
 describe("dropCapIndex", () => {
   const long = "x".repeat(DROP_CAP_MIN_LENGTH);
-  it("is the first block when it is a long paragraph that starts with a letter", () => {
+  it("is the first block when it is a long paragraph that starts with a capital letter", () => {
     expect(dropCapIndex([{ type: "paragraph", text: `A${long}` }])).toBe(0);
-    expect(dropCapIndex([{ type: "paragraph", text: `\u201CA${long}` }])).toBe(0);
+    expect(dropCapIndex([{ type: "paragraph", text: `T${long}` }])).toBe(0);
     expect(dropCapIndex([{ type: "paragraph", text: `\u00C9t\u00E9${long}` }])).toBe(0);
   });
   it("is -1 for a short paragraph, a body that does not open with a paragraph, or a first character that is not a letter", () => {
@@ -52,6 +52,28 @@ describe("dropCapIndex", () => {
     expect(dropCapIndex([{ type: "heading", level: 2, text: "H" }, { type: "paragraph", text: `A${long}` }])).toBe(-1);
     expect(dropCapIndex([{ type: "paragraph", text: `\u2014${long}` }])).toBe(-1);
     expect(dropCapIndex([])).toBe(-1);
+  });
+});
+
+describe("dropCapKind", () => {
+  const long = " " + "word ".repeat(DROP_CAP_MIN_LENGTH / 5);
+  it("takes a capital and an accented capital (with room for the mark)", () => {
+    expect(dropCapKind(`A${long}`)).toBe("plain");
+    expect(dropCapKind(`W${long}`)).toBe("plain");
+    expect(dropCapKind(`J${long}`)).toBe("plain");
+    expect(dropCapKind(`\u0152uvre${long}`)).toBe("plain");
+    expect(dropCapKind(`\u00C9crit${long}`)).toBe("accent");
+    expect(dropCapKind(`\u00C0 ${long}`)).toBe("accent");
+    expect(dropCapKind(`   T${long}`)).toBe("plain");
+  });
+  it("skips an opening quote or bracket, a letter that hangs below the baseline, a lowercase start and a capital followed by a mark (an elision too)", () => {
+    for (const lead of ["\u00ABIl", "\u201CA", "\"A", "'A", "(A", "Quand", "\u00C7a", "answer", "I,", "A.", "\u00E9t\u00E9", "L'exil", "L\u2019exil", "I'm"]) {
+      expect(dropCapKind(`${lead}${long}`), lead).toBeNull();
+    }
+  });
+  it("skips a paragraph shorter than the threshold", () => {
+    expect(dropCapKind("A short one.")).toBeNull();
+    expect(dropCapKind("A".repeat(DROP_CAP_MIN_LENGTH - 1))).toBeNull();
   });
 });
 

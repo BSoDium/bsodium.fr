@@ -79,6 +79,18 @@ describe("key hints are plain text", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("in the header the search icon and the command key are one size: both inline icons of one font size", () => {
+    const palette = code(read("components/search-palette.tsx"));
+    const trigger = palette.slice(palette.indexOf("export function SearchTriggers"), palette.indexOf("export function SearchPalette"));
+    // the glyph is an inline icon (1.1 em), not the control size: it follows the type it sits in, as the command key does
+    expect(trigger).toMatch(/<Icon name="search" size="inline" \/>/);
+    expect(trigger).not.toMatch(/size="control"/);
+    // and the key hint takes the row's font size there (it is 13 px elsewhere), so the command key's 1.1 em is the same number of pixels
+    const rule = css.slice(css.indexOf("  .nav-search .ds-kbd {"), css.indexOf("\n  }", css.indexOf("  .nav-search .ds-kbd {")));
+    expect(rule).toContain("font-size: inherit");
+    expect(code(read("components/ui/key-hint.tsx"))).toMatch(/<Icon name="command" size="inline" \/>/);
+  });
+
   it("the palette's close and its footer hint are an icon and plain words, no boxed key", () => {
     const palette = code(read("components/search-palette.tsx"));
     expect(palette).not.toMatch(/ds-micro/);

@@ -67,6 +67,23 @@ export function yearOf(date: string | undefined): number | null {
   return match ? Number(match[1]) : null;
 }
 
+/**
+ * The line under a list's title, computed from what the entries publish and nothing else: the years they span and how many places
+ * they are set in ("From 2019 to 2026, across 9 places.", "2026, in Paris."). `null` when no entry has a year or a place.
+ */
+export function listSpan(items: readonly Pick<EntrySummary, "date" | "places">[]): string | null {
+  const years = items.map((i) => yearOf(i.date)).filter((y): y is number => y !== null);
+  const places = new Map<string, string>();
+  for (const item of items) for (const p of item.places) places.set(p.slug, p.name);
+  const first = years.length > 0 ? Math.min(...years) : null;
+  const last = years.length > 0 ? Math.max(...years) : null;
+  const range = first === null || last === null ? null : first === last ? `${first}` : `${first} to ${last}`;
+  const where = places.size === 0 ? null : places.size === 1 ? `in ${[...places.values()][0]}` : `across ${places.size} places`;
+  if (range && where) return `${range}, ${where}.`;
+  if (range) return first === last ? `${range}.` : `From ${range}.`;
+  return where ? `${where[0]!.toUpperCase()}${where.slice(1)}.` : null;
+}
+
 /** Groups entries by year, newest year first; inside a year the newest first (by the date string, which sorts as written), authored order breaking ties; undated entries last. */
 export function groupByYear<T extends Pick<EntrySummary, "date">>(items: readonly T[]): YearGroup<T>[] {
   const byYear = new Map<number | null, { item: T; order: number }[]>();
