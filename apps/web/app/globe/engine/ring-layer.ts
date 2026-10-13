@@ -4,9 +4,9 @@
  * "Ring of type".
  *
  * Why a 2D canvas and not DOM text or the pixel buffer:
- * - Not the pixel buffer. The glyphs are rotated, sheared and foreshortened every frame (the ring is a 3D object seen in perspective); a
- *   5 x 7 bitmap font cannot be turned, and the labels of the map were moved out of the pixel buffer into device-pixel text for the same reason
- *   (engine/label-text.ts). The ring is drawn in the labels' own type (`--font-mono`), crisp at the device's resolution, in palette tones.
+ * - Not the pixel buffer. The glyphs turn about the planet every frame (each is rotated to its place on the circle); a 5 x 7 bitmap font cannot
+ *   be turned, and the labels of the map were moved out of the pixel buffer into device-pixel text for the same reason (engine/label-text.ts).
+ *   The ring is drawn in the labels' own type (`--font-mono`), crisp at the device's resolution, in palette tones.
  * - Not DOM text. 250 absolutely positioned glyph elements with a matrix each would be 250 style writes a frame and 250 elements for a
  *   crawler, a text search and a screen reader's virtual cursor to skip; a canvas is one element with no text in the page. The one thing a
  *   canvas cannot do is be selected, which is what is wanted.
@@ -14,21 +14,19 @@
  * Cost model. Nothing runs while the ring is not shown (`alpha` 0: the wrapper is hidden, no timer, no listener but the page's visibility).
  * While shown it draws on the frames the globe draws anyway (the camera moved: the ring must be where the planet is, in the same frame) and, on
  * its own clock, at most one frame per `RING.frameMs` for the slow turn; never under reduced motion (a static ring) nor in a hidden tab. A
- * frame is a clear of the ring's bounding box and about 150 `fillText`s with a matrix each, with no layout and no DOM read. The canvas is
+ * frame is a clear of the ring's bounding box and about 100 `drawImage`s of an atlas cell with a rotation each, with no layout and no DOM read. The canvas is
  * sized to the ring's bounding box (grown, rarely shrunk), not to the window.
  */
 import type { GlobeTheme } from "./colors";
-import { cameraDistance, focalPx } from "./geo";
-import { GlyphBuffer, placeGlyphs, ringPhase, ringRepeats, ringTone } from "./ring";
+import { GlyphBuffer, placeGlyphs, ringLayout, ringPhase, ringTone, type RingLayout } from "./ring";
 import { RING } from "./tuning";
 
 export interface RingFrame {
   /** Centre of the planet on the container, CSS px. */
   cx: number;
   cy: number;
-  /** Camera distance in earth radii and the viewport's focal length (CSS px). */
-  d: number;
-  f: number;
+  /** The planet's silhouette radius now, CSS px (`silhouetteRadiusPx`). */
+  r: number;
   /** `ringAlpha` of the zoom, 0..1. */
   alpha: number;
   /** The container's size, CSS px (the canvas never goes beyond it). */
@@ -41,8 +39,13 @@ export interface RingState {
   level: number;
   alpha: number;
   repeats: number;
+  /** Tracking the layout picked so that the line closes, em. */
+  tracking: number;
   glyphs: number;
+  /** Em of every letter, CSS px, and the radii of the baseline and of the letters' centres. */
   em: number;
+  baseline: number;
+  radius: number;
   looping: boolean;
   /** The ring's turn now, degrees (its own clock). */
   phaseDeg: number;
@@ -51,12 +54,12 @@ export interface RingState {
   lastMs: number;
   totalMs: number;
   canvas: { width: number; height: number; left: number; top: number; dpr: number };
-  /** Extent of the ring's glyph centres, container CSS px (all of the ring's glyphs, drawn or not). */
+  /** Extent of the circle the letters' centres lie on, container CSS px. */
   bounds: { minX: number; maxX: number; minY: number; maxY: number };
 }
 
 /**
- * The glyphs are not drawn with `fillText`: a canvas draws TURNED or SHEARED text as outlines on the main thread (measured: 6 ms of the main
+ * The glyphs are not drawn with `fillText`: a canvas draws TURNED text as outlines on the main thread (measured: 6 ms of the main
  * thread's commit per 250-glyph frame in headless Chrome with the GPU on, against 0.13 ms for the same frame with upright text). Each distinct
  * character is drawn once, upright, into a small atlas (one per palette tone, `ATLAS_EM` CSS px, at the device's resolution), and a frame is
  * `drawImage` of one cell per glyph with its matrix: a textured quad on the GPU, mipmapped on the way down.
@@ -80,7 +83,7 @@ export class RingLayer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D | null;
   private text: string;
-  private repeats = 1;
+  private layout: RingLayout = { repeats: 1, emPerR: 0.04, tracking: 0.14 };
   private theme: GlobeTheme;
   private reduced: boolean;
   private hidden = typeof document !== "undefined" && document.hidden;
@@ -132,11 +135,12 @@ export class RingLayer {
     return this.shown;
   }
 
-  /** The camera at the lowest zoom (focal length and distance): how many times the line goes round follows from it, and only changes with the viewport. */
-  setLayout(f: number, d: number): void {
-    const n = ringRepeats(this.text.length, f, d);
-    if (n === this.repeats) return;
-    this.repeats = n;
+  /** The silhouette's radius at the lowest zoom (CSS px): how the line closes round the ring (`ringLayout`) follows from it, and only changes with the viewport. */
+  setLayout(rFloorPx: number): void {
+    const next = ringLayout(this.text.length, rFloorPx);
+    const cur = this.layout;
+    if (next.repeats === cur.repeats && next.emPerR === cur.emPerR && next.tracking === cur.tracking) return;
+    this.layout = next;
     this.redraw();
   }
 
@@ -175,11 +179,14 @@ export class RingLayer {
     const f = this.frame;
     return {
       shown: this.shown,
-      level: f ? ringTone(f.alpha, this.theme.ramp.length, "front") : 0,
+      level: f ? ringTone(f.alpha, this.theme.ramp.length) : 0,
       alpha: f?.alpha ?? 0,
-      repeats: this.repeats,
+      repeats: this.layout.repeats,
+      tracking: this.layout.tracking,
       glyphs: this.glyphs.count,
       em: this.glyphs.em,
+      baseline: this.glyphs.baseline,
+      radius: this.glyphs.radius,
       looping: this.raf !== 0,
       phaseDeg: (this.phase * 180) / Math.PI,
       frames: this.frames,
@@ -289,8 +296,8 @@ export class RingLayer {
     const ctx = this.ctx;
     if (!fr || !ctx) return;
     const levels = this.theme.ramp.length;
-    const front = ringTone(fr.alpha, levels, "front");
-    if (front <= 0) {
+    const level = ringTone(fr.alpha, levels);
+    if (level <= 0) {
       if (this.shown) this.hide();
       return;
     }
@@ -304,7 +311,7 @@ export class RingLayer {
     this.drawnAt = now;
     this.frames++;
     const g = this.glyphs;
-    placeGlyphs(g, { text: this.text, repeats: this.repeats, phase: this.phase, f: fr.f, d: fr.d, cx: fr.cx, cy: fr.cy });
+    placeGlyphs(g, { text: this.text, layout: this.layout, phase: this.phase, r: fr.r, cx: fr.cx, cy: fr.cy });
     const pad = g.em * 1.6;
     const left = Math.max(0, Math.floor(g.minX - pad));
     const top = Math.max(0, Math.floor(g.minY - pad));
@@ -345,48 +352,23 @@ export class RingLayer {
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.allocW, this.allocH);
-    // One local px of a glyph's matrix is one px of the nominal em `g.em`; the atlas cell is drawn at `ATLAS_EM`.
-    const k = g.em / ATLAS_EM;
-    const radius = fr.f / Math.sqrt(fr.d * fr.d - 1);
-    const levelBack = ringTone(fr.alpha, levels, "back");
+    // The atlas cell is drawn at `ATLAS_EM`; a letter is `g.em`. The cell's centre is the capital's centre: each letter turns about it to its
+    // angle (clockwise from twelve o'clock), its top pointing away from the planet.
+    const atlas = this.atlas(Math.min(level, levels - 1), dpr);
+    if (!atlas) return;
+    const m = (dpr * g.em) / ATLAS_EM;
     const ox = -left * dpr;
     const oy = -top * dpr;
-    // The far arc first, with what the planet covers cut out; then the near arc over everything (and over the planet).
-    for (let pass = 0; pass < 2; pass++) {
-      const nearArc = pass === 1;
-      const level = nearArc ? front : levelBack;
-      if (level <= 0) continue;
-      const atlas = this.atlas(Math.min(level, levels - 1), dpr);
-      if (!atlas) continue;
-      ctx.save();
-      if (!nearArc) {
-        // Everything outside the silhouette circle (a little larger than the pixelated disc's own edge, never smaller: no glyph shows through the planet).
-        ctx.setTransform(dpr, 0, 0, dpr, ox, oy);
-        ctx.beginPath();
-        ctx.rect(0, 0, fr.width, fr.height);
-        ctx.arc(fr.cx, fr.cy, radius + 1, 0, Math.PI * 2);
-        ctx.clip("evenodd");
-      }
-      const r2 = (radius - g.em * 0.5) * (radius - g.em * 0.5);
-      for (let i = 0; i < g.count; i++) {
-        if ((g.front[i] === 1) !== nearArc) continue;
-        if (!nearArc) {
-          const dx = g.x[i]! - fr.cx;
-          const dy = g.y[i]! - fr.cy;
-          if (dx * dx + dy * dy < r2) continue; // wholly behind the planet
-        }
-        const col = atlas.col.get(g.code[i]!);
-        if (col === undefined) continue;
-        const m = dpr * k;
-        ctx.setTransform(g.a[i]! * m, g.b[i]! * m, g.c[i]! * m, g.d[i]! * m, g.x[i]! * dpr + ox, g.y[i]! * dpr + oy);
-        ctx.drawImage(atlas.canvas, col * CELL_W * dpr, 0, CELL_W * dpr, CELL_H * dpr, -CELL_W / 2, -CELL_H / 2, CELL_W, CELL_H);
-      }
-      ctx.restore();
+    const cw = CELL_W * dpr;
+    const ch = CELL_H * dpr;
+    for (let i = 0; i < g.count; i++) {
+      const col = atlas.col.get(g.code[i]!);
+      if (col === undefined) continue;
+      const a = g.angle[i]!;
+      const c = Math.cos(a) * m;
+      const sn = Math.sin(a) * m;
+      ctx.setTransform(c, sn, -sn, c, g.x[i]! * dpr + ox, g.y[i]! * dpr + oy);
+      ctx.drawImage(atlas.canvas, col * cw, 0, cw, ch, -CELL_W / 2, -CELL_H / 2, CELL_W, CELL_H);
     }
   }
-}
-
-/** The camera numbers the layer needs, from the viewport's height and the zoom (so the renderer does not allocate a basis per frame). */
-export function ringCamera(zoom: number, viewportHeight: number): { f: number; d: number } {
-  return { f: focalPx(viewportHeight), d: cameraDistance(zoom, viewportHeight) };
 }

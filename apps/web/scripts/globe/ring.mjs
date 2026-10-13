@@ -14,7 +14,7 @@
 //          390x844, 844x390 and 1920x1080
 // layers   wrapper is aria-hidden, pointer-events none, after the GL canvas and before the labels in the stacking order; a point on the ring
 //          still hits the globe's canvas (drag and wheel work through it); the ring's text is not in the page's text
-// spin     the ring turns on its own clock at RING.degPerSec in its direction, with no GL frame and no camera tick, a repaint at most every
+// spin     the ring turns clockwise on its own clock at RING.degPerSec, with no GL frame and no camera tick, a repaint at most every
 //          RING.frameMs; not coupled to the globe's idle rotation
 // reduced  under reduced motion the ring is there and static: no rAF call, the same phase
 // panel    the panel's inset: the lowest zoom follows the free area, the ring is inside it
@@ -31,6 +31,11 @@ const expect = (name, ok, detail) => {
   if (!ok) failures.push(name);
 };
 const note = (s) => console.log(`note ${s}`);
+
+// The line of the ring (app/globe/ring-text.ts, joined by engine/ring.ts `ringText`): its length and its letters that are not spaces.
+const LINE = "ELLIOT N\u00c9GREL-JERZY \u00b7 FRONT-END ENGINEER \u00b7 DATA VISUALISATION \u00b7 CARTOGRAPHY \u00b7 DESIGN SYSTEMS \u00b7 PARIS \u00b7 ";
+const LINE_LENGTH = LINE.length;
+const NONSPACE = LINE.replace(/ /g, "").length;
 
 const URL_RING = "/?globe-debug&no-street&ring";
 const openRing = async (browser, ctxOpts = DESKTOP, path = URL_RING, opts = {}) => {
@@ -159,6 +164,18 @@ try {
       // The header row (centred, the top 56 px) is clear of the ring unless the viewport is a landscape phone.
       if (h >= 700) expect(`${name}: the ring stays below the header`, b.minY >= 56, b);
       expect(`${name}: the planet's silhouette is inside as well`, r.silhouettePx * 2 <= Math.min(w, h), r);
+      // The flat ring: concentric with the disc (the globe is centred on the free area), the letters' bottoms outside the silhouette by the gap,
+      // a whole number of turns of the line, every letter the same size.
+      const cxr = (b.minX + b.maxX) / 2;
+      const cyr = (b.minY + b.maxY) / 2;
+      expect(`${name}: concentric with the planet (the centre of the viewport)`, Math.abs(cxr - w / 2) < 1.5 && Math.abs(cyr - h / 2) < 1.5, { cxr, cyr });
+      const gap = r.baseline - r.silhouettePx;
+      expect(`${name}: the baseline is the silhouette's radius plus the gap (6 %)`, Math.abs(gap - 0.06 * r.silhouettePx) < 0.5, { gap, r: r.silhouettePx });
+      expect(`${name}: the line goes round a whole number of times (${r.glyphs} letters = ${r.repeats} x ${NONSPACE})`, r.glyphs === r.repeats * NONSPACE && Number.isInteger(r.repeats), r);
+      // Even spacing: the advance along the baseline times the number of glyph slots is the circumference.
+      const slots = r.repeats * LINE_LENGTH;
+      const closes = Math.abs(slots * r.em * (0.6 + r.tracking) - 2 * Math.PI * r.baseline) < 0.5;
+      expect(`${name}: the seam closes evenly (tracking ${r.tracking.toFixed(3)} em)`, closes, { slots, em: r.em, tracking: r.tracking, baseline: r.baseline });
       // Asking for less than the floor changes nothing.
       const below = await goto(page, n.min - 2);
       const v = await page.evaluate(() => window.__globeDebug.view());
@@ -195,7 +212,7 @@ try {
     expect("pointer-events none (the wrapper and the canvas)", info.pointerEvents === "none" && info.canvasPointer === "none", info);
     expect("after the GL canvas, below the labels", info.afterGl === true && info.labelsZ === "1" && info.ringZ === "auto", info);
     expect("no text in the page for the ring (a canvas, not DOM text)", info.text === "" && !info.bodyHasRingWords, info);
-    // A point on the near arc hits the globe's canvas, not the ring.
+    // A point on the ring (its bottom) hits the globe's canvas, not the ring.
     const hit = await page.evaluate((b) => {
       const el = document.elementFromPoint((b.minX + b.maxX) / 2, b.maxY);
       return { tag: el?.tagName, inRing: !!el?.closest("[data-ring]"), inGlobe: !!el?.closest('[data-globe="three"]') };
@@ -216,7 +233,7 @@ try {
     const dt = (s1.t - s0.t) / 1000;
     const dphase = s1.ring.phaseDeg - s0.ring.phaseDeg;
     const rate = dphase / dt;
-    expect("the ring turns at RING.degPerSec in its direction (the near arc leftwards: the phase decreases)", Math.abs(rate - -2.4) < 0.25, { rate, dphase, dt });
+    expect("the ring turns clockwise at RING.degPerSec (3 deg/s)", Math.abs(rate - 3) < 0.3, { rate, dphase, dt });
     expect("... gentler than the globe's idle rotation", Math.abs(rate) < s0.spin.degPerSec, { rate, globe: s0.spin.degPerSec });
     expect("it asked for no GL frame and no camera tick", s1.frames === s0.frames && s1.ticks === s0.ticks && s1.clears === s0.clears, { s0, s1 });
     const repaints = s1.ring.frames - s0.ring.frames;
@@ -233,7 +250,7 @@ try {
     const b = await o.page.evaluate(() => ({ r: window.__globeDebug.ring(), t: performance.now(), s: window.__globeDebug.spin(), lon: window.__globeDebug.view().lon }));
     const rate2 = (b.r.phaseDeg - a.r.phaseDeg) / ((b.t - a.t) / 1000);
     expect("the globe's rotation runs at the floor (the ring's regime is part of the world view)", a.s.spinning === true || b.s.spinning === true, { a: a.s, b: b.s });
-    expect("... and the ring's rate is the same with the globe turning", Math.abs(rate2 - -2.4) < 0.3, { rate2 });
+    expect("... and the ring's rate is the same with the globe turning", Math.abs(rate2 - 3) < 0.35, { rate2 });
     expect("... while the globe's longitude changed (its own clock)", Math.abs(b.lon - a.lon) > 1, { a: a.lon, b: b.lon });
     await o.ctx.close();
   }

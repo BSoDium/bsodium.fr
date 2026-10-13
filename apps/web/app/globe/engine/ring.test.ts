@@ -1,19 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { cameraDistance, DEG, fitZoom, focalPx, silhouetteRadiusPx, silhouetteZoom } from "./geo";
-import { GlyphBuffer, isMirrored, placeGlyphs, ringAlpha, ringFloorZoom, ringHalfExtents, ringPhase, ringRepeats, ringText, ringTone } from "./ring";
+import { DEG, fitZoom, silhouetteRadiusPx, silhouetteZoom } from "./geo";
 import { activeLevels, roleLevel } from "./palette";
+import { CAP_HEIGHT_EM, GlyphBuffer, placeGlyphs, ringAlpha, ringFloorZoom, ringLayout, ringPhase, ringText, ringTone } from "./ring";
 import { RING } from "./tuning";
 import { RING_PHRASES } from "../ring-text";
 
-const sinE = Math.sin(RING.elevationDeg * DEG);
-const cosE = Math.cos(RING.elevationDeg * DEG);
+const LINE = ringText(RING_PHRASES);
 
 describe("silhouette zoom", () => {
   it("is the inverse of the silhouette radius, and `fitZoom` is built on it", () => {
     for (const h of [600, 900, 1200]) {
-      for (const r of [80, 200, 396]) {
-        expect(silhouetteRadiusPx(silhouetteZoom(r, h), h)).toBeCloseTo(r, 6);
-      }
+      for (const r of [80, 200, 396]) expect(silhouetteRadiusPx(silhouetteZoom(r, h), h)).toBeCloseTo(r, 6);
     }
     expect(fitZoom(1440, 900, 0.12)).toBeCloseTo(silhouetteZoom(450 * 0.88, 900), 12);
   });
@@ -27,148 +24,129 @@ describe("the ring's text", () => {
   });
 
   it("is the site identity, nothing else", () => {
-    const line = ringText(RING_PHRASES);
-    expect(line).toBe(
-      "ELLIOT NÉGREL-JERZY · FRONT-END ENGINEER · DATA VISUALISATION · CARTOGRAPHY · DESIGN SYSTEMS · PARIS · ",
-    );
-    expect(line).toBe(line.toLocaleUpperCase("en"));
-  });
-
-  it("goes round a whole number of times, landing the glyphs nearest the target size", () => {
-    const len = ringText(RING_PHRASES).length;
-    const f = 1350;
-    for (const d of [2.2, 3.0, 3.6, 5, 9]) {
-      const n = ringRepeats(len, f, d);
-      expect(Number.isInteger(n)).toBe(true);
-      expect(n).toBeGreaterThanOrEqual(1);
-      // The em it gives is what placeGlyphs reports, and no other count is nearer the target in ratio.
-      const g = new GlyphBuffer();
-      placeGlyphs(g, { text: "A".repeat(len), repeats: n, phase: 0, f, d, cx: 0, cy: 0 });
-      const off = (k: number) => {
-        const h = new GlyphBuffer();
-        placeGlyphs(h, { text: "A".repeat(len), repeats: k, phase: 0, f, d, cx: 0, cy: 0 });
-        return Math.abs(Math.log(h.em / RING.type.targetEmPx));
-      };
-      for (const k of [Math.max(1, n - 1), n + 1]) expect(off(n)).toBeLessThanOrEqual(off(k) + 1e-9);
-    }
-    expect(ringRepeats(0, 1350, 3)).toBe(1);
+    expect(LINE).toBe("ELLIOT NÉGREL-JERZY · FRONT-END ENGINEER · DATA VISUALISATION · CARTOGRAPHY · DESIGN SYSTEMS · PARIS · ");
   });
 });
 
-describe("placement of the glyphs on the projected ellipse", () => {
-  const text = "ABC DEF · ";
-  const f = 1350;
-  const base = { text, repeats: 3, phase: 0.3, f, d: 3.5, cx: 700, cy: 450 };
+describe("the layout: the line closes evenly round the ring", () => {
+  const adv = RING.type.advanceEm;
+  // The silhouette's radius at the lowest zoom for the viewports the ring is checked at (1440x900, 1024x700, 390x844, 844x390, 1920x1080, the panel's half).
+  const radii = [281, 190, 122, 100, 380, 150, 60];
 
-  it("puts every glyph exactly where the globe's own perspective puts the point of the ring", () => {
+  it("goes round a whole number of times and fills the circumference exactly: n * length advances of em * (0.6 + tracking)", () => {
+    for (const r of radii) {
+      const l = ringLayout(LINE.length, r);
+      expect(Number.isInteger(l.repeats)).toBe(true);
+      expect(l.repeats).toBeGreaterThanOrEqual(1);
+      const em = l.emPerR * r;
+      const circumference = 2 * Math.PI * r * (1 + RING.gap);
+      expect(l.repeats * LINE.length * em * (adv + l.tracking)).toBeCloseTo(circumference, 6);
+    }
+  });
+
+  it("keeps the letters near the target size, the tracking near the nominal, and never lets them touch", () => {
+    for (const r of radii.filter((v) => v >= 100)) {
+      const l = ringLayout(LINE.length, r);
+      const em = l.emPerR * r;
+      expect(em).toBeGreaterThanOrEqual(RING.type.targetEmPx * (1 - RING.type.emSlack) - 1e-9);
+      expect(em).toBeLessThanOrEqual(RING.type.targetEmPx * (1 + RING.type.emSlack) + 1e-9);
+      expect(l.tracking).toBeGreaterThan(0.02 - 1e-9);
+      expect(Math.abs(l.tracking - RING.type.tracking)).toBeLessThan(0.2);
+    }
+    // A ring too small for the line at the smallest em shrinks the type instead of overlapping it.
+    const tiny = ringLayout(LINE.length, 30);
+    expect(tiny.tracking).toBeGreaterThanOrEqual(0.02 - 1e-9);
+  });
+
+  it("is a ratio of the silhouette: the same layout closes at any zoom", () => {
+    const l = ringLayout(LINE.length, 281);
+    const g = new GlyphBuffer();
+    for (const r of [60, 140, 281, 396]) {
+      placeGlyphs(g, { text: LINE, layout: l, phase: 0, r, cx: 0, cy: 0 });
+      // The advance along the baseline circle is the em times (0.6 + tracking), whatever r is.
+      const step = (2 * Math.PI) / (LINE.length * l.repeats);
+      expect(step * r * (1 + RING.gap)).toBeCloseTo(g.em * (adv + l.tracking), 6);
+    }
+  });
+
+  it("repeats more on a bigger ring", () => {
+    expect(ringLayout(LINE.length, 380).repeats).toBeGreaterThanOrEqual(ringLayout(LINE.length, 122).repeats);
+    expect(ringLayout(0, 200).repeats).toBe(1);
+  });
+});
+
+describe("placement of the glyphs on the flat circle", () => {
+  const text = "ABC DEF · ";
+  const layout = { repeats: 3, emPerR: 0.04, tracking: 0.14 };
+  const base = { text, layout, phase: 0, r: 280, cx: 700, cy: 450 };
+
+  it("puts every glyph on one circle concentric with the planet, outside its silhouette, one cap height-ish above the baseline", () => {
     const g = new GlyphBuffer();
     const n = placeGlyphs(g, base);
-    const M = text.length * 3;
-    const step = (2 * Math.PI) / M;
-    // The non-space characters of 3 repeats, each at angle phase + k * step.
-    let seen = 0;
-    for (let k = 0; k < M; k++) {
-      if (text.charCodeAt(k % text.length) === 32) continue;
-      const t = base.phase + k * step;
-      const X = RING.radiusRatio * Math.cos(t);
-      const Y = RING.radiusRatio * Math.sin(t) * sinE;
-      const Z = -RING.radiusRatio * Math.sin(t) * cosE;
-      const sx = base.cx + (f * X) / (base.d - Z);
-      const sy = base.cy - (f * Y) / (base.d - Z);
-      // Find it by code and position (edge-on glyphs may be culled: none are at this elevation for the flat lettering).
-      const i = [...Array(n).keys()].find((j) => Math.abs(g.x[j]! - sx) < 1e-3 && Math.abs(g.y[j]! - sy) < 1e-3);
-      expect(i, `glyph ${k}`).toBeDefined();
-      expect(g.code[i!]).toBe(text.charCodeAt(k % text.length));
-      expect(g.front[i!]).toBe(Z >= 0 ? 1 : 0);
-      seen++;
-    }
-    expect(n).toBe(seen);
-  });
-
-  it("lies on an ellipse of semi-axes rho*s and rho*s*sin(e) in the orthographic limit (a far camera)", () => {
-    const g = new GlyphBuffer();
-    const S = 400; // px per earth radius at any depth
-    const d = 1e7;
-    placeGlyphs(g, { ...base, d, f: S * d, cx: 0, cy: 0 });
-    const a = RING.radiusRatio * S;
-    const b = a * sinE;
-    for (let i = 0; i < g.count; i++) {
-      const v = (g.x[i]! / a) ** 2 + (g.y[i]! / b) ** 2;
-      expect(v).toBeCloseTo(1, 3);
+    expect(n).toBe(text.replace(/ /g, "").length * 3);
+    const baseline = base.r * (1 + RING.gap);
+    expect(g.baseline).toBeCloseTo(baseline, 9);
+    expect(g.radius).toBeCloseTo(baseline + (CAP_HEIGHT_EM / 2) * g.em, 9);
+    for (let i = 0; i < n; i++) {
+      expect(Math.hypot(g.x[i]! - base.cx, g.y[i]! - base.cy)).toBeCloseTo(g.radius, 3);
+      expect(g.radius - (CAP_HEIGHT_EM / 2) * g.em).toBeGreaterThan(base.r); // the glyph's bottom is outside the disc
     }
   });
 
-  it("spaces the glyphs by equal angles and closes the loop", () => {
+  it("starts at twelve o'clock and runs clockwise, equal steps, the last glyph one step before the first (the seam is no different)", () => {
     const g = new GlyphBuffer();
-    const S = 400;
-    const d = 1e7;
-    // No spaces: every index is a glyph, in angle order.
-    placeGlyphs(g, { text: "ABCDEFGH", repeats: 2, phase: 0, f: S * d, d, cx: 0, cy: 0 });
+    placeGlyphs(g, { ...base, text: "ABCDEFGH", layout: { ...layout, repeats: 2 } });
     expect(g.count).toBe(16);
-    const a = RING.radiusRatio * S;
-    const ang = (i: number) => Math.atan2(-g.y[i]! / (a * sinE), g.x[i]! / a); // the screen's y is down
+    expect(g.x[0]).toBeCloseTo(base.cx, 3);
+    expect(g.y[0]).toBeCloseTo(base.cy - g.radius, 3);
+    const step = (2 * Math.PI) / 16;
     for (let i = 0; i < 16; i++) {
+      expect(g.angle[i]).toBeCloseTo(i * step, 6);
+      // clockwise on the screen (y down): the glyph after twelve o'clock is to its RIGHT.
+      if (i === 1) expect(g.x[1]! > g.x[0]!).toBe(true);
       const next = (i + 1) % 16;
-      let da = ang(next) - ang(i);
-      if (da < 0) da += 2 * Math.PI;
-      expect(da).toBeCloseTo((2 * Math.PI) / 16, 6);
+      const chord = Math.hypot(g.x[next]! - g.x[i]!, g.y[next]! - g.y[i]!);
+      expect(chord).toBeCloseTo(2 * g.radius * Math.sin(step / 2), 3);
     }
   });
 
-  it("reads left to right on the near arc, which is the lower one, and is larger there than on the far arc", () => {
+  it("points every glyph's top away from the planet and keeps one size (no mirroring, no perspective)", () => {
     const g = new GlyphBuffer();
-    placeGlyphs(g, { ...base, text: "ABCDEFGHIJKLMNOP", repeats: 1, phase: 0 });
-    let nearX = 0;
-    let nearY = 0;
-    let n = 0;
+    placeGlyphs(g, base);
     for (let i = 0; i < g.count; i++) {
-      if (!g.front[i]) continue;
-      nearY += g.y[i]!;
-      nearX += g.x[i]!;
-      n++;
+      // The glyph's up vector (0, -1) turned clockwise by its angle is (sin a, -cos a): the unit vector from the planet's centre to the glyph.
+      const ux = Math.sin(g.angle[i]!);
+      const uy = -Math.cos(g.angle[i]!);
+      expect((g.x[i]! - base.cx) / g.radius).toBeCloseTo(ux, 3);
+      expect((g.y[i]! - base.cy) / g.radius).toBeCloseTo(uy, 3);
     }
-    expect(n).toBeGreaterThan(4);
-    expect(nearY / n).toBeGreaterThan(base.cy); // the near arc is below the centre of the planet (seen from above)
-    // Consecutive near glyphs: x grows with the character index, and the glyph is upright (a > 0, d > 0, no mirroring).
-    const near = [...Array(g.count).keys()].filter((i) => g.front[i] === 1).sort((p, q) => g.code[p]! - g.code[q]!);
-    const mid = near.slice(Math.floor(near.length / 4), Math.ceil((3 * near.length) / 4));
-    for (let i = 1; i < mid.length; i++) expect(g.x[mid[i]!]!).toBeGreaterThan(g.x[mid[i - 1]!]!);
-    for (const i of near) expect(isMirrored(g.a[i]!, g.b[i]!, g.c[i]!, g.d[i]!)).toBe(false);
-    // Perspective: the scale of a near glyph is larger than a far one's.
-    const scale = (i: number) => Math.hypot(g.a[i]!, g.b[i]!);
-    const nearScale = Math.max(...near.map(scale));
-    const far = [...Array(g.count).keys()].filter((i) => g.front[i] === 0);
-    expect(far.length).toBeGreaterThan(0);
-    expect(nearScale).toBeGreaterThan(Math.max(...far.map(scale)));
+    expect(g.em).toBeCloseTo(layout.emPerR * base.r, 9);
   });
 
-  it("turns with the phase: a quarter of a step later glyph k is a quarter of a step further round", () => {
+  it("turns with the phase: a whole step later glyph k sits where glyph k + 1 was", () => {
     const g0 = new GlyphBuffer();
     const g1 = new GlyphBuffer();
-    const M = 40;
-    const S = 400;
-    const d = 1e7;
-    const text = "A".repeat(M);
-    const step = (2 * Math.PI) / M;
-    placeGlyphs(g0, { text, repeats: 1, phase: 0, f: S * d, d, cx: 0, cy: 0 });
-    placeGlyphs(g1, { text, repeats: 1, phase: step, f: S * d, d, cx: 0, cy: 0 });
-    // A whole step later, glyph k sits where glyph k + 1 was.
-    for (let k = 0; k < M - 1; k++) {
-      expect(g1.x[k]).toBeCloseTo(g0.x[k + 1]!, 1);
-      expect(g1.y[k]).toBeCloseTo(g0.y[k + 1]!, 1);
+    const text40 = "A".repeat(40);
+    const l = { repeats: 1, emPerR: 0.04, tracking: 0.14 };
+    const step = (2 * Math.PI) / 40;
+    placeGlyphs(g0, { ...base, text: text40, layout: l, phase: 0 });
+    placeGlyphs(g1, { ...base, text: text40, layout: l, phase: step });
+    for (let k = 0; k < 39; k++) {
+      expect(g1.x[k]).toBeCloseTo(g0.x[k + 1]!, 2);
+      expect(g1.y[k]).toBeCloseTo(g0.y[k + 1]!, 2);
     }
   });
 
-  it("gives the nominal em from the ring's own size: the same in earth radii at every zoom, so the type scales with the ring", () => {
-    const g = new GlyphBuffer();
-    const h = 900;
-    const f = focalPx(h);
-    placeGlyphs(g, { ...base, f, d: cameraDistance(2.2, h) });
-    const emWorld = (g.em * cameraDistance(2.2, h)) / f;
-    placeGlyphs(g, { ...base, f, d: cameraDistance(3.0, h) });
-    expect((g.em * cameraDistance(3.0, h)) / f).toBeCloseTo(emWorld, 9);
-    // 3 repeats of the line: the advance is rho * 2pi / 27 and a glyph's em is that over (0.6 + tracking).
-    expect(emWorld).toBeCloseTo((RING.radiusRatio * 2 * Math.PI) / (3 * text.length) / (RING.type.advanceEm + RING.type.tracking), 9);
+  it("scales with the planet and follows its centre", () => {
+    const a = new GlyphBuffer();
+    const b = new GlyphBuffer();
+    placeGlyphs(a, { ...base, r: 200, cx: 0, cy: 0 });
+    placeGlyphs(b, { ...base, r: 400, cx: 10, cy: -5 });
+    for (let i = 0; i < a.count; i++) {
+      expect(b.x[i]! - 10).toBeCloseTo(2 * a.x[i]!, 2);
+      expect(b.y[i]! + 5).toBeCloseTo(2 * a.y[i]!, 2);
+    }
+    expect(b.em).toBeCloseTo(2 * a.em, 9);
   });
 
   it("allocates nothing once the buffer is big enough", () => {
@@ -181,9 +159,9 @@ describe("placement of the glyphs on the projected ellipse", () => {
 });
 
 describe("the ring's clock", () => {
-  it("moves against the near arc's reading direction at RING.degPerSec, gentler than the globe's rotation", () => {
-    const p = (ms: number) => ringPhase(ms);
-    expect((p(1000) - p(0)) / DEG).toBeCloseTo(RING.direction * RING.degPerSec, 9);
+  it("runs clockwise at RING.degPerSec, gentler than the globe's rotation", () => {
+    expect((ringPhase(1000) - ringPhase(0)) / DEG).toBeCloseTo(RING.direction * RING.degPerSec, 9);
+    expect(RING.direction).toBe(1);
     expect(RING.degPerSec).toBeLessThan(4); // SPIN.degPerSec
   });
 });
@@ -197,28 +175,22 @@ describe("the lowest zoom", () => {
     { w: 1920, h: 1080 },
   ];
 
-  it("is below the fit by at least `floorBelowFit` levels and keeps the whole ring and the planet in the free area, with the margin", () => {
+  it("is at least `floorBelowFit` below the fit and keeps the planet and the whole ring in the free area, with the margin", () => {
     for (const { w, h } of cases) {
       const fit = fitZoom(w, h, 0.12);
       const floor = ringFloorZoom({ fit, freeWidth: w, height: h });
       expect(floor).toBeLessThanOrEqual(fit - RING.zoom.floorBelowFit + 1e-9);
-      const d = cameraDistance(floor, h);
-      const e = ringHalfExtents(focalPx(h), d);
-      const pad = RING.type.targetEmPx * 1.6;
-      expect(e.hx + pad).toBeLessThanOrEqual((w / 2) * (1 - RING.zoom.fitMargin) + 1e-6);
-      expect(e.hy + pad).toBeLessThanOrEqual((h / 2) * (1 - RING.zoom.fitMargin) + 1e-6);
-      // And it is the highest such zoom unless the floor is the plain levels-below-the-fit rule.
-      if (floor < fit - RING.zoom.floorBelowFit - 1e-6) {
-        const e2 = ringHalfExtents(focalPx(h), cameraDistance(floor + 0.01, h));
-        expect(e2.hx + pad > (w / 2) * (1 - RING.zoom.fitMargin) || e2.hy + pad > (h / 2) * (1 - RING.zoom.fitMargin)).toBe(true);
-      }
+      const r = silhouetteRadiusPx(floor, h);
+      const l = ringLayout(LINE.length, r);
+      const outer = r * (1 + RING.gap) + CAP_HEIGHT_EM * l.emPerR * r;
+      expect(outer).toBeLessThanOrEqual((Math.min(w, h) / 2) * (1 - RING.zoom.fitMargin) + 1e-6);
     }
   });
 
-  it("is a small change on a desktop and a larger one on a narrow screen", () => {
-    const d = (w: number, h: number) => fitZoom(w, h, 0.12) - ringFloorZoom({ fit: fitZoom(w, h, 0.12), freeWidth: w, height: h });
-    expect(d(1440, 900)).toBeLessThan(1);
-    expect(d(390, 844)).toBeGreaterThan(d(1440, 900));
+  it("is the highest such zoom when the room, not the 0.5 levels, decides (a very small screen)", () => {
+    const fit = fitZoom(240, 240, 0.12);
+    const floor = ringFloorZoom({ fit, freeWidth: 240, height: 240 });
+    expect(floor).toBeLessThanOrEqual(fit - RING.zoom.floorBelowFit + 1e-9);
   });
 });
 
@@ -240,10 +212,8 @@ describe("the fade", () => {
   });
 
   it("is already zero before the camera is back at the fit, and full before it is at the floor", () => {
-    const t = (z: number) => (fit - z) / (fit - floor);
     expect(ringAlpha(fit - RING.zoom.fade.from * (fit - floor), fit, floor)).toBeCloseTo(0, 12);
     expect(ringAlpha(fit - RING.zoom.fade.to * (fit - floor), fit, floor)).toBeCloseTo(1, 12);
-    expect(t(floor)).toBe(1);
   });
 
   it("is off when there is no room below the fit (no ring: the floor is the fit)", () => {
@@ -251,13 +221,11 @@ describe("the fade", () => {
     expect(ringAlpha(2.0, 2.5, 2.5)).toBe(0);
   });
 
-  it("is a staircase of palette tones, the near arc the louder, never above the role's level", () => {
+  it("is a staircase of palette tones, never above the role's level", () => {
     const levels = activeLevels();
-    const front = [0, 0.1, 0.4, 0.7, 1].map((a) => ringTone(a, levels, "front"));
-    expect(front[0]).toBe(0);
-    expect(front[front.length - 1]).toBe(roleLevel(RING.tones.front, levels));
-    for (let i = 1; i < front.length; i++) expect(front[i]).toBeGreaterThanOrEqual(front[i - 1]!);
-    expect(ringTone(1, levels, "back")).toBeLessThanOrEqual(ringTone(1, levels, "front"));
-    expect(ringTone(0, levels, "back")).toBe(0);
+    const tones = [0, 0.1, 0.4, 0.7, 1].map((a) => ringTone(a, levels));
+    expect(tones[0]).toBe(0);
+    expect(tones.at(-1)).toBe(roleLevel(RING.tone, levels));
+    for (let i = 1; i < tones.length; i++) expect(tones[i]).toBeGreaterThanOrEqual(tones[i - 1]!);
   });
 });

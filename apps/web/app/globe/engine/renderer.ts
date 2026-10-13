@@ -22,10 +22,8 @@ import { groupFitZoom, radiusFitZoom } from "./framing";
 import {
   DEG,
   FOV_DEG,
-  cameraDistance,
   clamp,
   fitZoom,
-  focalPx,
   silhouetteRadiusPx,
   normalizeLon,
   projectLonLat,
@@ -342,7 +340,7 @@ export class GlobeRenderer {
     const free = freeWidth(w, clampInset(this.insetTarget, w));
     const fit = fitZoom(free, h, TUNING.fitMargin);
     const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h }));
-    this.ring.setLayout(focalPx(h), cameraDistance(floor, h));
+    this.ring.setLayout(silhouetteRadiusPx(floor, h));
   }
 
   /**
@@ -1045,8 +1043,7 @@ export class GlobeRenderer {
     ring.update({
       cx: (this.bufW * P) / 2 - this.shiftBuf * P + this.canvasLeft,
       cy: ch / 2 + this.canvasTop,
-      f: focalPx(ch),
-      d: cameraDistance(this.view.zoom, ch),
+      r: silhouetteRadiusPx(this.view.zoom, ch),
       alpha,
       width: this.width,
       height: this.height,
