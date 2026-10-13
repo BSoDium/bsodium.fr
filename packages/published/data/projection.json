@@ -1,9 +1,2795 @@
 {
   "schemaVersion": 1,
-  "places": [],
-  "groups": [],
+  "places": [
+    {
+      "slug": "copenhagen",
+      "name": "Copenhagen",
+      "coordinates": {
+        "lat": 55.6761,
+        "lon": 12.5683
+      },
+      "labelPriority": 42,
+      "group": "europe",
+      "countryCode": "DK",
+      "body": [],
+      "images": [],
+      "related": [
+        {
+          "kind": "artwork",
+          "slug": "frederiks-church-copenhagen"
+        }
+      ]
+    },
+    {
+      "slug": "klagenfurt",
+      "name": "Klagenfurt",
+      "coordinates": {
+        "lat": 46.6,
+        "lon": 14.31
+      },
+      "labelPriority": 61,
+      "bbox": [
+        14.2102806,
+        46.5743838,
+        14.416258,
+        46.7087059
+      ],
+      "viewRadiusKm": 10.9,
+      "group": "europe",
+      "countryCode": "AT",
+      "body": [],
+      "images": [],
+      "related": [
+        {
+          "kind": "project",
+          "slug": "amaze-me"
+        },
+        {
+          "kind": "project",
+          "slug": "ipvchat"
+        },
+        {
+          "kind": "project",
+          "slug": "lidar"
+        },
+        {
+          "kind": "project",
+          "slug": "randomite"
+        },
+        {
+          "kind": "project",
+          "slug": "clifford"
+        },
+        {
+          "kind": "project",
+          "slug": "moneytor"
+        },
+        {
+          "kind": "project",
+          "slug": "voxelife"
+        },
+        {
+          "kind": "project",
+          "slug": "catalyst"
+        },
+        {
+          "kind": "project",
+          "slug": "hypergon"
+        }
+      ]
+    },
+    {
+      "slug": "paris",
+      "name": "Paris",
+      "coordinates": {
+        "lat": 48.85,
+        "lon": 2.35
+      },
+      "labelPriority": 70,
+      "bbox": [
+        2.258113,
+        48.8155755,
+        2.435769,
+        48.902156
+      ],
+      "viewRadiusKm": 8.1,
+      "group": "france",
+      "countryCode": "FR",
+      "body": [],
+      "images": [],
+      "related": [
+        {
+          "kind": "project",
+          "slug": "whatsapp-content-moderation"
+        },
+        {
+          "kind": "project",
+          "slug": "isf-design-system"
+        },
+        {
+          "kind": "project",
+          "slug": "raycast-capture-and-create"
+        },
+        {
+          "kind": "project",
+          "slug": "carbon-atlas"
+        },
+        {
+          "kind": "project",
+          "slug": "cron"
+        },
+        {
+          "kind": "project",
+          "slug": "mui-joy-palette-generator"
+        },
+        {
+          "kind": "project",
+          "slug": "wco-demo"
+        },
+        {
+          "kind": "project",
+          "slug": "material-sticky-header"
+        },
+        {
+          "kind": "project",
+          "slug": "esp-string-lights"
+        },
+        {
+          "kind": "artwork",
+          "slug": "anatomy-study"
+        },
+        {
+          "kind": "artwork",
+          "slug": "hand-drawn-vector-self-portrait"
+        },
+        {
+          "kind": "artwork",
+          "slug": "resilience"
+        },
+        {
+          "kind": "project",
+          "slug": "spectrum-visualizer"
+        },
+        {
+          "kind": "project",
+          "slug": "avatar"
+        },
+        {
+          "kind": "project",
+          "slug": "svg-gradients"
+        },
+        {
+          "kind": "artwork",
+          "slug": "la-vierge-au-lys-musee-d-orsay"
+        },
+        {
+          "kind": "artwork",
+          "slug": "subsurface-scattering-study"
+        },
+        {
+          "kind": "artwork",
+          "slug": "the-anomaly"
+        },
+        {
+          "kind": "artwork",
+          "slug": "bridgetop-encounter"
+        },
+        {
+          "kind": "artwork",
+          "slug": "cloth-lighting-study"
+        },
+        {
+          "kind": "artwork",
+          "slug": "the-lighthouse-monochrome-gouache-study"
+        },
+        {
+          "kind": "artwork",
+          "slug": "where-the-sun-never-sets"
+        },
+        {
+          "kind": "artwork",
+          "slug": "baroque-with-a-twist-musee-d-orsay"
+        },
+        {
+          "kind": "artwork",
+          "slug": "giants-of-steel"
+        },
+        {
+          "kind": "artwork",
+          "slug": "suborbital-launch"
+        },
+        {
+          "kind": "artwork",
+          "slug": "yamato-class-battleship-firing-test-study"
+        },
+        {
+          "kind": "artwork",
+          "slug": "portrait-study"
+        },
+        {
+          "kind": "poem",
+          "slug": "l-exil"
+        },
+        {
+          "kind": "poem",
+          "slug": "les-pelerins-du-rail"
+        }
+      ]
+    },
+    {
+      "slug": "toulouse",
+      "name": "Toulouse",
+      "coordinates": {
+        "lat": 43.61,
+        "lon": 1.44
+      },
+      "labelPriority": 65,
+      "bbox": [
+        1.3503311,
+        43.5326969,
+        1.5153356,
+        43.6687119
+      ],
+      "viewRadiusKm": 10.1,
+      "group": "france",
+      "countryCode": "FR",
+      "body": [],
+      "images": [],
+      "related": [
+        {
+          "kind": "article",
+          "slug": "virtual-reality-technologies"
+        },
+        {
+          "kind": "article",
+          "slug": "rendering-techniques-applied-to-caustics"
+        },
+        {
+          "kind": "project",
+          "slug": "terrain-interpolation"
+        },
+        {
+          "kind": "project",
+          "slug": "light-engine"
+        },
+        {
+          "kind": "project",
+          "slug": "av-data-processing"
+        },
+        {
+          "kind": "project",
+          "slug": "epidemic-spreading-sim"
+        },
+        {
+          "kind": "project",
+          "slug": "linda"
+        },
+        {
+          "kind": "project",
+          "slug": "slashboard"
+        },
+        {
+          "kind": "project",
+          "slug": "spinel"
+        },
+        {
+          "kind": "project",
+          "slug": "vshell"
+        },
+        {
+          "kind": "project",
+          "slug": "pconsole"
+        },
+        {
+          "kind": "project",
+          "slug": "hull-breach-tracking"
+        },
+        {
+          "kind": "project",
+          "slug": "wave-engine"
+        },
+        {
+          "kind": "project",
+          "slug": "pyos"
+        },
+        {
+          "kind": "poem",
+          "slug": "crepuscule-grec"
+        },
+        {
+          "kind": "poem",
+          "slug": "foret-dansante"
+        },
+        {
+          "kind": "poem",
+          "slug": "le-comedien"
+        },
+        {
+          "kind": "poem",
+          "slug": "ode-au-desert"
+        },
+        {
+          "kind": "poem",
+          "slug": "penombre-d-ete"
+        },
+        {
+          "kind": "poem",
+          "slug": "prose-nocturne"
+        },
+        {
+          "kind": "poem",
+          "slug": "sinking"
+        },
+        {
+          "kind": "poem",
+          "slug": "the-enslaved-acrobat"
+        },
+        {
+          "kind": "poem",
+          "slug": "the-traveler"
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "slug": "europe",
+      "name": "Europe",
+      "kind": "continent",
+      "coordinates": {
+        "lat": 49.774,
+        "lon": 6.309
+      },
+      "viewRadiusKm": 870.4,
+      "labelPriority": 90
+    },
+    {
+      "slug": "france",
+      "name": "France",
+      "kind": "country",
+      "parent": "europe",
+      "coordinates": {
+        "lat": 46.222,
+        "lon": 1.866
+      },
+      "viewRadiusKm": 333.9,
+      "labelPriority": 70
+    }
+  ],
   "routes": [],
-  "projects": [],
-  "articles": [],
-  "artworks": []
+  "projects": [
+    {
+      "slug": "amaze-me",
+      "title": "Amaze.me",
+      "summary": "A two-dimensional maze generator and three-dimensional visualiser for the web.",
+      "date": "2023-01",
+      "url": "https://amaze.me.bsodium.fr/",
+      "tags": [
+        "three-js",
+        "typescript"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React, Three.js, MUI Joy"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Amaze.me"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A web app that generates random mazes and visualises them in 3D, written in TypeScript with Three.js for rendering and Joy UI for its interface."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Amaze.me"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "av-data-processing",
+      "title": "Audio-visual data processing",
+      "summary": "A collection of assignments for the audio-visual data processing course at ENSEEIHT, with compiled reports.",
+      "date": "2022-02",
+      "url": "https://bsodium.github.io/AV-data-processing/",
+      "tags": [
+        "signal-processing",
+        "matlab"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "MATLAB"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/AV-data-processing"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Assignments for the audio-visual data processing course at ENSEEIHT. The compiled reports are published online."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/AV-data-processing"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "avatar",
+      "title": "Avatar",
+      "summary": "A web-based SVG avatar generator that recolours a profile picture from a chosen palette.",
+      "date": "2024-06",
+      "url": "https://avatar.bsodium.fr",
+      "tags": [
+        "svg",
+        "typescript"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React, SVG"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Avatar"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A web tool for creating variations of one specific profile picture by changing its colour palette. It does not alter the avatar's design or structure."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Avatar"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "carbon-atlas",
+      "title": "Carbon Atlas",
+      "summary": "An interactive dashboard that visualises carbon projects on a world map, with filterable project cards, animated links between markers and cards, a command palette and a KPI overview.",
+      "date": "2026-03",
+      "url": "https://carbon-atlas.bsodium.fr",
+      "tags": [
+        "dataviz",
+        "maps"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "React, TypeScript, Vite, MUI Joy, Mapbox GL, Motion, Recharts"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "An interactive dashboard for visualising carbon projects on a world map with detailed project information: an interactive map with project markers, a sidebar of filterable project cards, animated lines connecting markers to cards, a command palette for quick navigation and a KPI overview."
+        },
+        {
+          "type": "paragraph",
+          "text": "It is a fork of Kanop's 2026 user interface capabilities demo, published here with the explicit authorisation of the company."
+        },
+        {
+          "type": "link",
+          "title": "Live demo",
+          "url": "https://carbon-atlas.bsodium.fr"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "catalyst",
+      "title": "Catalyst",
+      "summary": "Catalyst is the code name of this website: a personal archive organised around places, with an interactive pixel-art globe that hands over to a street map.",
+      "date": "2022-09",
+      "tags": [
+        "maps",
+        "typescript",
+        "this-site"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "React Router, TypeScript, Three.js, MapLibre, Hono"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Catalyst"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Catalyst is the project name of this website. It is a personal archive organised around places: an interactive globe is the main way to discover curated places and the stories, projects, articles and artworks attached to them, and it hands over to a street map when you zoom in."
+        },
+        {
+          "type": "paragraph",
+          "text": "The site is a monorepo with a server-rendered web app, a read-only public API and a published content projection. The content itself lives in a separate private repository and reaches the public one only as a reviewed pull request. The first version, from 2022, was an e-portfolio built with React, React Spring and MUI Joy."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Catalyst"
+        },
+        {
+          "type": "link",
+          "title": "First version of its API",
+          "url": "https://github.com/BSoDium/Catalyst-API"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "clifford",
+      "title": "CLIfford",
+      "summary": "A simple and highly customisable command line interface for C++ applications.",
+      "date": "2022-11",
+      "tags": [
+        "cpp",
+        "tooling"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "C++"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/CLIfford"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A generic command line interface for C++ applications, with custom commands, arguments and options, an integrated help system and splash screen, and colour support."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/CLIfford"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "cron",
+      "title": "Cron",
+      "summary": "An Android alarm app that picks your wake time from your calendar, location, travel time and sleep signals.",
+      "date": "2026-02",
+      "tags": [
+        "android",
+        "kotlin"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Kotlin, Android"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Cron"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "An Android smart alarm that decides each evening when to wake you, from your calendar, your location, the travel time to your first commitment and overnight sleep signals. A second, fixed alarm is armed as a safety floor. The evening plan is computed with Anthropic's Claude."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Cron"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "epidemic-spreading-sim",
+      "title": "Epidemic spreading",
+      "summary": "A graph theory study of the propagation of an epidemic, written as a Julia notebook.",
+      "date": "2021-12",
+      "tags": [
+        "graphs",
+        "julia"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Julia, Jupyter"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Epidemic-spreading-sim"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A graph theory study about the propagation of an epidemic, in a notebook meant to be run with the Julia Jupyter kernel."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Epidemic-spreading-sim"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "esp-string-lights",
+      "title": "ESP string lights",
+      "summary": "An MQTT-enabled controller for string lights with several effects, designed for the ESP32.",
+      "date": "2025-02",
+      "tags": [
+        "iot",
+        "esp32"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "C++, ESP32, MQTT"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/ESP-string-lights"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "An MQTT-enabled controller for string lights with multiple effects and a physical button, designed for the ESP32, compatible with Home Assistant, and keeping its state across power cycles."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/ESP-string-lights"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "hull-breach-tracking",
+      "title": "Hull breach tracking",
+      "summary": "A physics engine that simulates breaches in a ship's hull and detects their location through mechanical wave analysis.",
+      "date": "2019-10",
+      "tags": [
+        "simulation",
+        "python"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Python, Panda3D"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Hull-breach-tracking"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A dynamic physics engine which simulates breaches in a ship's hull, and the many ways of detecting them and finding their location through mechanical wave analysis."
+        },
+        {
+          "type": "paragraph",
+          "text": "It was meant to be completed by June 2020 as part of the French TIPE oral exams; the exams were cancelled because of the COVID crisis."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Hull-breach-tracking"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "hypergon",
+      "title": "Hypergon",
+      "summary": "A proof of concept for a 4D rendering engine in C++.",
+      "date": "2022-09",
+      "tags": [
+        "graphics",
+        "cpp"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "C++, OpenGL, CMake"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Hypergon"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A proof of concept for a 4D rendering engine, built with OpenGL, GLFW and GLM. A separate repository is a template for applications built on it."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Hypergon"
+        },
+        {
+          "type": "link",
+          "title": "Application template",
+          "url": "https://github.com/BSoDium/Hypergon-boilerplate"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "ipvchat",
+      "title": "IPvChat",
+      "summary": "A C++ chat client and server infrastructure for Linux, configured with CMake.",
+      "date": "2023-01",
+      "tags": [
+        "cpp",
+        "networking"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "C++, CMake"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/IPvChat"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A chat client-server infrastructure written in C++, split into a client and a server, both configured with CMake and built for Linux."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/IPvChat"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "isf-design-system",
+      "title": "ISF design system",
+      "summary": "A first draft of the design system of Ingénieurs sans frontières (ISF).",
+      "date": "2026-05",
+      "url": "https://design-system.isf.bsodium.fr",
+      "tags": [
+        "design-system",
+        "typescript"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, Next.js"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/ISF-design-system"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A first draft of the design system of Ingénieurs sans frontières (ISF), built with Next.js."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/ISF-design-system"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "lidar",
+      "title": "Lidar",
+      "summary": "A virtual reality game about escaping a maze you cannot see, using a lidar to scan your surroundings.",
+      "date": "2023-01",
+      "url": "https://lidar.bsodium.fr",
+      "tags": [
+        "vr",
+        "game"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "JavaScript"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Lidar"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A virtual reality game where you have to find your way out of a maze you cannot see: you use your lidar, a laser coupled with a light sensor, to scan your surroundings and avoid obstacles."
+        },
+        {
+          "type": "paragraph",
+          "text": "It is inspired by the Garry's Mod addon LIDAR by datæ, and is still in early development: playable, with many features missing."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Lidar"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "light-engine",
+      "title": "Light engine",
+      "summary": "An inverse rasterizer engine demo in Java and Swing, extended with camera movement and a better interface.",
+      "date": "2022-04",
+      "tags": [
+        "graphics",
+        "java"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Java, Swing"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Light-engine"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "An inverse rasterizer engine demo, written in Java using Swing. Most calculations run on the CPU, which limits performance, but it is a sample implementation of the rasterization process."
+        },
+        {
+          "type": "paragraph",
+          "text": "It is a heavily modified version of a rasterizer by C. Dehais, S. Mondet and G. Morin, with camera movement, further optimisation and a better interface."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Light-engine"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "linda",
+      "title": "Linda",
+      "summary": "A remotely accessible, thread-safe tuple database implemented in Java with RMI remote objects.",
+      "date": "2021-11",
+      "tags": [
+        "java",
+        "distributed-systems"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Java, RMI, Gradle"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Linda"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A remotely accessible Tuple database, implemented in Java using RMI remote objects. Mostly a proof of concept."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Linda"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "material-sticky-header",
+      "title": "Material sticky header",
+      "summary": "A proof of concept of Android's scroll-snap settings header behaviour in React and TypeScript.",
+      "date": "2025-06",
+      "url": "https://material-sticky-header.vercel.app",
+      "tags": [
+        "react",
+        "ui"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Material-sticky-header"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A proof of concept implementation of Android's scroll-snap settings header: a sticky header that transitions between states with the scroll position, mimicking the native Android settings screen."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Material-sticky-header"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "moneytor",
+      "title": "Moneytor",
+      "summary": "A lightweight web app that visualises your coding activity from the Wakatime API and calculates your earnings from your hourly rate.",
+      "date": "2022-11",
+      "url": "https://moneytor.bsodium.fr/",
+      "tags": [
+        "dataviz",
+        "typescript"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Moneytor"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A lightweight web application built on the Wakatime API. It shows your coding activity in a simple way and calculates earnings from your hourly rate. It needs a Wakatime API key."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Moneytor"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "mui-joy-palette-generator",
+      "title": "Joy UI palette generator",
+      "summary": "A procedural, accessible palette generator for the MUI Joy library, working in the OKLCH colour space.",
+      "date": "2025-12",
+      "url": "https://mui-joy.bsodium.fr",
+      "tags": [
+        "colour",
+        "accessibility"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React, OKLCH"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/MUI-Joy-palette-generator"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Generates accessible colour palettes for Joy UI in OKLCH, with gamut mapping to sRGB, WCAG 2.1 and APCA contrast validation, all five semantic palettes, and exports to TypeScript, CSS variables, JSON and Tailwind."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/MUI-Joy-palette-generator"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "pconsole",
+      "title": "Pconsole",
+      "summary": "A tiny, easy-to-use runtime console for Panda3D-powered applications, published on PyPI.",
+      "date": "2020-04",
+      "tags": [
+        "python",
+        "tooling"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Python, Panda3D"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Pconsole"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A tiny runtime console for Panda3D applications. You give it a dictionary of command names and functions, a key to toggle it, and a command line is available in your running app. It is installable with pip install pconsole."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Pconsole"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "pyos",
+      "title": "PyOS",
+      "summary": "An orbital mechanics simulator written entirely in Python on the Panda3D engine. PyOS stands for Python orbit simulator.",
+      "date": "2019-03",
+      "tags": [
+        "simulation",
+        "python"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Python, Panda3D"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/The-PyOS-Project"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "PyOS is an orbital mechanics simulator, written entirely in Python on top of the Panda3D engine."
+        },
+        {
+          "type": "paragraph",
+          "text": "It was created for a computer science class at PCSI Déodat de Séverac in Toulouse, and was heavily inspired by Universe Sandbox, a game by Giant Army. It was meant to become a sandbox space game and is now archived."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/The-PyOS-Project"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "randomite",
+      "title": "Randomite",
+      "summary": "A pseudo-random number generator and visualiser for the web, with a gaussian generator and charts.",
+      "date": "2022-12",
+      "url": "https://randomite.bsodium.fr/",
+      "tags": [
+        "dataviz",
+        "typescript"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React, ECharts, MUI Joy"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Randomite"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A web app that generates pseudo-random numbers and visualises them in several ways, with the ECharts library and Joy UI."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Randomite"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "raycast-capture-and-create",
+      "title": "Raycast capture and create",
+      "summary": "A Raycast extension that turns a selected region of your screen into a Google Task or a macOS Calendar event.",
+      "date": "2026-05",
+      "tags": [
+        "raycast",
+        "productivity"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, Raycast"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Raycast-capture-and-create"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A Raycast extension with two commands: select any region of your screen and it becomes a Google Task (with an inferred title, note and due date) or a macOS Calendar event. The screenshot is interpreted with Claude Vision."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Raycast-capture-and-create"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "slashboard",
+      "title": "Slashboard",
+      "summary": "A dashboard to monitor the activity and performance of your home servers: an Electron and React desktop client, and a lightweight Node.js agent (Pulsar) on each server.",
+      "date": "2021-08",
+      "tags": [
+        "dashboard",
+        "electron"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Electron, React, TypeScript, Node.js"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Slashboard-desktop"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A simple and convenient way to monitor the activity and performance of your servers: a desktop client built with Electron and React, which talks to Slashboard Pulsar, a lightweight Node.js app installed on each server."
+        },
+        {
+          "type": "link",
+          "title": "Desktop client",
+          "url": "https://github.com/BSoDium/Slashboard-desktop"
+        },
+        {
+          "type": "link",
+          "title": "Pulsar agent",
+          "url": "https://github.com/BSoDium/Slashboard-pulsar"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "spectrum-visualizer",
+      "title": "Spectrum visualizer",
+      "summary": "A demo of a custom spectrum visualisation component for microphone recording interfaces.",
+      "date": "2024-10",
+      "url": "https://spectrum-visualizer.bsodium.fr/",
+      "tags": [
+        "dataviz",
+        "audio"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React, Web Audio"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Spectrum-visualizer-demo"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A demo application of a custom spectrum visualisation component: real-time audio visualisation from the microphone, with customisable colour schemes and a responsive layout."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Spectrum-visualizer-demo"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "spinel",
+      "title": "Spinel",
+      "summary": "An OpenGL-based 3D rendering engine written in Java, created as part of the 7map project.",
+      "date": "2021-06",
+      "tags": [
+        "graphics",
+        "java"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Java, OpenGL"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Spinel"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Spinel is an OpenGL-based 3D rendering engine, written in Java and created as part of the 7map project."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Spinel"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "svg-gradients",
+      "title": "SVG gradients",
+      "summary": "A collection of experiments with grainy, noisy SVG gradients built on turbulence filters.",
+      "date": "2024-06",
+      "url": "https://svg-gradients.vercel.app/",
+      "tags": [
+        "svg",
+        "typescript"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React, SVG"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/SVG-gradients"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Experiments with SVG turbulence-based gradients. A LinearGradient component is a drop-in replacement for the standard SVG linearGradient element, documented in the source with examples."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/SVG-gradients"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "terrain-interpolation",
+      "title": "Terrain interpolation",
+      "summary": "An OpenGL proof of concept of a procedural terrain interpolation algorithm, documented in French.",
+      "date": "2022-05",
+      "tags": [
+        "graphics",
+        "cpp"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "C++, OpenGL"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Terrain-interpolation"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A proof of concept for terrain interpolation, built with OpenGL, GLFW and GLM. The documentation is in French and most comments are in English."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Terrain-interpolation"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "voxelife",
+      "title": "Voxelife",
+      "summary": "A three-dimensional Conway's Game of Life in C++ and OpenGL.",
+      "date": "2022-10",
+      "tags": [
+        "simulation",
+        "cpp"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "C++, OpenGL"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Voxelife"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A proof of concept of a three-dimensional game of life simulation, written in C++ with OpenGL for rendering."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Voxelife"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
+      ]
+    },
+    {
+      "slug": "vshell",
+      "title": "Vshell",
+      "summary": "A very basic Unix shell written in C as a proof of concept.",
+      "date": "2021-05",
+      "tags": [
+        "c",
+        "systems"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "C"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Vshell"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A basic shell in C with job control (fg, bg, stop, jobs, exit), pipes and background jobs."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Vshell"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "wave-engine",
+      "title": "Wave engine",
+      "summary": "A wave-motion particle simulator in Python, powered by Panda3D.",
+      "date": "2019-06",
+      "tags": [
+        "simulation",
+        "python"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "Python, Panda3D"
+        },
+        {
+          "label": "Status",
+          "value": "Archived"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Wave-engine"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A wave-motion particle simulator written in Python and rendered with Panda3D. The physical constants (rigidity, time scale, friction) are variables at the top of the code."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Wave-engine"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "wco-demo",
+      "title": "Window controls overlay demo",
+      "summary": "A demo of the Window Controls Overlay API in an installable web app, for collapsing navigation bars into the title bar.",
+      "date": "2025-11",
+      "url": "https://wco-demo.bsodium.fr",
+      "tags": [
+        "pwa",
+        "ui"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, React, PWA"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/WCO-demo"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "An experiment with the Window Controls Overlay API in a progressive web app, which lets a desktop PWA use the title bar area for its own navigation."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/WCO-demo"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "whatsapp-content-moderation",
+      "title": "WhatsApp content moderation",
+      "summary": "A background-hosted \"digital curtain\" for a personal WhatsApp account: it links as a companion device, runs messages from chosen contacts through a local LLM classifier, deletes flagged ones locally and warns or temporarily blocks after repeated strikes.",
+      "date": "2026-09",
+      "url": "https://whatsapp-moderation-demo.vercel.app",
+      "tags": [
+        "typescript",
+        "llm"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "TypeScript, Baileys, Docker Compose, Ollama"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/WhatsApp-content-moderation"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A localised, background-hosted \"digital curtain\" for a personal WhatsApp account. It links to the account as a headless companion device, runs incoming messages from an operator-chosen set of monitored contacts through an LLM classifier, deletes flagged messages locally (\"delete for me\"), sends a warning, and temporarily blocks a contact after repeated strikes. Repeated unanswered calls are handled the same way."
+        },
+        {
+          "type": "paragraph",
+          "text": "A web control app shows the moderated contacts, an activity log, the settings and the policy. It is pre-release: it ships with a shadow mode that only logs, and a live demo with invented data."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/WhatsApp-content-moderation"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    }
+  ],
+  "articles": [
+    {
+      "slug": "rendering-techniques-applied-to-caustics",
+      "title": "Rendering techniques applied to caustics",
+      "summary": "A review of the techniques used to render caustics: texture projections, ray tracing, volumetric lighting, and real-time simulation as opposed to precomputed rendering.",
+      "date": "2022-05",
+      "url": "https://www.researchgate.net/publication/360604514_Rendering_techniques_applied_to_caustics",
+      "tags": [
+        "rendering",
+        "research"
+      ],
+      "meta": [
+        {
+          "label": "Publication",
+          "value": "ResearchGate, May 2022"
+        },
+        {
+          "label": "Type",
+          "value": "Article"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Replicating reality is a goal that we have essentially always been striving to achieve. This obsession with realism started with cave paintings, and has now reached the age of computer-generated imagery, with highly advanced, mathematically-proven methods, one of these being caustics."
+        },
+        {
+          "type": "paragraph",
+          "text": "This paper explains in simple words the idea behind texture projections, ray tracing, volumetric lighting and real-time simulation, and what makes these methods effective."
+        },
+        {
+          "type": "link",
+          "title": "Full text on ResearchGate",
+          "url": "https://www.researchgate.net/publication/360604514_Rendering_techniques_applied_to_caustics"
+        },
+        {
+          "type": "link",
+          "title": "Presentation, with Sébastien Pont",
+          "url": "https://www.researchgate.net/publication/360626889_Rendering_techniques_applied_to_caustics"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "virtual-reality-technologies",
+      "title": "Virtual reality technologies",
+      "summary": "A comparison of the hardware, tracking systems and software behind virtual reality headsets, summarising the available literature.",
+      "date": "2022-10",
+      "url": "https://www.researchgate.net/publication/364840600_Virtual_reality_technologies",
+      "tags": [
+        "vr",
+        "research"
+      ],
+      "meta": [
+        {
+          "label": "Publication",
+          "value": "ResearchGate, October 2022"
+        },
+        {
+          "label": "Type",
+          "value": "Article"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Virtual reality is a software marvel combined with decades of experience in computer hardware and sensors, and a tool now used in a large variety of domains."
+        },
+        {
+          "type": "paragraph",
+          "text": "This article compares and summarises, in a clear and concise manner, the many approaches chosen to address the subject: the existing hardware, the most commonly used tracking systems, and the software that brings the machinery to life."
+        },
+        {
+          "type": "link",
+          "title": "Full text on ResearchGate",
+          "url": "https://www.researchgate.net/publication/364840600_Virtual_reality_technologies"
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    }
+  ],
+  "artworks": [
+    {
+      "slug": "anatomy-study",
+      "title": "Anatomy study",
+      "summary": "Drawn live in 30 minutes. Procreate, 2025.",
+      "date": "2025",
+      "cover": {
+        "src": "/media/artwork/anatomy-study/cover.ed3d1edb.jpg",
+        "alt": "Charcoal figure drawing of a seated nude figure seen from behind, sitting on a block.",
+        "width": 1920,
+        "height": 2560
+      },
+      "sensitive": true,
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Procreate"
+        },
+        {
+          "label": "Year",
+          "value": "2025"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Drawn live in 30 minutes."
+        },
+        {
+          "type": "paragraph",
+          "text": "Procreate, 2025."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/lGl9LY"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "baroque-with-a-twist-musee-d-orsay",
+      "title": "Baroque with a twist, Musée d'Orsay",
+      "summary": "Autodesk Sketchbook, 2020.",
+      "date": "2020",
+      "cover": {
+        "src": "/media/artwork/baroque-with-a-twist-musee-d-orsay/cover.7d1b1bb6.jpg",
+        "alt": "Pencil study of a sculpture group: a standing figure with one arm raised above a seated figure stretching an arm out.",
+        "width": 1848,
+        "height": 2960
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Autodesk Sketchbook"
+        },
+        {
+          "label": "Year",
+          "value": "2020"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Autodesk Sketchbook, 2020."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/Nq8b5P"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "bridgetop-encounter",
+      "title": "Bridgetop encounter",
+      "summary": "Infinite Painter, 2022.",
+      "date": "2022",
+      "cover": {
+        "src": "/media/artwork/bridgetop-encounter/cover.ab15d13e.jpg",
+        "alt": "Painting of a steel arch bridge under a dark blue sky, with fire and black smoke rising from its deck.",
+        "width": 1200,
+        "height": 2000
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Infinite Painter"
+        },
+        {
+          "label": "Year",
+          "value": "2022"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Infinite Painter, 2022."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/1NWX3q"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "cloth-lighting-study",
+      "title": "Cloth lighting study",
+      "summary": "Autodesk Sketchbook, 2022.",
+      "date": "2022",
+      "cover": {
+        "src": "/media/artwork/cloth-lighting-study/cover.596dc343.jpg",
+        "alt": "Charcoal study of a cloth draped over an object, its corners fanning out on the floor.",
+        "width": 1848,
+        "height": 2930
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Autodesk Sketchbook"
+        },
+        {
+          "label": "Year",
+          "value": "2022"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Autodesk Sketchbook, 2022."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/x3oqJm"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "frederiks-church-copenhagen",
+      "title": "Frederik's church, Copenhagen",
+      "summary": "Procreate, 2025.",
+      "date": "2025",
+      "cover": {
+        "src": "/media/artwork/frederiks-church-copenhagen/cover.c42880dd.jpg",
+        "alt": "Ink and colour drawing of a domed church with a green copper dome, a columned portico and statues along the roofline.",
+        "width": 1920,
+        "height": 2560
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Procreate"
+        },
+        {
+          "label": "Year",
+          "value": "2025"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Procreate, 2025."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/dy3QrA"
+        }
+      ],
+      "placeSlugs": [
+        "copenhagen"
+      ]
+    },
+    {
+      "slug": "giants-of-steel",
+      "title": "Giants of steel",
+      "summary": "A digital painting of one of the most iconic World of Warships wallpapers, featuring the American battleship USS Arizona. Photoshop, 2020.",
+      "date": "2020",
+      "cover": {
+        "src": "/media/artwork/giants-of-steel/cover.a40f451a.jpg",
+        "alt": "Painting of warships on a stormy sea: a battleship in the foreground heading toward the viewer, a destroyer on the right and another ship under lightning on the left.",
+        "width": 1920,
+        "height": 1035
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Photoshop"
+        },
+        {
+          "label": "Year",
+          "value": "2020"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A digital painting of one of the most iconic World of Warships wallpapers, featuring the American battleship USS Arizona."
+        },
+        {
+          "type": "paragraph",
+          "text": "Photoshop, 2020."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/y4XEBJ"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "hand-drawn-vector-self-portrait",
+      "title": "Hand drawn vector self portrait",
+      "summary": "A dynamically coloured avatar, drawn by hand and vectorised in Figma. Figma (vectorised), 2025.",
+      "date": "2025",
+      "cover": {
+        "src": "/media/artwork/hand-drawn-vector-self-portrait/cover.27a8f878.jpg",
+        "alt": "A web interface showing a flat-style avatar of a smiling man with black hair and a blue jacket, with controls for shape, three colours and glasses.",
+        "width": 1618,
+        "height": 1747
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Figma (vectorised)"
+        },
+        {
+          "label": "Year",
+          "value": "2025"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A dynamically coloured avatar, drawn by hand and vectorised in Figma."
+        },
+        {
+          "type": "paragraph",
+          "text": "Figma (vectorised), 2025."
+        },
+        {
+          "type": "image",
+          "src": "/media/artwork/hand-drawn-vector-self-portrait/gallery-1.626fb733.jpg",
+          "alt": "Pencil sketch of the avatar on paper, with construction lines and measurements, before it was vectorised.",
+          "width": 1920,
+          "height": 1875,
+          "caption": "Pencil sketch of the vector image"
+        },
+        {
+          "type": "image",
+          "src": "/media/artwork/hand-drawn-vector-self-portrait/gallery-2.3b589900.jpg",
+          "alt": "The avatar in Figma, with its layer list: glasses, ear, hair, mouth, nose, eyes, chin shadow, head, shirt, collar, neck, jacket.",
+          "width": 1531,
+          "height": 1070,
+          "caption": "Figma project, with layer view"
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/P6bOR4"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "la-vierge-au-lys-musee-d-orsay",
+      "title": "La Vierge au Lys, Musée d'Orsay",
+      "summary": "After the statue by Eugène Delaplanche, Musée d'Orsay, Paris. Infinite Painter, 2023.",
+      "date": "2023",
+      "cover": {
+        "src": "/media/artwork/la-vierge-au-lys-musee-d-orsay/cover.eb0cfe41.jpg",
+        "alt": "Pencil study of a standing statue of a veiled woman holding a lily, on a low plinth.",
+        "width": 1848,
+        "height": 2960
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Infinite Painter"
+        },
+        {
+          "label": "Year",
+          "value": "2023"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "After the statue by Eugène Delaplanche, Musée d'Orsay, Paris."
+        },
+        {
+          "type": "paragraph",
+          "text": "Infinite Painter, 2023."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/vbxELA"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "portrait-study",
+      "title": "Portrait study",
+      "summary": "Adobe Photoshop, 2019.",
+      "date": "2019",
+      "cover": {
+        "src": "/media/artwork/portrait-study/cover.7f0e509c.jpg",
+        "alt": "Grey digital drawing of a bearded man in sunglasses looking up, with loose construction lines behind him.",
+        "width": 900,
+        "height": 1400
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Adobe Photoshop"
+        },
+        {
+          "label": "Year",
+          "value": "2019"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Adobe Photoshop, 2019."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/qJPZ6n"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "resilience",
+      "title": "Resilience",
+      "summary": "Charcoal, Procreate, 2025.",
+      "date": "2025",
+      "cover": {
+        "src": "/media/artwork/resilience/cover.640be4dc.jpg",
+        "alt": "Charcoal portrait of an elderly man with curly hair, a beard and deep-set eyes, wrapped in a dark cloak.",
+        "width": 1920,
+        "height": 2560
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Charcoal, Procreate"
+        },
+        {
+          "label": "Year",
+          "value": "2025"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Charcoal, Procreate, 2025."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/3Era62"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "suborbital-launch",
+      "title": "Suborbital launch",
+      "summary": "A cloud lighting study. Autodesk Sketchbook, 2020.",
+      "date": "2020",
+      "cover": {
+        "src": "/media/artwork/suborbital-launch/cover.1ccd20a7.jpg",
+        "alt": "A rocket climbing out of a layer of red and orange clouds, trailing smoke.",
+        "width": 1920,
+        "height": 1152
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Autodesk Sketchbook"
+        },
+        {
+          "label": "Year",
+          "value": "2020"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A cloud lighting study."
+        },
+        {
+          "type": "paragraph",
+          "text": "Autodesk Sketchbook, 2020."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/AZPvqo"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "subsurface-scattering-study",
+      "title": "Subsurface scattering study",
+      "summary": "Infinite Painter, 2023.",
+      "date": "2023",
+      "cover": {
+        "src": "/media/artwork/subsurface-scattering-study/cover.df0760dd.jpg",
+        "alt": "Colour sketch of a figure with the head bowed and a hand held to the forehead, the skin tinted purple and red where light passes through.",
+        "width": 1848,
+        "height": 1848
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Infinite Painter"
+        },
+        {
+          "label": "Year",
+          "value": "2023"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Infinite Painter, 2023."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/Ez4N44"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "the-anomaly",
+      "title": "The anomaly",
+      "summary": "Infinite Painter, gouache and charcoal, 2023.",
+      "date": "2023",
+      "cover": {
+        "src": "/media/artwork/the-anomaly/cover.42f5ce46.jpg",
+        "alt": "Digital painting of a lone traveller on a dirt track beside a wooden fence, under a stormy sky where tree-like shapes float and a glowing disc hovers.",
+        "width": 1920,
+        "height": 1179
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Infinite Painter, gouache and charcoal"
+        },
+        {
+          "label": "Year",
+          "value": "2023"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Infinite Painter, gouache and charcoal, 2023."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/kNLaKn"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "the-lighthouse-monochrome-gouache-study",
+      "title": "The lighthouse, monochrome gouache study",
+      "summary": "Infinite Painter, gouache, 2021.",
+      "date": "2021",
+      "cover": {
+        "src": "/media/artwork/the-lighthouse-monochrome-gouache-study/cover.4e84c7ab.jpg",
+        "alt": "Monochrome teal painting of a lit lighthouse on a rocky islet in a rough sea at night, with three small figures beside it and moonlight on the water.",
+        "width": 1920,
+        "height": 1152
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Infinite Painter, gouache"
+        },
+        {
+          "label": "Year",
+          "value": "2021"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Infinite Painter, gouache, 2021."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/8BokRQ"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "where-the-sun-never-sets",
+      "title": "Where the sun never sets",
+      "summary": "A custom brush study. Infinite Painter, 2021.",
+      "date": "2021",
+      "cover": {
+        "src": "/media/artwork/where-the-sun-never-sets/cover.2a3247ee.jpg",
+        "alt": "Digital painting of a space probe in front of a purple nebula, near a bright star circled by thin rings.",
+        "width": 1920,
+        "height": 1080
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Infinite Painter"
+        },
+        {
+          "label": "Year",
+          "value": "2021"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "A custom brush study."
+        },
+        {
+          "type": "paragraph",
+          "text": "Infinite Painter, 2021."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/JrnOzz"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "yamato-class-battleship-firing-test-study",
+      "title": "Yamato-class battleship firing test study",
+      "summary": "Autodesk Sketchbook, 2020.",
+      "date": "2020",
+      "cover": {
+        "src": "/media/artwork/yamato-class-battleship-firing-test-study/cover.4ec1f84b.jpg",
+        "alt": "Black ink sketch of a battleship under way at sea, smoke rising from its funnel and a gun firing.",
+        "width": 1920,
+        "height": 980
+      },
+      "tags": [
+        "digital-art"
+      ],
+      "meta": [
+        {
+          "label": "Medium",
+          "value": "Autodesk Sketchbook"
+        },
+        {
+          "label": "Year",
+          "value": "2020"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Autodesk Sketchbook, 2020."
+        },
+        {
+          "type": "link",
+          "title": "On ArtStation",
+          "url": "https://www.artstation.com/artworks/98Xy9v"
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    }
+  ],
+  "poems": [
+    {
+      "slug": "crepuscule-grec",
+      "title": "Crépuscule grec",
+      "summary": "Un poème sur un village et ses collines, à midi, vu depuis un banc.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "Français"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Ce matin les toits brillent,",
+              "inondés de soleil.",
+              "Sur les coteaux vermeils",
+              "des enfants s'éparpillent."
+            ],
+            [
+              "Couronnant le village telle une mitre grise,",
+              "des massifs rocheux dominent l'horizon.",
+              "Et du haut de leurs cimes embrumées, le gazon",
+              "déverse sa verdure sur un clocher d'église."
+            ],
+            [
+              "Depuis un banc, assis, je contemple la vue.",
+              "Je savoure ce calme solennel que parfois",
+              "ponctuent les tons joyeux de ses rires, de sa voix.",
+              "Les yeux rivés sur ce spectacle imprévu,"
+            ],
+            [
+              "je caresse sa main. Mes démons se sont tus,",
+              "comme attendris peut-être, par la splendeur profonde",
+              "de ce moment de paix et d'amour impromptu.",
+              "Il est bientôt midi, la lumière furibonde",
+              "donne à ses traits marbrés des reflets de statue."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "foret-dansante",
+      "title": "Forêt dansante",
+      "summary": "Un quatrain sur un acrobate sous les chênes.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "Français"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Lourde est la corde et brave est l'habile acrobate",
+              "sous les chênes d'argent, il s'élance, gracieux",
+              "du feuillage rayonne un soleil écarlate",
+              "seuls témoins de l'exploit, s'émerveillent les cieux"
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "l-exil",
+      "title": "L'exil",
+      "summary": "Un poème sur une ville endeuillée et le départ qui approche.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "Français"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Ce soir la ville est morne, les arbres sont en deuil.",
+              "Les carreaux larmoyants ont des teintes bleuâtres.",
+              "Pourtant, aucun passant ne pleure, aucun cercueil",
+              "dans les rues désertées d'un Paris acariâtre."
+            ],
+            [
+              "Ce teint sombre et muet, ce silence morose,",
+              "il trouve son ardeur dans mon esprit hagard.",
+              "Pour l'apaiser, tantôt j'ai couché ci ma prose",
+              "mais elle ne peut défaire mes chaînes. Je m'égare"
+            ],
+            [
+              "dans les traits dilués par les larmes versées.",
+              "Bientôt je partirai, et mes rêves d'enfants",
+              "resteront tous ici. Et c'est le cœur gercé",
+              "que je m'assoupirai à l'aube, caressant"
+            ],
+            [
+              "d'une main frémissante, le velours des fauteuils.",
+              "Un son strident retentira, note angoissante,",
+              "glas sourd annonçant mon exil; en un clin d'œil",
+              "les balustrades, les toitures grises opalescentes"
+            ],
+            [
+              "seront déjà perdues dans la brume aurorale."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "le-comedien",
+      "title": "Le comédien",
+      "summary": "Un poème sur un comédien d'improvisation qui affronte un cavalier surgi de la brume.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "Français"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Sur la scène embrumée d'illusions impalpables",
+              "se dresse un comédien, emblème du chaos.",
+              "De son esprit radieux, ruissellent quelques fables",
+              "mais nul ne voit vraiment, de fin à son propos."
+            ],
+            [
+              "C'est néanmoins sans but, étourdi formidable,",
+              "qu'il déclame fièrement sa tirade, et là-haut",
+              "sa muse, divertie, cache d'un air affable",
+              "la clé tant convoitée du trésor qu'est l'impro."
+            ],
+            [
+              "Mais voilà que des brumes indéfinies, macabres",
+              "se dessine soudain, l'ombre d'un cavalier",
+              "sa monture invisible, frémit, hennit, se cabre",
+              "et lacère le brouillard de ses sabots d'acier."
+            ],
+            [
+              "Le comédien frissonne, mais se pare au combat",
+              "des éclairs jaillissent de ses mains argentées.",
+              "Le premier coup est sien, et de ses feux l'éclat",
+              "n'a d'égal ici bas que sa dextérité."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "les-pelerins-du-rail",
+      "title": "Les pèlerins du rail",
+      "summary": "Un poème sur un trajet en train à Paris, du soir à la nuit.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "Français"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "La ville est assoupie, le soleil est de glace",
+              "Des reflets palpitants sur les vitres du train",
+              "s'élèvent des figures, sombres, et c'est l'audace",
+              "de l'habile architecte, artiste dont l'entrain",
+              "a su mouvoir des villes, fédérer des génies",
+              "qui défie, souveraine, l'horizon monotone",
+              "d'un Paris dont Montmartre est le seul insoumis."
+            ],
+            [
+              "Le ciel est de rubis, comme en un soir d'automne."
+            ],
+            [
+              "Nuit d'été, chaleur sourde, aux couleurs estompées",
+              "Lueurs mourantes et mornes, baignant de leurs pénombre",
+              "le satin suranné des rideaux déchirés"
+            ],
+            [
+              "Ronflement monotone, murmure perdu dans l'ombre",
+              "des passagers bercés par la voie délabrée."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "paris"
+      ]
+    },
+    {
+      "slug": "ode-au-desert",
+      "title": "Ode au désert",
+      "summary": "Une ode à un chemin de terre et au désert, au crépuscule.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "Français"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Sur ce chemin terreux perdu dans le lointain,",
+              "à travers des torrents et des falaises antiques,",
+              "l'herbe courbe l'échine, et les vents incertains",
+              "caressent la dentelle infinie et lithique"
+            ],
+            [
+              "des berges désolées de ce désert brumeux.",
+              "Parmi les roches ocres, nul être ne subsiste,",
+              "et seul le sable blanc, aux reflets résineux,",
+              "tourbillonne en silence, et recouvre la piste."
+            ],
+            [
+              "La route est longue, hélas ! Pourpre est le crépuscule.",
+              "Les phares scintillants du monstre de métal",
+              "peinent à révéler les arbres minuscules",
+              "cernant le précipice de sinistres pétales."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "penombre-d-ete",
+      "title": "Pénombre d'été",
+      "summary": "Un poème sur une chambre en pénombre, en été.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "Français"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Enseveli, rêveur, parmi les draps de nacre,",
+              "il observe ahuri, arborant un sourire,",
+              "son reflet translucide dans le miroir de cire",
+              "aux teintes grisonnantes, emplies de senteurs âcres."
+            ],
+            [
+              "Des stores bancals au bois fendu, irrégulier,",
+              "se déverse un soleil hésitant et fugace.",
+              "Il répand sur les murs sa chevelure de glace",
+              "et strie de son chaos la pièce immaculée."
+            ],
+            [
+              "Rayonnante de joie, le visage radiant,",
+              "elle se dresse dans l'ombre telle une idole antique",
+              "et s'esclaffe d'un rire aux timbres idylliques,",
+              "admirant, inlassable, son accomplissement."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "prose-nocturne",
+      "title": "Prose nocturne",
+      "summary": "Un poème en prose sur une pièce éclairée de néons bleus.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "Français"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Dans la pénombre jaunâtre et bleutée",
+              "d'un bouge obscur aux meubles clairsemés,",
+              "des néons bleus bourdonnent tristement."
+            ],
+            [
+              "Une lueur sombre mais grésillante",
+              "baigne les murs de tons froids, ambigus."
+            ],
+            [
+              "Et dans un coin se blottit, assoupi,",
+              "un être pâle à la chevelure noire."
+            ],
+            [
+              "Sur son visage creusé par l'insomnie",
+              "se réverbèrent des sigles mystérieux."
+            ],
+            [
+              "Des ombres sourdes, quelques notes",
+              "chétives et faibles et cependant dansantes,",
+              "seule trace d'un monde proche de l’irréel."
+            ],
+            [
+              "Les vers s'effondrent, tels les piliers centenaires d'un édifice ancien,",
+              "et l'esprit se fragmente, dans un cri déchirant plein de frayeur et d'angoisse."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "sinking",
+      "title": "Sinking",
+      "summary": "A short poem about melancholy as a slow drowning.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "English"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Melancholy kicking in, like waves splashing on a rundown pier",
+              "Surges of pain flashing up your spine, exploding in your head",
+              "washing up the remains of your mind, dragging you down the well",
+              "like a sinking boat, you fight for your life, for the air, for the freedom",
+              "but you don't even know what it feels like anymore.",
+              "Your face fades away in the dark, oily water, and your mouth",
+              "opens and close again and again, in a futile survival instinct."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "the-enslaved-acrobat",
+      "title": "The enslaved acrobat",
+      "summary": "A poem in four quatrains about a prisoner acrobat on a battlefield at night.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "English"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Rundown gears rumble in the night,",
+              "weeping engines covered in tears and dust.",
+              "The prisoner rushes into the fight,",
+              "his mind is weak and overcome with rust."
+            ],
+            [
+              "The ground is harsh and unforgiving;",
+              "under the sand, lie the defeated,",
+              "their daggers raised below, their king",
+              "perished at their side, beheaded."
+            ],
+            [
+              "Yet the prisoner's feet fly above",
+              "like a ghostly bird, he hovers",
+              "upon the moonlit pond where love's",
+              "only presence is scattered clovers."
+            ],
+            [
+              "The field is cold, the moon is bright",
+              "a drop of blood has stained the moss.",
+              "Another life is claimed tonight",
+              "the prisoner has joined the lost."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    },
+    {
+      "slug": "the-traveler",
+      "title": "The traveler",
+      "summary": "A four-line poem about being lost in a foreign town at night.",
+      "meta": [
+        {
+          "label": "Language",
+          "value": "English"
+        }
+      ],
+      "body": [
+        {
+          "type": "verse",
+          "stanzas": [
+            [
+              "Lost in a town whose mirror lake shines bright",
+              "Arcane slang that I can't comprehend",
+              "I tirelessly seek at night",
+              "A magic place where heaven knows no end."
+            ]
+          ]
+        }
+      ],
+      "placeSlugs": [
+        "toulouse"
+      ]
+    }
+  ]
 }
