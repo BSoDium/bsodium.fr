@@ -64,6 +64,29 @@ describe("icons: one library, one wrapper", () => {
   });
 });
 
+describe("key hints are plain text", () => {
+  const css = read("app.css");
+
+  it("have no border, background or outline in CSS and no box utility in any component", () => {
+    const from = css.indexOf("  .ds-kbd {");
+    const block = css.slice(from, css.indexOf("\n  }", from));
+    expect(block.length).toBeGreaterThan(0);
+    expect(block).not.toMatch(/border|background|outline|box-shadow|padding/);
+    expect(css).not.toContain("data-boxed");
+    const offenders = sources()
+      .filter((f) => f.endsWith(".tsx"))
+      .filter((f) => /data-boxed|<kbd[^>]*(border|bg-|ring|outline)/.test(code(read(f))) || /ds-kbd[^"`]*(border|bg-|ring|outline)/.test(code(read(f))));
+    expect(offenders).toEqual([]);
+  });
+
+  it("the palette's close and its footer hint are an icon and plain words, no boxed key", () => {
+    const palette = code(read("components/search-palette.tsx"));
+    expect(palette).not.toMatch(/ds-micro/);
+    expect(palette).toMatch(/aria-label="Close search"[\s\S]{0,400}<Icon name="close"/);
+    expect(palette).not.toMatch(/border border-border/);
+  });
+});
+
 describe("Icon", () => {
   const html = (props: Parameters<typeof Icon>[0]) => renderToStaticMarkup(createElement(Icon, props));
 

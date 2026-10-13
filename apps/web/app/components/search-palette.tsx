@@ -27,7 +27,42 @@ export function openSearch(): void {
 }
 
 /**
- * Quick search (Cmd or Ctrl + K, or the button in the navigation): a modal `dialog` holding an ARIA combobox over the places and
+ * The header's two forms of the trigger (the icon with the key hint from 28 rem of header width, the one word "Search" under it: a
+ * phone). They only send the open event: the palette itself (`SearchPalette`) is mounted once, next to the header and not inside it, so
+ * that the header can come and go (the home page's header is absent while the hero is at rest) without closing a palette that is open.
+ */
+export function SearchTriggers() {
+  return (
+    <>
+      {/* Where the icon trigger below is not shown (the header is under 28 rem: a phone), the same control as one quiet word: a 44 px target. */}
+      <button
+        type="button"
+        onClick={openSearch}
+        aria-keyshortcuts="Control+K Meta+K"
+        aria-haspopup="dialog"
+        data-slot="search-trigger-compact"
+        className="nav-link pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground @md:hidden"
+      >
+        Search
+      </button>
+      <button
+        type="button"
+        onClick={openSearch}
+        aria-label="Search"
+        aria-keyshortcuts="Control+K Meta+K"
+        aria-haspopup="dialog"
+        data-slot="search-trigger"
+        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2.5 px-2 text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground @md:inline-flex"
+      >
+        <Icon name="search" size="control" />
+        <KeyHint className="hidden @xl:inline-flex" />
+      </button>
+    </>
+  );
+}
+
+/**
+ * Quick search (Cmd or Ctrl + K, the hero's search line, or the header's trigger): a modal `dialog` holding an ARIA combobox over the places and
  * entries. The input owns the focus; the arrow keys move a highlight (`aria-activedescendant`) through the listbox, Enter opens it,
  * Escape closes and gives the focus back. Results are grouped (places, then the four kinds), each row led by the kind's icon at the control size. The index
  * is fetched once (`/search-index.json`) and searched in the browser (`lib/search.ts`). Nothing renders before the first open.
@@ -135,29 +170,6 @@ export function SearchPalette() {
 
   return (
     <>
-      {/* Where the icon trigger below is not shown (the header is under 28 rem: a phone), the same control as one quiet word: a 44 px target. */}
-      <button
-        type="button"
-        onClick={show}
-        aria-keyshortcuts="Control+K Meta+K"
-        aria-haspopup="dialog"
-        data-slot="search-trigger-compact"
-        className="nav-link pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground @md:hidden"
-      >
-        Search
-      </button>
-      <button
-        type="button"
-        onClick={show}
-        aria-label="Search"
-        aria-keyshortcuts="Control+K Meta+K"
-        aria-haspopup="dialog"
-        data-slot="search-trigger"
-        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2.5 px-2 text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground @md:inline-flex"
-      >
-        <Icon name="search" size="control" />
-        <KeyHint boxed className="hidden @xl:inline-flex" />
-      </button>
       {open && (
         <dialog
           ref={dialogRef}
@@ -195,14 +207,14 @@ export function SearchPalette() {
                 onKeyDown={onInputKey}
                 className="min-h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
+              {/* A plain icon, no box: the footer says the key. It is the way out for a touch screen. */}
               <button
                 type="button"
                 onClick={hide}
                 aria-label="Close search"
-                data-boxed=""
-                className="ds-kbd min-h-11 min-w-11 shrink-0 text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground"
               >
-                Esc
+                <Icon name="close" size="control" />
               </button>
             </div>
             <div className="max-h-[min(24rem,60dvh)] overflow-y-auto overscroll-contain">
@@ -261,9 +273,7 @@ export function SearchPalette() {
                     open
                   </span>
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="ds-kbd" data-boxed="">
-                      Esc
-                    </span>
+                    <span className="font-meta text-[0.8125rem]">Esc</span>
                     close
                   </span>
                 </span>
