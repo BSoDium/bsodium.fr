@@ -6,7 +6,7 @@ Source of truth: `apps/web/app/app.css`. Colors, radii, motion and layout are CS
 Tailwind 4 reads them through `@theme` / `@theme inline`. Light and dark follow `prefers-color-scheme`
 (no toggle for visitors; `[data-scheme="light"|"dark"]` forces a scheme on a subtree and is set only by the dev styleguide). Names match shadcn/ui's contract so selectively added components work unchanged.
 
-Principles: monochrome with one accent, generous spacing, clear hierarchy. The system stack plus three self-hosted fonts (display, reading, metadata), no remote font requests.
+Principles: black and white with one accent (BSoD blue, the call to action; since 2026-10-14 no warm tone anywhere), generous spacing, clear hierarchy. The system stack plus three self-hosted fonts (display, reading, metadata), no remote font requests.
 The navbar has no surface of its own: it floats over the page and a gradient (a scrim over content, a fade over the globe) keeps it readable (see "Nav scrim").
 
 ## Color
@@ -19,9 +19,10 @@ The navbar has no surface of its own: it floats over the page and a gradient (a 
 | `--muted-foreground` | `#595959` | `#a3a3a3` | secondary text (AA: 6.8:1 light, 7.9:1 dark) |
 | `--subtle-foreground` | `#6f6f6f` | `#8a8a8a` | the map's credits line: dimmer than muted text by COLOUR (4.9:1 light, 5.7:1 dark against the page; muted is 6.8 / 7.9), never by opacity; hover and keyboard focus raise it to `--foreground` |
 | `--border` | `rgb(0 0 0 / .14)` | `rgb(255 255 255 / .16)` | hairlines |
-| `--border-strong` | `rgb(0 0 0 / .4)` | `rgb(255 255 255 / .45)` | outlined buttons (not the credits dialog, which uses `--border`) |
-| `--ring` | `#0a0a0a` | `#f5f5f5` | focus ring (2px outline, 2px offset, all focusable elements) |
-| `--primary` / `--primary-foreground` | `#0a0a0a` / `#fbfbfb` | `#f5f5f5` / `#0a0a0a` | default button |
+| `--border-strong` | `rgb(0 0 0 / .44)` | `rgb(255 255 255 / .45)` | outlined buttons (not the credits dialog, which uses `--border`); 3.3:1 light, 4.5:1 dark against the page (it was .4, 2.8:1, until 2026-10-14: a control's edge is held to 3:1) |
+| `--ring` | `#0067b8` | `#0a93ff` | focus ring (2px outline, 2px offset, all focusable elements, on a 5px moat of `--background`): the accent's text tone, 5.6:1 / 6.3:1 on the page (it was the ink until 2026-10-14). A primary button's ring is the ink: a blue ring round a blue fill would read as a halo |
+| `--primary` / `--primary-foreground` | `#0076d4` / `#ffffff` | `#0076d4` / `#ffffff` | the call to action: the default (primary) button is a filled BSoD blue with white text (4.62:1); it was ink on the page's colour until 2026-10-14 |
+| `--signal-hover`, `--signal-active` | `#006cc2`, `#0064b2` | the same | a signal fill hovered and pressed: one step and two steps deeper along lightness (white text 5.35:1 and 6.06:1; the fill against the page 5.2:1 and 5.9:1 in light, 3.7:1 and 3.3:1 in dark (3.5:1 and 3.1:1 on the surface plate): a deeper step would clear AA text but lose the 3:1 shape against the near-black page) |
 | `--signal` | `#0076d4` | `#0076d4` | the one accent, BSoD blue, the same in both schemes: LARGE display text (24 px, or 18.66 px bold, and up), non-text marks (underline, tick, rule, a cover's mark) and fills. 4.47:1 on the page and 4.20:1 on the surface in light, 4.28:1 and 4.05:1 in dark. See "Accent" below |
 | `--signal-text` | `#0067b8` | `#0a93ff` | the accent as text of any size under 24 px: 5.59:1 on the page, 5.26:1 on the surface, 4.89:1 on the hover grey (light); 6.25 / 5.91 / 5.20:1 (dark) |
 | `--signal-foreground` | `#ffffff` | `#ffffff` | text on a `--signal` fill: 4.62:1 (both schemes: the fill is the same) |
@@ -37,7 +38,7 @@ UI-system additions (2026-10-08, values and use in design-system.md): `--surface
 
 ### Accent
 
-The one accent is **BSoD blue**, after the owner's handle (BSoDium) and the Windows stop screen: the reference is `#0078d7` (hue 206.5 degrees, HSL 100 % 42 %). Every tone of it keeps that hue and saturation and moves along lightness only, so nothing drifts to cyan or to purple. The fill is `--signal` `#0076d4`, the same in both schemes (two steps deeper than the reference: white text on `#0078d7` itself is 4.499:1, a thousandth under AA, and on `#0076d4` it is 4.62:1). On a fill the text is white (`--signal-foreground`), as on the stop screen. Text under 24 px needs more against a light page than the fill gives (4.47:1 on the page, 3.91:1 on the hover grey) and against a dark one more against the hover grey (3.57:1 for the fill), so `--signal-text` is a tone of the same hue: `#0067b8` in light (5.59:1 on the page, 4.89:1 on the hover grey) and `#0a93ff` in dark (6.25:1 on the page, 5.20:1 on the hover grey). Contrast is computed with `lib/contrast.ts` (WCAG 2) and asserted for every pair, both schemes, by `design-system.test.ts`. Changing the accent later is the five accent lines of `app.css` (`--signal`, `--signal-text`, `--signal-foreground`, `--signal-wash`, and the two `--inverse-signal*`), times the four copies of the list; the tests say what no longer holds.
+The one accent is **BSoD blue**, after the owner's handle (BSoDium) and the Windows stop screen: the reference is `#0078d7` (hue 206.5 degrees, HSL 100 % 42 %). Every tone of it keeps that hue and saturation and moves along lightness only, so nothing drifts to cyan or to purple. The fill is `--signal` `#0076d4`, the same in both schemes (two steps deeper than the reference: white text on `#0078d7` itself is 4.499:1, a thousandth under AA, and on `#0076d4` it is 4.62:1). On a fill the text is white (`--signal-foreground`), as on the stop screen. Text under 24 px needs more against a light page than the fill gives (4.47:1 on the page, 3.91:1 on the hover grey) and against a dark one more against the hover grey (3.57:1 for the fill), so `--signal-text` is a tone of the same hue: `#0067b8` in light (5.59:1 on the page, 4.89:1 on the hover grey) and `#0a93ff` in dark (6.25:1 on the page, 5.20:1 on the hover grey). Contrast is computed with `lib/contrast.ts` (WCAG 2) and asserted for every pair, both schemes, by `design-system.test.ts`. Changing the accent later is the accent lines of `app.css` (`--signal`, `--signal-text`, `--signal-foreground`, `--signal-wash`, `--signal-hover`, `--signal-active`, `--primary`, `--ring`, the two `--paper-signal*` and the two `--inverse-signal*`), times the four copies of the list; the tests say what no longer holds. The hover and pressed fills are the same hue and saturation at lightness 38 % and 35 % (the fill is 42 %): the range is bounded below by 3:1 against the dark page and above by 4.5:1 for the white label.
 
 | Use | Token | Rule |
 | --- | --- | --- |
@@ -45,9 +46,14 @@ The one accent is **BSoD blue**, after the owner's handle (BSoDium) and the Wind
 | Non-text marks: link underline, the active tick, the progress line, a cover's mark, a rule | `--signal` | 3:1 |
 | Any text under that size (a status word, a micro-label, a meta line) | `--signal-text` (`text-signal-text`) | 4.5:1 on the page, the surface and the hover grey |
 | Text on a filled accent block | `--signal-foreground` on `--signal` | 4.5:1; the fill is blue with white on it in both schemes |
-| Inside an inverted frame | `--signal` and `--signal-text` are rebound to `--inverse-signal` / `--inverse-signal-text` | 3:1 and 4.5:1 on the inverted page |
+| The call to action: a primary button, a toggle that is on | `--primary` (= `--signal`) with `--primary-foreground` (= `--signal-foreground`); hover `--signal-hover`, pressed `--signal-active` | 4.5:1 for the label on all three fills; each fill 3:1 against the page |
+| A link in running text, a hovered tag, filter or header item, a key hint on hover | `--signal-text` | 4.5:1 |
+| The focus ring | `--ring` (the same tone as `--signal-text`); a primary button's ring is `--foreground` | 3:1 on the page, the surface and the hover grey |
+| The selection | `::selection`: `--signal` with `--signal-foreground` | 4.5:1 |
+| The current header item, the chosen filter, the active frame's edge, a card title under the pointer | `--signal` as a 2 px underline or rule | 3:1 (marks) |
+| Inside an inverted frame | `--signal`, `--signal-text`, `--ring` and `--primary` are rebound to `--inverse-signal` / `--inverse-signal-text` / `--inverse-signal` | 3:1 and 4.5:1 on the inverted page |
 
-The accent stays out of the map and the globe (they are monochrome); on paper (`@media print`) both tokens are black.
+The accent stays out of the map and the globe (they are monochrome); on paper (`@media print`) the accent, the ring and the primary fill are black.
 
 Tailwind utilities: `bg-background`, `text-foreground`, `text-muted-foreground`, `border-border`, `bg-accent`, etc.
 The map and the globe stay monochrome: the accent `--signal` and the kind hues are for the data-display UI only, and there is no destructive color on purpose (an error is the word Error in an inverted tag).
@@ -151,18 +157,29 @@ Older steps (system sans, still used by the interface):
 
 ## Reading surface
 
-The entry pages and the four lists sit on **paper** in the light scheme and on **night** in the dark: the colours of the "Article on paper" and "Poem at night" boards of the owner's canvas. Six tokens, in the four copies of the scheme blocks (root, dark media rule, both forced rules):
+The entry pages and the four lists use the page's own colour in both schemes: **no paper tone** (2026-10-14, owner: the milky cream of the earlier "Article on paper" board was jarring against an editorial, black and white, LCD-adjacent system; until then they sat on `#efeadf` / `#0b0c0f` with a warm ivory ink). Six tokens remain, in the four copies of the scheme blocks (root, dark media rule, both forced rules), so that the reading surface can differ from the page again without touching a component; today each equals the page token it is bound to, and `contrast-audit.test.ts` ("neutral palette") fails on any warm cast in a grey and on a paper that is not the page's colour:
 
-| Token | Light (paper) | Dark (night) | Use |
+| Token | Light | Dark | Use |
 | --- | --- | --- | --- |
-| `--paper` | `#efeadf` | `#0b0c0f` | the page of an entry or a list |
-| `--paper-foreground` | `#16130f` | `#ece8df` | ink: text and the rules (15.4:1 / 16.0:1) |
-| `--paper-muted` | `#6b665b` | `#8d8a82` | secondary text and the mono marginalia (4.76:1 / 5.67:1; 4.5:1 or more on the hover grey) |
-| `--paper-hover` | `#ebe7dc` | `#17181b` | the hover grey (rows, contents links) |
-| `--paper-signal` | `#0076d4` | `#0076d4` | the accent as large text and marks: 3.85:1 on the paper / 4.23:1 on the night (the page accent is the same value: blue is deep enough on the warm paper, so no separate tone is needed, unlike the orange) |
-| `--paper-signal-text` | `#0067b8` | `#0a93ff` | the accent as text under 24 px: 4.82:1 on the paper, 4.68:1 on its hover grey / 6.18:1 on the night, 5.61:1 on its hover grey |
+| `--paper` | `#fbfbfb` | `#0a0a0a` | the page of an entry or a list (equal to `--background`) |
+| `--paper-foreground` | `#0a0a0a` | `#f5f5f5` | ink: text and the rules (equal to `--foreground`) |
+| `--paper-muted` | `#595959` | `#a3a3a3` | secondary text and the mono marginalia (6.8:1 / 7.9:1) |
+| `--paper-hover` | `#ececec` | `#1f1f1f` | the hover grey (rows, contents links) |
+| `--paper-signal` | `#0076d4` | `#0076d4` | the accent as large text and marks |
+| `--paper-signal-text` | `#0067b8` | `#0a93ff` | the accent as text under 24 px |
 
-They are bound, not used by name: for an entry's panel (`[data-panel]:has([data-surface="reading"])`), for the root of a list page (`:root:has(main[data-surface="reading"])`) and for one element (`[data-reading-surface]`, the styleguide), `--background`, `--surface`, `--foreground`, `--muted-foreground`, `--accent`, `--border`, `--border-strong`, `--ring`, `--signal`, `--signal-text` and `--primary` take these values, so every component inside follows (the navigation's scrim, the focus ring, the buttons). The rule is unlayered on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The map, the place panel and the home page keep the neutral page colours. `design-system.test.ts` ("reading surface") tests the pairs in both schemes.
+They are bound, not used by name: for an entry's panel (`[data-panel]:has([data-surface="reading"])`), for the root of a list page (`:root:has(main[data-surface="reading"])`) and for one element (`[data-reading-surface]`, the styleguide), `--background`, `--surface`, `--foreground`, `--muted-foreground`, `--accent`, `--border`, `--border-strong`, `--ring`, `--signal`, `--signal-text` and `--primary` take these values, so every component inside follows (the navigation's scrim, the focus ring, the buttons). The rule is unlayered on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The map, the place panel and the home page keep the page colours. `design-system.test.ts` ("reading surface") and `contrast-audit.test.ts` test the pairs in both schemes.
+
+## Contrast audit
+
+Two automatic checks, run before a palette change ships.
+
+1. **Tokens** (`app/lib/contrast-audit.test.ts`, in `pnpm test`). A table of every foreground / background pair the interface draws, evaluated in both schemes and in the three contexts that rebind the tokens (the page, the reading surface, an inverted frame), plus print: body text 7:1 on the page, the surface and the hover grey; secondary text, the accent as text, a link, a hovered tag or nav item, the key hint, a primary button's label at rest, hovered and pressed, a signal fill's label, the selected label, a disabled label 4.5:1; large display accent text, marks, the primary fill and its hover as shapes, the focus ring and a control's edge 3:1; the signal wash plate; no warm cast in any grey.
+2. **Rendered pages** (`apps/web/scripts/contrast/audit.mjs`, a browser, DEMO content). Every route kind (the home page, the place panel, the four lists and a filtered one, an entry of each kind in the panel and full screen, a short note, an archived project, a mature artwork, a poem in French, the 404 pages, the 500 page, the search palette with and without a query and with no result, the credits dialog, the styleguide) in both schemes at 1440 x 900 and 390 x 844. Each element that owns text is scrolled into view; its glyphs are compared with what is really drawn behind THEM (the page is screenshot with and without the text colours, and only the pixels the glyphs changed are compared, so a scrim, a label plate, a gradient, the globe's lines or a hover fill are in the number). Every control (two of each look) is measured at hover, with keyboard focus (forced `:focus-visible`: the ring is checked at 3:1 against what is around it, or a change of look is required) and pressed. Icon-only controls are held to 3:1. Hidden, covered, inert and visually hidden text is skipped and counted; disabled controls are measured but exempt. `CHROME_PATH=... BASE_URL=http://localhost:5463 OUT_DIR=/tmp/contrast node scripts/contrast/audit.mjs` (`--page`, `--scheme`, `--vp` narrow it), exit code 1 on any failure, the full table in `OUT_DIR/contrast-audit.json`.
+
+Results, 2026-10-14 (demo content, Chrome, both schemes, 1440 x 900 and 390 x 844): 27 pages x 4 = 108 loads, 10 418 measures (7 492 texts under 24 px, lowest 4.59:1; 1 498 large texts and icons, lowest 3.74:1; 1 420 focus rings, lowest 3.63:1; hover, focus and pressed states of every control, lowest 4.12:1), 0 failures; 6 044 hidden, covered or inert elements skipped. Before (main's look, same script): the "Open host" bar's label 3.24:1 at rest and 1.63:1 pressed (muted mono text from the marginalia's link rule on the black fill), focus rings 1.0 to 2.7:1 over an image, a coast line or the scrim, the hero row's hovered accent text 2.0:1 over a map line, the heading anchors on touch 2.4:1, the header's hovered items 3.3:1 over a dark picture under the scrim, the palette field and the search triggers with no focus indicator beyond the caret.
+
+Pairs changed: the primary button (ink on page, 19:1, became white on `#0076d4`, 4.62:1; hover `#006cc2`, pressed `#0064b2`); `--border-strong` (light 2.8:1 to 3.3:1); the "Open host" bar's label (3.24:1 to 4.62:1); focus ring (ink to the accent's text tone, on a 5 px page-colour moat, so 3:1 or more over any picture); the hovered tag, filter and header item (ink or muted to `--signal-text`); the nav scrim over a header's text (77% to 92% or more); the hero row's hover (a 90% plate of the page colour under it); the heading anchor on touch (opacity .55 to .75); the focused segmented button and the mobile panel's header row now stack above what overlaps their ring. Not made AA: none. Not measured: Safari and iOS (no `color-mix`/`:has()` fallback was needed in Chrome; WebKit untested), forced colours (separate: system colours), the WebGL globe's own pixels beyond what lies under HTML text.
 
 ## Spacing
 
@@ -216,7 +233,7 @@ a scrim dims whatever passes beneath it. It is `.nav-scrim` in `app.css`, render
 
 - Geometry: `position: fixed`, top and full width, height `--scrim-height` (navbar height + 2.5rem = 96px),
   `pointer-events: none`, `aria-hidden`, z-index 35 (content and panel 30, navbar 40).
-- Colour: a 14-stop `linear-gradient` from `--background` at 96% alpha to transparent, with stops eased roughly like a
+- Colour: a 14-stop `linear-gradient` from `--background` at 97% alpha (92% or more up to a third of the height, where the header's text sits: a hovered, accent-coloured item stays 4.5:1 over a dark picture scrolling under it; it was 96% falling to 77% there until 2026-10-14) to transparent, with stops eased roughly like a
   smoothstep so there is no visible start or end line. The stops use `color-mix(in srgb, var(--background) N%,
   transparent)`, so it follows light and dark with no extra tokens.
 - Blur: three child `<span>`s, each a `backdrop-filter: blur()` (1.5px, 4px, 9px) masked by its own `mask-image`
