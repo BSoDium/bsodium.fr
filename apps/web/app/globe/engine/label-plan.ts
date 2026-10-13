@@ -22,7 +22,7 @@
  * text of the map keeps the whole-cell version (`CELL_UNITS`), used by the tests of the planner as well.
  */
 import { LABEL_TYPE } from "./label-text";
-import { clampOn, coversBox, labelCandidates, snapToLattice, type CellRect, type GridSize, type LabelSpot, type Lattice } from "./pixel-labels";
+import { clampOn, coversBox, labelCandidates, selectedShift, snapToLattice, type CellRect, type GridSize, type LabelSpot, type Lattice } from "./pixel-labels";
 
 /** The distances the plan works with, in the unit of its geometry. */
 export interface PlanUnits {
@@ -38,8 +38,10 @@ export interface PlanUnits {
   quant: number;
   /** Clear room between a plate outside a box and the box's outline. */
   gap: number;
-  /** How far a plate aligned with a box edge sticks out past it (0: its edge is the box's outer edge). */
+  /** How far a plate aligned with a box edge sticks out past it (0: its edge is the box's outer edge): the padding of the plate hangs outside the box so the TEXT is flush with the edge. */
   bleed: number;
+  /** The same for a plate beside its box: its top sticks out this far above the box's top edge. */
+  bleedY: number;
   /** The art-pixel lattice the plates sit on (`pxUnits`): every position is a whole number of cells from its origin, like the boxes. */
   lattice?: Lattice | undefined;
   /**
@@ -53,13 +55,15 @@ export interface PlanUnits {
 }
 
 /** Whole art cells (the pixel text). */
-export const CELL_UNITS: PlanUnits = { clearance: 1, upgradeMargin: 2, shiftStep: 2, inset: 1, quant: 1, gap: 0, bleed: 0, keepSlack: 0 };
+export const CELL_UNITS: PlanUnits = { clearance: 1, upgradeMargin: 2, shiftStep: 2, inset: 1, quant: 1, gap: 0, bleed: 0, bleedY: 0, keepSlack: 0 };
 /**
  * CSS px (the DOM labels): 4 px between two labels, 10 px of room before a label gives its place up, `LABEL_TYPE.boxGap` (3 px) of clear room
- * between a label and its box, the plate's edge ON the box's outer edge (`LABEL_TYPE.bleed` 0: the text starts `padX` inside it), a nested label
- * `inset` (the outline's thickness plus `LABEL_TYPE.nestInset`, set per plan from the cell) inside.
+ * between a label and its box, the plate hanging `LABEL_TYPE.bleed` (its padding, 6 px) past the box's edge it is aligned with so that the TEXT is
+ * flush with that edge (`bleedY`, 3 px, the same for a label beside its box), a nested label `inset` (the outline's thickness plus
+ * `LABEL_TYPE.nestInset`, set per plan from the cell) inside. This is the plate as it is at rest; a selected label is the card, flush with its box,
+ * which moves by `selectedShift` (the plan reserves that room too: `PlanItem.reserve`).
  */
-export const PX_UNITS: PlanUnits = { clearance: 4, upgradeMargin: 10, shiftStep: 6, inset: 2.5 + LABEL_TYPE.nestInset, quant: 0.5, gap: LABEL_TYPE.boxGap, bleed: LABEL_TYPE.bleed, keepSlack: 2.75 };
+export const PX_UNITS: PlanUnits = { clearance: 4, upgradeMargin: 10, shiftStep: 6, inset: 2.5 + LABEL_TYPE.nestInset, quant: 0.5, gap: LABEL_TYPE.boxGap, bleed: LABEL_TYPE.bleed, bleedY: LABEL_TYPE.bleedY, keepSlack: 2.75 };
 
 /**
  * The units of the labels as they are DRAWN (2026-10-13: the lattice was reverted for the labels, see docs/web-architecture.md "Labels move
@@ -143,6 +147,11 @@ export interface PlanItem {
    * position that is free by a few px. Not available (off the grid, taken): the usual order.
    */
   pref?: number | undefined;
+  /**
+   * The node's label is SELECTED: it is drawn as the card, moved by `selectedShift` from the plate planned here (the plate at rest), so that room is
+   * reserved too: no other plate is planned over the card. Without it the plan is for the plate at rest only.
+   */
+  reserve?: boolean | undefined;
 }
 
 export interface PlanResult {
@@ -183,6 +192,15 @@ interface Best {
   second: boolean;
 }
 
+/**
+ * The room a plate at (`x`, `y`) occupies: itself, and, when it is a selected label's (`id` >= 0), the room its card takes when it moves flush with
+ * the box (`selectedShift`). `id` -1: the plate alone (the last resort has no alignment).
+ */
+export function occupied(x: number, y: number, w: number, h: number, id: number, units: Pick<PlanUnits, "bleed" | "bleedY">): Plate {
+  const s = id >= 0 ? selectedShift(id, units.bleed, units.bleedY) : { dx: 0, dy: 0 };
+  return { x0: x + Math.min(0, s.dx), y0: y + Math.min(0, s.dy), x1: x + w + Math.max(0, s.dx), y1: y + h + Math.max(0, s.dy) };
+}
+
 /** Placement order of the items: score, then the bigger box, then the key. */
 export function planOrder(items: readonly PlanItem[]): number[] {
   return items.map((_, n) => n).sort((a, b) => {
@@ -205,7 +223,7 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
   const { clearance, upgradeMargin, shiftStep } = units;
   // the hysteresis of a kept slot is for plans that run while the camera moves; the plan at rest has the full room (`PlanUnits.keepSlack`)
   const slack = upgradeMargin > 0 ? units.keepSlack : 0;
-  const spotUnits = { inset: units.inset, quant: units.quant, gap: units.gap, bleed: units.bleed, lattice: units.lattice };
+  const spotUnits = { inset: units.inset, quant: units.quant, gap: units.gap, bleed: units.bleed, bleedY: units.bleedY, lattice: units.lattice };
 
   for (const n of order) {
     const t = items[n]!;
@@ -266,7 +284,7 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
     }
     if (chosen) {
       const { w, h } = t.variants[chosen.v]!;
-      placed.push({ x0: chosen.s.x, y0: chosen.s.y, x1: chosen.s.x + w, y1: chosen.s.y + h });
+      placed.push(occupied(chosen.s.x, chosen.s.y, w, h, t.reserve ? chosen.s.id : -1, units));
       out[n] = { variant: chosen.v, x: chosen.s.x, y: chosen.s.y, w, h, cand: chosen.s.id, inside: chosen.s.inside, overlap: false };
       continue;
     }

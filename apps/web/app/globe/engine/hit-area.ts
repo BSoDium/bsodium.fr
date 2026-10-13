@@ -18,7 +18,7 @@
  * answer never depends on the order of the nodes). A node that is almost faded in or out is not a target (`LOD.pickAlphaMin`), and one on its way
  * out only while it is half there (`pickAlpha`, `LOD.pickFadingMin`): a cross-fading group never steals a click from its children.
  *
- * Touch: the slop is larger so that a target is about 44 CSS px across (a minimum box is 22 px, its label adds height).
+ * Touch: the slop is larger so that a target is about 44 CSS px across (the box part is at least `HIT.minBoxPx`, 24 px, its label adds height).
  */
 export type PointerKind = "mouse" | "touch";
 
@@ -41,7 +41,22 @@ export const HIT = {
   band: { mouse: 6, touch: 12 },
   /** A box wider or taller than this fraction of the smaller side of the map has no interior target (it opens at 0.45, `LOD.boxMaxFrom`). */
   bigBoxFrac: 0.45,
+  /**
+   * The box part of a target is at least this many CSS px across, whatever the box drawn (2026-10-13: the floor size of a box went from 22.5 to
+   * 12.5 px, a drawing, not a pointer target: the target stays what it was, 24 px or more, plus the slop).
+   */
+  minBoxPx: 24,
 } as const;
+
+/** A box grown about its centre to at least `min` CSS px on each axis (the hit target of a small box: the pointer target does not shrink with the drawing). */
+export function minTargetBox(box: Rect, min: number = HIT.minBoxPx): Rect {
+  const w = box.x1 - box.x0;
+  const h = box.y1 - box.y0;
+  if (w >= min && h >= min) return box;
+  const gx = Math.max(0, (min - w) / 2);
+  const gy = Math.max(0, (min - h) / 2);
+  return { x0: box.x0 - gx, y0: box.y0 - gy, x1: box.x1 + gx, y1: box.y1 + gy };
+}
 
 const cross = (o: Point, a: Point, b: Point) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 

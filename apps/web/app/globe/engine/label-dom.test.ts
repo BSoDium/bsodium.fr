@@ -4,7 +4,11 @@ import { LABEL_TYPE } from "./label-text";
 
 /** The smallest DOM the layer needs: elements with a style, a dataset, children and remove(). */
 class FakeEl {
-  style: Record<string, string> = {};
+  style: Record<string, string> & { setProperty(name: string, value: string): void } = {
+    setProperty(this: Record<string, string>, name: string, value: string) {
+      this[name] = value; // (a custom property: the real declaration keeps it by name too)
+    },
+  } as unknown as Record<string, string> & { setProperty(name: string, value: string): void };
   dataset: Record<string, string> = {};
   children: FakeEl[] = [];
   className = "";
@@ -31,7 +35,7 @@ class FakeEl {
   }
 }
 
-const view = (extra: Partial<LabelView> = {}): LabelView => ({ x: 10, y: 20, w: 60, h: 24, name: "Paris", sub: null, mode: "rest", over: false, alpha: 1, ...extra });
+const view = (extra: Partial<LabelView> = {}): LabelView => ({ x: 10, y: 20, w: 60, h: 24, name: "Paris", sub: null, mode: "rest", over: false, alpha: 1, dx: 0, dy: 0, ...extra });
 let root: FakeEl;
 let layer: LabelLayer;
 
@@ -122,6 +126,22 @@ describe("the label layer: real text in pooled elements, positioned by transform
     expect(layer.writes).toBe(w + 1);
     frame(() => layer.put(1, "a", view({ x: 11, w: 70 })));
     expect(layer.writes).toBe(w + 2);
+  });
+  it("the card's shift is two custom properties the stylesheet's `translate` of a selected label reads: written when it changes, never per frame, and not as a transform", () => {
+    frame(() => layer.put(1, "a", view({ dx: 6, dy: 0 })));
+    expect(el().style["--map-label-dx"]).toBe("6px");
+    expect(el().style["--map-label-dy"]).toBe("0px");
+    expect(el().style.transform).toBe("translate3d(10px,20px,0)"); // the position is the transform alone
+    const w = layer.writes;
+    frame(() => layer.put(1, "a", view({ dx: 6, dy: 0 })));
+    expect(layer.writes).toBe(w);
+    frame(() => layer.put(1, "a", view({ dx: -6, dy: 0 })));
+    expect(layer.writes).toBe(w + 1);
+    expect(el().style["--map-label-dx"]).toBe("-6px");
+    // the same whatever the mode: the properties are the slot's, the stylesheet applies them to a selected label only
+    frame(() => layer.put(1, "a", view({ dx: -6, dy: 0, mode: "selected" })));
+    expect(el().style["--map-label-dx"]).toBe("-6px");
+    expect(el().style.translate).toBeUndefined(); // (no inline translate: it is the stylesheet's, with its transition)
   });
   it("a selected plate (inverted) and one drawn over other labels (the last resort) are opaque: no feather; at rest and hovered it has one", () => {
     frame(() => layer.put(1, "a", view({ mode: "rest" })));

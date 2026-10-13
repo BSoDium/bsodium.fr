@@ -38,7 +38,7 @@
  * Hover, focus and selection are NOT inputs of the plan, and they change neither the text nor the size of a label (the plate is inverted when
  * selected, nothing else): moving the pointer never moves a label.
  */
-import { planLabels, type PlanItem, type PlanUnits, type Plate, type Prev, type Sized } from "./label-plan";
+import { occupied, planLabels, type PlanItem, type PlanUnits, type Plate, type Prev, type Sized } from "./label-plan";
 import { HASH_SEED, hashStep, spotAt, type CellRect, type GridSize } from "./pixel-labels";
 
 export const TRACK = {
@@ -141,6 +141,8 @@ export interface TrackItem {
   avoid?: (() => readonly Plate[]) | undefined;
   /** The candidate the cut reserved for the plate (`PlanItem.pref`). */
   pref?: number | undefined;
+  /** The label is selected: the room of its card (flush with the box) is kept clear too (`PlanItem.reserve`). */
+  reserve?: boolean | undefined;
 }
 
 export interface Placed {
@@ -407,7 +409,7 @@ export class LabelTracker {
       let inside = false;
       let ok: boolean;
       if (mem.cand[i]! >= 0) {
-        ok = spotAt(mem.cand[i]!, it.rect, w, hh, grid, { inset: units.inset, quant: units.quant, gap: units.gap, bleed: units.bleed, lattice: units.lattice, slide: true }, at);
+        ok = spotAt(mem.cand[i]!, it.rect, w, hh, grid, { inset: units.inset, quant: units.quant, gap: units.gap, bleed: units.bleed, bleedY: units.bleedY, lattice: units.lattice, slide: true }, at);
         x = at.x;
         y = at.y;
         inside = at.inside;
@@ -422,13 +424,13 @@ export class LabelTracker {
       }
       const d = this.place(t, i, it.rect, x, y, "keep");
       out[n] = { variant: v, cand: mem.cand[i]!, x: d.x, y: d.y, w, h: hh, gx: d.gx, gy: d.gy, inside, overlap: mem.cand[i]! < 0, moved: false, fresh: false };
-      fixed.push({ x0: x, y0: y, x1: x + w, y1: y + hh }); // the slot's place, not the drawn one: the plan keeps clear of where a plate WILL be
+      fixed.push(occupied(x, y, w, hh, it.reserve && mem.cand[i]! >= 0 ? mem.cand[i]! : -1, units)); // the slot's place, not the drawn one: the plan keeps clear of where a plate WILL be (and of the selected card's)
     }
     let held = false; // a plan ran while a choice was still young: it is owed again once the youngest is old enough
     if (plan.length) {
       const sub: PlanItem[] = plan.map((n) => {
         const it = items[n]!;
-        return { score: it.score, area: it.area, key: it.key, rect: it.rect, variants: it.variants, prev: mem.prev(it.id), hold: moving && mem.set[it.id] === 1 && t - mem.since[it.id]! < this.opts.dwellMs, avoid: it.avoid?.(), pref: it.pref };
+        return { score: it.score, area: it.area, key: it.key, rect: it.rect, variants: it.variants, prev: mem.prev(it.id), hold: moving && mem.set[it.id] === 1 && t - mem.since[it.id]! < this.opts.dwellMs, avoid: it.avoid?.(), pref: it.pref, reserve: it.reserve };
       });
       // At rest nothing moves, so a better place needs no room to spare to be taken: labels settle on their first free position (the one anchor)
       const planUnits: PlanUnits = full && !moving ? { ...units, upgradeMargin: 0 } : units;

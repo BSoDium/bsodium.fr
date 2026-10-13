@@ -4,7 +4,7 @@
  * The plate is the page colour at an ALPHA over whatever the map draws behind the label (app.css `.map-label`, `--label-plate-alpha`). The
  * less alpha, the more of the map shows through, and the less the text is separated from it: the least alpha that still keeps the text AA
  * (WCAG 4.5:1, the name at 14 px and the second line at 11 px are both "not large") against the WORST tone that can be behind a glyph is
- * what is wanted, and it is computed here from the tokens, not tuned by eye.
+ * the FLOOR, computed here from the tokens (`LABEL_PLATE_FLOOR`); the value used is chosen above it by eye (`LABEL_PLATE_ALPHA`).
  *
  * The worst tone behind a plate is the loudest the map ever draws: the `peak` level of the ramp (engine/palette.ts), which is the colour of
  * a box's outline at rest, one level above the coastline (the loudest tone of the map's own content: coastlines, borders, roads, graticule).
@@ -57,7 +57,18 @@ export function labelPlateAlpha(text: LabelTextColours, background: Rgb, under: 
 }
 
 /**
- * The plate alpha of each scheme, as written in app.css (`--label-plate-alpha`, light and dark): `roundPlateAlpha(labelPlateAlpha(...))` with
- * the scheme's tokens over the `peak` level of its ramp (readability.test.ts recomputes it from the stylesheet and fails on any drift).
+ * The WCAG FLOOR of the plate alpha of each scheme: `roundPlateAlpha(labelPlateAlpha(...))` with the scheme's tokens over the `peak` level of
+ * its ramp, the least at which both lines are AA (readability.test.ts recomputes it from the stylesheet and fails on any drift). Until
+ * 2026-10-13 the stylesheet's token WAS this floor; the owner found the plate too see-through, so it is a chosen value above it now.
  */
-export const LABEL_PLATE_ALPHA = { light: 0.7, dark: 0.62 } as const;
+export const LABEL_PLATE_FLOOR = { light: 0.7, dark: 0.62 } as const;
+
+/**
+ * The plate alpha of each scheme, as written in app.css (`--label-plate-alpha`, light and dark): a design choice (2026-10-13, owner: "not
+ * opaque enough, a bit less see-through"), 0.16 / 0.18 above the floor so the plate reads as a ground over a busy map while the map still shows
+ * through it (the text contrast only grows with the alpha: the floor's guarantee holds). Never above `LABEL_PLATE_MAX`: a plate that hid
+ * the map would be the opaque sticker the translucent plate replaced.
+ */
+export const LABEL_PLATE_ALPHA = { light: 0.86, dark: 0.8 } as const;
+/** The most opaque a map label's plate may be at rest and still be "translucent" (the map shows through a tenth of it or more). */
+export const LABEL_PLATE_MAX = 0.9;

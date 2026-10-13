@@ -20,8 +20,8 @@
   --muted-foreground: #595959;
   /* Quieter than muted text, still AA against the page (4.9:1): the map credits line. Dimmer by colour, never by opacity. */
   --subtle-foreground: #6f6f6f;
-  /* The share of the page colour in a map label's plate (engine/label-plate.ts: the least that keeps the 11 px second line AA, 4.5:1, over the loudest map tone). */
-  --label-plate-alpha: 0.7;
+  /* The share of the page colour in a map label's plate (engine/label-plate.ts): a chosen value, well above the least that keeps the 11 px second line AA (4.5:1) over the loudest map tone (0.70 light, 0.62 dark), so the plate reads as a ground. */
+  --label-plate-alpha: 0.86;
   --border: rgb(0 0 0 / 0.14);
   --border-strong: rgb(0 0 0 / 0.4);
   --ring: #0a0a0a;
@@ -119,7 +119,7 @@
     --foreground: #f5f5f5;
     --muted-foreground: #a3a3a3;
     --subtle-foreground: #8a8a8a;
-    --label-plate-alpha: 0.62;
+    --label-plate-alpha: 0.8;
     --border: rgb(255 255 255 / 0.16);
     --border-strong: rgb(255 255 255 / 0.45);
     --ring: #f5f5f5;
@@ -279,8 +279,8 @@
   --foreground: #0a0a0a;
   --muted-foreground: #595959;
   --subtle-foreground: #6f6f6f;
-  /* The share of the page colour in a map label's plate (engine/label-plate.ts: the least that keeps the 11 px second line AA, 4.5:1, over the loudest map tone). */
-  --label-plate-alpha: 0.7;
+  /* The share of the page colour in a map label's plate (engine/label-plate.ts): a chosen value, well above the least that keeps the 11 px second line AA (4.5:1) over the loudest map tone (0.70 light, 0.62 dark), so the plate reads as a ground. */
+  --label-plate-alpha: 0.86;
   --border: rgb(0 0 0 / 0.14);
   --border-strong: rgb(0 0 0 / 0.4);
   --ring: #0a0a0a;
@@ -322,7 +322,7 @@
   --foreground: #f5f5f5;
   --muted-foreground: #a3a3a3;
   --subtle-foreground: #8a8a8a;
-  --label-plate-alpha: 0.62;
+  --label-plate-alpha: 0.8;
   --border: rgb(255 255 255 / 0.16);
   --border-strong: rgb(255 255 255 / 0.45);
   --ring: #f5f5f5;
@@ -1968,9 +1968,9 @@ h1[tabindex="-1"]:focus-visible {
  * Map labels: the names of the detection boxes, HTML text in the app's monospace stack (`--font-mono`, the credits line's and the dev badge's) (engine/label-dom.ts creates and positions the
  * elements; sizes, weights and tracking come from LABEL_TYPE in engine/label-text.ts because the planner measures with the same numbers).
  * Two lines: the name (line 1, 14 px, weight 500) and a second line (11 px, regular: the country or number of places, and the linked entries by kind).
- * EVERY label sits on a TRANSLUCENT plate of the page colour, `--label-plate-alpha` of it (0.7 light, 0.62 dark: the least that keeps the 11 px
- * second line AA, 4.5:1, over the loudest tone of the map, a box's outline at rest; computed from these tokens in engine/label-plate.ts and
- * pinned by readability.test.ts), so the map shows through, dimmed, instead of being wiped out under the text. Its edge is a feather of 1 to
+ * EVERY label sits on a TRANSLUCENT plate of the page colour, `--label-plate-alpha` of it (0.86 light, 0.8 dark: clearly above the 0.70 / 0.62 that
+ * keep the 11 px second line AA, 4.5:1, over the loudest tone of the map, a box's outline at rest; the floor is computed from these tokens in
+ * engine/label-plate.ts and pinned by readability.test.ts), so the map still shows through, dimmed, instead of being wiped out under the text. Its edge is a feather of 1 to
  * 2 px (engine/label-dom.ts `featherShadow`, LABEL_TYPE.feather, a shadow of the plate's own colour) so it is not a hard sticker and dims
  * nothing around the text. The text is the foreground (names, 19:1) and the muted foreground (second line, AA on the plate in both
  * schemes: tests in globe/engine/readability.test.ts); there is no underline and no text-shadow. Hovered or focused: the plate and text do not
@@ -2014,6 +2014,16 @@ h1[tabindex="-1"]:focus-visible {
   background: var(--foreground);
   color: var(--background);
   z-index: 3;
+  /* The card: at rest the plate's padding hangs outside its box so that the TEXT is flush with the box's edge; selected, the plate is flush with the
+     box (the padding is inside the card) and the whole label moves by what hung out (engine/label-dom.ts writes --map-label-dx / -dy from
+     `selectedShift`). `translate` composes with the `transform` that positions the label and runs on the compositor: no layout, no paint. */
+  translate: var(--map-label-dx, 0px) var(--map-label-dy, 0px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .map-label {
+    transition: translate var(--duration-fast) var(--ease-standard);
+  }
 }
 
 .map-label[data-mode="selected"] .map-label-sub {

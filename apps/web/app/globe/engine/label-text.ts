@@ -32,8 +32,15 @@ export const LABEL_TYPE = {
   boxGap: 3,
   /** Extra room, beyond the outline's own thickness, between a nested label's plate and the box's outline. */
   nestInset: 3,
-  /** How far the plate sticks out past the box's edge it is aligned with: none, the plate's edge IS the box's outer edge (the text starts `padX` inside it). */
-  bleed: 0,
+  /**
+   * How far the plate sticks out past the box's edge it is aligned with (2026-10-13, owner: "the text should be aligned with the edge of the
+   * bbox"): the plate's padding HANGS OUTSIDE the box, `padX` past the left edge of a left-aligned label (and the right edge of a
+   * right-aligned one), so the TEXT and the box's edge share one vertical line. A SELECTED label is the card: it moves by this much towards the
+   * box (a transform, `selectedShift` in pixel-labels.ts) so its plate is flush on the box and the padding is inside the card, as before.
+   * `bleedY` is the same for a label beside its box (left or right of it): its plate's top hangs `padY` above the box's top edge.
+   */
+  bleed: 6,
+  bleedY: 3,
   /**
    * The soft edge of the plate, px (label-dom.ts writes it as a `box-shadow` of the plate's own colour): the plate's translucent colour goes on
    * `spread` px beyond the plate and fades out over `blur` px more. Small on purpose, 1 to 2 px: the plate is a translucent ground, not a halo
