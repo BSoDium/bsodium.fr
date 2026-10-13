@@ -174,9 +174,6 @@ export interface StreetMap {
    */
   crossfadeTo(canvas: HTMLCanvasElement | null, grid?: { cell: number; left: number; top: number }): void;
 
-  /** Native mode: map pixels per art cell per axis (1 to 3) from now on; the frame governor lowers it on slow devices. */
-  setRenderScale(n: number): void;
-
   getTileStatus(): TileStatus;
   /** Highest zoom the experience should offer right now (the cap while no tile source works). */
   getMaxZoom(): number;

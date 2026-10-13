@@ -76,6 +76,8 @@ export interface GlobeDebug {
   /** The theme's palette, level 0 (page colour) to the ink, as [r, g, b] 0..255. */
   ramp(): number[][];
   frames(): number;
+  /** Size of one art pixel in CSS px (the globe's grid): a function of the viewport and the device pixel ratio only (`TUNING.pixelSize`); checks assert it never moves. */
+  cell(): number;
   /** Camera ticks, drawn or suspended (idle must not increase it). */
   ticks(): number;
   isAnimating(): boolean;
@@ -290,6 +292,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       labelStats: () => labels.stats(),
       ramp: () => renderer.getTheme().ramp.map((c) => c.map((v) => Math.round(v * 255))),
       frames: () => renderer.frameCount(),
+      cell: () => renderer.pixelGrid().cell,
       isAnimating: () => renderer.isAnimating(),
       renderNow() {
         renderer.renderNow();
