@@ -119,6 +119,15 @@ function checkCsp(res, html, label) {
   return csp;
 }
 
+// Entries whose link text is exactly the code name (a project that says "Catalyst is this website"): found on the kind list pages.
+const codeNameEntries = new Set();
+for (const list of ["/projects", "/articles", "/artworks", "/poetry"]) {
+  const res = await fetch(BASE + list).catch(() => null);
+  if (!res || !res.ok) continue;
+  for (const m of (await res.text()).matchAll(/<a\b[^>]*href="(\/[a-z]+\/[^"#?]+)"[^>]*>\s*catalyst\s*<\/a>/gi)) codeNameEntries.add(m[1]);
+}
+if (codeNameEntries.size) console.log(`note: entries that explain the code name (exempt from the code-name scan): ${[...codeNameEntries].join(", ")}`);
+
 const page = async (path, label, { status = 200, method = "GET" } = {}) => {
   const { res, body } = await text(path, { method });
   ok(res.status === status, `${label}: status ${status} (got ${res.status})`);
@@ -127,7 +136,13 @@ const page = async (path, label, { status = 200, method = "GET" } = {}) => {
   staticHeaders(res, label);
   checkCsp(res, body, label);
   // The project's code name is not the site's name: nothing a document says, in its markup, head tags, state or JSON-LD, may carry it.
-  ok(!/catalyst/i.test(body), `${label}: the code name appears nowhere in the document${/catalyst/i.test(body) ? ` (…${/.{0,40}catalyst.{0,40}/i.exec(body)?.[0]}…)` : ""}`);
+  // One exception, decided by the owner: a project entry that explains the code name is this website may carry it. Its own document and
+  // the links to it (a card whose whole text is the name) are exempt; everything else is not (see `codeNameEntries` below).
+  const exempt = codeNameEntries.has(path.split("?")[0]);
+  // Also exempt: the serialised data of such a link (its title sits within a few characters of its slug in the page's state).
+  let scanned = body.replace(/<a\b[^>]*href="(\/[a-z]+\/[^"#?]+)"[^>]*>\s*catalyst\s*<\/a>/gi, (m, href) => (codeNameEntries.has(href) ? "" : m));
+  for (const href of codeNameEntries) scanned = scanned.replace(new RegExp(`.{0,160}${href.split("/").pop().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.{0,160}`, "gs"), "");
+  ok(exempt || !/catalyst/i.test(scanned), `${label}: the code name appears nowhere in the document${exempt ? " (the entry that explains it)" : /catalyst/i.test(scanned) ? ` (…${/.{0,40}catalyst.{0,40}/i.exec(scanned)?.[0]}…)` : ""}`);
   return { res, body };
 };
 
