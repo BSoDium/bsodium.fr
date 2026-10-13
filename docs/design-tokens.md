@@ -69,6 +69,20 @@ The globe's skybox (`SKY` in `app/globe/engine/tuning.ts`; architecture in web-a
 | `eraDeg` | 70 | the earth rotation angle at load (the sky's one placement against the earth) |
 | `seed` | `0x5ca1ab1e` | every random choice (positions, tiers, keep ranks) |
 
+### Ring of type
+
+The ring of type that circles the planet's disc when the globe is zoomed out below its whole-globe fit (`RING` in `app/globe/engine/tuning.ts`; web-architecture.md, "Ring of type") has no colour of its own either: one palette tone, no alpha, the `coast` role (3.1:1 dark / 3.2:1 light on the page: the loudest the MAP itself gets, never above a coastline), its fade a staircase of tones; decorative and `aria-hidden`, so not held to WCAG, and below the boxes (5.2:1) and the labels (ink). Type: `--font-mono` (the labels' stack), weight 500, tracking about 0.14 em like `.nav-link` (adjusted per viewport so the line closes the circle), uppercase, about 11 px (10 to 13) at the lowest zoom, scaling with the planet. No new token.
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `gap` | 0.06 | the baseline's distance from the silhouette, a fraction of its radius (17 px at the lowest zoom on 1440 x 900) |
+| `degPerSec`, `direction`, `startDeg` | 3, 1 (clockwise), 0 | its own turn (the globe's idle rotation is 4); degrees clockwise from twelve o'clock at the start |
+| `type` | weight 500, tracking 0.14, advance 0.6 em, target 11 px, slack 15 % | the line goes round a whole number of times, nearest the target em; the em may move by the slack and the tracking takes the rest, so the seam closes |
+| `zoom.floorBelowFit`, `zoom.fitMargin` | 0.5 levels, 0.12 | the camera goes at least this far below the whole-globe fit, and further until the ring fits the free area with this margin |
+| `zoom.fade` | from 0.08, to 0.6 | strength by the way from the fit (0) to the lowest zoom (1): absent up to `from`, full from `to` |
+| `tone` | `coast` | palette role of the letters |
+| `frameMs`, `maxStepMs`, `maxDpr` | 32, 100, 2 | at most 30 repaints a second, the largest step of its clock, the largest device pixel ratio its canvas is drawn at |
+
 Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251), because at those values it reads as the same barely-there haze as the dark one and the stipple does not compete with the boxes; `?no-sky` is the off switch.
 
 ### Map card and credits line

@@ -51,11 +51,21 @@ interface GlobeOptions {
   onFrame?(): void;
   /** See `RendererOptions.pickOverride`. */
   pickOverride?: RendererOptions["pickOverride"];
+  /** The line of the ring of type (see `RendererOptions.ringText`); absent = no ring. */
+  ringText?: string;
 }
 
 /** Read-only introspection for automated checks (exposed on `window` only with `?globe-debug`). */
 export interface GlobeDebug {
+  /**
+   * The whole-globe fit (internal zoom): the 0 of the app's zoom and "the world view" of every older check (they start sweeps from it). With the
+   * ring of type the camera can go below it: `floorZoom()`.
+   */
   minZoom(): number;
+  /** The same number as `minZoom()` (the fit), under the name that says what it is. */
+  fitZoom(): number;
+  /** The lowest zoom the camera can reach: the fit, or the ring's floor below it when the ring is on (debug pages have it off unless `?ring`). */
+  floorZoom(): number;
   maxZoom(): number;
   /** Internal zoom (globe zoom levels), not the [0, 1] app zoom. */
   view(): { lon: number; lat: number; zoom: number };
@@ -94,6 +104,8 @@ export interface GlobeDebug {
   spin(): ReturnType<GlobeRenderer["spinInfo"]> & { idleMs: number; degPerSec: number; easeInMs: number; stopMs: number; enabled: boolean };
   /** The sky: the earth rotation angle, its timed value (0..1), whether it is wanted and drawn, the farthest corner in earth radii; null when switched off (debug pages default to off, `?sky`). */
   sky(): ReturnType<GlobeRenderer["skyState"]>;
+  /** The ring of type: whether it is drawn, its tone, glyphs, repeats, canvas size and the zoom numbers behind it; null when there is none (`?no-ring`, a debug page without `?ring`). */
+  ring(): ReturnType<GlobeRenderer["ringState"]>;
   /** Set the earth rotation angle in degrees (moves the sky against the earth) and draw. */
   setSkyEra(deg: number): void;
   gpuSync(): void;
@@ -179,7 +191,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
     if (labelsActive) {
       labels.update(renderer.nodeScreen, renderer.pixelGrid());
     }
-    const next = toViewState(v, renderer.getMinZoom(), TUNING.maxZoom);
+    const next = toViewState(v, renderer.getFitZoom(), TUNING.maxZoom);
     if (!sameView(lastReported, next)) {
       lastReported = next;
       opts.onViewChange(next);
@@ -215,6 +227,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         labelsAnimating: () => labelsActive && labels.animating,
         pickLabel: (x, y, kind) => labels.hit(x, y, kind),
         pickOverride: opts.pickOverride,
+        ringText: opts.ringText,
         onSelect: opts.onSelect,
         onSelectGroup: opts.onSelectGroup,
         onHover: (slug) => {
@@ -269,7 +282,9 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
     },
     setInset: (px) => renderer.setInset(px),
     debug: () => ({
-      minZoom: () => renderer.getMinZoom(),
+      minZoom: () => renderer.getFitZoom(),
+      fitZoom: () => renderer.getFitZoom(),
+      floorZoom: () => renderer.getMinZoom(),
       maxZoom: () => TUNING.maxZoom,
       view: () => renderer.getView(),
       ticks: () => renderer.tickCount(),
@@ -310,6 +325,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       layers: () => ({ ...renderer.layerState(), animating: lod.animating || renderer.layerState().animating, framePending: renderer.isAnimating() }),
       spin: () => ({ ...renderer.spinInfo(), idleMs: SPIN.idleMs, degPerSec: SPIN.degPerSec, easeInMs: SPIN.easeInMs, stopMs: SPIN.stopMs, enabled: SPIN.enabled }),
       sky: () => renderer.skyState(),
+      ring: () => renderer.ringState(),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),
       info: () => renderer.renderInfo(),

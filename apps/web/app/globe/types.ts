@@ -8,7 +8,10 @@ import type { ComponentType } from "react";
 export interface GlobeViewState {
   lon: number;
   lat: number;
-  /** In [0, 1]. 0 = whole globe, 1 = the closest the world-scale globe goes (regional scale). */
+  /**
+   * In [0, 1]. 0 = whole globe, 1 = the closest the world-scale globe goes (regional scale). The camera may go further out than the whole
+   * globe (the ring of type's regime, docs/web-architecture.md "Ring of type"): that is still 0.
+   */
   zoom: number;
   /**
    * Street scale: extra zoom levels beyond `zoom` = 1 (>= 0, about 0 to 11). Absent (or 0) on every view that

@@ -92,14 +92,24 @@ export function horizonAngle(d: number): number {
   return Math.acos(1 / d);
 }
 
+/** Apparent radius, in CSS px, of the globe's silhouette at a zoom (and so its camera distance): `f / sqrt(d^2 - 1)`, the inverse of `silhouetteZoom`. */
+export function silhouetteRadiusPx(zoom: number, viewportHeight: number): number {
+  const d = cameraDistance(zoom, viewportHeight);
+  return focalPx(viewportHeight) / Math.sqrt(d * d - 1);
+}
+
+/** The zoom at which the globe's silhouette has the radius `radiusPx` in a viewport `viewportHeight` px tall. */
+export function silhouetteZoom(radiusPx: number, viewportHeight: number): number {
+  // For a perspective globe the apparent silhouette radius is f * tan(asin(1/d)); solving for d given the target radius.
+  const f = focalPx(viewportHeight);
+  // silhouette radius r = f * (1/d) / sqrt(1 - 1/d^2) = f / sqrt(d^2 - 1)  =>  d = sqrt((f/r)^2 + 1)
+  const d = Math.sqrt((f / radiusPx) ** 2 + 1);
+  return radiusPxToZoom(f / (d - 1));
+}
+
 /** Zoom at which the whole globe fits the viewport with a margin (fraction of the smaller side left empty). */
 export function fitZoom(width: number, height: number, margin = 0.1): number {
-  // For a perspective globe the apparent silhouette radius is f * tan(asin(1/d)); solving for d given the target radius.
-  const target = (Math.min(width, height) / 2) * (1 - margin);
-  const f = focalPx(height);
-  // silhouette radius r = f * (1/d) / sqrt(1 - 1/d^2) = f / sqrt(d^2 - 1)  =>  d = sqrt((f/r)^2 + 1)
-  const d = Math.sqrt((f / target) ** 2 + 1);
-  return radiusPxToZoom(f / (d - 1));
+  return silhouetteZoom((Math.min(width, height) / 2) * (1 - margin), height);
 }
 
 export interface ViewState {

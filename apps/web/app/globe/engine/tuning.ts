@@ -128,3 +128,48 @@ export const SKY = {
 
 /** `cubic-bezier` control points of the app's standard easing (`--ease-standard`). */
 export const INSET_EASE = [0.2, 0, 0, 1] as const;
+
+/**
+ * The ring of type (engine/ring.ts, engine/ring-layer.ts; docs/web-architecture.md, "Ring of type"): one short line of the site's identity, set in
+ * the map's monospace on a flat circle concentric with the planet's disc (the circle of its silhouette, a little larger), tops of the letters
+ * outward, running clockwise and turning slowly on its own clock. It exists only in the zoomed-OUT regime below the whole-globe fit and fades
+ * out as the camera comes in, so it is gone at the fit: the boxes and the labels of the world view never compete with it.
+ *
+ * Sizes in CSS px or as named. Everything that can be tuned by eye is here.
+ */
+export const RING = {
+  /**
+   * The gap between the planet's silhouette and the BASELINE of the letters, as a fraction of the silhouette's radius (0.06: 17 px at the lowest
+   * zoom on a 1440 x 900 screen). The letters' tops point outward from there.
+   */
+  gap: 0.06,
+  /** Turning speed, degrees a second. The globe's idle rotation is 4 (`SPIN.degPerSec`): the ring is gentler. */
+  degPerSec: 3,
+  /** `1`: clockwise, the way the text reads (the letters move along the line); `-1` the other way. */
+  direction: 1,
+  /** Where the line starts when the ring appears: degrees clockwise from twelve o'clock. */
+  startDeg: 0,
+  /**
+   * The type: the weight, the tracking (em added to the monospace's 0.6 em advance; the nav's `.nav-link` is 0.14), and the em size (CSS px) the
+   * letters have at the lowest zoom. The line goes round a WHOLE number of times (`ringLayout`): the count is the one whose letters, at the
+   * nominal tracking, come nearest `targetEmPx`, then the em is allowed to move by `emSlack` (a fraction) and the tracking takes the rest up, so
+   * the seam closes evenly at any size. The type then scales with the planet (the ring is an object of the planet's), so a closed ring stays closed.
+   */
+  type: { weight: 500, tracking: 0.14, advanceEm: 0.6, targetEmPx: 11, emSlack: 0.15 },
+  /** Between the phrases (and after the last, which closes the loop). */
+  separator: " \u00b7 ",
+  /**
+   * Zoom range. `floorBelowFit`: the lowest zoom is at least this many zoom levels below the whole-globe fit (0.5 levels = the globe 0.71 times its fit
+   * size), and lower still when the ring does not fit the free area with `fitMargin` of it left empty (never on a screen with a 4:3 or wider
+   * shape). `fade`: the ring's strength by the way from the fit (0) to the lowest zoom (1): gone up to `from`, full from `to`, a smoothstep
+   * between, quantised to palette tones.
+   */
+  zoom: { floorBelowFit: 0.5, fitMargin: 0.12, fade: { from: 0.08, to: 0.6 } },
+  /** Palette role (engine/palette.ts) of the letters: not louder than the coastline (`coast`), so a coast is never outshone. */
+  tone: "coast",
+  /** At most one frame every `frameMs` (30 fps: the ring is slow, the pixels it moves a frame are under one) and no step longer than `maxStepMs` (a stalled frame must not jump). */
+  frameMs: 32,
+  maxStepMs: 100,
+  /** Largest device pixel ratio the ring's canvas is drawn at (the type is crisp at 2; a phone's 3 would cost 2.25 times the pixels). */
+  maxDpr: 2,
+} as const;
