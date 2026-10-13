@@ -53,9 +53,9 @@ const VIEWPORTS = FIT_SIZES.map(([width, height]) => {
 /** The name is stacked (the family name under the given name) under 48 rem, except on a phone on its side (480 px and up, 34 rem tall at most). */
 const isStacked = (width, height) => width < 768 && !(width >= 480 && height <= 544);
 const IDLE_QUERY = "?globe-debug&hero-idle=1500";
-const PATHS = ["/projects", "/articles", "/artworks", "/poetry"];
+const PATHS = ["/software", "/articles", "/artworks", "/poetry"];
 /** The rows' names: the poems' section is "Poetry". */
-const LABELS = ["Projects", "Articles", "Artworks", "Poetry"];
+const LABELS = ["Software", "Articles", "Artworks", "Poetry"];
 
 async function newPage(contextOptions, { colorScheme = "dark", reducedMotion = "no-preference" } = {}) {
   const ctx = await browser.newContext({ ...contextOptions, colorScheme, reducedMotion });
@@ -546,10 +546,10 @@ for (const width of [320, 360, 390, 430]) {
   };
   await collapse();
   // a header link has the focus: the idle delay (1.5 s here) passes twice and the hero stays collapsed, the header and the focus stay
-  await page.locator("header a[href='/projects']").focus();
+  await page.locator("header a[href='/software']").focus();
   await sleep(3200);
   ok((await heroState(page)) === "collapsed", "focus hold: with the focus on a header link the hero does not come back after the idle delay");
-  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/projects" && !!document.activeElement.closest("header")), "focus hold: the focus is still on the header link (the header was not unmounted under it)");
+  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/software" && !!document.activeElement.closest("header")), "focus hold: the focus is still on the header link (the header was not unmounted under it)");
   // leaving the header releases the hold: a whole idle period later, the hero is back
   await page.evaluate(() => document.activeElement?.blur());
   await sleep(500);

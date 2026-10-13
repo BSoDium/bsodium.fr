@@ -102,8 +102,8 @@ async function lifecycle(browser) {
   const liveAway = [];
   const liveBack = [];
   for (let i = 0; i < 20; i++) {
-    await page.evaluate(() => document.querySelector('a[href="/projects"]').click());
-    await page.waitForFunction(() => location.pathname === "/projects");
+    await page.evaluate(() => document.querySelector('a[href="/software"]').click());
+    await page.waitForFunction(() => location.pathname === "/software");
     await page.waitForTimeout(150);
     liveAway.push(await liveContexts(page));
     await page.goBack();

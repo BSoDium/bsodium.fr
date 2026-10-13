@@ -52,6 +52,6 @@
   </g>
   <path d="M80 500H300" stroke="#f5f5f5" stroke-opacity="0.34" stroke-width="1"/>
   <g font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="16" letter-spacing="2.4" fill="#a3a3a3">
-    <text x="80" y="554">ARTICLES / PROJECTS / ARTWORKS / POETRY</text>
+    <text x="80" y="554">SOFTWARE / ARTICLES / ARTWORKS / POETRY</text>
   </g>
 </svg>

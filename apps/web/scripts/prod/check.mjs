@@ -119,9 +119,10 @@ function checkCsp(res, html, label) {
   return csp;
 }
 
-// Entries whose link text is exactly the code name (a project that says "Catalyst is this website"): found on the kind list pages.
+// Entries whose link text is exactly the code name (the software entry that says "Catalyst is this website", `/software/portfolio-website`):
+// found on the kind list pages.
 const codeNameEntries = new Set();
-for (const list of ["/projects", "/articles", "/artworks", "/poetry"]) {
+for (const list of ["/software", "/articles", "/artworks", "/poetry"]) {
   const res = await fetch(BASE + list).catch(() => null);
   if (!res || !res.ok) continue;
   for (const m of (await res.text()).matchAll(/<a\b[^>]*href="(\/[a-z]+\/[^"#?]+)"[^>]*>\s*catalyst\s*<\/a>/gi)) codeNameEntries.add(m[1]);
@@ -136,7 +137,7 @@ const page = async (path, label, { status = 200, method = "GET" } = {}) => {
   staticHeaders(res, label);
   checkCsp(res, body, label);
   // The project's code name is not the site's name: nothing a document says, in its markup, head tags, state or JSON-LD, may carry it.
-  // One exception, decided by the owner: a project entry that explains the code name is this website may carry it. Its own document and
+  // One exception, decided by the owner: a software entry that explains the code name is this website may carry it. Its own document and
   // the links to it (a card whose whole text is the name) are exempt; everything else is not (see `codeNameEntries` below).
   const exempt = codeNameEntries.has(path.split("?")[0]);
   // Also exempt: the serialised data of such a link (its title sits within a few characters of its slug in the page's state).
@@ -161,9 +162,9 @@ ok(locs.every((l) => l.startsWith(SITE + "/")), `sitemap.xml: ${locs.length} URL
 ok(new Set(locs).size === locs.length, "sitemap.xml: no duplicate URL");
 ok(lastmods.every((d) => /^\d{4}(-\d{2}(-\d{2})?)?$/.test(d)), `sitemap.xml: ${lastmods.length} lastmod values are W3C dates`);
 const paths = locs.map((l) => l.slice(SITE.length));
-for (const p of ["/", "/projects", "/articles", "/artworks", "/poetry"]) ok(paths.includes(p), `sitemap.xml lists ${p}`);
-ok(!paths.some((p) => /^\/poems(\/|$)/.test(p)), "sitemap.xml lists nothing under the old /poems (it redirects)");
-const entryPaths = paths.filter((p) => /^\/(articles|projects|artworks|poetry)\/./.test(p));
+for (const p of ["/", "/software", "/articles", "/artworks", "/poetry"]) ok(paths.includes(p), `sitemap.xml lists ${p}`);
+ok(!paths.some((p) => /^\/(poems|projects)(\/|$)/.test(p)), "sitemap.xml lists nothing under the old /poems and /projects (they redirect)");
+const entryPaths = paths.filter((p) => /^\/(articles|software|artworks|poetry)\/./.test(p));
 const placePaths = paths.filter((p) => p.startsWith("/locations/"));
 ok(deployed || (entryPaths.length > 0 && placePaths.length > 0), `sitemap.xml lists ${entryPaths.length} entries and ${placePaths.length} places`);
 {
@@ -187,7 +188,7 @@ const placePath = placePaths[0];
 
 // ---- 2. documents ---------------------------------------------------------------------------------------------------------------
 section("documents: headers and head tags");
-const TYPES = { articles: "Article", projects: ["CreativeWork", "SoftwareSourceCode"], artworks: "CreativeWork", poetry: "CreativeWork" };
+const TYPES = { articles: "Article", software: ["CreativeWork", "SoftwareSourceCode"], artworks: "CreativeWork", poetry: "CreativeWork" };
 async function document(path, label, expect) {
   const { res, body } = await page(path, label);
   const tags = headTags(body);
@@ -230,6 +231,10 @@ async function document(path, label, expect) {
 await document("/", "/", { home: true, ld: "WebSite" });
 await document("/articles", "/articles", {});
 {
+  const list = await document("/software", "/software", {});
+  ok(title(list.body) === `Software · ${NAME}`, `/software: the section is called "Software" (${title(list.body)})`);
+}
+{
   const list = await document("/poetry", "/poetry", {});
   ok(title(list.body) === `Poetry · ${NAME}`, `/poetry: the section is called "Poetry" (${title(list.body)})`);
 }
@@ -237,7 +242,7 @@ if (articlePath) {
   const e = await document(articlePath, articlePath, { article: kindOf(articlePath) === "articles", ld: TYPES[kindOf(articlePath)] });
   ok(/article:published_time/.test(e.body) === (kindOf(articlePath) === "articles" && /datePublished/.test(e.body)), `${articlePath}: article:published_time follows the authored date`);
 }
-for (const k of ["projects", "artworks", "poetry"]) {
+for (const k of ["software", "artworks", "poetry"]) {
   const p = entryPaths.find((x) => kindOf(x) === k);
   if (p) await document(p, p, { ld: TYPES[k] });
 }
@@ -251,16 +256,16 @@ section("data responses (client navigations)");
   ok(/public/.test(res.headers.get("cache-control") ?? "") && cdnCache(res.headers.get("cache-control"), /s-maxage=60.*stale-while-revalidate|stale-while-revalidate.*s-maxage=60/), `/articles.data: cache-control (${res.headers.get("cache-control")})`);
 }
 
-// ---- 2b. the poems' section moved: /poems is a permanent redirect to /poetry (query kept, entries too) ---------------------------------
-section("redirects from /poems");
-{
-  const poemPath = entryPaths.find((p) => kindOf(p) === "poetry");
+// ---- 2b. the sections moved: /poems and /projects are permanent redirects (query kept, entries too) ----------------------------------
+for (const [oldBase, base, kind] of [["/poems", "/poetry", "poetry"], ["/projects", "/software", "software"]]) {
+  section(`redirects from ${oldBase}`);
+  const entryPath = entryPaths.find((p) => kindOf(p) === kind);
   const cases = [
-    ["/poems", "/poetry"],
-    ["/poems/", "/poetry"],
-    ["/poems?tag=night", "/poetry?tag=night"],
-    ["/poems?tag=night&x=1", "/poetry?tag=night&x=1"],
-    ...(poemPath ? [[poemPath.replace("/poetry/", "/poems/"), poemPath], [poemPath.replace("/poetry/", "/poems/") + "?view=full", poemPath + "?view=full"]] : []),
+    [oldBase, base],
+    [`${oldBase}/`, base],
+    [`${oldBase}?tag=night`, `${base}?tag=night`],
+    [`${oldBase}?tag=night&x=1`, `${base}?tag=night&x=1`],
+    ...(entryPath ? [[entryPath.replace(`${base}/`, `${oldBase}/`), entryPath], [entryPath.replace(`${base}/`, `${oldBase}/`) + "?view=full", entryPath + "?view=full"]] : []),
   ];
   for (const [from, to] of cases) {
     const r = await get(from);
@@ -274,14 +279,14 @@ section("redirects from /poems");
     ok(followed.status === 200, `${to}: the target answers 200 (${followed.status})`);
   }
   // an address that was never valid stays a 404 (not turned into a redirect to a 404)
-  const deep = await get("/poems/a/b");
+  const deep = await get(`${oldBase}/a/b`);
   await deep.arrayBuffer();
-  ok(deep.status === 404, `/poems/a/b: 404 (${deep.status})`);
+  ok(deep.status === 404, `${oldBase}/a/b: 404 (${deep.status})`);
 }
 
 // ---- 3. errors -------------------------------------------------------------------------------------------------------------------
 section("errors");
-for (const path of ["/articles/this-entry-does-not-exist", "/locations/this-place-does-not-exist", "/no-such-page", `/projects/${articlePath?.split("/")[2] ?? "x"}-wrong-kind`]) {
+for (const path of ["/articles/this-entry-does-not-exist", "/locations/this-place-does-not-exist", "/no-such-page", `/software/${articlePath?.split("/")[2] ?? "x"}-wrong-kind`]) {
   const { body } = await page(path, `404 ${path}`, { status: 404 });
   ok(/Page not found|Place not found|not found/i.test(body), `404 ${path}: says not found`);
   ok(/name="robots" content="noindex"/.test(body), `404 ${path}: noindex`);
