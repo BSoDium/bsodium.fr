@@ -10,7 +10,7 @@ import { collectTags, filterByTag, groupByYear, parseTagFilter, shouldGroupByYea
 const TAGS_SHOWN = 10;
 
 /**
- * `/projects`, `/articles`, `/artworks`, `/poetry`: the section's front page, set as type (docs/design-system.md, "Entry pages"): the double
+ * `/software`, `/articles`, `/artworks`, `/poetry`: the section's front page, set as type (docs/design-system.md, "Entry pages"): the double
  * rule, a mono line with the plain count, the section name at the headline scale, then a rule and the tag filter, then the entries as hairline rows
  * (`EntryRow`: date and places in mono, the title heavy over a thin summary, the image where there is one), grouped by year (newest first)
  * when a year holds more than one. The filter is the URL (`?tag=rail`: a link, a reload, the back button; works without scripts) and each
@@ -26,7 +26,7 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
   const grouped = shouldGroupByYear(byYear);
   const groups = grouped ? byYear : [{ key: "all", year: null, items: byYear.flatMap((g) => g.items) }];
   const cardLevel = grouped ? 3 : 2;
-  // The section's name for labels ("Filter poetry by tag"), the count noun for counts ("4 poems").
+  // The section's name for labels ("Filter poetry by tag"), the count noun for counts ("4 poems", "33 software").
   const section = KIND_PLURALS[kind].toLowerCase();
   const nouns = KIND_NOUNS[kind];
   let seen = 0;

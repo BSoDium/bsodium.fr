@@ -63,6 +63,21 @@ describe("EntryListPage", () => {
     // the entry's own kicker (singular) is not the list's business
     expect(html).not.toContain("Poetry /");
   });
+  it("calls the projects' section \"Software\" (title, list, filter) and counts it as software, which has no plural", () => {
+    const software = listEntries(demo, "project");
+    const at = (items: EntrySummary[], search = "") =>
+      renderToStaticMarkup(createElement(StaticRouter, { location: `/software${search}` }, createElement(EntryListPage, { kind: "project", items })));
+    const html = at(software);
+    expect(html).toMatch(/<h1[^>]*>Software<\/h1>/);
+    expect(html).toContain(`>${software.length} software<`);
+    expect(html).toContain('aria-label="Filter software by tag"');
+    expect(html).toContain('role="list" aria-label="Software"');
+    expect(html).not.toMatch(/Projects?\b|projects\b|softwares/);
+    expect(at(software.slice(0, 1))).toContain(">1 software<");
+    const tag = software.find((p) => p.tags.length > 0)?.tags[0];
+    expect(tag).toBeTruthy();
+    expect(at(software, `?tag=${encodeURIComponent(tag!)}`)).toMatch(new RegExp(`Showing \\d+ of ${software.length} software tagged`));
+  });
   it("ignores an unknown tag", () => {
     expect((render(articles, "?tag=nope").match(/<article/g) ?? []).length).toBe(articles.length);
   });

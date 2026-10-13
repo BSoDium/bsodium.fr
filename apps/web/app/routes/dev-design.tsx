@@ -72,7 +72,7 @@ const SAMPLES: Record<Exclude<EntryKind, "place">, { title: string; summary: str
   },
   project: {
     title: "Tessera, a tiling toy",
-    summary: "A placeholder project: a small program that fills a plane with tiles and lets you break the rules one at a time.",
+    summary: "A placeholder piece of software: a small program that fills a plane with tiles and lets you break the rules one at a time.",
     meta: [
       { label: "Stack", value: "TypeScript, SVG" },
       { label: "Year", value: "2026" },
@@ -152,7 +152,7 @@ const SWATCHES: { token: string; role: string }[] = [
   { token: "--signal-foreground", role: "Text on a signal fill" },
   { token: "--signal-wash", role: "Active plate" },
   { token: "--kind-article", role: "Article hue" },
-  { token: "--kind-project", role: "Project hue" },
+  { token: "--kind-project", role: "Software hue" },
   { token: "--kind-artwork", role: "Artwork hue" },
   { token: "--kind-poem", role: "Poem hue" },
 ];
@@ -267,7 +267,7 @@ function Icons() {
                 Search places and entries
               </span>
               <span className="font-display text-3xl font-light">
-                Projects <Icon name="arrow-right" size={size} />
+                Software <Icon name="arrow-right" size={size} />
               </span>
               <span className="text-sm text-muted-foreground">{where}</span>
             </li>

@@ -15,48 +15,34 @@ import type {
   PublishedPlace,
   PublishedProjection,
 } from "@catalyst/schemas";
+import { SECTIONS, type Section } from "./sections";
 
 /** The order kinds are listed in wherever they are grouped (the design system's order of kinds). */
 export const CONTENT_KINDS = ["article", "project", "artwork", "poem"] as const satisfies readonly ContentKind[];
 
+/** The contract's collection of each kind in the projection (`projection.projects`, ...): an interface, not the section's name (`lib/sections.ts`). */
 export const COLLECTIONS = { project: "projects", article: "articles", artwork: "artworks", poem: "poems" } as const satisfies Record<ContentKind, string>;
 
+const fromSections = <T>(pick: (section: Section) => T) =>
+  Object.fromEntries(CONTENT_KINDS.map((kind) => [kind, pick(SECTIONS[kind])])) as Record<ContentKind, T>;
+
 /**
- * Where each kind lives: its list page, and `<path>/<slug>` for each entry (the panel and full-screen routes, `?view=full`). Poems are
- * the one kind whose section is not named after its plural: the section is "Poetry", at `/poetry` and `/poetry/:slug`. The previous
- * `/poems` and `/poems/:slug` answer with a permanent redirect (`lib/legacy-paths.ts`, `routes/legacy-poems.ts`).
+ * Where each kind lives: its list page, and `<path>/<slug>` for each entry (the panel and full-screen routes, `?view=full`). The section is
+ * not always named after the kind: "Software" for projects (`/software`), "Poetry" for poems (`/poetry`), from the one table in
+ * `lib/sections.ts`. The previous `/projects` and `/poems` (and their `/:slug`) answer with a permanent redirect (`lib/legacy-paths.ts`).
  */
-export const KIND_PATHS: Record<ContentKind, string> = {
-  project: "/projects",
-  article: "/articles",
-  artwork: "/artworks",
-  poem: "/poetry",
-};
+export const KIND_PATHS: Record<ContentKind, string> = fromSections((section) => `/${section.slug}`);
 
-export const KIND_LABELS: Record<ContentKind, string> = {
-  project: "Project",
-  article: "Article",
-  artwork: "Artwork",
-  poem: "Poem",
-};
+/** One entry of the kind, title case ("Software", "Poem"): the kind tag, the breadcrumb, the default description. */
+export const KIND_LABELS: Record<ContentKind, string> = fromSections((section) => section.label);
 
-/** The name of the kind's SECTION (list page title, header and hero rows, search group, place panel group): "Poetry" for poems. Not a count noun, see `KIND_NOUNS`. */
-export const KIND_PLURALS: Record<ContentKind, string> = {
-  project: "Projects",
-  article: "Articles",
-  artwork: "Artworks",
-  poem: "Poetry",
-};
+/** The name of the kind's SECTION (list page title, header and hero rows, search group, place panel group): "Software", "Poetry". Not a count noun, see `KIND_NOUNS`. */
+export const KIND_PLURALS: Record<ContentKind, string> = fromSections((section) => section.name);
 
-/** What a COUNT of the kind's entries says, lowercase ("1 poem", "4 poems"): the section may be named differently (`KIND_PLURALS`). */
-export const KIND_NOUNS: Record<ContentKind, { one: string; many: string }> = {
-  project: { one: "project", many: "projects" },
-  article: { one: "article", many: "articles" },
-  artwork: { one: "artwork", many: "artworks" },
-  poem: { one: "poem", many: "poems" },
-};
+/** What a COUNT of the kind's entries says, lowercase ("1 poem", "4 poems", "33 software": uncountable, its own plural): the section may be named differently (`KIND_PLURALS`). */
+export const KIND_NOUNS: Record<ContentKind, { one: string; many: string }> = fromSections((section) => section.noun);
 
-/** "1 poem", "4 poems". */
+/** "1 poem", "4 poems", "33 software". */
 export const kindCount = (kind: ContentKind, count: number) => `${count} ${count === 1 ? KIND_NOUNS[kind].one : KIND_NOUNS[kind].many}`;
 
 export const placePath = (slug: string) => `/locations/${slug}`;

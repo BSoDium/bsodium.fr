@@ -15,18 +15,21 @@ export default [
     index("routes/home.tsx"),
     route("locations/:slug", "routes/location.tsx"),
     route("articles/:slug", "routes/entry-article.tsx"),
-    route("projects/:slug", "routes/entry-project.tsx"),
+    route("software/:slug", "routes/entry-project.tsx"),
     route("artworks/:slug", "routes/entry-artwork.tsx"),
     route("poetry/:slug", "routes/entry-poem.tsx"),
   ]),
   // The lists (no globe).
-  route("projects", "routes/projects.tsx"),
+  route("software", "routes/software.tsx"),
   route("articles", "routes/articles.tsx"),
   route("artworks", "routes/artworks.tsx"),
   route("poetry", "routes/poetry.tsx"),
-  // The poems' section was `/poems` (and `/poems/:slug`) before it was named "Poetry": permanent redirects, query kept (lib/legacy-paths.ts).
+  // The sections' former addresses, before they were named "Poetry" (`/poems`) and "Software" (`/projects`): permanent redirects, query kept
+  // (lib/legacy-paths.ts; the names are one table, lib/sections.ts).
   route("poems", "routes/legacy-poems.ts", { id: "legacy-poems" }),
   route("poems/:slug", "routes/legacy-poems.ts", { id: "legacy-poem" }),
+  route("projects", "routes/legacy-projects.ts", { id: "legacy-projects" }),
+  route("projects/:slug", "routes/legacy-projects.ts", { id: "legacy-project" }),
   // Resource routes (no UI): the crawlers' files. `manifest.webmanifest`, the favicons and the share image are static files in public/.
   route("sitemap.xml", "routes/sitemap.ts"),
   route("robots.txt", "routes/robots.ts"),

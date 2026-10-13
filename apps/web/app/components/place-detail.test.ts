@@ -22,7 +22,7 @@ describe("PlaceDetail", () => {
   it("groups the entries under the kinds' own headings, without numbering or brackets", () => {
     const html = render("lisbon");
     expect(html).toMatch(/<h2[^>]*>Articles<\/h2>/);
-    expect(html).toMatch(/<h2[^>]*>Projects<\/h2>/);
+    expect(html).toMatch(/<h2[^>]*>Software<\/h2>/);
     expect(html).not.toMatch(/>0\d<|ds-frame|Entries<\/h2>/);
     // cards in kind groups do not repeat the kind
     expect(html).not.toContain('data-slot="kind-tag"');

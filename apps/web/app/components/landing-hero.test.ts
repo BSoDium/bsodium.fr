@@ -74,7 +74,7 @@ describe("LandingHero", () => {
     expect(button).toContain('type="button"');
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>(?:<span>)?([^<]*)</g)].map((m) => [m[1], m[2]]);
     expect(links).toEqual([
-      ["/projects", "Projects"],
+      ["/software", "Software"],
       ["/articles", "Articles"],
       ["/artworks", "Artworks"],
       ["/poetry", "Poetry"],
@@ -82,7 +82,7 @@ describe("LandingHero", () => {
     // reading order: name, intro, search, the lists
     expect(html.indexOf("hero-name")).toBeLessThan(html.indexOf("hero-intro"));
     expect(html.indexOf("hero-intro")).toBeLessThan(search);
-    expect(search).toBeLessThan(html.indexOf('href="/projects"'));
+    expect(search).toBeLessThan(html.indexOf('href="/software"'));
   });
 
   it("shows no count, no number, no employer and no code name", async () => {

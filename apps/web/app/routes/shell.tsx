@@ -12,10 +12,13 @@ import { useLandingHero } from "~/hooks/use-landing-hero";
 import { useViewportWidth } from "~/hooks/use-viewport-width";
 import { getProjection } from "~/lib/content.server";
 import { getTilesConfig } from "~/lib/tiles-config.server";
-import { parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
+import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
 import { panelInset } from "~/lib/layout";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
 import { SITE } from "~/lib/site";
+
+/** The sections the no-script text lists, in the order of the header (the names and addresses are `lib/sections.ts`'s). */
+const NOSCRIPT_KINDS = ["project", "article", "artwork", "poem"] as const;
 
 /** The words of the globe's ring of type: the site's identity (name, role, fields, place), the same constant the head tags and the hero read. */
 const RING_PHRASES = ringPhrases(SITE);
@@ -33,7 +36,7 @@ export function shouldRevalidate() {
 }
 
 /**
- * Pathless layout for `/`, `/locations/:slug` and the entries (`/articles/:slug`, `/projects/:slug`, `/artworks/:slug`,
+ * Pathless layout for `/`, `/locations/:slug` and the entries (`/articles/:slug`, `/software/:slug`, `/artworks/:slug`,
  * `/poetry/:slug`): one full-bleed globe instance, the keyboard path to the places (`PlacesNav`, visually hidden until
  * focused), and the detail panel (whose content is the child route). An entry opens in the side panel or, with `?view=full`,
  * in the full-screen container: the panel widens over the SAME globe, which stays mounted and keeps its view.
@@ -138,8 +141,14 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
           <noscript>
             <p className="absolute inset-y-0 left-0 m-0 flex w-full items-center justify-center px-6 text-center text-sm text-muted-foreground md:w-1/2 [&_a]:underline">
               <span className="max-w-xs">
-                The globe needs JavaScript. The <a href="/articles">articles</a>, <a href="/projects">projects</a>, <a href="/artworks">artworks</a> and{" "}
-                <a href="/poetry">poetry</a> are readable without it.
+                The globe needs JavaScript. The{" "}
+                {NOSCRIPT_KINDS.map((kind, i) => (
+                  <span key={kind}>
+                    {i > 0 && (i === NOSCRIPT_KINDS.length - 1 ? " and " : ", ")}
+                    <a href={KIND_PATHS[kind]}>{KIND_PLURALS[kind].toLowerCase()}</a>
+                  </span>
+                ))}{" "}
+                are readable without it.
               </span>
             </p>
           </noscript>

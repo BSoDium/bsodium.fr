@@ -40,11 +40,11 @@ describe("entryJsonLd", () => {
     expect((ld.name as string).length).toBe(150);
   });
   it("types a project as SoftwareSourceCode only when it points at a source repository", () => {
-    expect(entryJsonLd(entry({ kind: "project", href: "/projects/a", url: "https://github.com/a/b" }), ORIGIN)).toMatchObject({ "@type": "SoftwareSourceCode", codeRepository: "https://github.com/a/b" });
-    const plain = entryJsonLd(entry({ kind: "project", href: "/projects/a", url: "https://example.org/demo" }), ORIGIN);
+    expect(entryJsonLd(entry({ kind: "project", href: "/software/a", url: "https://github.com/a/b" }), ORIGIN)).toMatchObject({ "@type": "SoftwareSourceCode", codeRepository: "https://github.com/a/b" });
+    const plain = entryJsonLd(entry({ kind: "project", href: "/software/a", url: "https://example.org/demo" }), ORIGIN);
     expect(plain["@type"]).toBe("CreativeWork");
     expect(plain).not.toHaveProperty("codeRepository");
-    expect(entryJsonLd(entry({ kind: "project", href: "/projects/a" }), ORIGIN)["@type"]).toBe("CreativeWork");
+    expect(entryJsonLd(entry({ kind: "project", href: "/software/a" }), ORIGIN)["@type"]).toBe("CreativeWork");
   });
   it("types a poem as a CreativeWork of genre Poem and an artwork as a CreativeWork", () => {
     expect(entryJsonLd(entry({ kind: "poem", href: "/poetry/a" }), ORIGIN)).toMatchObject({ "@type": "CreativeWork", genre: "Poem" });

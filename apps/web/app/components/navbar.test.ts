@@ -24,7 +24,7 @@ describe("Navbar", () => {
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
     expect(links).toEqual([
       ["/", "Globe"],
-      ["/projects", "Projects"],
+      ["/software", "Software"],
       ["/articles", "Articles"],
       ["/artworks", "Artworks"],
       ["/poetry", "Poetry"],
@@ -50,7 +50,7 @@ describe("Navbar", () => {
   it("on the home page, once the hero has stepped back (its rows are hidden), brings the sections back", async () => {
     const html = await render("/", { heroResting: false });
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => m[1]);
-    expect(links).toEqual(["/", "/projects", "/articles", "/artworks", "/poetry"]);
+    expect(links).toEqual(["/", "/software", "/articles", "/artworks", "/poetry"]);
     expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
     // the key hint is plain muted text: the command key's name in a kbd with no box, no border, no background
     const kbd = html.slice(html.indexOf("<kbd"), html.indexOf("</kbd>"));
@@ -61,7 +61,7 @@ describe("Navbar", () => {
   it("is unchanged on every other route, whatever the hero's state (it is not on the page there)", async () => {
     for (const url of ["/articles", "/poetry", "/locations/x", "/articles/x"]) {
       const html = await render(url, { shell: url.startsWith("/locations") || url.startsWith("/articles/"), heroResting: true });
-      expect([...html.matchAll(/<a [^>]*href="([^"]*)"/g)].map((m) => m[1]), url).toEqual(["/", "/projects", "/articles", "/artworks", "/poetry"]);
+      expect([...html.matchAll(/<a [^>]*href="([^"]*)"/g)].map((m) => m[1]), url).toEqual(["/", "/software", "/articles", "/artworks", "/poetry"]);
       expect(html, url).toContain('aria-label="Primary"');
     }
   });
@@ -88,7 +88,7 @@ describe("Navbar", () => {
     expect(await render("/", { heroResting: false })).toMatch(/<a [^>]*aria-current="page"[^>]*href="\/"|<a [^>]*href="\/"[^>]*aria-current="page"/);
     const articles = await render("/articles", { shell: false });
     expect(articles).toMatch(/<a [^>]*aria-current="page"[^>]*>Articles<\/a>/);
-    expect(articles).not.toMatch(/<a [^>]*aria-current="page"[^>]*>Projects<\/a>/);
+    expect(articles).not.toMatch(/<a [^>]*aria-current="page"[^>]*>Software<\/a>/);
   });
 
   it("is centred over the whole viewport, except beside the place and entry panels where it is centred over the map", async () => {
@@ -96,7 +96,7 @@ describe("Navbar", () => {
       expect(await render(url), url).not.toContain("md:right-1/2");
     }
     // (a place has no full-screen view: `?view=full` on a place is still the side panel)
-    for (const url of ["/locations/x", "/locations/x?view=full", "/articles/x", "/projects/x?view=panel", "/poetry/x?tag=y"]) {
+    for (const url of ["/locations/x", "/locations/x?view=full", "/articles/x", "/software/x?view=panel", "/poetry/x?tag=y"]) {
       expect(await render(url), url).toContain("md:right-1/2");
     }
   });

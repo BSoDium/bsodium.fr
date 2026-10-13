@@ -24,7 +24,7 @@ describe("EntryView", () => {
     expect(html).toContain("/locations/ljubljana");
     expect(html).toContain("/locations/split");
     // entries that share a place with it: the timetable tool (Belgrade, Zagreb) and the night platform (Zagreb, Split)
-    expect(html).toContain("/projects/timetable-diff");
+    expect(html).toContain("/software/timetable-diff");
     expect(html).toContain("/artworks/night-platform-split");
   });
   it("uses the authored cover when there is one", () => {
@@ -138,7 +138,7 @@ describe("EntryView", () => {
   });
   it("links each tag to the filtered list of its kind", () => {
     expect(render("article", "demo-article", "panel")).toContain('href="/articles?tag=night-trains"');
-    expect(render("project", "demo-project", "panel")).toMatch(/href="\/projects\?tag=/);
+    expect(render("project", "demo-project", "panel")).toMatch(/href="\/software\?tag=/);
   });
   it("draws the copy-link button only once hydrated (nothing to press without scripts)", () => {
     expect(render("article", "demo-article", "panel")).not.toContain("Copy link");

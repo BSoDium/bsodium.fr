@@ -7,7 +7,15 @@ const ORIGIN = "https://v2.bsodium.fr";
 
 describe("sitemapUrls", () => {
   it("lists the home page and the four lists, even for an empty projection", () => {
-    expect(sitemapUrls(EMPTY_PROJECTION, ORIGIN).map((u) => u.loc)).toEqual([`${ORIGIN}/`, `${ORIGIN}/articles`, `${ORIGIN}/projects`, `${ORIGIN}/artworks`, `${ORIGIN}/poetry`]);
+    expect(sitemapUrls(EMPTY_PROJECTION, ORIGIN).map((u) => u.loc)).toEqual([`${ORIGIN}/`, `${ORIGIN}/articles`, `${ORIGIN}/software`, `${ORIGIN}/artworks`, `${ORIGIN}/poetry`]);
+  });
+  it("lists the projects' section and entries under /software, and nothing under the old /projects", () => {
+    const projection = { ...EMPTY_PROJECTION, projects: [{ slug: "s", title: "S", placeSlugs: [] }] } as PublishedProjection;
+    const locs = sitemapUrls(projection, ORIGIN).map((u) => u.loc);
+    expect(locs).toContain(`${ORIGIN}/software`);
+    expect(locs).toContain(`${ORIGIN}/software/s`);
+    expect(locs.filter((l) => /\/projects(\/|$)/.test(l))).toEqual([]);
+    expect(sitemapXml(sitemapUrls(projection, ORIGIN))).not.toContain("/projects");
   });
   it("lists the poems' section and entries under /poetry, and nothing under the old /poems", () => {
     const projection = { ...EMPTY_PROJECTION, poems: [{ slug: "p", title: "P", placeSlugs: [] }] } as PublishedProjection;

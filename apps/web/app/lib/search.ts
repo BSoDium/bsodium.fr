@@ -6,6 +6,7 @@
 import type { ContentKind, PublishedProjection } from "@catalyst/schemas";
 import { COLLECTIONS, CONTENT_KINDS, entryPath, KIND_LABELS, KIND_NOUNS, KIND_PLURALS, placePath } from "./entries";
 import { formatEntryDate } from "./dates";
+import { SECTIONS } from "./sections";
 
 export type SearchType = "place" | ContentKind;
 
@@ -44,8 +45,11 @@ export function buildSearchIndex(projection: PublishedProjection): SearchItem[] 
   const entries = CONTENT_KINDS.flatMap((kind) =>
     projection[COLLECTIONS[kind]].map((item): SearchItem => {
       const date = formatEntryDate(item.date);
-      // the kind's words stay findable ("poem", "poems" and the section's name "poetry" list the poems) though the row no longer spells them out
-      const keywords = [KIND_LABELS[kind], KIND_NOUNS[kind].many, KIND_PLURALS[kind], ...(item.tags ?? []), item.summary ?? ""].join(" ").trim();
+      // the kind's words stay findable ("poem", "poems" and the section's name "poetry" list the poems) though the row no longer spells them out;
+      // so do the contract's kind id and the section's former names ("project", "projects" still list the software)
+      const keywords = [KIND_LABELS[kind], KIND_NOUNS[kind].many, KIND_PLURALS[kind], kind, ...SECTIONS[kind].formerSlugs, ...(item.tags ?? []), item.summary ?? ""]
+        .join(" ")
+        .trim();
       return {
         type: kind,
         title: item.title,
