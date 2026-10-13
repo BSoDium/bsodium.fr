@@ -36,18 +36,15 @@ describe("Navbar", () => {
     expect(html.indexOf('data-slot="search-trigger"')).toBeGreaterThan(html.indexOf('href="/poems"'));
   });
 
-  it("on the home page, while the hero shows its four rows, is the search trigger alone: no section links, no second primary navigation", async () => {
+  it("on the home page, while the hero is at rest, renders no header at all: its rows are the sections and its search line is the search", async () => {
     const html = await render("/");
-    expect([...html.matchAll(/<a /g)]).toHaveLength(0);
-    for (const word of ["Globe", "Projects", "Articles", "Artworks", "Poems"]) expect(html).not.toContain(`>${word}<`);
-    // the nav element stays (the palette inside it keeps its state when the sections come back) but is no landmark
-    expect(html).toContain('role="none"');
-    expect(html).not.toContain('aria-label="Primary"');
-    // both forms of the trigger are there: the icon one and the compact word
-    expect(html).toContain('data-slot="search-trigger"');
-    expect(html).toContain('data-slot="search-trigger-compact"');
-    // the fade over the globe stays
-    expect(html).toContain("nav-fade");
+    // nothing visible: no bar, no links, no search trigger, no landmark (the palette itself is closed until opened)
+    expect(html).not.toContain("<header");
+    expect(html).not.toContain("<nav");
+    expect(html).not.toContain("<a ");
+    expect(html).not.toContain("<svg");
+    expect(html).not.toContain("search-trigger");
+    expect(html).not.toContain("nav-fade");
   });
 
   it("on the home page, once the hero has stepped back (its rows are hidden), brings the sections back", async () => {
@@ -55,6 +52,10 @@ describe("Navbar", () => {
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => m[1]);
     expect(links).toEqual(["/", "/projects", "/articles", "/artworks", "/poems"]);
     expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
+    // the key hint is plain muted text: the command key's name in a kbd with no box, no border, no background
+    const kbd = html.slice(html.indexOf("<kbd"), html.indexOf("</kbd>"));
+    expect(kbd).toContain('class="ds-kbd');
+    expect(kbd).not.toMatch(/border|bg-|data-boxed|outline|ring/);
   });
 
   it("is unchanged on every other route, whatever the hero's state (it is not on the page there)", async () => {
@@ -92,7 +93,7 @@ describe("Navbar", () => {
   });
 
   it("carries its own fade over the globe and the map only (the lists have the page scrim, the full-screen view the panel's)", async () => {
-    expect(await render("/")).toContain("nav-fade");
+    expect(await render("/", { heroResting: false })).toContain("nav-fade");
     expect(await render("/locations/x")).toContain("nav-fade");
     expect(await render("/articles", { shell: false })).not.toContain("nav-fade");
     expect(await render("/articles/x?view=full")).not.toContain("nav-fade");
