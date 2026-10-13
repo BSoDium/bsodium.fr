@@ -134,8 +134,8 @@ export class GlobeScene {
    * Per-frame sky: the view-to-galactic matrix of this camera at the earth rotation angle `era`, and where the earth's silhouette is in
    * the buffer. Call after the camera's matrices are current. `bufW`, `bufH` and `shiftBuf` are the drawing buffer and the inset's shift (buffer px).
    */
-  syncSky(camera: PerspectiveCamera, basis: ViewBasis, era: number, buf: { w: number; h: number; shift: number }, now: number, instant: boolean) {
-    this.sky?.sync({ viewToGal: viewToGalactic(basis, era), projInv: camera.projectionMatrixInverse, d: basis.d, bufW: buf.w, bufH: buf.h, shiftBuf: buf.shift }, now, instant);
+  syncSky(camera: PerspectiveCamera, basis: ViewBasis, era: number, buf: { w: number; h: number; shift: number; lift?: number }, now: number, instant: boolean) {
+    this.sky?.sync({ viewToGal: viewToGalactic(basis, era), projInv: camera.projectionMatrixInverse, d: basis.d, bufW: buf.w, bufH: buf.h, shiftBuf: buf.shift, liftBuf: buf.lift ?? 0 }, now, instant);
   }
 
   /** Per-frame uniforms that depend on the camera. `now` is the clock (ms) the border fade runs on; `instant`: reduced motion. */

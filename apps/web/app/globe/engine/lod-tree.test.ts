@@ -943,3 +943,42 @@ describe("label text: the name on the first line, the country on the second", ()
     expect(nodes[0]!.countryCode).toBe("CO");
   });
 });
+
+/** Run the clock for a second at 60 Hz from `start` (a gap over `MAX_STEP_MS` counts as one frame, so a fade needs real steps). */
+function run(t: LodTree, start: number) {
+  for (let k = 0; k <= 70; k++) t.advance(start + 1 + k * 16);
+}
+
+describe("suppression: the home screen's orbiting type replaces every box and label", () => {
+  it("sends every node's target OFF, keeps the cut itself, and brings them back; a node that is on its way out is no click target", () => {
+    const t = new LodTree([g("de", "country", undefined, 51, 10, 400, 70), ...germany().slice(1)]);
+    const cam = camAt(10, 50.5, 2.7);
+    t.alphas(cam);
+    const shown = t.count;
+    expect(shown).toBeGreaterThan(0);
+    t.setSuppressed(true);
+    expect(t.isSuppressed).toBe(true);
+    t.update({ ...cam, zoom: cam.zoom + 1e-9 }, -1, -1, false);
+    // every drawn node is heading OFF; they are still there (a fade runs), and none of them is wanted: the picking rules read `wanted`
+    for (let k = 0; k < t.count; k++) expect(t.life.target[t.visible[k]!]).toBe(0);
+    run(t, 0);
+    expect(t.count).toBe(0);
+    expect(t.animating).toBe(false);
+    // and back
+    t.setSuppressed(false);
+    t.update({ ...cam, zoom: cam.zoom + 2e-9 }, -1, -1, false);
+    run(t, 10_000);
+    expect(t.count).toBe(shown);
+  });
+
+  it("is instant under reduced motion", () => {
+    const t = new LodTree(germany());
+    const cam = camAt(10, 50.5, 2.7);
+    t.alphas(cam, true);
+    t.setSuppressed(true);
+    t.update({ ...cam, zoom: cam.zoom + 1e-9 }, -1, -1, true);
+    t.advance(1);
+    t.advance(2);
+    expect(t.count).toBe(0);
+  });
+});

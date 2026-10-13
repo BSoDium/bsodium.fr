@@ -147,7 +147,8 @@ export interface ScreenPoint {
 /**
  * Project a lon/lat (optionally lifted to `radius`) to CSS px for an orthogonal-to-view camera model.
  * `centreX` is the x of the projection centre (the view centre lands there); default is the middle of `width`.
- * The renderer passes a centre left of the middle when UI covers the right-hand side (see `insetRight`).
+ * The renderer passes a centre left of the middle when UI covers the right-hand side (see `insetRight`), and a `centreY` above the middle
+ * while the landing hero covers the bottom (see `GlobeProps.coverBottom`).
  */
 export function projectLonLat(
   lon: number,
@@ -157,9 +158,10 @@ export function projectLonLat(
   height: number,
   radius = 1,
   centreX = width / 2,
+  centreY = height / 2,
 ): ScreenPoint {
   const p = lonLatToVec3(lon, lat);
-  return projectUnit(p[0], p[1], p[2], basis, height, radius, centreX);
+  return projectUnit(p[0], p[1], p[2], basis, height, radius, centreX, { x: 0, y: 0, visible: false, facing: 0 }, centreY);
 }
 
 /**
@@ -176,12 +178,13 @@ export function projectUnit(
   radius = 1,
   centreX = 0,
   out: ScreenPoint = { x: 0, y: 0, visible: false, facing: 0 },
+  centreY = height / 2,
 ): ScreenPoint {
   const { c, east, north } = basis;
   const pc = px * c[0] + py * c[1] + pz * c[2];
   const depth = basis.d - pc * radius;
   const sx = centreX + (basis.f * radius * (px * east[0] + py * east[1] + pz * east[2])) / depth;
-  const sy = height / 2 - (basis.f * radius * (px * north[0] + py * north[1] + pz * north[2])) / depth;
+  const sy = centreY - (basis.f * radius * (px * north[0] + py * north[1] + pz * north[2])) / depth;
   const horizon = 1 / basis.d;
   const visible = pc > horizon + 1e-4;
   out.x = sx;

@@ -198,6 +198,8 @@ export interface LodCamera {
   height: number;
   /** x of the projection centre (the view centre; shifted left by the detail panel's inset). */
   centreX: number;
+  /** y of the projection centre (the middle of the height, shifted up while the landing hero covers the bottom: `GlobeProps.coverBottom`). */
+  centreY: number;
   /** Smaller side of the free map area (free width, height): the unit of the size rules. */
   refPx: number;
   /** Width of the free map area, centred on `centreX` (the area the detail panel leaves): the screen of the early opening (`LOD.open`). */
@@ -210,7 +212,7 @@ export interface LodCamera {
 export function setLodCamera(
   cam: LodCamera,
   view: { lon: number; lat: number; zoom: number },
-  space: { width: number; height: number; centreX: number },
+  space: { width: number; height: number; centreX: number; centreY?: number },
   freeWidthPx: number,
   cell: number,
 ) {
@@ -220,12 +222,13 @@ export function setLodCamera(
   cam.width = space.width;
   cam.height = space.height;
   cam.centreX = space.centreX;
+  cam.centreY = space.centreY ?? space.height / 2;
   cam.refPx = Math.max(1, Math.min(freeWidthPx, space.height));
   cam.freeWidth = Math.max(1, freeWidthPx);
   cam.cell = cell;
 }
 
-export const newLodCamera = (): LodCamera => ({ lon: 0, lat: 0, zoom: 0, width: 1, height: 1, centreX: 0.5, refPx: 1, freeWidth: 1, cell: 3 });
+export const newLodCamera = (): LodCamera => ({ lon: 0, lat: 0, zoom: 0, width: 1, height: 1, centreX: 0.5, centreY: 0.5, refPx: 1, freeWidth: 1, cell: 3 });
 
 /**
  * Half side in CSS px of the box of a place of `radiusKm` at a node whose cosine to the view centre is `pc`: the local scale
@@ -399,6 +402,8 @@ export class LodTree {
   private plateX = 0;
   private plateY = 0;
   private key = new Float64Array(10);
+  /** The overlay is hidden as a whole (`setSuppressed`): every node's target is OFF, so boxes and labels fade out by their own timed opacity and are no click targets. */
+  private suppressed = false;
   private keyValid = false;
   private lastForced0 = -2;
   private lastForced1 = -2;
@@ -609,6 +614,7 @@ export class LodTree {
       k[6] === cam.centreX &&
       k[7] === cam.cell &&
       k[8] === cam.freeWidth &&
+      k[9] === cam.centreY &&
       forced0 === this.lastForced0 &&
       forced1 === this.lastForced1 &&
       reduced === this.lastReduced
@@ -625,6 +631,7 @@ export class LodTree {
     k[6] = cam.centreX;
     k[7] = cam.cell;
     k[8] = cam.freeWidth;
+    k[9] = cam.centreY;
     this.keyValid = true;
     this.lastForced0 = forced0;
     this.lastForced1 = forced1;
@@ -634,6 +641,21 @@ export class LodTree {
     this.retarget();
     this.rebuild = true;
     return this.count;
+  }
+
+  /**
+   * Hide every box and label (the home screen's orbiting type replaces them: `GlobeProps.showcase`) or bring them back: the targets of all nodes
+   * go OFF (or back to what the cut wants) and each runs to it by its own timed opacity (engine/fade.ts), so the overlay cross-fades with
+   * whatever replaces it and a node that is mostly gone takes no click (`pickAlpha`). The cut itself is untouched: nothing is re-planned.
+   */
+  setSuppressed(on: boolean): void {
+    if (on === this.suppressed) return;
+    this.suppressed = on;
+    this.keyValid = false;
+  }
+
+  get isSuppressed(): boolean {
+    return this.suppressed;
   }
 
   /** True while some transition (a node, a mask) has not reached its target: the host's frame loop must keep going. */
@@ -704,7 +726,7 @@ export class LodTree {
   /** Hand the cut's wants to the transitions, and snap what must not fade (geometry: a limb crossing, a group left empty). */
   private retarget() {
     for (let i = 0; i < this.size; i++) {
-      const on = this.want[i] === 1;
+      const on = this.want[i] === 1 && !this.suppressed;
       const geometry = this.isGroup[i] ? this.members[i]! > 0 : this.shown[i] === 1;
       if (!geometry) {
         // Nothing to draw it from: a fade would show it where the globe's far side is, mirrored. It goes at once.
@@ -766,8 +788,8 @@ export class LodTree {
     let projected = 0;
     for (const p of this.places) {
       const p3 = p * 3;
-      projectUnit(vec[p3]!, vec[p3 + 1]!, vec[p3 + 2]!, basis, cam.height, 1, cam.centreX, out);
-      const shown = markerShown(out, basis, cam.centreX, cam.height / 2, clearance);
+      projectUnit(vec[p3]!, vec[p3 + 1]!, vec[p3 + 2]!, basis, cam.height, 1, cam.centreX, out, cam.centreY);
+      const shown = markerShown(out, basis, cam.centreX, cam.centreY, clearance);
       this.shown[p] = shown ? 1 : 0;
       this.px[p] = out.x;
       this.py[p] = out.y;

@@ -1,5 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createHeroMachine, HERO_IDLE_MS, isWorldView, WORLD_ZOOM01, type HeroMachine } from "./hero-machine";
+import { createHeroMachine, HERO_IDLE_MS, isWorldView, showcaseOf, WORLD_ZOOM01, type HeroMachine } from "./hero-machine";
+
+describe("showcaseOf: when the home screen shows the orbiting type and lifts the planet", () => {
+  it("is on only for the full hero at the world view, with the measured cover; off, the planet comes back down", () => {
+    expect(showcaseOf({ state: "rest", world: true }, 182)).toEqual({ on: true, coverBottom: 182 });
+    expect(showcaseOf({ state: "collapsed", world: true }, 182)).toEqual({ on: false, coverBottom: 0 });
+    expect(showcaseOf({ state: "rest", world: false }, 182)).toEqual({ on: false, coverBottom: 0 });
+    expect(showcaseOf({ state: "collapsed", world: false }, 182)).toEqual({ on: false, coverBottom: 0 });
+    expect(showcaseOf({ state: "rest", world: true }, -5)).toEqual({ on: true, coverBottom: 0 });
+  });
+
+  it("follows the machine: a gesture ends it, the idle period brings it back", () => {
+    vi.useFakeTimers();
+    try {
+      const m = createHeroMachine();
+      expect(showcaseOf(m.getSnapshot(), 100).on).toBe(true);
+      m.interact();
+      expect(showcaseOf(m.getSnapshot(), 100).on).toBe(false);
+      vi.advanceTimersByTime(HERO_IDLE_MS);
+      expect(showcaseOf(m.getSnapshot(), 100).on).toBe(true);
+      m.setWorld(false);
+      expect(showcaseOf(m.getSnapshot(), 100).on).toBe(false);
+      m.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
 
 describe("isWorldView", () => {
   it("is the whole globe, within the slack, and never the street map", () => {

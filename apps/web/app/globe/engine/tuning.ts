@@ -126,50 +126,86 @@ export const SKY = {
   onRho: { rho: 1.75, band: 0.05 },
 } as const;
 
+/**
+ * The lift (engine/lift.ts): while the landing hero covers the bottom of the page the planet's centre goes up so that the planet clears it as far as
+ * the room above allows. `gapPx`: air kept between the planet's lowest point and what covers it; `marginPx`: the least room kept above the highest
+ * thing (the planet, or the ring when it is shown). The tween is the inset's (`TUNING.insetMs`, `INSET_EASE`).
+ */
+export const LIFT = { gapPx: 14, marginPx: 14 } as const;
+
 /** `cubic-bezier` control points of the app's standard easing (`--ease-standard`). */
 export const INSET_EASE = [0.2, 0, 0, 1] as const;
 
 /**
- * The ring of type (engine/ring.ts, engine/ring-layer.ts; docs/web-architecture.md, "Ring of type"): one short line of the site's identity, set in
- * the map's monospace on a flat circle concentric with the planet's disc (the circle of its silhouette, a little larger), tops of the letters
- * outward, running clockwise and turning slowly on its own clock. It exists only in the zoomed-OUT regime below the whole-globe fit and fades
- * out as the camera comes in, so it is gone at the fit: the boxes and the labels of the world view never compete with it.
+ * The orbiting type (engine/ring.ts, engine/orbit.ts, engine/orbit-layer.ts; docs/web-architecture.md, "Orbiting type"): two pieces of the site's
+ * type that live in the planet's space and are seen through the globe's own perspective camera, over the planet and crisp (a layer above the pixel
+ * buffer, not part of it). The RING (A) is one short line of the site's identity in the map's mono face that circles the planet in a tilted
+ * plane; the BAND (B) is a heavy two-line caption of the display face that wraps a shell just above the surface and tells the visitor what to
+ * do. They exist only in the zoomed-OUT regime below the whole-globe fit, while the home screen is at rest (`GlobeProps.showcase`).
  *
- * Sizes in CSS px or as named. Everything that can be tuned by eye is here.
+ * Sizes in planet radii (1 = the sphere's radius) unless a name says px. Everything that can be tuned by eye is here.
  */
 export const RING = {
+  /** The ring's baseline circle, as a fraction of the planet's radius above the surface: its radius is `1 + gap` planet radii. */
+  gap: 0.22,
   /**
-   * The gap between the planet's silhouette and the BASELINE of the letters, as a fraction of the silhouette's radius (0.06: 17 px at the lowest
-   * zoom on a 1440 x 900 screen). The letters' tops point outward from there.
+   * How the ring is tipped. `tiltDeg`: the plane is turned about the view's horizontal axis so that its top goes away from the viewer (0 = facing
+   * the viewer, a flat circle; 90 = edge on). `rollDeg`: then turned about the view axis (counter-clockwise positive), so the orbit leans.
    */
-  gap: 0.06,
-  /** Turning speed, degrees a second, on the ring's own clock. The globe's idle rotation is 0.2 (`SPIN.degPerSec`); the ring turns at 3. */
+  tiltDeg: 72,
+  rollDeg: -8,
+  /** Turning speed, degrees a second, on the ring's own clock; `direction` -1 slides the line to the left on the near arc, against the globe's own turn and the way it reads, like a ticker. */
   degPerSec: 3,
-  /** `1`: clockwise, the way the text reads (the letters move along the line); `-1` the other way. */
-  direction: 1,
-  /** Where the line starts when the ring appears: degrees clockwise from twelve o'clock. */
+  direction: -1,
+  /** Where the line starts: degrees counter-clockwise from the near point, so the name starts at the front. */
   startDeg: 0,
   /**
-   * The type: the weight, the tracking (em added to the monospace's 0.6 em advance; the nav's `.nav-link` is 0.14), and the em size (CSS px) the
-   * letters have at the lowest zoom. The line goes round a WHOLE number of times (`ringLayout`): the count is the one whose letters, at the
-   * nominal tracking, come nearest `targetEmPx`, then the em is allowed to move by `emSlack` (a fraction) and the tracking takes the rest up, so
-   * the seam closes evenly at any size. The type then scales with the planet (the ring is an object of the planet's), so a closed ring stays closed.
+   * The type of the ring: the weight, the tracking (em added to the monospace's 0.6 em advance), and the em size (CSS px) the letters have at the
+   * lowest zoom. The line goes round a WHOLE number of times (`ringLayout`): the count is the one whose letters, at the nominal tracking, come
+   * nearest `targetEmPx`, then the em is allowed to move by `emSlack` and the tracking takes the rest up, so the seam closes evenly at any size.
    */
   type: { weight: 500, tracking: 0.14, advanceEm: 0.6, targetEmPx: 11, emSlack: 0.15 },
   /** Between the phrases (and after the last, which closes the loop). */
   separator: " \u00b7 ",
+  /** Palette role (engine/palette.ts) of the ring's letters: the box's own tone at rest, over the page colour. */
+  tone: "peak",
+  /** Opacity of the glyphs on the far side of the planet (seen outside the disc): a depth cue. */
+  farAlpha: 0.5,
+  /**
+   * The band: a caption in the display face wrapped on a shell. `radius`: the shell, a little above the surface. `emR`: the em in planet radii (the
+   * caps are 0.7 of it). `lines` lines `leading` em apart each go round the whole planet: line i has phrase `i mod n` at the front, so at the
+   * start the phrases are one under the other and as the band slides they swap. `leanDeg`: the axis the lines go round is leaned towards the viewer
+   * by this much (negative: away), which makes the lines arch, `riseDeg`: the lines are that much higher on the face than where the view's centre is;
+   * `rollDeg`: and rolled (counter-clockwise positive). `minGapEm`: air kept at the seam
+   * of a loop. `degPerSec`: slides to the left (against the globe's turn), on its own clock. `outlineEm`: the page-colour keyline round the letters
+   * that keeps them readable over the coastlines.
+   */
+  band: {
+    radius: 1.04,
+    emR: 0.2,
+    leading: 1.0,
+    lines: 2,
+    leanDeg: -18,
+    riseDeg: 22,
+    rollDeg: -9,
+    minGapEm: 2,
+    degPerSec: 4,
+    startDeg: 0,
+    weight: 800,
+    /** Tracking of the heavy capitals, em added to every advance (the display face is set tight, as in the hero's name). */
+    tracking: -0.02,
+    outlineEm: 0.11,
+    separator: " \u00b7 ",
+  },
   /**
    * Zoom range. `floorBelowFit`: the lowest zoom is at least this many zoom levels below the whole-globe fit (0.5 levels = the globe 0.71 times its fit
-   * size), and lower still when the ring does not fit the free area with `fitMargin` of it left empty (never on a screen with a 4:3 or wider
-   * shape). `fade`: the ring's strength by the way from the fit (0) to the lowest zoom (1): gone up to `from`, full from `to`, a smoothstep
-   * between, quantised to palette tones.
+   * size), and lower still when the ring does not fit the free area with `fitMargin` of it left empty. `fade`: the type's presence by the way from the
+   * fit (0) to the lowest zoom (1): gone up to `from`, full from `to`, a smoothstep between.
    */
   zoom: { floorBelowFit: 0.5, fitMargin: 0.12, fade: { from: 0.08, to: 0.6 } },
-  /** Palette role (engine/palette.ts) of the letters: not louder than the coastline (`coast`), so a coast is never outshone. */
-  tone: "coast",
-  /** At most one frame every `frameMs` (30 fps: the ring is slow, the pixels it moves a frame are under one) and no step longer than `maxStepMs` (a stalled frame must not jump). */
+  /** At most one frame every `frameMs` (30 fps: the type is slow, the pixels it moves a frame are under one) and no step longer than `maxStepMs` (a stalled frame must not jump). */
   frameMs: 32,
   maxStepMs: 100,
-  /** Largest device pixel ratio the ring's canvas is drawn at (the type is crisp at 2; a phone's 3 would cost 2.25 times the pixels). */
+  /** Largest device pixel ratio the layer's canvas is drawn at (the type is crisp at 2; a phone's 3 would cost 2.25 times the pixels). */
   maxDpr: 2,
 } as const;

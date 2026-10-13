@@ -2410,6 +2410,14 @@ h1[tabindex="-1"]:focus-visible {
     row-gap: 2.125rem;
   }
 
+  /* The name's two halves are boxes a transform can move: they shrink into the small line and back (landing-hero.tsx `travelName`). Origin: the
+     top-left corner of the box, which the script's arithmetic assumes. */
+  .hero-given,
+  .hero-family {
+    display: inline-block;
+    transform-origin: 0 0;
+  }
+
   /* Under 48 rem the hero stacks: name, intro and search, the rows (the search line's hairline is the first rule of the list). */
   @media (max-width: 47.99rem) {
     .hero-block {
@@ -2460,7 +2468,6 @@ h1[tabindex="-1"]:focus-visible {
     margin-inline-start: -0.035em;
     white-space: nowrap;
     text-wrap: nowrap;
-    transform-origin: left bottom;
   }
 
   /* The given name is the heavy half: at 800 and the name's -0.055em the three l, l, i of "Elliot" touch, so it is set looser (the thin
@@ -2729,7 +2736,7 @@ h1[tabindex="-1"]:focus-visible {
 
     .hero-given,
     .hero-family {
-      display: inline;
+      display: inline-block;
     }
 
     .hero-lead {
@@ -2771,7 +2778,7 @@ h1[tabindex="-1"]:focus-visible {
     row-gap: 0.25rem;
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--hero-fade), visibility 0s linear var(--duration-base);
+    transition: opacity 60ms linear, visibility 0s linear 60ms;
   }
 
   @media (max-width: 47.99rem) {
@@ -2818,7 +2825,6 @@ h1[tabindex="-1"]:focus-visible {
   }
 
   /* ---- States: every moving part is opacity and transform; visibility follows the fade so that hidden controls leave the tab order. ---- */
-  .hero-name,
   .hero-intro,
   .hero-hint,
   .hero-search,
@@ -2835,14 +2841,28 @@ h1[tabindex="-1"]:focus-visible {
     transition-timing-function: var(--ease-standard), var(--ease-standard), linear, var(--ease-standard);
   }
 
-  .landing-hero[data-hero="collapsed"] .hero-name,
   .landing-hero[data-hero="collapsed"] .hero-intro,
   .landing-hero[data-hero="collapsed"] .hero-hint {
     opacity: 0;
     transform: translateY(0.5rem);
   }
 
-  /* The name stays in the accessibility tree (it is the page's h1): opacity only. The controls are removed from the tab order. */
+  /*
+   * The name does not fade like the rest: its two halves shrink and travel to where the small line has them (landing-hero.tsx, a transform animation
+   * of `--duration-slow`, the compositor's), and it is the SAME text that stays on screen until it has arrived, so the h1 is visible for the whole
+   * of the travel and gives way to the small line in the last 90 ms (they coincide). Coming back is the other way round: the small line goes at
+   * once and the name travels out of its place. The h1 stays in the accessibility tree at opacity 0 (it is the page's heading).
+   */
+  .hero-name {
+    transition: opacity 90ms linear;
+  }
+
+  .landing-hero[data-hero="collapsed"] .hero-name {
+    opacity: 0;
+    transition: opacity 90ms linear calc(var(--duration-slow) - 90ms);
+  }
+
+  /* The controls are removed from the tab order. */
   .landing-hero[data-hero="collapsed"] .hero-search,
   .landing-hero[data-hero="collapsed"] .hero-list {
     opacity: 0;
@@ -2858,7 +2878,26 @@ h1[tabindex="-1"]:focus-visible {
   .landing-hero[data-hero="collapsed"] .hero-mini {
     opacity: 1;
     visibility: visible;
-    transition: opacity var(--hero-fade) 80ms, visibility 0s;
+    transition: opacity 90ms linear calc(var(--duration-slow) - 90ms), visibility 0s;
+  }
+
+  /*
+   * The how-to line is said by the orbiting caption while the globe has one (`data-orbit`: "pending" until the globe is up, "true" with the type,
+   * "false" without it, on the empty archive, or when the globe cannot start). Then it is for assistive technology only: visually hidden, in the
+   * accessibility tree, out of the layout. With scripts off (`scripting: none`) nothing says it but this line, and it stays.
+   */
+  @media (scripting: enabled) {
+    .landing-hero:is([data-orbit="pending"], [data-orbit="true"]) .hero-hint {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
   }
 
   /* Away: a place or an entry is open. Instant: the panel is arriving, the hero is not the page. */

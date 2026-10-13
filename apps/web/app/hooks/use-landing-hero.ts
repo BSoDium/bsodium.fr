@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { GlobeViewState } from "~/globe";
-import { createHeroMachine, HERO_IDLE_MS, isWorldView, type HeroMachine } from "~/lib/hero-machine";
+import type { GlobeShowcase, GlobeSignal, GlobeViewState } from "~/globe";
+import { createHeroMachine, HERO_IDLE_MS, isWorldView, showcaseOf, type HeroMachine } from "~/lib/hero-machine";
 
 /**
  * The idle delay. Test-only override, in debug mode only (`?globe-debug`, what the browser checks run in; the same convention as
@@ -54,6 +54,14 @@ export interface LandingHero {
   onInteract(): void;
   /** `GlobeProps.onViewChange`'s companion: feed it every reported view (cheap: a comparison, and a notification only when the world view is left or reached). Stable. */
   onView(view: GlobeViewState): void;
+  /**
+   * `GlobeProps.showcase`: the home screen is at rest (the full hero at the world view), and how much of the globe's bottom the hero's name covers
+   * then. A signal the globe subscribes to: a gesture starts or ends the showcase without the shell, the globe's props or the places list
+   * rendering. Stable.
+   */
+  showcase: GlobeSignal<GlobeShowcase>;
+  /** The hero reports the height it covers at the bottom of the globe's box, CSS px (measured by the hero; a change tells the globe). Stable. */
+  setCover(px: number): void;
 }
 
 /**
@@ -79,6 +87,34 @@ export function useLandingHero(open: boolean): LandingHero {
     [sync],
   );
 
+  // The showcase: a signal over the machine and the measured cover. The snapshot object is replaced only when a value changes.
+  const cover = useRef(0);
+  const coverListeners = useRef(new Set<() => void>());
+  const showcase = useMemo<GlobeSignal<GlobeShowcase>>(() => {
+    let snap: GlobeShowcase = { on: false, coverBottom: 0 };
+    return {
+      get() {
+        const { on, coverBottom } = showcaseOf(machine.getSnapshot(), cover.current);
+        if (snap.on !== on || snap.coverBottom !== coverBottom) snap = { on, coverBottom };
+        return snap;
+      },
+      subscribe(listener) {
+        coverListeners.current.add(listener);
+        const off = machine.subscribe(listener);
+        return () => {
+          coverListeners.current.delete(listener);
+          off();
+        };
+      },
+    };
+  }, [machine]);
+  const setCover = useCallback((px: number) => {
+    const next = Math.max(0, Math.round(px));
+    if (next === cover.current) return;
+    cover.current = next;
+    for (const l of [...coverListeners.current]) l();
+  }, []);
+
   useEffect(() => {
     openRef.current = open;
     sync();
@@ -86,5 +122,5 @@ export function useLandingHero(open: boolean): LandingHero {
   useEffect(() => () => machine.stop(), [machine]);
   useEffect(() => watchFocusHold(machine), [machine]);
 
-  return useMemo(() => ({ machine, onInteract, onView }), [machine, onInteract, onView]);
+  return useMemo(() => ({ machine, onInteract, onView, showcase, setCover }), [machine, onInteract, onView, showcase, setCover]);
 }

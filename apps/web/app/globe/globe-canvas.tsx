@@ -109,6 +109,9 @@ export default function GlobeCanvas({
   tiles,
   attribution: Attribution,
   ringPhrases,
+  captionPhrases,
+  showcase,
+  onOrbit,
   onSelect,
   onViewChange,
   onInteract,
@@ -132,9 +135,9 @@ export default function GlobeCanvas({
   const tilesKey = tiles && !(debugEnabled() && streetDisabledForTests()) ? JSON.stringify(tiles) : "";
   const viewRef = useRef(initialView);
   const appliedSelection = useRef(selectedSlug);
-  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, onSelect, onViewChange, onInteract });
+  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, captionPhrases, showcase, onOrbit, onSelect, onViewChange, onInteract });
   useEffect(() => {
-    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, onSelect, onViewChange, onInteract };
+    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, captionPhrases, showcase, onOrbit, onSelect, onViewChange, onInteract };
   });
 
   // `onInteract`: a gesture that starts ON the globe (its stage holds the canvas; the labels and the street map ignore the pointer, the
@@ -192,6 +195,9 @@ export default function GlobeCanvas({
           insetRight: now.insetRight,
           tiles: tilesKey ? JSON.parse(tilesKey) : null,
           ringText: ringText(now.ringPhrases ?? []), // the line of the ring of type, from the identity the app hands in (the words, capitals and closing seam are the engine's)
+          captionPhrases: now.captionPhrases,
+          coverBottom: now.showcase?.get().coverBottom ?? 0,
+          showcase: now.showcase?.get().on ?? false,
           onNotice: setNotice,
           onSelect: (slug) => latest.current.onSelect(slug),
           onViewChange: (view) => {
@@ -214,9 +220,11 @@ export default function GlobeCanvas({
           window.__globeDebug = d.globe;
         }
         setStatus("ready");
+        latest.current.onOrbit?.(handle.hasOrbit());
       } catch (e) {
         if (cancelled) return;
         if (!isWebGLUnavailable(e)) console.error("Globe failed to start", e);
+        latest.current.onOrbit?.(false);
         setStatus("unavailable");
         setRevealed(true);
       }
@@ -237,6 +245,19 @@ export default function GlobeCanvas({
   useEffect(() => {
     handleRef.current?.setInset(insetRight);
   }, [insetRight]);
+
+  // The home screen's showcase (the hero at rest): followed by subscription, so a gesture costs the app no render. Applied again when the engine
+  // has just come up (`status`), which is when there is a handle to tell.
+  useEffect(() => {
+    if (!showcase || status !== "ready") return;
+    const apply = () => {
+      const v = showcase.get();
+      handleRef.current?.setCover(v.coverBottom);
+      handleRef.current?.setShowcase(v.on);
+    };
+    apply();
+    return showcase.subscribe(apply);
+  }, [showcase, status]);
 
   useEffect(() => {
     const handle = handleRef.current;
