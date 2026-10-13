@@ -2290,6 +2290,17 @@ h1[tabindex="-1"]:focus-visible {
     color: var(--signal-text);
   }
 
+  /*
+   * A header that has just appeared because of a gesture (the hero stepping back on the home page) ignores the pointer until the gesture's
+   * pointer sequence has ended and a short guard has passed (components/navbar.tsx `useGestureGuard`): the tap's click is fired where the
+   * finger is, and must not activate a link that was not there when the finger went down. Visible, focusable and readable throughout.
+   * `!important`: the links carry the `pointer-events-auto` utility, which is in a later layer.
+   */
+  [data-slot="site-header"][data-guard],
+  [data-slot="site-header"][data-guard] * {
+    pointer-events: none !important;
+  }
+
   @container (min-width: 23rem) {
     .nav-link {
       letter-spacing: 0.06em;

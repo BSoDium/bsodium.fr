@@ -746,6 +746,50 @@ for (const [name, options] of VIEWPORTS) {
   await ctx.close();
 }
 
+// --- 11. A header that appears because of a gesture does not receive that gesture's click ------------------------------------------------
+// On a phone a tap on the globe collapses the hero in the same task as the press and the header row appears; the browser then fires the
+// tap's click at what is under the finger NOW. A tap near the top used to land on a header link ("Articles") and navigate. The header's
+// controls ignore the pointer until the pointer sequence has ended plus a short guard (keyboard, focus and assistive technology unaffected).
+{
+  const TOUCH = { ...MOBILE, viewport: { width: 390, height: 844 } };
+  // Where the "Articles" link is once the header is there (two steps: collapse, read the box).
+  const probe = await newPage(TOUCH);
+  await probe.page.goto(`${BASE_URL}/${IDLE_QUERY}`);
+  await waitGlobe(probe.page);
+  await waitDebug(probe.page);
+  await sleep(800);
+  await probe.page.touchscreen.tap(380, 400);
+  await waitState(probe.page, "collapsed", 1500);
+  await sleep(500);
+  const box = await probe.page.locator("header a[href='/articles']").boundingBox();
+  await probe.ctx.close();
+  ok(box !== null && box.y + box.height / 2 < 60, `tap-through: the header's Articles link is in the top strip (${box ? Math.round(box.y + box.height / 2) : "none"} px)`);
+  const tx = box.x + box.width / 2;
+  const ty = box.y + box.height / 2;
+
+  const { ctx, page, logs } = await newPage(TOUCH);
+  await page.goto(`${BASE_URL}/${IDLE_QUERY.replace("hero-idle=1500", "hero-idle=20000")}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(800);
+  ok((await page.locator("header").count()) === 0, "tap-through: no header before the tap");
+  await page.touchscreen.tap(tx, ty);
+  await sleep(700);
+  ok(new URL(page.url()).pathname === "/", `tap-through: the tap's click did not reach the header link that appeared under it (${new URL(page.url()).pathname})`);
+  if (new URL(page.url()).pathname === "/") ok((await heroState(page)) === "collapsed", "tap-through: the tap on the globe collapsed the hero");
+  ok((await page.locator("header a[href='/articles']").count()) === 1 && (await page.locator("header a[href='/articles']").isVisible()), "tap-through: the header is there and visible");
+  ok((await page.locator("header").getAttribute("data-guard")) === null, "tap-through: the guard is off a moment after the tap");
+  // after the guard the link works with a real tap, and keyboard focus was never blocked
+  await page.locator("header a[href='/projects']").focus();
+  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/projects"), "tap-through: the header's links can be focused at once (keyboard and assistive technology are not guarded)");
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.touchscreen.tap(tx, ty);
+  await page.waitForURL("**/articles", { timeout: 4000 }).catch(() => {});
+  ok(new URL(page.url()).pathname === "/articles", `tap-through: after the guard a tap on the link navigates (${new URL(page.url()).pathname})`);
+  ok(logs.length === 0, `tap-through: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
 await browser.close();
 if (failures.length) {
   console.error(`\n${failures.length} check(s) failed:`);

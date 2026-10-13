@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createStaticHandler, createStaticRouter, StaticRouterProvider, type StaticHandlerContext } from "react-router";
 import { describe, expect, it } from "vitest";
 import { SITE_NAME } from "~/lib/site";
-import { Navbar } from "./navbar";
+import { GESTURE_GUARD_MS, Navbar } from "./navbar";
 
 /** The navbar server-rendered at `url`; `shell` stands for the route that owns the globe (`routes/shell`). */
 async function render(url: string, { shell = true, heroResting }: { shell?: boolean; heroResting?: boolean } = {}): Promise<string> {
@@ -150,5 +150,26 @@ describe(".nav-fade (app.css)", () => {
     expect(css).toMatch(/forced-colors: active\)[\s\S]*\.nav-fade \{[^}]*Canvas/);
     // a solid band (forced colours drop gradients and the mask would hide it), as tall as the row
     expect(css).toMatch(/forced-colors: active\)\s*\{[^@]*\.nav-fade \{[^}]*height: var\(--navbar-height\);[^}]*background: Canvas;[^}]*background-image: none;[^}]*mask-image: none;/);
+  });
+});
+
+describe("the header that a gesture brings", () => {
+  const css = readFileSync(new URL("../app.css", import.meta.url), "utf8");
+
+  it("ignores the pointer while guarded (the tap's click must not reach a link that was not there when the finger went down), and only the pointer", () => {
+    const at = css.indexOf('[data-slot="site-header"][data-guard]');
+    expect(at).toBeGreaterThan(0);
+    const rule = css.slice(at, css.indexOf("}", at));
+    expect(rule).toContain('[data-slot="site-header"][data-guard] *');
+    expect(rule).toMatch(/pointer-events: none !important;/);
+    // visible and readable throughout: the guard changes nothing else
+    expect(rule).not.toMatch(/opacity|visibility|display|inert/);
+  });
+
+  it("is a short guard, not rendered on the server (a server page has no gesture)", async () => {
+    expect(GESTURE_GUARD_MS).toBeGreaterThanOrEqual(250);
+    expect(GESTURE_GUARD_MS).toBeLessThanOrEqual(500);
+    expect(await render("/articles", { shell: false })).not.toContain("data-guard");
+    expect(await render("/", { heroResting: false })).not.toContain("data-guard");
   });
 });
