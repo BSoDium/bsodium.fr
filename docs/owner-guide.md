@@ -95,6 +95,21 @@ pnpm export:preview --out ../catalyst         # then look at it locally (section
 
 Pushing opens or refreshes the publication PR; **merging it is the publication** (section 5). For mature content (a figure or anatomy study) set `sensitive: true` in the header: the site draws that entry's pictures blurred until the visitor asks to see them, and never uses the cover as a share image. It is a hint for people looking over a shoulder, not access control: the image files stay public at their `/media/` addresses. An entry with `sensitive: true` and no image gets a warning. Not verified from this repo: the exact flags of `new-entry` and `vault` (read them from the private repo's `docs/writing-entries.md` and `pnpm new-entry --help` if they differ).
 
+### Edit the career document
+
+The career page reads ONE document, `content/career/index.md` in the private repo: a header with the roles (most recent first), education, languages, skill groups and links, and below it the profile statement as one paragraph. It is a draft until you set `status: published`, and then it travels like any other content (the publication PR; merging it is the publication). There is no email, phone number or address field on purpose: they cannot be published by accident. Writing rules: the private repo's `docs/writing-entries.md`, "Career"; the shape: [api-contract.md](api-contract.md#the-career-document-career).
+
+```bash
+# [private]
+pnpm new-career                               # only if the file does not exist yet: a commented draft
+# edit content/career/index.md: add a role at the TOP, bump updated: YYYY-MM
+pnpm vault check                              # dates, order, links, places, markup
+pnpm export:preview --out ../catalyst         # the preview includes the document whatever its status
+# when it is right: status: published, commit, push, review and merge the publication PR
+```
+
+The first publication of the career needs the public repo to know the key already (the change that added `career` to the contract must be merged and deployed): [api-contract.md](api-contract.md#the-career-document-career) lists the order. Take it down with `status: unpublished` and the next publication PR.
+
 ### Add places from Polarsteps steps
 
 The snapshot is only a base. Proposals come from positions, not names.
@@ -208,7 +223,7 @@ Risk to keep in mind: this is an unofficial endpoint with your session cookie. I
 
 ## 5. Publish
 
-**What triggers it.** A push to the private `main` touching `editorial/**`, `config/regions.json`, `config/bboxes.json` or `config/publish.json`, or a manual run: Actions, `publish`, Run workflow (or `gh workflow run publish.yml -R BSoDium/Catalyst-content`).
+**What triggers it.** A push to the private `main` touching `editorial/**`, `content/**`, `config/regions.json`, `config/bboxes.json` or `config/publish.json`, or a manual run: Actions, `publish`, Run workflow (or `gh workflow run publish.yml -R BSoDium/Catalyst-content`).
 
 **What the workflow does** (`publish.yml`): mints a short-lived token from the GitHub App, checks out the public repo, refreshes `contract/published.schema.json` from it, runs `pnpm validate`, `pnpm export --out public` and `pnpm export --out public --check`, builds the PR body (counts and slugs only), then opens or updates **one rolling PR** from branch `content/publish`, titled "content: publish editorial update", assigned to `PR_ASSIGNEE` (default `BSoDium`). The PR may only contain `packages/published/data/projection.json` and `apps/web/public/media`. Nothing to change means no PR. If validation fails, nothing is opened: read the failed run.
 
@@ -334,6 +349,9 @@ Two NEW projects from this repo (team `photonsquid`), created when the rebuild w
 
 ```bash
 pnpm install
+pnpm new-entry --kind article|project|artwork|poem --slug x --title "X"   # draft entry (content/<kind>s/x/index.md)
+pnpm new-career                              # draft career document (content/career/index.md), never overwrites
+pnpm vault check                             # the vault: entries, career, places (errors with file:line)
 pnpm new-place --name "X" --lat 0 --lon 0 [--country XX] [--slug x]      # hand-authored draft
 pnpm new-place <slug> [--name "X"] --from-step <trip>/<step> [--from-step ...]
 pnpm propose-places [--trip <id>|--all] [--across-trips] [--radius-km 20] [--min-steps 1] [--write]

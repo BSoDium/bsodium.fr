@@ -121,3 +121,25 @@ Each would be a new optional field or block type in `/v1`, with this repo's sche
 - entry-to-entry and entry-to-place references inside the text (a typed `ref` span or block);
 - `images` (gallery) on entries, a `references` collection, a table of contents or heading ids;
 - Markdown for place bodies.
+
+## 7. The career document (a singleton, not an entry)
+
+One more vault document maps onto the contract, and it is **not an entry**: `content/career/index.md` (`type: career`), a YAML header plus a Markdown body, exported as the optional top-level `career` object of the projection (shape and limits: [api-contract.md](api-contract.md), "The career document"). It has no slug, no kind and no collection; there is at most one, and it is absent while its `status` is not `published`. The private model is `src/vault/model/career.ts`; the writing guide is the private `docs/writing-entries.md`, "Career".
+
+| Vault header | Contract field | Rule |
+| --- | --- | --- |
+| `title` | `title` | 1 to 80, one line. |
+| the body's one paragraph, or `summary` | `summary` | The profile statement. Not both; one paragraph, no hard break, at most 1000 characters. Any other block in the body (heading, list, quote, image, code, link card) is an error. Inline marks are flattened with a warning, as in an entry. |
+| `updated` | `updated` | `YYYY-MM`, authored. A month in the future is an error; a document that mentions a later date is warned about. |
+| `roles` | `roles` | Most recent first by `start` (an error otherwise). `place: place/<slug>` becomes `place: "<slug>"`. |
+| `education`, `languages`, `skills`, `links` | the same names | Same field names; `orgUrl` and `links[].url` are https without credentials. |
+| `status` | (filter) | Only `published` is exported; the preview (`pnpm export:preview`) includes it whatever its status. |
+| `id`, `notes`, `type`, `schema` | not exported | Private. The singleton's own `id` is not exported (it has no public identity), unlike the `id` of a role or an education item, which is authored and public. |
+
+Rules the private validator adds on top of the contract (errors for a published document, warnings for a draft): no start more than a year ahead, ids unique across roles and education, no empty `roles`, no skill group without items, no markup-looking text (`<b>`), a place reference that exists and, for a published document, is published (otherwise the export would drop it). The second gate (`checkProjectionSemantics`) re-implements the contract's zod-only rules, as for entries (section 5).
+
+**Privacy by construction.** The header is strict and has no key for an email address, a phone number or a street address, in the vault and in the contract alike, so neither can leave the private repo by accident. A role's `location` is a free-text city and country, not an address. Whether a contact line, a location line or an open-to-work status should exist is a contract change, to be decided by the owner (not made here).
+
+**Order of deployment** (the contract must know the key before a projection carries it): see [api-contract.md](api-contract.md#the-career-document-career).
+
+**Conformance sample.** `packages/published/fixtures/demo.json` has a made-up `career` (made-up employers: "Example Studio", "Sample Works Ltd", example domains only) that uses every field, so the career page can be built on `pnpm dev:demo`.
