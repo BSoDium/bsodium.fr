@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FADE_MS } from "./fade";
 import { LOD, LodTree, clearanceAt, type GroupKind, type LodNodeInput } from "./lod-tree";
-import { CROWD_GAP, SCREEN_OWNER, SCREEN_SWEEP, SWEEP, SWEEP_AREAS, SWEEP_CENTRES, SWEEP_GROUPS, belowGroup, camera, cameraOn, crowdSweep, crowding, drawnAt, inseparable, measure, nodesFromProjection, openingOf, runSweep, sweepZooms, type Drawn, type SweepRow } from "./open-sweep";
+import { CROWD_GAP, SCREEN_OWNER, SCREEN_SWEEP, SWEEP, SWEEP_CENTRES, SWEEP_GROUPS, belowGroup, camera, cameraOn, crowdSweep, crowding, drawnAt, inseparable, measure, nodesFromProjection, openingOf, runSweep, sweepAreasOf, sweepZooms, type Drawn, type SweepRow } from "./open-sweep";
 
 /**
  * The EARLY OPENING of groups (engine/lod-tree.ts `LodTree.cut`, `LOD.open`): a closed group opens into its most important children as soon as
@@ -171,7 +171,7 @@ describe("the opening rule (synthetic country of six places)", () => {
   });
 
   /**
-   * A country of two multi-scale areas (area inside area inside the country, long names like "Marrakesh region" > "Marrakesh area"), 50 km apart:
+   * A country of two multi-scale areas (area inside area inside the country, long names like "North region of the country" > "North area of the country"), 50 km apart:
    * the areas' boxes are small and their labels long, so neither box fits next to the other, but the places inside do.
    */
   const nested = (): LodNodeInput[] => [
@@ -698,7 +698,7 @@ describe.skipIf(!havePreview)("the owner's preview projection (sweeps)", () => {
   });
 
   it("the Moroccan areas (area inside area inside a country) open before the size rule did, through their most important place when their box does not fit", () => {
-    for (const grp of SWEEP_AREAS) {
+    for (const grp of sweepAreasOf(nodes)) {
       const now = openingOf(nodes, grp, true);
       const before = openingOf(nodes, grp, false);
       expect(now.zoom, grp.slug).toBeGreaterThan(0);
@@ -775,7 +775,7 @@ describe.skipIf(!havePreview)("the owner's preview projection (sweeps)", () => {
         lastPlaces = places;
       }
     }
-    // measured: 2 events (a neighbour near the bottom edge moved its label to the first position that was left, onto the one of a node that was kept by its own test: sarajevo at Europe 5.43, la-quiaca at the Andes 5.02) over 14 views x 650 steps of zoom
+    // measured: 2 events (a neighbour near the bottom edge moved its label to the first position that was left, onto the one of a node that was kept by its own test: a place at Europe 5.43, another at the Andes 5.02) over 14 views x 650 steps of zoom
     expect(events.length, events.join("; ")).toBeLessThanOrEqual(3);
   });
 
@@ -960,7 +960,7 @@ describe.skipIf(!havePreview)("the owner's preview projection (sweeps)", () => {
         );
       }
       lines.push("", "group             opens at zoom (size rule -> early)   places shown at the opening (of the total)   boxes on screen then   overlapping pairs then");
-      for (const grp of [...SWEEP_GROUPS, ...SWEEP_AREAS]) {
+      for (const grp of [...SWEEP_GROUPS, ...sweepAreasOf(nodes)]) {
         const now = openingOf(nodes, grp, true);
         const before = openingOf(nodes, grp, false);
         lines.push(`${grp.slug.padEnd(16)}  ${f(before.zoom)} -> ${f(now.zoom)}                      ${before.shown} -> ${now.shown} of ${now.total}                          ${before.boxes} -> ${now.boxes}              ${before.overlaps} -> ${now.overlaps}`);

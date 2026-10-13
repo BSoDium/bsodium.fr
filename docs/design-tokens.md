@@ -76,7 +76,7 @@ The ring of type that circles the planet's disc when the globe is zoomed out bel
 | Constant | Value | Meaning |
 | --- | --- | --- |
 | `gap` | 0.06 | the baseline's distance from the silhouette, a fraction of its radius (17 px at the lowest zoom on 1440 x 900) |
-| `degPerSec`, `direction`, `startDeg` | 3, 1 (clockwise), 0 | its own turn (the globe's idle rotation is 4); degrees clockwise from twelve o'clock at the start |
+| `degPerSec`, `direction`, `startDeg` | 3, 1 (clockwise), 0 | its own turn on its own clock (the globe's idle rotation is 0.2 degrees a second, so the ring turns 15 times faster); degrees clockwise from twelve o'clock at the start |
 | `type` | weight 500, tracking 0.14, advance 0.6 em, target 11 px, slack 15 % | the line goes round a whole number of times, nearest the target em; the em may move by the slack and the tracking takes the rest, so the seam closes |
 | `zoom.floorBelowFit`, `zoom.fitMargin` | 0.5 levels, 0.12 | the camera goes at least this far below the whole-globe fit, and further until the ring fits the free area with this margin |
 | `zoom.fade` | from 0.08, to 0.6 | strength by the way from the fit (0) to the lowest zoom (1): absent up to `from`, full from `to` |

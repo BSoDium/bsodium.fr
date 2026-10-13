@@ -1,79 +1,70 @@
-# Handoff (2026-10-08)
+# Handoff (2026-10-13)
 
 Where the project stands and what is left. Details live in the linked docs; this file only keeps the state, the open items and the decisions.
 
 ## State
 
-- `main` holds the rebuild (#234), the globe polish (#239 to #241) and the API fix (#243). Open PRs, stacked: **#244** (DOM labels, sticky placement, calmer streets, skybox stars, `feat/polish-2`) and `feat/peek` (a group opens early into its most important places and cross-fades with them, base `feat/polish-2`; the first version of it, places drawn inside a closed group, was rejected by the owner and removed).
-- Deployments (Vercel team `photonsquid`): `catalyst-v2` (web, `apps/web`) at `v2.bsodium.fr`, `catalyst-v2-api` (`apps/api`) at `v2.api.bsodium.fr`. `v1.bsodium.fr` and `v1.api.bsodium.fr` redirect to the old v1 site and API (separate projects; the v1 project's pull-request and non-default-branch deployments are disabled). `v2.bsodium.fr` stays the main domain of the new site until the MVP.
-- Nothing is published yet (0 published places: the public site and API show an empty projection). Publishing is by PR from the private repo's `publish.yml`; merging that PR is the act of publishing. `pnpm dev` serves the owner's local preview (`pnpm export:preview --out ../catalyst` in the private repo), `pnpm dev:demo` the made-up fixture.
+- `main` holds the rebuild (#234), the globe polish (#239 to #241), the API fix (#243), the DOM labels and the early opening of groups (#244, #245: merged), the entry views, production readiness, the list pages with filters, search and reading features (#250, #251) and the restraint pass (#252, #253). Release `release/2026-10-13` folds PRs #254 to #267 into `main`: see "What the 2026-10-13 release changed".
+- Deployments (Vercel team `photonsquid`): `catalyst-v2` (web, `apps/web`) at `v2.bsodium.fr`, `catalyst-v2-api` (`apps/api`) at `v2.api.bsodium.fr`. `v1.bsodium.fr` and `v1.api.bsodium.fr` redirect to the old v1 site and API (separate projects; the v1 project's pull-request and non-default-branch deployments are disabled). **`v2.bsodium.fr` is the address of the new site until the owner repoints `bsodium.fr` to it**; the code's default site URL is `https://v2.bsodium.fr` (`CATALYST_SITE_URL`).
+- Nothing is published yet (0 published places: the public site and API show an empty projection). Publishing is by PR from the private repo's `publish.yml`; merging that PR is the act of publishing. `pnpm dev` serves the owner's local preview (`pnpm export:preview --out ../catalyst` in the private repo), `pnpm dev:demo` the made-up fixture (18 places, 18 entries, one of them sensitive).
 - Checks: `pnpm typecheck`, `pnpm test`, `pnpm test:scripts`, `pnpm test:deploy`, `pnpm build`, `pnpm check:leaks` (CI runs all of them on every PR). Private repo: `pnpm typecheck`, `pnpm test`, plus the `migration-parity` workflow.
-- Not verified anywhere: Safari/iOS, real phones, real reduced motion (Chromium emulation only), the street overlay labels and `groups.mjs handover` after the label overhaul (they need the local tile server), GPU and CPU cost on a phone. The GPU budgets (`pnpm --filter @catalyst/web perf`) were last run on 2026-10-07 on a busy machine and accepted (marginal `gpuMean` overruns at street pan); they were not rerun after the label, sky and early-opening work (the cut now does a trial per group near the screen: 24 us per evaluation on the preview in Node, 200 us on 5,000 nodes, against 22 and 182 us before).
 
-## Entry views (branch `feat/entry-ui`, stacked on `feat/design-system`)
+## What the 2026-10-13 release changed
 
-The data display is implemented: articles, projects, artworks and poems open at `/<kind>/:slug` (`/articles/:slug`, ..., poems at `/poetry/:slug`: the poems' section is named "Poetry"; `/poems` and `/poems/:slug` redirect with a 301, query kept) in the shell's side panel (globe
-interactive) or full screen (`?view=full`, same component, same URL scheme, SSR, reload keeps it); the place panel lists its entries as
-cards; the four list pages use the card grid and an intentional empty state; the body renderer covers every block type of the contract.
-Details: [web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme), [design-system.md](design-system.md#entry-view-the-panel-and-the-full-screen-view). Check: `apps/web/scripts/entries/check.mjs` on `pnpm dev:demo`.
-Open points: the index code is the position in the kind (shifts when entries are inserted); no tag pages (tags are plain chips); covers
-are shown at full column width (a cap may be wanted once real covers exist); Safari/iOS and real phones were not tried; the
-`open.test.ts` sweeps over the owner's preview data fail in this tree (globe engine, not touched by this work).
+| Change | Details |
+|---|---|
+| Constant pixel density: the art cell and the street map's render scale no longer depend on measured frame times; the frame governor is deleted | [performance.md](performance.md) (item 5), [web-architecture.md](web-architecture.md) ("Pixel density is constant") |
+| Fast-zoom desync fixed: one camera per frame; the globe no longer waits under a zoom past 6.5 | [street-architecture.md](street-architecture.md) ("One camera per frame"), `scripts/street/desync.mjs` |
+| Group crowding: groups take over earlier so visible boxes keep their room; the planner takes the position the cut reserved; labels follow their box smoothly, translucent plates, a second line that stays | [web-architecture.md](web-architecture.md) ("Opening a group into its most important children", "Labels move smoothly") |
+| Typography: three self-hosted families (display, reading, metadata), licences beside the files | [design-tokens.md](design-tokens.md#typography), `apps/web/public/fonts/` |
+| Landing hero: the owner's name in the studio typography over the globe; no header at all on the home page at rest | [landing.md](landing.md) |
+| Entry pages in the studio typography (headline, standfirst, marginalia, lists as hairline rows) | [design-system.md](design-system.md#entry-pages-typography) |
+| Identity and one icon library (lucide, one scale): the site carries the owner's name, never the project's code name | [web-architecture.md](web-architecture.md#production-readiness), [design-system.md](design-system.md#icons) |
+| Ring of type around the planet when zoomed out (labelled an **experiment**); `?no-ring` switches it off | [web-architecture.md](web-architecture.md) ("Ring of type") |
+| Idle rotation 20 times slower (0.2 degrees a second), a frame per display refresh, labels keep their slots while it turns | [web-architecture.md](web-architecture.md) ("Idle rotation"), [performance.md](performance.md) |
+| BSoD blue accent in place of the orange | [design-tokens.md](design-tokens.md#accent) |
+| Poetry: the poems' section is "Poetry" at `/poetry`; `/poems` and `/poems/:slug` answer a 301 | [web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme) |
+| Sensitive media: the contract's optional `sensitive: true` on an entry; its pictures are blurred from the server render and shown on request (a hint for shoulders, not access control) | [api-contract.md](api-contract.md), [design-system.md](design-system.md#sensitive-media), [content-entry-model.md](content-entry-model.md) |
 
-## Production readiness (branch `feat/entry-polish`)
-
-Added: site identity and head tags on every route (canonical, Open Graph, Twitter card, JSON-LD), a default 1200x630 share image, favicons and a web manifest, `sitemap.xml` and `robots.txt` (open only on the production host), an enforced nonce-based CSP and the other security headers (`entry.server.tsx`, `vercel.json`), a root error boundary with a real 500 page, a pending-navigation line, a no-JS note on the globe, and `pnpm --filter @catalyst/web check:prod`. The schema library no longer ships in the browser bundle (-29 kB gzip). Details and the header tables: [web-architecture.md, Production readiness](web-architecture.md#production-readiness).
-Owner: nothing is required (the default site URL is `https://v2.bsodium.fr`); set `CATALYST_SITE_URL` only when the domain changes. Not verified: Vercel's own merging of `vercel.json` headers, Safari and Firefox, real link previews.
-
-## Brand and header (branch `feat/brand-header`, on `feat/ui-restraint`)
-
-Owner feedback 2026-10-12: the logo looked like an icon-set icon, and the top-left icon was to go with the nav centred and kept readable
-by a soft fade. Done: an original mark (a square and a disc overlapping, the overlap knocked out: bounding box and globe; `apps/web/scripts/brand/mark.mjs`, one
-source for the favicons, the home-screen icons, `LogoMark` and `LogoWordmark`), the header without a logo (the site name as a text link, then the four
-sections, then search; centred over the viewport, over the map while the panel is open), a fade of its own over the globe. Details:
-[design-system.md, Brand and header](design-system.md#brand-and-header), [design-tokens.md, Nav fade](design-tokens.md#nav-fade),
-[web-architecture.md](web-architecture.md#floating-navbar-and-scrim). Not done on purpose: the landing hero (waits for the owner's
-references and copy). Open: a phone has no search trigger (no room in the row at 390 px; the same as before, it was hidden below `sm`),
-the owner may want a menu button or a second row; the mark is not on any page yet.
-
-## Mature content (branch `feat/sensitive-media`, on the entry stack)
-
-Owner: some artworks (a figure or anatomy study) are included but must be blurred by default, so that nobody browsing at work is exposed by
-accident. Done on the public side: the contract's optional `sensitive: true` on an entry (schema version stays 1; the exporter omits it when
-false), every picture of such an entry blurred from the server render (entry view in the panel and full screen, list rows, place panel
-cards, related cards), a "Show image" button on the entry's own pictures (per page view only, never stored), the cover never used as a
-share image or JSON-LD `image` (the default image instead, plus `robots: noimageindex`), print kept blurred. Details:
-[design-system.md, Sensitive media](design-system.md#sensitive-media), [web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme),
-[api-contract.md](api-contract.md), [content-entry-model.md](content-entry-model.md) (the spec the private mapper must follow: vault header
-`sensitive: true` -> `sensitive: true`, warn when the entry has no image). Check: `apps/web/scripts/entries/sensitive.mjs` on `pnpm dev:demo`.
-Open: the private exporter and its header profile do not carry the key yet (somebody else's work); the image files stay public at their
-`/media/` addresses (the blur is for shoulders, not access control); Safari/iOS and real printing were not tried.
+The header's first item is "Globe" (the owner's name is the hero's headline). Off the home page the header is unchanged; on the home page it is absent while the hero is at rest and comes back whenever the hero has stepped back (after a gesture, zoomed in).
 
 ## Where the details are
 
 | Topic | Doc |
 |---|---|
 | Layers, publication flow, content modes | [architecture.md](architecture.md) |
-| Day-to-day (add, hide, preview, sync, publish, secrets, troubleshooting) | [owner-guide.md](owner-guide.md) |
-| Globe engine: LOD, labels in device pixels, sticky placement, binary visibility, the early opening of groups, idle rotation, skybox, framing | [web-architecture.md](web-architecture.md) |
+| Day-to-day (add a place or an entry, hide, preview, sync, publish, secrets, troubleshooting) | [owner-guide.md](owner-guide.md) |
+| Globe engine: LOD, labels in device pixels, sticky placement, binary visibility, the early opening of groups, idle rotation, ring of type, skybox, framing | [web-architecture.md](web-architecture.md) |
 | Street map: palette, road hierarchy, binary layers, tile ease, the cut at zoom 3.7 | [street-architecture.md](street-architecture.md) |
 | Tokens (colours, label type, map card, sky) | [design-tokens.md](design-tokens.md) |
+| Typography, accent, fonts (families, files, licences, roles, measure) | [design-tokens.md](design-tokens.md#typography), [design-tokens.md](design-tokens.md#accent) |
 | UI system (principles, components, styleguide `/dev/design`) | [design-system.md](design-system.md) |
+| Landing hero (states, hooks, header at rest, tests) | [landing.md](landing.md) |
+| How a vault document (header + Markdown) becomes an entry of the contract | [content-entry-model.md](content-entry-model.md) |
 | Frame cost, budgets, phone testing | [performance.md](performance.md) |
 | API contract, Vercel setup, the 500 incident of 2026-10-08 | [api-contract.md](api-contract.md) |
 | API quota, abuse, the firewall rules applied | [api-cost-and-abuse.md](api-cost-and-abuse.md) |
-| Private repo: content model v2, importance score, bbox acceptance, self-review, route research | `catalyst-content/docs/` |
+| Private repo: content model v2, importance score, bbox acceptance, writing entries, route research | `catalyst-content/docs/` |
 
 ## Open items
 
-1. **Review and merge #244, then #245** (the early opening of groups). Retarget #245 to `main` after #244.
-2. **Owner actions on Vercel:** usage alerts (team settings) and a weekly look at the Usage page for the first month; disconnect or ignore-build the v1 project's Git link when convenient. The firewall rules (allowlist deny, 120 requests per minute per IP) are live; one of the three free custom rules is left.
-3. **Content model v2** (private repo): P0 and P1 are done (shadow `content/`, parity gates, CI job). Next: P2 (flip to `content/` as the source) after a week of real use and one real edit in Obsidian or VS Code; issue Catalyst-content#2 tracks P2 to P4.
-4. **Importance ranking** (private `config/population.json`, 85 of 146 places matched): 61 places share the same priority today because nothing is published and no entry links to a place. It improves by itself as items are linked; unmatched places can get a manual offset (an authored `labelPriority` is an offset around 50) only if something looks wrong.
-5. **Bounding boxes:** automatic acceptance rule (`config/publish.json` `bboxAcceptance`: type and size limits); rejected boxes fall back to a point with the default radius. Quito and Stara Zagora are true cities dropped by it (their OSM boxes are a county and a state district); Rissani, Akhfennir, Samaipata, Sucre, Ipiales and Diama are rural but accepted. Edit the thresholds or set a hand `bbox` for one place. Mostar matched a local community (5 x 6 km).
-6. **Routes: skipped by the owner** (they would only look right with road snapping). The research is kept in the private repo (`docs/route-display-research.md`).
-7. **Large-scale review items** are tracked as issues: #235 (split the renderer orchestration units), #236 (bbox / `viewRadiusKm` contract and a conformance test), #237 (fate of `prototypes/*`), #238 (dev-only loaders out of the API bundle), and Catalyst-content #1 to #3.
+1. **Owner actions on Vercel:** usage alerts (team settings) and a weekly look at the Usage page for the first month; disconnect or ignore-build the v1 project's Git link when convenient; repoint `bsodium.fr` to `catalyst-v2` when the new site replaces the old one (then set `CATALYST_SITE_URL` only if the origin differs from `https://v2.bsodium.fr`). The firewall rules (allowlist deny, 120 requests per minute per IP) are live; one of the three free custom rules is left.
+2. **Content model v2** (private repo): P0 and P1 are done (shadow `content/`, `pnpm vault migrate | check | export-legacy`, parity gates, CI job). `editorial/` stays the source until P2 (the flip), after a week of real use and one real edit in Obsidian or VS Code; issue Catalyst-content#2 tracks P2 to P4. Entries are written as Markdown documents under `content/<kind>s/<slug>/index.md` (`pnpm new-entry`, `docs/writing-entries.md` there); [owner-guide.md](owner-guide.md) has the recipe.
+3. **Importance ranking** (private `config/population.json`, 85 of 146 places matched): 61 places share the same priority today because nothing is published and no entry links to a place. It improves by itself as items are linked; unmatched places can get a manual offset (an authored `labelPriority` is an offset around 50) only if something looks wrong.
+4. **Bounding boxes:** automatic acceptance rule (`config/publish.json` `bboxAcceptance`: type and size limits); rejected boxes fall back to a point with the default radius. Two true cities are dropped by it (their OSM boxes are a county and a state district); six rural places are accepted; one place matched a local community (5 x 6 km). Edit the thresholds or set a hand `bbox` for one place.
+5. **Routes: skipped by the owner** (they would only look right with road snapping). The research is kept in the private repo (`docs/route-display-research.md`).
+6. **Large-scale review items** are tracked as issues: #235 (split the renderer orchestration units), #236 (bbox / `viewRadiusKm` contract and a conformance test), #237 (fate of `prototypes/*`), #238 (dev-only loaders out of the API bundle), and Catalyst-content #1 to #3.
+7. **Design points left open:** the ring of type is an experiment (keep, tune or drop); the mark (`LogoMark`, `LogoWordmark`) is on no page yet; in the hero's rest view the globe is centred, not to the right of the text as the owner's board draws it (an engine change: [landing.md](landing.md), "Not done"); covers are shown at full column width (a cap may be wanted once real covers exist); a phone has no search icon off the home page, only the word "Search".
 8. **Known test gaps (2026-10-09, after the verification pass):** (a) `tile-fade.mjs ghostlow` fails at `z4.5 zoom`: about 380 trail cells, 7.4 % of the 5135 lit cells, in the one frame where MapLibre swaps its tile level at zoom 5.0; present since `3148a2b` (it is not new), no baseline and not a regression; the check keeps failing until its limit is set from that frame (see `docs/street-architecture.md`, "Temporal ease"). (b) `sea-ease.mjs` is RETIRED (deleted): it measured the tone curve of the sea against zoom for the old ramp, and the sea is a binary switch since 2026-10-08, so its numbers have no meaning; `street/lod-check.mjs` (sea texture XOR graticule at every resting zoom on the real pipeline, with the local archive and with `SOURCE=primary`) and `layer-switch.test.ts` replace it. (c) `groups.mjs flicker` passes on the owner's preview (5 of 5 runs) with recalibrated limits (4 slot changes per label, wobble share, a 6 px teleport slack; `docs/web-architecture.md`, "Inertia and flicker"); on the DEMO content it is not meaningful (6 to 8 labels in a view: it flaps on the average and on the 2-box Atlantic view). (d) `markers.mjs` reads the places of the served projection now (`quick` passes on demo and on the preview); the full run on the preview (146 places, about 90,000 views) was not run. (e) The perf budgets of the CPU rows were re-fitted on 2026-10-09 (`docs/performance.md`, "Budgets re-fitted 2026-10-09"). (The street-line gate count is settled: `pnpm test:street-lines` runs 256 checks, 256 of 256 pass, 2026-10-09; docs say 256 now.)
+
+## Not verified
+
+- **Safari and iOS** (including `image-rendering: pixelated` on canvas and the ring's canvas atlas), **real phones** (the frame cost, and what a weak GPU does now that no governor lowers the density: it drops frames, not measured) and real printing of an entry.
+- **Reduced motion** with a real system setting: Chromium emulation only. **A real 120 Hz display and the battery** under the idle rotation.
+- **Vercel's merging of the `vercel.json` headers** with the ones the server sets (the same values are set twice on purpose), HSTS and the `*.vercel.app` robots behaviour on a real deployment, real link previews on social networks.
+- **The street overlay labels and `groups.mjs handover`** after the label overhaul (they need the local tile server).
+- **`pnpm perf` budgets**: the last documented full run is 2026-10-09 (CPU rows re-fitted); no full run is recorded after this release's changes (constant density, smooth labels, the ring, the hero): rerun it on an idle machine before trusting the budgets.
+- **The private exporter and the `sensitive` key:** this repo documents the mapping ([content-entry-model.md](content-entry-model.md)) and ships a sensitive demo artwork; the private side's behaviour is that repo's to verify. A consumer that validates strictly must learn the key before an entry with it is published ([api-contract.md](api-contract.md)).
 
 ## Decisions taken (owner)
 
@@ -84,3 +75,9 @@ Open: the private exporter and its header profile do not carry the key yet (some
 - Bounding boxes: dynamic, OSM-derived, as few manual overrides as possible; routes skipped; GPU budgets accepted.
 - Groups: no peeks (owner, after seeing them: a group and the cities inside it must never be visible together). A group opens early into its most important children that fit and its box and label fade out exactly as they fade in; the rest come in as you zoom. The private design note `lod-importance-design.md` still describes the peeks (section 3, work packages W1 to W4): the client part is superseded by [web-architecture.md](web-architecture.md#opening-a-group-into-its-most-important-children-2026-10-08).
 - Importance: population from Natural Earth, step counts never count (privacy), an authored `labelPriority` is an offset around 50, group names keep the authored priority.
+- Identity (2026-10-13): the site carries the owner's name; the project's code name stays in the repository, the packages and the environment variables only.
+- Pixel density is constant (2026-10-12): no measurement at runtime changes what the owner sees.
+- Accent: BSoD blue (2026-10-13), after the owner's handle and the Windows stop screen.
+- The poems' section is "Poetry", at `/poetry` (2026-10-13).
+- Mature content is blurred by default and revealed on request; it is a hint, not access control (2026-10-13).
+- Home page: no header at all while the hero is at rest; its rows are the sections and its search line is the search (2026-10-13).

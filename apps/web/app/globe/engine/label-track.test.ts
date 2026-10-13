@@ -688,7 +688,7 @@ function sweep(strategy: "every-frame" | "no-glide" | "reduced" | "tracked"): Sw
     // clusters, so that labels crowd each other
     const cx = 50 + (k % 9) * 108 + ((k * 37) % 40);
     const cy = 30 + Math.floor(k / 9) * 74 + ((k * 53) % 30);
-    const name = ["Marrakesh", "Fès", "Chefchaouen", "Essaouira", "Ouarzazate", "Merzouga", "Tangier", "Rabat", "Casablanca", "Agadir"][k % 10]!;
+    const name = ["Northgate", "Fen", "Greenmeadow", "Eastbrook", "Westfields", "Highmoor", "Lowford", "Ashby", "Redcliffes", "Bayton"][k % 10]!;
     return { cx, cy, name, w: 10 + ((k * 7) % 5) * 3, h: 10 + ((k * 3) % 4) * 3 };
   });
   const variantsFor = (name: string) => {

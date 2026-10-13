@@ -121,6 +121,8 @@ All in `app/components/ui/`, importable from `~/components/ui` (barrel) or by fi
 | `SensitiveMedia` | a picture frame (`overflow: hidden`, a size container) that holds the picture blurred, with a plate over it: a mono label "Mature content" (eye-off icon) and, in an entry, a small `Toggle` "Show image" | `revealed`; `onRevealedChange` present = the entry's own picture (control, drawn once hydrated; before that the plate says "Image hidden"), absent = a card (label only, no control). `SensitiveMediaScope` / `SensitiveImage` share one state across an entry's pictures |
 | `CopyButton` | ghost button that copies a string (or a function of the window) and confirms in place: its word turns to `Copied` (or `Not copied`) for 2 s, a polite status says it; no toast | drawn only once hydrated; clipboard API with an `execCommand` fallback; `glyph`, `label` (the accessible name), `announcement` |
 | `Icon` | one icon of the set by name (5 kinds, close, expand, collapse, arrows, enter, command, copy, link, check, search, hash, eye, eye-off), from lucide-react | `size` inline (1.1 em), control (1.25 rem, default), large (1.5 rem); decorative (`aria-hidden`); "Icons" below |
+| `LogoMark` | the site's mark: a 16 x 16 one-bit grid (a square and a disc overlapping, the overlap knocked out), one path, `currentColor`, `shapeRendering="crispEdges"`; decorative unless given a `title` | `size` (CSS px, a whole multiple of 16 keeps every pixel crisp; default 32), `title`. Not in the header; the styleguide and `LogoWordmark` use it |
+| `LogoWordmark` | the mark and the site's name (the owner's name, from `SITE`) as text, semibold and tight, the mark at the height of the capitals | `size` (the mark's; the type follows it, default 16), `name`, `className`. Not in the header |
 | `KeyHint` | the shortcut's hint in a `kbd`: the command icon (Mac) or "Ctrl", then K, mono 13 px, muted, **plain text: no border, background or outline anywhere**; empty space of its final width until hydrated | none: the same in the header and on the hero's search line |
 
 ### Generative cover art
@@ -226,9 +228,8 @@ the cards h3). A place without entries shows nothing for them (no section, no em
 - **Lists.** A plain count ("5 articles", "2 of 5 articles" filtered) in mono over the section's name at the headline scale, then a **tag filter**: one row of text links (the chosen
   one heavier and underlined, `aria-current`, no boxes, no counts) under an ink rule, above hairline rows; **year headings** (thin display numerals) only where
   years group entries. The state is the URL (`?tag=`); on a phone the row scrolls sideways.
-- **Empty states.** Home with no place: the globe stays and `ArchiveEmpty` (a small plate under one ink rule, "Nothing on the globe yet" in the display face, one
-  line in the reading face and the four lists with their counts in mono) sits bottom left; a list with no entries is one muted line ("Nothing here yet."); a place
-  with none shows no entries section.
+- **Empty states.** The home page with no published place keeps the globe, and the hero's hint reads "No place is published yet: start from a list." (no plate, no
+  count); a list with no entries is one muted line ("Nothing here yet."); a place with none shows no entries section.
 - **Search.** A modal dialog on the surface Frame: a combobox input with the search icon and a plain close icon (no box), group headings in mono, rows of kind
   icon (control size, one size for every kind) + title (display face, 700) + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of one quiet line of key hints in plain muted text, with no box (icons for the arrows and Enter, the word "Esc" for the key, each followed by its verb: "Esc close") and the result count. The trigger is a 44 px button with the search icon and, from `xl` of header width, the `KeyHint` (command icon + K, or Ctrl K).
 - **Print.** Ink on white, no globe, navigation, controls, contents, related cards or neighbours; external link addresses are written out.
@@ -288,7 +289,7 @@ current one in the foreground and underlined, `aria-current="page"`), the search
 rest, there is no header at all** (its four rows are the sections and its search line is the search: docs/landing.md); the header is back,
 tabs and search, whenever the hero has stepped back, and on every other route. Centred over the viewport; while the place
 or entry panel is open beside the globe it is centred over the map (the left half), so it never meets the panel's Close and expand
-controls, and it glides with the panel. Its width decides what it shows (container query): the name and the four sections always,
+controls, and it glides with the panel. Its width decides what it shows (container query): "Globe" and the four sections always,
 the search trigger from 28 rem, its key hint from 36 rem. 44 px targets. Over content that scrolls (lists, 404, errors) it has the
 page scrim; over the globe and the map a soft fade of its own, 85 % of the page colour at the top edge easing to nothing, only as wide
 as the row (design-tokens.md, "Nav fade"). Details and measurements: [web-architecture.md](web-architecture.md#floating-navbar-and-scrim).

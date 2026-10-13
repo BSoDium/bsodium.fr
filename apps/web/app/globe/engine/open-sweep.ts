@@ -399,17 +399,21 @@ export const SWEEP_GROUPS: readonly { slug: string; lon: number; lat: number }[]
 ];
 
 /**
- * The areas of the multi-scale hierarchy of the Moroccan trip (an area inside an area inside a country: "Marrakesh region" > "Marrakesh area"), centred on the
- * group's published coordinates. Their boxes carry long labels ("Marrakesh region") that do not fit where the places inside do: they open THROUGH their most
- * important unit (`LodTree.tryKid`), so they may be open with a single node of theirs drawn.
+ * The areas of the multi-scale hierarchy of one country (an area inside an area inside a country), centred on the group's published coordinates
+ * rounded to 0.1 degree: the country itself, then its areas that hold at least `minChildren` nodes, by slug. They are read from the projection, so
+ * no place name is written here. Their boxes carry long labels that do not fit where the places inside do: they open THROUGH their most important
+ * unit (`LodTree.tryKid`), so they may be open with a single node of theirs drawn. The country defaults to the one the preview's nested areas are in.
  */
-export const SWEEP_AREAS: readonly { slug: string; lon: number; lat: number }[] = [
-  { slug: "morocco", lon: -11.8, lat: 28.8 },
-  { slug: "marrakesh-region", lon: -8.2, lat: 31.6 },
-  { slug: "casablanca-area", lon: -6.7, lat: 33.9 },
-  { slug: "laayoune-area", lon: -12.2, lat: 27.8 },
-  { slug: "caidat-d-ait-sedrate-jbel-region", lon: -4.9, lat: 31.3 },
-];
+export function sweepAreasOf(nodes: readonly LodNodeInput[], country = "morocco", minChildren = 3): { slug: string; lon: number; lat: number }[] {
+  const tenth = (x: number) => Math.round(x * 10) / 10;
+  const children = new Map<string, number>();
+  for (const n of nodes) if (n.parent) children.set(n.parent, (children.get(n.parent) ?? 0) + 1);
+  const areas = nodes
+    .filter((n) => n.kind === "area" && n.parent === country && (children.get(n.slug) ?? 0) >= minChildren)
+    .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0))
+    .map((n) => ({ slug: n.slug, lon: tenth(n.lon), lat: tenth(n.lat) }));
+  return nodes.some((n) => n.slug === country) ? [{ slug: country, lon: -11.8, lat: 28.8 }, ...areas] : areas;
+}
 
 export const sweepZooms = (from = 2, to = 9, step = 0.25): number[] => {
   const out: number[] = [];

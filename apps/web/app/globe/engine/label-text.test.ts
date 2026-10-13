@@ -157,9 +157,9 @@ describe("shorter ways of writing a label: the entries first, then the second li
   });
   it("cached: the same list for the same text until the meter changes", () => {
     setTextMeter(fixed);
-    expect(labelVariants("Marrakesh", null)).toBe(labelVariants("Marrakesh", null));
-    const a = labelVariants("Marrakesh", null);
+    expect(labelVariants("Northgate", null)).toBe(labelVariants("Northgate", null));
+    const a = labelVariants("Northgate", null);
     setTextMeter({ width: () => 40 });
-    expect(labelVariants("Marrakesh", null)).not.toBe(a);
+    expect(labelVariants("Northgate", null)).not.toBe(a);
   });
 });

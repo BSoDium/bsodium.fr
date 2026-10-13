@@ -264,7 +264,7 @@ The muted-text plate went from 80 % to 90 % of the page colour: at 80 % a route 
 | horizon outline (2) | 1.24 / 1.21 | same | 1.2 |
 | ink (markers, labels, route, selected box) | 19.1 / 18.2 | same | |
 
-The road tiers keep their order: motorway 7, primary 6, secondary 5, tertiary 3 (primary and secondary went up one level each, at the lighter ramp the old levels 5 and 4 were 1.61 and 1.48, too close to tertiary's 1.42 to read as tiers). `lod.test.ts` relaxed, and only where needed: OKLab separation of adjacent tiers 0.02 (primary / secondary) and 0.03 (secondary / tertiary) where it was 0.045 and 0.045; motorway to path span 0.18 where it was 0.2. The line rules do not read levels, so none changed. Checked (before / after, light and dark, boxes on) at the world view, Europe and the Mediterranean, a continental view, and Paris and London at street zoom.
+The road tiers keep their order: motorway 7, primary 6, secondary 5, tertiary 3 (primary and secondary went up one level each, at the lighter ramp the old levels 5 and 4 were 1.61 and 1.48, too close to tertiary's 1.42 to read as tiers). `lod.test.ts` relaxed, and only where needed: OKLab separation of adjacent tiers 0.02 (primary / secondary) and 0.03 (secondary / tertiary) where it was 0.045 and 0.045; motorway to path span 0.18 where it was 0.2. The line rules do not read levels, so none changed. Checked (before / after, light and dark, boxes on) at the world view, Europe and the Mediterranean, a continental view, and Paris and another large city at street zoom.
 
 ### 7.9 Sea ease (the sea no longer loads in one step)
 

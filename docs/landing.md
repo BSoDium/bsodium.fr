@@ -48,7 +48,7 @@ Restyled with the hero (the board's header): `Globe` (the home page; accessible 
 
 ## Empty archive
 
-With no published place the hero is also the empty home (it replaced `ArchiveEmpty`, which is no longer rendered): the hint reads "No place is published yet: start from a list." (under who the owner is). The hero shows no count or number.
+With no published place the hero is also the empty home (it replaced the old `ArchiveEmpty` plate, which is gone): the hint reads "No place is published yet: start from a list." (under who the owner is). The hero shows no count or number.
 
 ## Tokens used
 

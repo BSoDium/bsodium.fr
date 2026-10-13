@@ -1282,7 +1282,7 @@ export class LodTree {
       const owner = this.obsOwner[k]!;
       if (kind === 3 || owner === own || this.gone[owner]) continue;
       if (kind === 2 && !reserved) continue;
-      // two places whose TRUE boxes overlap (Leticia and Yavari, two communes cut out of each other) never come apart with the zoom: the room between
+      // two places whose TRUE boxes overlap (two neighbouring communes cut out of each other) never come apart with the zoom: the room between
       // their rectangles is not asked of them (their labels still keep clear)
       if (kind === 0 && boxOf >= 0 && !this.isGroup[owner] && this.trueOverlap(boxOf, owner)) continue;
       const dx = Math.max(o[4 * k]! - ax1, ax0 - o[4 * k + 2]!);

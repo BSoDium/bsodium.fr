@@ -143,7 +143,7 @@ export const RING = {
    * zoom on a 1440 x 900 screen). The letters' tops point outward from there.
    */
   gap: 0.06,
-  /** Turning speed, degrees a second. The globe's idle rotation is 4 (`SPIN.degPerSec`): the ring is gentler. */
+  /** Turning speed, degrees a second, on the ring's own clock. The globe's idle rotation is 0.2 (`SPIN.degPerSec`); the ring turns at 3. */
   degPerSec: 3,
   /** `1`: clockwise, the way the text reads (the letters move along the line); `-1` the other way. */
   direction: 1,
