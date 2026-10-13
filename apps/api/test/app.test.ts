@@ -287,21 +287,51 @@ describe("endpoints (demo content)", () => {
 });
 
 describe("committed (published) content", () => {
-  it("is served and, being empty today, yields empty collections", async () => {
+  it("is served, whatever it holds: counts, collections and details agree with the committed projection", async () => {
     const app = emptyApp();
-    expect(loadPublishedProjection()).toEqual(EMPTY_PROJECTION);
+    const projection = loadPublishedProjection();
 
     const health = await json<HealthResponse>(await app.request("/health"));
     expect(health.content).toBe("published");
-    expect(health.counts).toEqual({ places: 0, groups: 0, routes: 0, projects: 0, articles: 0, artworks: 0, poems: 0 });
+    expect(health.counts).toEqual({
+      places: projection.places.length,
+      groups: projection.groups.length,
+      routes: projection.routes.length,
+      projects: projection.projects.length,
+      articles: projection.articles.length,
+      artworks: projection.artworks.length,
+      poems: projection.poems.length,
+    });
 
-    expect(await (await app.request("/v1/projection")).json()).toEqual(EMPTY_PROJECTION);
-    for (const path of ["/v1/places", "/v1/groups", "/v1/routes", "/v1/projects", "/v1/articles", "/v1/artworks", "/v1/poems"]) {
+    expect(await (await app.request("/v1/projection")).json()).toEqual(projection);
+    const collections = {
+      "/v1/places": projection.places,
+      "/v1/groups": projection.groups,
+      "/v1/routes": projection.routes,
+      "/v1/projects": projection.projects,
+      "/v1/articles": projection.articles,
+      "/v1/artworks": projection.artworks,
+      "/v1/poems": projection.poems,
+    } as const;
+    for (const [path, items] of Object.entries(collections)) {
       const res = await app.request(path);
       expect(res.status, path).toBe(200);
-      expect(await res.json(), path).toEqual([]);
+      expect(((await res.json()) as unknown[]).length, path).toBe(items.length);
     }
-    for (const path of ["/v1/places/lisbon", ...DETAILS.slice(1)]) expect((await app.request(path)).status, path).toBe(404);
+    // A slug that no content has is a 404 under every detail route.
+    for (const path of ["/v1/places/atlantis", "/v1/projects/atlantis", "/v1/articles/atlantis", "/v1/artworks/atlantis", "/v1/poems/atlantis"]) {
+      expect((await app.request(path)).status, path).toBe(404);
+    }
+    // The first item of each detail collection is served.
+    for (const [path, first] of [
+      ["/v1/places", projection.places[0]],
+      ["/v1/projects", projection.projects[0]],
+      ["/v1/articles", projection.articles[0]],
+      ["/v1/artworks", projection.artworks[0]],
+      ["/v1/poems", projection.poems[0]],
+    ] as const) {
+      if (first) expect((await app.request(`${path}/${first.slug}`)).status, `${path}/${first.slug}`).toBe(200);
+    }
   });
 
   it("defaults to published when CATALYST_CONTENT is unset or empty", async () => {

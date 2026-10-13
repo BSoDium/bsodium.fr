@@ -25,9 +25,15 @@ describe("published package", () => {
     for (const g of demo.groups) expect(children.get(g.slug) ?? 0, g.slug).toBeGreaterThanOrEqual(2);
     expect(demo.places.filter((p) => p.group === undefined).map((p) => p.slug)).toEqual(["cape-town", "wellington"]);
   });
-  it("the committed (empty) projection has no groups and no poems", () => {
-    expect(loadPublishedProjection().groups).toEqual([]);
-    expect(loadPublishedProjection().poems).toEqual([]);
+  it("the committed projection is internally consistent whatever it holds (empty or published)", () => {
+    const p = loadPublishedProjection();
+    const places = new Set(p.places.map((x) => x.slug));
+    const groups = new Set(p.groups.map((g) => g.slug));
+    for (const g of p.groups) if (g.parent) expect(groups.has(g.parent), `parent of ${g.slug}`).toBe(true);
+    for (const pl of p.places) if (pl.group) expect(groups.has(pl.group), `group of ${pl.slug}`).toBe(true);
+    for (const e of [...p.projects, ...p.articles, ...p.artworks, ...p.poems]) {
+      for (const s of e.placeSlugs ?? []) expect(places.has(s), `${e.slug} -> ${s}`).toBe(true);
+    }
   });
   it("the demo has 18 entries (5 articles, 4 projects, 5 artworks, 4 poems) that together use every body block type", () => {
     const demo = loadDemoProjection();
