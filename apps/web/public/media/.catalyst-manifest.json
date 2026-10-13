@@ -1,5 +1,96 @@
 {
   "generatedBy": "catalyst-content export",
   "version": 1,
-  "files": []
+  "files": [
+    {
+      "path": "artwork/anatomy-study/cover.ed3d1edb.jpg",
+      "sha256": "ed3d1edbb4e2486dde3bfa404266e7d39579fde73662ec654ea14e01ba85a73d",
+      "bytes": 595673
+    },
+    {
+      "path": "artwork/baroque-with-a-twist-musee-d-orsay/cover.7d1b1bb6.jpg",
+      "sha256": "7d1b1bb6aa3d323c38fce1f1b075622ccbfe5413c14c446b38589c2dc2c369e8",
+      "bytes": 652345
+    },
+    {
+      "path": "artwork/bridgetop-encounter/cover.ab15d13e.jpg",
+      "sha256": "ab15d13e56c36d165915f5920595aafcd67b27a77020b411594f9e67d3fe6076",
+      "bytes": 375716
+    },
+    {
+      "path": "artwork/cloth-lighting-study/cover.596dc343.jpg",
+      "sha256": "596dc343674087db211aaf2bb4c8403ebb465af10c47cd0d966ce9277fce170f",
+      "bytes": 657997
+    },
+    {
+      "path": "artwork/frederiks-church-copenhagen/cover.c42880dd.jpg",
+      "sha256": "c42880dd8a253598c311b307b2ebc70193874dd3c67096e4524976f9b4a98c88",
+      "bytes": 660463
+    },
+    {
+      "path": "artwork/giants-of-steel/cover.a40f451a.jpg",
+      "sha256": "a40f451a5825b709d634929fd72397c73f0ab10e3abe5df6d65b498e60c0bbe7",
+      "bytes": 415099
+    },
+    {
+      "path": "artwork/hand-drawn-vector-self-portrait/cover.27a8f878.jpg",
+      "sha256": "27a8f8787b7582cffacb9792c271119c5d55cdff88e269a63ad466150ff32684",
+      "bytes": 114442
+    },
+    {
+      "path": "artwork/hand-drawn-vector-self-portrait/gallery-1.626fb733.jpg",
+      "sha256": "626fb73385cdde6e9e97f662de550e88569ade8c1a8cf4a7543e49e989fd55fc",
+      "bytes": 279531
+    },
+    {
+      "path": "artwork/hand-drawn-vector-self-portrait/gallery-2.3b589900.jpg",
+      "sha256": "3b5899002a24f0b5fcbb4c620150eb4ffc8df02e22db6b57c273e040ad3b7dac",
+      "bytes": 92594
+    },
+    {
+      "path": "artwork/la-vierge-au-lys-musee-d-orsay/cover.eb0cfe41.jpg",
+      "sha256": "eb0cfe411c90bc997aec420b9cfd7d22f9a378a6bdd0e501452298cab4be9246",
+      "bytes": 623695
+    },
+    {
+      "path": "artwork/portrait-study/cover.7f0e509c.jpg",
+      "sha256": "7f0e509c9713f6c2dc9c82c1b68928762949ecdcff45465100018ccc4729bb86",
+      "bytes": 93637
+    },
+    {
+      "path": "artwork/resilience/cover.640be4dc.jpg",
+      "sha256": "640be4dcc1605d35d3da3229b56129d9627d67df10e2eb73c03a7f4fd2570713",
+      "bytes": 1093379
+    },
+    {
+      "path": "artwork/suborbital-launch/cover.1ccd20a7.jpg",
+      "sha256": "1ccd20a79a0f414cc143d805a6305084b19583e08821efb8d72501b03eba21fc",
+      "bytes": 146786
+    },
+    {
+      "path": "artwork/subsurface-scattering-study/cover.df0760dd.jpg",
+      "sha256": "df0760dd9898415075a8456f6c7276f2021b3638e353da5cedd8db17a571d9da",
+      "bytes": 144455
+    },
+    {
+      "path": "artwork/the-anomaly/cover.42f5ce46.jpg",
+      "sha256": "42f5ce46fbfeb3bd16f01ed5c2e1eecad32b002abd415754d43ba78517cdfc1c",
+      "bytes": 389698
+    },
+    {
+      "path": "artwork/the-lighthouse-monochrome-gouache-study/cover.4e84c7ab.jpg",
+      "sha256": "4e84c7ab34247379895fb0673aa58c4700975d46b7d039c707d9af0054bcbc3f",
+      "bytes": 105804
+    },
+    {
+      "path": "artwork/where-the-sun-never-sets/cover.2a3247ee.jpg",
+      "sha256": "2a3247ee30e03ea93d90d91ee43527469a7f8e0b04e1db5739572d6a34cc10a5",
+      "bytes": 168566
+    },
+    {
+      "path": "artwork/yamato-class-battleship-firing-test-study/cover.4ec1f84b.jpg",
+      "sha256": "4ec1f84babef571be13294f53eba0b9f6ca1ce9fa08aa34ad95ab94085d0f719",
+      "bytes": 212311
+    }
+  ]
 }
