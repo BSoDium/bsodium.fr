@@ -20,6 +20,8 @@
   --muted-foreground: #595959;
   /* Quieter than muted text, still AA against the page (4.9:1): the map credits line. Dimmer by colour, never by opacity. */
   --subtle-foreground: #6f6f6f;
+  /* The share of the page colour in a map label's plate (engine/label-plate.ts: the least that keeps the 11 px second line AA, 4.5:1, over the loudest map tone). */
+  --label-plate-alpha: 0.7;
   --border: rgb(0 0 0 / 0.14);
   --border-strong: rgb(0 0 0 / 0.4);
   --ring: #0a0a0a;
@@ -117,6 +119,7 @@
     --foreground: #f5f5f5;
     --muted-foreground: #a3a3a3;
     --subtle-foreground: #8a8a8a;
+    --label-plate-alpha: 0.62;
     --border: rgb(255 255 255 / 0.16);
     --border-strong: rgb(255 255 255 / 0.45);
     --ring: #f5f5f5;
@@ -276,6 +279,8 @@
   --foreground: #0a0a0a;
   --muted-foreground: #595959;
   --subtle-foreground: #6f6f6f;
+  /* The share of the page colour in a map label's plate (engine/label-plate.ts: the least that keeps the 11 px second line AA, 4.5:1, over the loudest map tone). */
+  --label-plate-alpha: 0.7;
   --border: rgb(0 0 0 / 0.14);
   --border-strong: rgb(0 0 0 / 0.4);
   --ring: #0a0a0a;
@@ -317,6 +322,7 @@
   --foreground: #f5f5f5;
   --muted-foreground: #a3a3a3;
   --subtle-foreground: #8a8a8a;
+  --label-plate-alpha: 0.62;
   --border: rgb(255 255 255 / 0.16);
   --border-strong: rgb(255 255 255 / 0.45);
   --ring: #f5f5f5;
@@ -1960,21 +1966,24 @@ h1[tabindex="-1"]:focus-visible {
  * Map labels: the names of the detection boxes, HTML text in the app's monospace stack (`--font-mono`, the credits line's and the dev badge's) (engine/label-dom.ts creates and positions the
  * elements; sizes, weights and tracking come from LABEL_TYPE in engine/label-text.ts because the planner measures with the same numbers).
  * Two lines: the name (line 1, 14 px, weight 500) and a second line (11 px, regular: the country or number of places, and the linked entries by kind).
- * EVERY label sits on a plate of the page colour, selected or not, hovered or not (a label must read over coastlines, borders and the graticule in
- * both schemes), and the plate has a feathered edge: `.map-halo`, a transparent twin of the plate in a layer BELOW the box canvas whose
- * box-shadow (the page colour, engine/label-dom.ts `featherShadow`, LABEL_TYPE.feather) fades out over about 8 px, so it dims the map around the
- * text but never a box's own outline. The text is the foreground (names, 19:1) and the muted foreground (second line, AA on the plate in both
+ * EVERY label sits on a TRANSLUCENT plate of the page colour, `--label-plate-alpha` of it (0.7 light, 0.62 dark: the least that keeps the 11 px
+ * second line AA, 4.5:1, over the loudest tone of the map, a box's outline at rest; computed from these tokens in engine/label-plate.ts and
+ * pinned by readability.test.ts), so the map shows through, dimmed, instead of being wiped out under the text. Its edge is a feather of 1 to
+ * 2 px (engine/label-dom.ts `featherShadow`, LABEL_TYPE.feather, a shadow of the plate's own colour) so it is not a hard sticker and dims
+ * nothing around the text. The text is the foreground (names, 19:1) and the muted foreground (second line, AA on the plate in both
  * schemes: tests in globe/engine/readability.test.ts); there is no underline and no text-shadow. Hovered or focused: the plate and text do not
  * change (the box's own colour logic does), only the stacking order so that the label is not covered by a neighbour. Selected: INVERTED, the
- * foreground as the plate and the page colour as the text, with no feather (high contrast already; the second line is the page colour mixed 28 %
- * toward the foreground, still AA on it). A label has no CSS transition: it moves by `transform` only, and the motion (the glide to a new
- * slot, a critically damped spring relative to the label's box) is computed per frame in engine/label-track.ts, so a label is always on its
- * way to its place and never snaps; reduced motion (the host's own flag) makes it instant.
+ * foreground as the plate and the page colour as the text, OPAQUE with no feather (high contrast already; the second line is the page colour mixed 28 %
+ * toward the foreground, still AA on it). A label drawn over other labels (the last resort of the plan) is opaque too: a translucent plate would
+ * show the text under it. A label has no CSS transition: it moves by `transform` only, smoothly (to the sub-pixel while it moves, a whole device pixel at rest), and the
+ * motion (the eased glide to a new slot) is computed per frame in engine/label-track.ts, so a label is always on its way to its place and never snaps; reduced motion
+ * (the host's own flag) makes it instant. Reduced transparency: the plate is opaque.
  */
 .map-label {
+  --map-label-plate: color-mix(in srgb, var(--background) calc(var(--label-plate-alpha) * 100%), transparent);
   font-family: var(--font-mono);
   color: var(--foreground);
-  background: var(--background);
+  background: var(--map-label-plate);
   contain: layout style;
   z-index: 0;
 }
@@ -1983,7 +1992,15 @@ h1[tabindex="-1"]:focus-visible {
   color: var(--muted-foreground);
 }
 
+/* A browser without `color-mix` gets the opaque plate (an invalid custom property would leave the text on the bare map). */
+@supports not (background: color-mix(in srgb, red 50%, transparent)) {
+  .map-label {
+    --map-label-plate: var(--background);
+  }
+}
+
 .map-label[data-over] {
+  --map-label-plate: var(--background);
   z-index: 1;
 }
 
@@ -1999,14 +2016,6 @@ h1[tabindex="-1"]:focus-visible {
 
 .map-label[data-mode="selected"] .map-label-sub {
   color: color-mix(in srgb, var(--background) 72%, var(--foreground));
-}
-
-.map-halo {
-  z-index: 0;
-}
-
-.map-halo[data-mode="selected"] {
-  display: none;
 }
 
 @media (forced-colors: active) {
@@ -2037,6 +2046,11 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  /* A map label's plate is opaque. */
+  .map-label {
+    --map-label-plate: var(--background);
+  }
+
   /* No blur, and a band that stays solid longer. */
   .nav-scrim > span {
     display: none;

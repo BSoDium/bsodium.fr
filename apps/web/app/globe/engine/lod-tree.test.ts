@@ -334,7 +334,7 @@ describe("the demo hierarchy", () => {
     expect(evaluate(tree, camAt(174.8, -41.3, 2.7)).get("wellington")).toBe(1);
   });
 
-  it("each branch shows at most one level at rest (the opacities along a chain sum to 0 or 1, never more) while zooming into a place, and the place is there from the zoom its box covers `boxMaxTo`", () => {
+  it("each branch shows at most one level at rest (the opacities along a chain sum to 0 or 1, never more) while zooming into a place, and the place is there from `crowdOffZoom` once its group's box covers `boxMaxTo`", () => {
     for (const [lon, lat] of [[108.3, 16], [16, 44.6], [2.35, 48.86]] as const) {
       for (let z = 2.7; z <= 13; z += 0.02) {
         const a = evaluate(tree, camAt(lon, lat, z));
@@ -346,7 +346,8 @@ describe("the demo hierarchy", () => {
           // a place's own huge rectangle is hidden without anything to hand over to (street scale): that is the only way under 1 once its group is forced open
           if ((tree.boxX1[i]! - tree.boxX0[i]!) / H >= LOD.sizeFadeFrom) continue;
           const group = tree.parent[i]!;
-          if (group >= 0 && (tree.boxX1[group]! - tree.boxX0[group]!) / H >= LOD.boxMaxTo && !tree.isGroup[i]) expect(total, `${tree.slug[i]} at ${z.toFixed(2)}`).toBe(1);
+          // (a place whose group is forced open by the size rule is there from the zoom where no clearance is asked, `crowdOffZoom`; before it, when it keeps the room)
+          if (group >= 0 && z >= LOD.open.crowdOffZoom && (tree.boxX1[group]! - tree.boxX0[group]!) / H >= LOD.boxMaxTo && !tree.isGroup[i]) expect(total, `${tree.slug[i]} at ${z.toFixed(2)}`).toBe(1);
         }
       }
     }

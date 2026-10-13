@@ -8,8 +8,8 @@
 // start    zero frames and zero rAF before the delay; after it the globe EASES IN from rest (speed per 500 ms bin follows the smoothstep, monotonic, no jump),
 //          then turns EASTWARD at the configured speed, redrawn on every display refresh (one rAF per frame, none in between before the delay), the street map
 //          is not involved, the art cell never moves and no render-quality change is logged (there is no frame governor: the pixel density is constant)
-// cadence  steady turning, picture read back after every drawn frame: the gap between frames that change the picture has no step longer than 80 ms
-//          (before: a redraw every 227 ms), with the histogram and the size of the steps in art pixels
+// cadence  steady turning, picture read back after every drawn frame: a frame per display refresh (no ceiling), every one changes the picture, no gap
+//          between two pictures over 80 ms, the histogram and the size of the steps in art pixels; the speed is slow (an art pixel every 0.8 to 2.5 s)
 // input    a pointer move, a key, a wheel notch, a held pointer and a click each stop it in the same task (the view does not move afterwards, no frame follows
 //          but at most the one already queued) and restart the delay; a held pointer keeps it from starting
 // coast    a stop that is not an input (a place focused, a place selected) coasts to rest over `stopMs` with inertia instead of freezing: the speed only goes
@@ -32,7 +32,10 @@ const expect = (name, ok, detail) => {
 
 const IDLE = 1500;
 const SPIN_STOP = 1000; // SPIN.stopMs
-const URL_ROTATE = `/?globe-debug&no-street&rotate&spin-idle=${IDLE}`;
+// SPIN_SPEED=DEG (debug pages only, `?spin-speed`) runs the checks at another cruise speed (the speed table in docs/web-architecture.md was measured
+// that way; the cadence expectations about "slow enough" and "alive" then say which candidates they accept).
+const SPEED = process.env.SPIN_SPEED ? `&spin-speed=${Number(process.env.SPIN_SPEED)}` : "";
+const URL_ROTATE = `/?globe-debug&no-street&rotate&spin-idle=${IDLE}${SPEED}`;
 const state = (page) =>
   page.evaluate(() => {
     const d = window.__globeDebug;
@@ -219,12 +222,19 @@ try {
     const a = analyse(frames, info.inset.pixel, info.view.zoom);
     console.log(`     art pixel ${info.inset.pixel} css px, radius ${a.R.toFixed(0)} css px, speed ${info.spin.degPerSec} deg/s = ${((info.spin.degPerSec * Math.PI / 180 * a.R) / info.inset.pixel).toFixed(1)} art px/s at the centre`);
     report("steady turning", a, 8);
-    // Before: a redraw every 227 ms (one art pixel at 1.2 deg/s), the globe advancing in whole-pixel steps about 4 a second.
+    // The speed is the slowest that still reads as alive (docs/web-architecture.md, "Idle rotation": the labels flicker above 0.3 deg/s), so
+    // the picture cannot change by whole art pixels per frame: it is a redraw on every display refresh in which the features cross their
+    // art-pixel boundaries at different times, a few dozen pixels each, and no step between two pictures is longer than a few frames.
     const longest = Math.max(...a.gaps);
     expect(`no step longer than 80 ms between two pictures (longest ${longest.toFixed(0)} ms)`, a.gaps.length > 100 && longest <= 80, { longest, n: a.gaps.length });
     expect(`the picture changes at least 25 times a second (${(a.shown.length / 8).toFixed(1)}/s)`, a.shown.length / 8 >= 25, a.shown.length);
     expect(`every drawn frame changes the picture (the redraws are not wasted: ${a.shown.length} of ${a.frames.length})`, a.shown.length >= 0.95 * a.frames.length, { shown: a.shown.length, frames: a.frames.length });
-    expect("the disc's centre moves at least one art pixel per 70 ms", (1000 * info.inset.pixel) / (info.spin.degPerSec * (Math.PI / 180) * a.R) <= 70, info);
+    // no frame-rate ceiling: one frame per display refresh (60 Hz here), never skipped by `SPIN.minFrameMs`
+    expect(`one frame per display refresh: ${(a.frames.length / 8).toFixed(1)} a second, no gap over 25 ms between drawn frames (longest ${Math.max(...a.frameGaps).toFixed(0)} ms)`, a.frames.length / 8 >= 55 && Math.max(...a.frameGaps) <= 25, { n: a.frames.length });
+    const msPerArtPx = (1000 * info.inset.pixel) / (info.spin.degPerSec * (Math.PI / 180) * a.R);
+    console.log(`     the disc's centre crosses an art pixel every ${msPerArtPx.toFixed(0)} ms (one turn in ${(360 / info.spin.degPerSec / 60).toFixed(0)} min)`);
+    expect("slow enough for the labels: the disc's centre needs at least 0.8 s per art pixel (at most 0.3 deg/s at 1440x900)", msPerArtPx >= 800, info);
+    expect("but alive: the centre crosses an art pixel at least every 2.5 s (at least 0.1 deg/s)", msPerArtPx <= 2500, info);
     await page.context().close();
   }
 
@@ -455,7 +465,22 @@ try {
     const took = await untilSpinning(page, IDLE + 3000);
     expect("mobile: it turns after the delay", took !== null, took);
     const before = await state(page);
-    await page.touchscreen.tap(12, 700);
+    // a point of the globe's canvas with no link or button within 40 px (the hero's rows sit over the globe on a phone, and a touch tap snaps to a link nearby)
+    const free = await page.evaluate(() => {
+      const bad = (x, y) => {
+        const e = document.elementFromPoint(x, y);
+        return !e || e.tagName !== "CANVAS" || !!e.closest("a, button, [role=link]");
+      };
+      for (let y = 600; y > 120; y -= 20)
+        for (let x = 40; x < 360; x += 20) {
+          let ok = true;
+          for (const [dx, dy] of [[0, 0], [40, 0], [-40, 0], [0, 40], [0, -40], [28, 28], [-28, 28], [28, -28], [-28, -28]]) if (bad(x + dx, y + dy)) ok = false;
+          if (ok) return { x, y };
+        }
+      return null;
+    });
+    if (!free) console.log("     (no free point on the canvas: the tap goes to the corner)");
+    await page.touchscreen.tap(free?.x ?? 12, free?.y ?? 700);
     const after = await state(page);
     expect("mobile: a tap stops it at once", !after.spin.spinning, { before, after });
     await sleep(600);

@@ -10,8 +10,9 @@
  * A label is TWO LINES: line 1 the NAME (14 px, weight 500), line 2 a smaller SECOND LINE (11 px, regular) when there is one: for a place its
  * country and its linked entries split by kind, for a group its number of places and their entries (engine/label-sub.ts). The country is always
  * there when known, hovered or not; hover and selection change the colours of the plate, never the text or its size.
- * A label can be written several ways (`labelVariants`, widest first) for when there is no room: the whole label, without its entries, without
- * its country / number of places (one line), then the name truncated with an ellipsis down to `MIN_LABEL_CHARS` characters.
+ * A label can be written several ways (`labelVariants`, in the order the plan prefers them) for when there is no room: the whole label, without
+ * its entries, without its country / number of places (one line, the same width and a line lower), then the name truncated with an ellipsis down
+ * to `MIN_LABEL_CHARS` characters, a truncated name KEEPING its second line for as long as the plate stays narrower for it.
  */
 import { subSteps, type LabelSub } from "./label-sub";
 
@@ -33,8 +34,12 @@ export const LABEL_TYPE = {
   nestInset: 3,
   /** How far the plate sticks out past the box's edge it is aligned with: none, the plate's edge IS the box's outer edge (the text starts `padX` inside it). */
   bleed: 0,
-  /** The soft edge of the plate, px: it fades out over `blur` px around the plate, starting `spread` px beyond it (app.css `.map-halo`; label-dom.ts writes it). */
-  feather: { blur: 8, spread: 3 },
+  /**
+   * The soft edge of the plate, px (label-dom.ts writes it as a `box-shadow` of the plate's own colour): the plate's translucent colour goes on
+   * `spread` px beyond the plate and fades out over `blur` px more. Small on purpose, 1 to 2 px: the plate is a translucent ground, not a halo
+   * that dims the map around the text.
+   */
+  feather: { blur: 2, spread: 1 },
 } as const;
 
 export type Run = "name" | "sub";
@@ -149,28 +154,38 @@ export const MIN_LABEL_CHARS = 6;
 const TRAILING = /[\s,;:.\-–—]+$/;
 
 /**
- * The ways a label can be written, widest first: the whole label, then without its entries, then without its country / number of places (one line),
- * then the name truncated one character at a time with an ellipsis, down to `MIN_LABEL_CHARS` characters (never fewer; a name of six characters or
- * less is never truncated). Each is smaller than the one before (narrower, or as wide and lower: dropping a line a long name does not need
- * frees height only). The first is what the label wants; the others are what the plan falls back to when there is no room for it.
+ * The ways a label can be written, in the order the plan prefers them (each is smaller than every one before it in at least one of width and
+ * height: a variant that no earlier one beats in both is kept, one that is not smaller than an earlier one is dropped):
+ *   1. the whole name, its second line whole, then without its entries, then without the second line (the same width, one line lower: the
+ *      second line is dropped as the LAST step that keeps the whole name);
+ *   2. then the name truncated, one character at a time with an ellipsis, down to `MIN_LABEL_CHARS` characters (never fewer; a name of six
+ *      characters or less is never truncated), each truncation with the second line it kept (the lead: country, or number of places) first
+ *      and without it second. A shortened name keeps its second line for as long as the plate gets narrower: the second line is
+ *      never what the shortening takes away while it fits, and where it no longer makes the plate narrower (the name has become narrower than
+ *      the second line) only the one-line ways go on.
+ * The first is what the label wants; the others are what the plan falls back to when there is no room for it.
  */
 export function labelVariants(name: string, sub: LabelSub | null): LabelText[] {
   const key = `${sub?.lead ?? ""}|${sub?.entries ?? ""}|${name}`;
   const hit = variantCache.get(key);
   if (hit) return hit;
   const out: LabelText[] = [];
-  let lastW = Infinity;
-  let lastH = Infinity;
   const add = (n: string, line: string | null) => {
     const v = labelText(n, line);
-    if (v.w > lastW || v.h > lastH || (v.w === lastW && v.h === lastH)) return; // the shorter ways must really be smaller (the ellipsis is a wide glyph: cutting one letter does not shorten a label)
-    lastW = v.w;
-    lastH = v.h;
+    // no earlier way is already at most as wide and as high (the ellipsis is a wide glyph: cutting one letter does not shorten a label)
+    if (out.some((e) => e.w <= v.w && e.h <= v.h)) return;
     out.push(v);
   };
-  for (const line of subSteps(sub)) add(name, line);
+  const steps = subSteps(sub);
+  for (const line of steps) add(name, line);
+  // what a truncated name keeps of its second line: the lead alone when there are entries too (they went first), else the whole
+  const kept = steps.length > 1 ? steps[steps.length - 2]! : null;
   const chars = Array.from(name);
-  for (let n = chars.length - 1; n >= MIN_LABEL_CHARS; n--) add(chars.slice(0, n - 1).join("").replace(TRAILING, "") + "…", null);
+  for (let n = chars.length - 1; n >= MIN_LABEL_CHARS; n--) {
+    const cut = chars.slice(0, n - 1).join("").replace(TRAILING, "") + "…";
+    if (kept !== null) add(cut, kept);
+    add(cut, null);
+  }
   if (variantCache.size > 4000) variantCache.clear();
   variantCache.set(key, out);
   return out;

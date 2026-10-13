@@ -189,6 +189,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       opts.labelsRoot.style.setProperty("-webkit-mask-image", mask ?? "");
     }
     if (labelsActive) {
+      labels.setDrifting(renderer.spinInfo().spinning);
       labels.update(renderer.nodeScreen, renderer.pixelGrid());
     }
     const next = toViewState(v, renderer.getFitZoom(), TUNING.maxZoom);
