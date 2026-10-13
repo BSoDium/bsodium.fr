@@ -35,7 +35,7 @@ describe("poems and the additive entry fields", () => {
 
   it("an entry without any of the new fields is still valid, and the keys stay absent", () => {
     const parsed = parseItem();
-    for (const key of ["cover", "tags", "meta", "body", "summary", "url"]) expect(parsed).not.toHaveProperty(key);
+    for (const key of ["cover", "tags", "meta", "body", "summary", "url", "sensitive"]) expect(parsed).not.toHaveProperty(key);
   });
 
   it("cross-references: poems are a kind of their own", () => {
@@ -293,6 +293,35 @@ describe("poems and the additive entry fields", () => {
     });
   });
 
+  describe("sensitive (mature content)", () => {
+    it("is an optional boolean on every kind of entry, and stays absent when it is not given", () => {
+      expect(parseItem({ sensitive: true, cover: image }).sensitive).toBe(true);
+      expect(parseItem({ sensitive: false }).sensitive).toBe(false);
+      expect(parseItem()).not.toHaveProperty("sensitive");
+      for (const key of ["projects", "articles", "artworks", "poems"] as const) {
+        const parsed = parsePublishedProjection({ ...EMPTY_PROJECTION, [key]: [item({ sensitive: true })] });
+        expect(parsed[key][0]!.sensitive, key).toBe(true);
+      }
+    });
+    it("rejects anything that is not a boolean (the strings and numbers a loose exporter might write)", () => {
+      for (const value of ["true", "false", "yes", 1, 0, null, {}, []]) expect(() => parseItem({ sensitive: value }), JSON.stringify(value)).toThrow();
+    });
+    it("is not accepted on places, covers or blocks: it belongs to the entry, whose images it covers", () => {
+      expect(() => parseItem({ cover: { ...image, sensitive: true } })).toThrow();
+      expect(() => parsePublishedProjection({ ...EMPTY_PROJECTION, places: [{ ...place, sensitive: true }] })).toThrow();
+      expect(() => parseItem({ body: [{ type: "image", ...image, sensitive: true }] })).toThrow();
+    });
+    it("is an additive field: a projection that never says it stays valid, and the schema version is unchanged", () => {
+      expect(parsePublishedProjection({ ...EMPTY_PROJECTION, artworks: [item({ cover: image })] }).schemaVersion).toBe(1);
+    });
+    it("a summary carries it only when it is true (false is the same as absent)", () => {
+      const summary = (extra: object) => JSON.parse(JSON.stringify(toContentSummary(publishedContentItemSchema.parse(item(extra))))) as Record<string, unknown>;
+      expect(summary({ sensitive: true, cover: image })).toHaveProperty("sensitive", true);
+      expect(summary({ sensitive: false })).not.toHaveProperty("sensitive");
+      expect(summary({})).not.toHaveProperty("sensitive");
+    });
+  });
+
   describe("summaries", () => {
     it("toContentSummary drops the body and nothing else", () => {
       const full = publishedContentItemSchema.parse(
@@ -313,8 +342,10 @@ describe("poems and the additive entry fields", () => {
     // The four collections share one definition of an entry.
     for (const key of ["projects", "articles", "artworks", "poems"]) expect(schema.properties[key]!.items.$ref).toBe("#/$defs/PublishedContentItem");
     const entry = schema.$defs.PublishedContentItem!;
-    expect(Object.keys(entry.properties)).toEqual(["slug", "title", "summary", "date", "url", "cover", "tags", "meta", "body", "placeSlugs"]);
+    expect(Object.keys(entry.properties)).toEqual(["slug", "title", "summary", "date", "url", "cover", "sensitive", "tags", "meta", "body", "placeSlugs"]);
     expect(entry.required).toEqual(["slug", "title", "placeSlugs"]);
     expect(JSON.stringify(schema)).toContain('"const":"verse"');
+    expect(entry.properties.sensitive).toEqual({ type: "boolean" });
+    expect(entry.required).not.toContain("sensitive");
   });
 });

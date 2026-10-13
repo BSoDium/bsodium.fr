@@ -1,7 +1,4 @@
 /** Tuned constants (see docs/renderer-decision.md for how they were chosen). */
-/** Runtime quality state moved by the frame governor (engine/governor.ts): extra CSS px per art pixel. */
-export const QUALITY = { cellBoost: 0 };
-
 /**
  * THE art pixel: the size in CSS px of one cell of the pixel grid that the globe, the street map and the pixel text all
  * draw on (one constant, shared by both renderers and the labels). Desktop 2.5 (was 3), phones 2: a modest increase in
@@ -28,13 +25,14 @@ export function applyDebugArtPixel(): void {
 
 export const TUNING = {
   /**
-   * Size of one art pixel in CSS px, as a function of the smaller viewport side (+1 when the frame governor stepped
-   * down): `ART_PIXEL`, rounded to a whole number of device pixels, because otherwise nearest-neighbour upscaling shimmers
+   * Size of one art pixel in CSS px, as a function of the smaller viewport side and the device pixel ratio ONLY (nothing
+   * measured at runtime moves it: no frame-time feedback, no module state): `ART_PIXEL`, rounded to a whole number of
+   * device pixels, because otherwise nearest-neighbour upscaling shimmers
    * (2.5 is 5 device px at DPR 2 but 2.5 at DPR 1: ties go DOWN, so DPR 1 gets 2 CSS px, never a coarser 3; Android's
    * 2.625 and Windows' 1.25 and 1.5 get the nearest whole device size).
    */
   pixelSize(minSide: number, dpr: number): number {
-    const base = (minSide < ART_PIXEL.phoneBelow ? ART_PIXEL.phone : ART_PIXEL.desktop) + QUALITY.cellBoost;
+    const base = minSide < ART_PIXEL.phoneBelow ? ART_PIXEL.phone : ART_PIXEL.desktop;
     return Math.max(1, Math.round(base * dpr - 1e-9)) / dpr;
   },
   /**
@@ -130,3 +128,48 @@ export const SKY = {
 
 /** `cubic-bezier` control points of the app's standard easing (`--ease-standard`). */
 export const INSET_EASE = [0.2, 0, 0, 1] as const;
+
+/**
+ * The ring of type (engine/ring.ts, engine/ring-layer.ts; docs/web-architecture.md, "Ring of type"): one short line of the site's identity, set in
+ * the map's monospace on a flat circle concentric with the planet's disc (the circle of its silhouette, a little larger), tops of the letters
+ * outward, running clockwise and turning slowly on its own clock. It exists only in the zoomed-OUT regime below the whole-globe fit and fades
+ * out as the camera comes in, so it is gone at the fit: the boxes and the labels of the world view never compete with it.
+ *
+ * Sizes in CSS px or as named. Everything that can be tuned by eye is here.
+ */
+export const RING = {
+  /**
+   * The gap between the planet's silhouette and the BASELINE of the letters, as a fraction of the silhouette's radius (0.06: 17 px at the lowest
+   * zoom on a 1440 x 900 screen). The letters' tops point outward from there.
+   */
+  gap: 0.06,
+  /** Turning speed, degrees a second, on the ring's own clock. The globe's idle rotation is 0.2 (`SPIN.degPerSec`); the ring turns at 3. */
+  degPerSec: 3,
+  /** `1`: clockwise, the way the text reads (the letters move along the line); `-1` the other way. */
+  direction: 1,
+  /** Where the line starts when the ring appears: degrees clockwise from twelve o'clock. */
+  startDeg: 0,
+  /**
+   * The type: the weight, the tracking (em added to the monospace's 0.6 em advance; the nav's `.nav-link` is 0.14), and the em size (CSS px) the
+   * letters have at the lowest zoom. The line goes round a WHOLE number of times (`ringLayout`): the count is the one whose letters, at the
+   * nominal tracking, come nearest `targetEmPx`, then the em is allowed to move by `emSlack` (a fraction) and the tracking takes the rest up, so
+   * the seam closes evenly at any size. The type then scales with the planet (the ring is an object of the planet's), so a closed ring stays closed.
+   */
+  type: { weight: 500, tracking: 0.14, advanceEm: 0.6, targetEmPx: 11, emSlack: 0.15 },
+  /** Between the phrases (and after the last, which closes the loop). */
+  separator: " \u00b7 ",
+  /**
+   * Zoom range. `floorBelowFit`: the lowest zoom is at least this many zoom levels below the whole-globe fit (0.5 levels = the globe 0.71 times its fit
+   * size), and lower still when the ring does not fit the free area with `fitMargin` of it left empty (never on a screen with a 4:3 or wider
+   * shape). `fade`: the ring's strength by the way from the fit (0) to the lowest zoom (1): gone up to `from`, full from `to`, a smoothstep
+   * between, quantised to palette tones.
+   */
+  zoom: { floorBelowFit: 0.5, fitMargin: 0.12, fade: { from: 0.08, to: 0.6 } },
+  /** Palette role (engine/palette.ts) of the letters: not louder than the coastline (`coast`), so a coast is never outshone. */
+  tone: "coast",
+  /** At most one frame every `frameMs` (30 fps: the ring is slow, the pixels it moves a frame are under one) and no step longer than `maxStepMs` (a stalled frame must not jump). */
+  frameMs: 32,
+  maxStepMs: 100,
+  /** Largest device pixel ratio the ring's canvas is drawn at (the type is crisp at 2; a phone's 3 would cost 2.25 times the pixels). */
+  maxDpr: 2,
+} as const;

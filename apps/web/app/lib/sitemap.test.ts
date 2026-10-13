@@ -7,7 +7,15 @@ const ORIGIN = "https://v2.bsodium.fr";
 
 describe("sitemapUrls", () => {
   it("lists the home page and the four lists, even for an empty projection", () => {
-    expect(sitemapUrls(EMPTY_PROJECTION, ORIGIN).map((u) => u.loc)).toEqual([`${ORIGIN}/`, `${ORIGIN}/articles`, `${ORIGIN}/projects`, `${ORIGIN}/artworks`, `${ORIGIN}/poems`]);
+    expect(sitemapUrls(EMPTY_PROJECTION, ORIGIN).map((u) => u.loc)).toEqual([`${ORIGIN}/`, `${ORIGIN}/articles`, `${ORIGIN}/projects`, `${ORIGIN}/artworks`, `${ORIGIN}/poetry`]);
+  });
+  it("lists the poems' section and entries under /poetry, and nothing under the old /poems", () => {
+    const projection = { ...EMPTY_PROJECTION, poems: [{ slug: "p", title: "P", placeSlugs: [] }] } as PublishedProjection;
+    const locs = sitemapUrls(projection, ORIGIN).map((u) => u.loc);
+    expect(locs).toContain(`${ORIGIN}/poetry`);
+    expect(locs).toContain(`${ORIGIN}/poetry/p`);
+    expect(locs.filter((l) => /\/poems(\/|$)/.test(l))).toEqual([]);
+    expect(sitemapXml(sitemapUrls(projection, ORIGIN))).not.toContain("/poems");
   });
   it("adds every entry and every place, absolute, with the authored date as lastmod", () => {
     const projection: PublishedProjection = {
@@ -21,7 +29,7 @@ describe("sitemapUrls", () => {
     };
     const urls = sitemapUrls(projection, ORIGIN);
     expect(urls).toContainEqual({ loc: `${ORIGIN}/articles/a`, lastmod: "2024-04-02" });
-    expect(urls).toContainEqual({ loc: `${ORIGIN}/poems/p` });
+    expect(urls).toContainEqual({ loc: `${ORIGIN}/poetry/p` });
     expect(urls).toContainEqual({ loc: `${ORIGIN}/locations/lisbon`, lastmod: "2023-06-02" });
     expect(urls).toContainEqual({ loc: `${ORIGIN}/locations/paris` });
     expect(new Set(urls.map((u) => u.loc)).size).toBe(urls.length);

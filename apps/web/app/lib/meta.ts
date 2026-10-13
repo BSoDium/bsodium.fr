@@ -1,7 +1,7 @@
 import { DEFAULT_SHARE_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "./site";
 
 export interface PageMeta {
-  /** The page's own name; the title becomes `<title> · Catalyst`. Absent = the home title (`SITE_TITLE`). */
+  /** The page's own name; the title becomes `<title> · <site name>`. Absent = the home title (`SITE_TITLE`). */
   title?: string;
   description?: string;
   /** `website` (default) or `article`. */
@@ -14,6 +14,8 @@ export interface PageMeta {
   path?: string;
   /** Keep the page out of search engines (not-found pages). */
   noindex?: boolean;
+  /** The page may be indexed, but not its images (`noimageindex`): a sensitive entry. Ignored with `noindex`, which already says more. */
+  noImageIndex?: boolean;
   /** Articles: the authored date (a partial ISO date) and the tags. */
   publishedTime?: string;
   tags?: readonly string[];
@@ -43,7 +45,7 @@ const SCRAPABLE = /\.(?:png|jpe?g|gif|webp)$/i;
 
 export const isScrapableImage = (src: string) => SCRAPABLE.test(src);
 
-/** The title of a page: `<Page> · Catalyst`, or the home title. */
+/** The title of a page: `<Page> · <site name>`, or the home title. */
 export const pageTitle = (title?: string) => (title ? `${title} · ${SITE_NAME}` : SITE_TITLE);
 
 /**
@@ -59,7 +61,7 @@ export function canonicalUrl(path: string | undefined, origin: string | undefine
  * Every head tag of a page: title, description, canonical, Open Graph, Twitter card and, when given, the robots hint and JSON-LD. Every
  * page has a share image: the entry's cover when it is a format scrapers read, else the default one (1200x630 PNG).
  */
-export function pageMeta({ title, description = SITE_DESCRIPTION, type = "website", image, origin, path, noindex, publishedTime, tags, jsonLd }: PageMeta = {}): MetaDescriptor[] {
+export function pageMeta({ title, description = SITE_DESCRIPTION, type = "website", image, origin, path, noindex, noImageIndex, publishedTime, tags, jsonLd }: PageMeta = {}): MetaDescriptor[] {
   const fullTitle = pageTitle(title);
   const canonical = canonicalUrl(path, origin);
   const useCover = image !== undefined && isScrapableImage(image.src);
@@ -70,7 +72,7 @@ export function pageMeta({ title, description = SITE_DESCRIPTION, type = "websit
   return [
     { title: fullTitle },
     { name: "description", content: description },
-    ...(noindex ? [{ name: "robots", content: "noindex" }] : []),
+    ...(noindex ? [{ name: "robots", content: "noindex" }] : noImageIndex ? [{ name: "robots", content: "noimageindex" }] : []),
     ...(canonical ? [{ tagName: "link" as const, rel: "canonical", href: canonical }] : []),
     { property: "og:site_name", content: SITE_NAME },
     { property: "og:type", content: type },

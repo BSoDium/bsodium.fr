@@ -7,9 +7,11 @@
  *    nearest-neighbour): a rectangle one cell thick, corners solid and the rest of each edge dashed (anchored to the box's edges), its colour
  *    its STATE (the `peak` level at rest, the ink hovered or focused) and the selected one a solid line in the ink; its interior masked in the
  *    page colour while it is clamped to the minimum size, hollow once it is bigger. They are part of the map.
- *  - the LABELS are HTML text in device pixels (engine/label-dom.ts): the UI font on a plate of the page colour with a feathered edge (app.css
- *    `.map-label`, `.map-halo`; the feather sits BELOW the box canvas so it never dims a box's outline). Labels are not part of the map's
- *    pixels; the pixel text pipeline stays for text that is (route labels, later).
+ *  - the LABELS are HTML text in device pixels (engine/label-dom.ts): the UI font on a translucent plate of the page colour with a 1 to 2 px
+ *    feather (app.css `.map-label`, `--label-plate-alpha`, engine/label-plate.ts). They are not part of the map's pixels and do not move
+ *    like them: a label follows the PROJECTED rectangle of its box (`NodeScreen.fx0..fy1`), not the one snapped to art cells that is drawn, so
+ *    with the earth spinning labels glide smoothly instead of stepping by a cell (2026-10-13; the lattice of 2026-10-12 was taken back for
+ *    the labels). The pixel text pipeline stays for text that is part of the map (route labels, later).
  *
  * From the cut of the hierarchy (engine/lod-tree.ts) and the rectangle every drawn node was given (`NodeScreen`, whole cells), per frame,
  * O(drawn nodes):
@@ -40,17 +42,23 @@ import type { Rgb } from "./colors";
 import { isBigBox, pickAlpha, pickNode, type PointerKind, type Target } from "./hit-area";
 import { FrameDriver } from "./frame-driver";
 import { LabelLayer, type LabelMode } from "./label-dom";
-import { PX_UNITS, boxesToAvoid, pxUnits } from "./label-plan";
-import { LabelTracker, SlotMemory, type Placed, type TrackItem } from "./label-track";
+import { PX_UNITS, boxesToAvoid, smoothUnits } from "./label-plan";
+import { LabelTracker, SlotMemory, motionLimitPx, type Placed, type TrackItem } from "./label-track";
 import { subText } from "./label-sub";
 import { labelVariants, type LabelText } from "./label-text";
 import { LOD, type LodTree } from "./lod-tree";
 import type { NodeScreen } from "./node-screen";
 import { textFloorLevel } from "./palette";
-import { ALPHA_STEPS, HASH_SEED, PixelOverlay, drawBox, hashStep, labelTones, quantAlpha, type CellRect, type LabelTones } from "./pixel-labels";
+import { ALPHA_STEPS, HASH_SEED, PixelOverlay, SPOT, drawBox, hashStep, labelTones, quantAlpha, type CellRect, type LabelTones } from "./pixel-labels";
 
 /** Room kept between a label and the boxes of the other nodes, px (the early opening keeps `LOD.open.gapPx.leave` from every box and label: the same). */
 const AVOID_PAD = LOD.open.gapPx.leave;
+
+/** How long nothing may have moved before the labels are rounded to device pixels (ms). */
+const SETTLE_MS = 150;
+
+/** The planner's candidates (`SPOT`) for the positions the cut of the hierarchy reserves a label at (`LodTree.plateSlot`). */
+const CUT_SPOT: readonly number[] = [SPOT.aboveLeft, SPOT.aboveRight, SPOT.belowLeft, SPOT.belowRight, SPOT.right, SPOT.left, SPOT.insideTopLeft];
 
 /** The art-pixel grid of a map's canvas. */
 export interface PixelGrid {
@@ -80,9 +88,10 @@ interface Place {
 
 interface Item {
   i: number;
-  /** The box in whole cells of the pixel grid (for drawing) and in container CSS px (for planning and picking). */
+  /** The box in whole cells of the pixel grid (for drawing) and in container CSS px (for picking and for the plates to keep clear of), and as projected (not snapped; what the label follows). */
   rect: CellRect;
   px: CellRect;
+  cont: CellRect;
   wanted: boolean;
   variants: readonly LabelText[];
   place: Place;
@@ -124,6 +133,14 @@ export class BoxScene {
   private evalStamp = -1;
   private parked = false;
   private disposed = false;
+  /** Something moved in the last frame (a box's projected rectangle, or a glide): labels are drawn at exact positions; else rounded to device pixels. */
+  private moving = false;
+  private prevCont: Float64Array;
+  private settleTimer = 0;
+  /** Clock (ms) of the last frame that moved something: the one settle timer is re-armed only when it fires before `SETTLE_MS` have passed since. */
+  private lastMoveAt = 0;
+  /** Clock (ms) of the last run, the interval the speed of the rectangles is measured over. */
+  private lastRunAt = NaN;
   // per node, computed on first use
   private variantsOf: (readonly LabelText[] | undefined)[];
   private vkeyOf: Int32Array;
@@ -139,6 +156,7 @@ export class BoxScene {
     this.tracker = new LabelTracker(this.mem, PX_UNITS);
     this.variantsOf = new Array(lod.size);
     this.vkeyOf = new Int32Array(lod.size);
+    this.prevCont = new Float64Array(lod.size * 4).fill(NaN);
     if (typeof ResizeObserver !== "undefined") {
       this.ro = new ResizeObserver((entries) => {
         const r = entries[entries.length - 1]?.contentRect;
@@ -152,6 +170,11 @@ export class BoxScene {
   setTheme(theme: { ramp: readonly Rgb[] }) {
     this.tones = labelTones(theme.ramp.length, textFloorLevel(theme.ramp));
     this.overlay.setRamp(theme.ramp as readonly (readonly [number, number, number])[]);
+  }
+
+  /** The globe is turning slowly on its own (the idle rotation): the labels keep their slots as they do while the camera moves (engine/label-track.ts `setDrifting`). */
+  setDrifting(on: boolean) {
+    this.tracker.setDrifting(on);
   }
 
   /** Reduced motion: labels jump to a new place instead of gliding. */
@@ -243,6 +266,8 @@ export class BoxScene {
         rect: t.rect,
         /** The box in container CSS px. */
         box: { x0: t.px.c0, y0: t.px.r0, x1: t.px.c1, y1: t.px.r1 },
+        /** The same box as projected (not snapped to cells): what the label follows. */
+        boxExact: { x0: t.cont.c0, y0: t.cont.r0, x1: t.cont.c1, y1: t.cont.r1 },
         /** The label's plate in container CSS px (top-left corner and size), the name and the second line as written, and where it is. */
         label: {
           /** The plate as DRAWN (and picked) now; `tx`, `ty` is where its slot puts it (the same at rest), `glide` the distance between the two. */
@@ -345,7 +370,9 @@ export class BoxScene {
     this.parked = true;
     this.driver.stop();
     window.clearTimeout(this.timer);
+    window.clearTimeout(this.settleTimer);
     this.timer = 0;
+    this.settleTimer = 0;
     this.tracker.reset();
   }
 
@@ -369,7 +396,7 @@ export class BoxScene {
     const cell = grid.cell;
     this.overlay.layout(grid.cols, grid.rows, cell, grid.left, grid.top);
     const view = this.view();
-    const units = pxUnits(cell);
+    const units = smoothUnits(cell);
     const items: Item[] = [];
     for (let k = 0; k < lod.count; k++) {
       const i = lod.visible[k]!;
@@ -380,10 +407,14 @@ export class BoxScene {
         c1: Math.round((screen.bx1[i]! - grid.left) / cell),
         r1: Math.round((screen.by1[i]! - grid.top) / cell),
       };
+      const px: CellRect = { c0: screen.bx0[i]!, r0: screen.by0[i]!, c1: screen.bx1[i]!, r1: screen.by1[i]! };
+      // the projected rectangle when the renderer gave it (NaN: it did not, the snapped box stands in)
+      const cont: CellRect = Number.isFinite(screen.fx0[i]!) && Number.isFinite(screen.fy1[i]!) ? { c0: screen.fx0[i]!, r0: screen.fy0[i]!, c1: screen.fx1[i]!, r1: screen.fy1[i]! } : px;
       items.push({
         i,
         rect,
-        px: { c0: screen.bx0[i]!, r0: screen.by0[i]!, c1: screen.bx1[i]!, r1: screen.by1[i]! },
+        px,
+        cont,
         wanted: lod.life.target[i] === 1,
         variants: this.variants(i),
         place: { x: 0, y: 0, gx: 0, gy: 0, variant: 0, cand: 0, inside: false, overlap: false, moved: false, fresh: false },
@@ -398,14 +429,15 @@ export class BoxScene {
     const track: TrackItem[] = planned.map((t, n) => ({
       id: t.i,
       key: lod.slug[t.i]!,
-      rect: t.px,
+      rect: t.cont,
       score: t.score,
-      area: (t.px.c1 - t.px.c0) * (t.px.r1 - t.px.r0),
+      area: (t.cont.c1 - t.cont.c0) * (t.cont.r1 - t.cont.r0),
       variants: t.variants,
       vkey: this.vkey(t.i),
       avoid: () => boxesToAvoid(boxPlates, n, t.variants[0]!.w + t.variants[0]!.h + 2 * AVOID_PAD),
+      pref: CUT_SPOT[lod.plateSlot(t.i)],
     }));
-    const placed: Placed[] = this.tracker.step(now, track, view, units.inset);
+    const placed: Placed[] = this.tracker.step(now, track, view, units);
     if (this.tracker.info.full) this.replans++;
     this.partials += this.tracker.info.partial;
     planned.forEach((t, n) => {
@@ -419,10 +451,10 @@ export class BoxScene {
       now,
       fading.map((t) => {
         const v = mem.set[t.i] ? Math.min(mem.variant[t.i]!, t.variants.length - 1) : 0;
-        return { id: t.i, rect: t.px, size: t.variants[v]! };
+        return { id: t.i, rect: t.cont, size: t.variants[v]! };
       }),
       view,
-      units.inset,
+      units,
     );
     fading.forEach((t, k) => {
       const p = followed[k]!;
@@ -430,7 +462,26 @@ export class BoxScene {
       t.place = { x: p.x, y: p.y, gx: p.gx, gy: p.gy, variant: v, cand: mem.set[t.i] ? mem.cand[t.i]! : 0, inside: false, overlap: false, moved: false, fresh: false };
     });
     this.last = items;
+    // moving: a rectangle moves faster than `MOTION.pxPerSec` (a speed over the interval since the last run: the same at any frame rate and
+    // on any screen, so the idle rotation on a phone, 0.5 px/s, is still motion), or a plate is still gliding. A frame that moved nothing
+    // (and no glide) is the label layer's resting picture: positions rounded to device pixels. The camera may stop without another frame
+    // after the last moving one, so a timer asks for the resting picture.
+    let moved = this.tracker.gliding > 0;
+    const pc = this.prevCont;
+    const lim = motionLimitPx(now - this.lastRunAt); // (NaN on the first run: every rectangle is new, NaN, and counts as moved)
+    this.lastRunAt = now;
+    for (const t of items) {
+      const o = t.i * 4;
+      const c = t.cont;
+      if (!(Math.abs(c.c0 - pc[o]!) < lim && Math.abs(c.r0 - pc[o + 1]!) < lim && Math.abs(c.c1 - pc[o + 2]!) < lim && Math.abs(c.r1 - pc[o + 3]!) < lim)) moved = true;
+      pc[o] = c.c0;
+      pc[o + 1] = c.r0;
+      pc[o + 2] = c.c1;
+      pc[o + 3] = c.r1;
+    }
+    this.moving = moved;
     this.present();
+    if (moved) this.armSettle(now);
     this.arm();
     this.driver.ride();
   }
@@ -451,7 +502,7 @@ export class BoxScene {
     const targets: Target[] = [];
     const mapMinSide = Math.min(grid.cols, grid.rows) * cell;
     let h = HASH_SEED;
-    this.layer.begin();
+    this.layer.begin(!this.moving);
     for (const t of items) {
       const mode = this.modeOf(t.i, t.wanted);
       const forced = mode !== "rest";
@@ -488,6 +539,29 @@ export class BoxScene {
     this.targets = targets;
   }
 
+  /**
+   * Ask for the resting picture (labels rounded to whole device pixels) once nothing has moved for `SETTLE_MS`. Called in every frame that moved
+   * something: it only notes the time, and a timer is set when none is pending (one `setTimeout` per settle, not a `clearTimeout` and a
+   * `setTimeout` per frame); a timer that fires early (something moved since it was set) sets itself again for the rest of the interval.
+   */
+  private armSettle(now: number) {
+    this.lastMoveAt = now;
+    if (!this.settleTimer) this.settleTimer = window.setTimeout(this.settleFire, SETTLE_MS);
+  }
+
+  private settleFire = () => {
+    this.settleTimer = 0;
+    if (this.parked || this.disposed || !this.moving) return;
+    const wait = this.lastMoveAt + SETTLE_MS - performance.now();
+    if (wait > 1) {
+      this.settleTimer = window.setTimeout(this.settleFire, wait);
+      return;
+    }
+    if (this.tracker.gliding > 0) return this.armSettle(performance.now());
+    this.moving = false;
+    this.represent();
+  };
+
   /** Arm the timer of the re-plan that is owed (the last one after the camera stopped, or a young slot waiting out its dwell): an idle map draws no frames, so nothing else would run it. */
   private arm() {
     if (this.timer || this.parked || this.disposed) return;
@@ -519,6 +593,8 @@ export class BoxScene {
     this.disposed = true;
     this.driver.stop();
     window.clearTimeout(this.timer);
+    window.clearTimeout(this.settleTimer);
+    this.settleTimer = 0;
     this.ro?.disconnect();
     this.layer.dispose();
     this.overlay.dispose();

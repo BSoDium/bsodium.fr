@@ -1,6 +1,7 @@
 import { Link, isRouteErrorResponse } from "react-router";
-import { Button, Glyph, StatePanel } from "~/components/ui";
+import { Button, Icon, StatePanel } from "~/components/ui";
 import { errorStatus } from "~/lib/error-status";
+import { pageTitle } from "~/lib/meta";
 
 /**
  * The root error boundary's page for everything that is not a 404: a loader or render error (500) or any other error response. It says
@@ -13,7 +14,7 @@ export function ErrorPage({ error, showDetail = import.meta.env.DEV }: { error: 
   const detail = showDetail ? (error instanceof Error ? error.message : isRouteErrorResponse(error) ? String(error.data ?? error.statusText) : null) : null;
   return (
     <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-6 pt-[calc(var(--navbar-height)+3rem)] pb-24 outline-none">
-      <title>{serverSide ? "Something went wrong · Catalyst" : "Request not accepted · Catalyst"}</title>
+      <title>{pageTitle(serverSide ? "Something went wrong" : "Request not accepted")}</title>
       <meta name="robots" content="noindex" />
       <StatePanel
         state="error"
@@ -22,7 +23,7 @@ export function ErrorPage({ error, showDetail = import.meta.env.DEV }: { error: 
         title={serverSide ? "Something went wrong" : "That request was not accepted"}
         description={
           <>
-            {serverSide ? "The page could not be built. This is on our side: try again in a moment, or go back to the globe." : "The address or the request is not one this site can answer. Go back to the globe."}
+            {serverSide ? "The page could not be built, and that is on my side. Try again in a moment, or go back to the globe." : "The address or the request is not one this site can answer. Go back to the globe."}
             {detail && <code className="mt-3 block break-words text-xs">{detail}</code>}
           </>
         }
@@ -35,7 +36,7 @@ export function ErrorPage({ error, showDetail = import.meta.env.DEV }: { error: 
             )}
             <Button asChild variant="secondary">
               <Link to="/">
-                <Glyph name="arrow-left" size={16} />
+                <Icon name="arrow-left" size="inline" />
                 Back to the globe
               </Link>
             </Button>

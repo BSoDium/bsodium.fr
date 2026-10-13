@@ -18,6 +18,8 @@ export async function runScenarios({ base, scenarios, device = "desktop", scheme
     if (!sc) throw new Error(`unknown scenario ${id}`);
     for (let rep = 0; rep < repeat; rep++) {
       const flags = { "globe-debug": "1" };
+      // Debug pages have the ring OFF by default (engine/ring.ts `applyRingFlags`): its own scenarios turn it on, and RING=1 runs any scenario with it.
+      if (sc.ring || process.env.RING === "1") flags.ring = "1";
       const extra = streetOpts ?? {};
       if (!sc.primary || streetOpts) flags["street-opts"] = JSON.stringify({ ...(sc.primary ? {} : { forceSource: "fallback" }), ...extra });
       const { ctx, page, logs } = await openPage(browser, profile, new URL(sc.path ?? "/", base).toString(), { colorScheme: scheme, flags });
@@ -29,7 +31,7 @@ export async function runScenarios({ base, scenarios, device = "desktop", scheme
           continue;
         }
         if (throttle) {
-          // A slow device: the main thread runs `throttle` times slower (the GPU does not; the frame governor sees the main thread).
+          // A slow device: the main thread runs `throttle` times slower (the GPU does not). The pixel density does not react to it (no frame governor).
           const cdp = await ctx.newCDPSession(page);
           await cdp.send("Emulation.setCPUThrottlingRate", { rate: Number(throttle) });
         }
@@ -37,7 +39,8 @@ export async function runScenarios({ base, scenarios, device = "desktop", scheme
         const tracePath = out ? `${out}/${label}-${id}${repeat > 1 ? "-" + rep : ""}.trace.json` : null;
         const rep_ = await measure(browser, page, ctx, () => sc.run(page, {}), { trace, tracePath: trace ? tracePath : null });
         rep_.logs = logs.slice(0, 5);
-        rep_.quality = await page.evaluate(() => window.__handoverDebug?.quality?.() ?? null);
+        // The art cell at the end of the scenario: constant by design (scripts/globe/handover-perf.mjs `density` asserts it), recorded so a report shows it.
+        rep_.cell = await page.evaluate(() => window.__globeDebug?.cell?.() ?? null);
         const prev = results.scenarios[id];
         results.scenarios[id] = Array.isArray(prev) ? [...prev, rep_] : [rep_];
       } catch (e) {

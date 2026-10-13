@@ -51,11 +51,21 @@ interface GlobeOptions {
   onFrame?(): void;
   /** See `RendererOptions.pickOverride`. */
   pickOverride?: RendererOptions["pickOverride"];
+  /** The line of the ring of type (see `RendererOptions.ringText`); absent = no ring. */
+  ringText?: string;
 }
 
 /** Read-only introspection for automated checks (exposed on `window` only with `?globe-debug`). */
 export interface GlobeDebug {
+  /**
+   * The whole-globe fit (internal zoom): the 0 of the app's zoom and "the world view" of every older check (they start sweeps from it). With the
+   * ring of type the camera can go below it: `floorZoom()`.
+   */
   minZoom(): number;
+  /** The same number as `minZoom()` (the fit), under the name that says what it is. */
+  fitZoom(): number;
+  /** The lowest zoom the camera can reach: the fit, or the ring's floor below it when the ring is on (debug pages have it off unless `?ring`). */
+  floorZoom(): number;
   maxZoom(): number;
   /** Internal zoom (globe zoom levels), not the [0, 1] app zoom. */
   view(): { lon: number; lat: number; zoom: number };
@@ -76,6 +86,8 @@ export interface GlobeDebug {
   /** The theme's palette, level 0 (page colour) to the ink, as [r, g, b] 0..255. */
   ramp(): number[][];
   frames(): number;
+  /** Size of one art pixel in CSS px (the globe's grid): a function of the viewport and the device pixel ratio only (`TUNING.pixelSize`); checks assert it never moves. */
+  cell(): number;
   /** Camera ticks, drawn or suspended (idle must not increase it). */
   ticks(): number;
   isAnimating(): boolean;
@@ -92,6 +104,8 @@ export interface GlobeDebug {
   spin(): ReturnType<GlobeRenderer["spinInfo"]> & { idleMs: number; degPerSec: number; easeInMs: number; stopMs: number; enabled: boolean };
   /** The sky: the earth rotation angle, its timed value (0..1), whether it is wanted and drawn, the farthest corner in earth radii; null when switched off (debug pages default to off, `?sky`). */
   sky(): ReturnType<GlobeRenderer["skyState"]>;
+  /** The ring of type: whether it is drawn, its tone, glyphs, repeats, canvas size and the zoom numbers behind it; null when there is none (`?no-ring`, a debug page without `?ring`). */
+  ring(): ReturnType<GlobeRenderer["ringState"]>;
   /** Set the earth rotation angle in degrees (moves the sky against the earth) and draw. */
   setSkyEra(deg: number): void;
   gpuSync(): void;
@@ -106,7 +120,7 @@ export interface GlobeDebug {
   /** Ids of the routes drawn now (only the ones through the selected place). */
   routesShown(): string[];
   /** Hierarchy in tree order: slug, kind, parent slug (or null), radius km. */
-  tree(): { slug: string; kind: string; parent: string | null; radiusKm: number }[];
+  tree(): { slug: string; kind: string; parent: string | null; radiusKm: number; lon: number; lat: number }[];
   /** Measurement: cost in ms of `n` forced semantic-zoom evaluations at the current camera (the pure O(visible) pass, no drawing). */
   benchLod(n: number): { msPerEval: number; visited: number; nodes: number };
 }
@@ -175,9 +189,10 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       opts.labelsRoot.style.setProperty("-webkit-mask-image", mask ?? "");
     }
     if (labelsActive) {
+      labels.setDrifting(renderer.spinning);
       labels.update(renderer.nodeScreen, renderer.pixelGrid());
     }
-    const next = toViewState(v, renderer.getMinZoom(), TUNING.maxZoom);
+    const next = toViewState(v, renderer.getFitZoom(), TUNING.maxZoom);
     if (!sameView(lastReported, next)) {
       lastReported = next;
       opts.onViewChange(next);
@@ -213,6 +228,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         labelsAnimating: () => labelsActive && labels.animating,
         pickLabel: (x, y, kind) => labels.hit(x, y, kind),
         pickOverride: opts.pickOverride,
+        ringText: opts.ringText,
         onSelect: opts.onSelect,
         onSelectGroup: opts.onSelectGroup,
         onHover: (slug) => {
@@ -267,7 +283,9 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
     },
     setInset: (px) => renderer.setInset(px),
     debug: () => ({
-      minZoom: () => renderer.getMinZoom(),
+      minZoom: () => renderer.getFitZoom(),
+      fitZoom: () => renderer.getFitZoom(),
+      floorZoom: () => renderer.getMinZoom(),
       maxZoom: () => TUNING.maxZoom,
       view: () => renderer.getView(),
       ticks: () => renderer.tickCount(),
@@ -290,6 +308,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       labelStats: () => labels.stats(),
       ramp: () => renderer.getTheme().ramp.map((c) => c.map((v) => Math.round(v * 255))),
       frames: () => renderer.frameCount(),
+      cell: () => renderer.pixelGrid().cell,
       isAnimating: () => renderer.isAnimating(),
       renderNow() {
         renderer.renderNow();
@@ -307,6 +326,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       layers: () => ({ ...renderer.layerState(), animating: lod.animating || renderer.layerState().animating, framePending: renderer.isAnimating() }),
       spin: () => ({ ...renderer.spinInfo(), idleMs: SPIN.idleMs, degPerSec: SPIN.degPerSec, easeInMs: SPIN.easeInMs, stopMs: SPIN.stopMs, enabled: SPIN.enabled }),
       sky: () => renderer.skyState(),
+      ring: () => renderer.ringState(),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),
       info: () => renderer.renderInfo(),
@@ -348,7 +368,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         };
       },
       routesShown: () => renderer.routesShown(),
-      tree: () => Array.from({ length: lod.size }, (_, i) => ({ slug: lod.slug[i]!, kind: lod.kind[i]!, parent: lod.parent[i]! >= 0 ? lod.slug[lod.parent[i]!]! : null, radiusKm: lod.radiusKm[i]! })),
+      tree: () => Array.from({ length: lod.size }, (_, i) => ({ slug: lod.slug[i]!, kind: lod.kind[i]!, parent: lod.parent[i]! >= 0 ? lod.slug[lod.parent[i]!]! : null, radiusKm: lod.radiusKm[i]!, lon: lod.lon[i]!, lat: lod.lat[i]! })),
       benchLod(n) {
         const cam = renderer.lodCameraNow();
         const t0 = performance.now();

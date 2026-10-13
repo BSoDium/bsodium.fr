@@ -4,11 +4,11 @@ Design note for the private content repo's next export step. It maps a vault doc
 
 Kinds: `article`, `project` (a development project), `artwork`, `poem`. `poem` is new on both sides: the private envelope's `type` enum and the editorial content kinds (`EditorialContent`, `kindSets`, `DroppedRecord.kind`, importance links, `contentOf`) need it, and the mapper needs a `poems` collection (published poems only, sorted by slug, like the other three).
 
-Conformance sample: `packages/published/fixtures/demo.json` (made-up demo data) has 17 realistic entries (5 articles, 4 projects, 4 artworks, 4 poems) with covers, tags, kind-specific meta and bodies that use **every** block type. A private test can export a vault that reproduces it and compare, and it validates against `packages/schemas/published.schema.json` with ajv in strict mode (checked).
+Conformance sample: `packages/published/fixtures/demo.json` (made-up demo data) has 18 realistic entries (5 articles, 4 projects, 5 artworks, 4 poems; one artwork is `sensitive`) with covers, tags, kind-specific meta and bodies that use **every** block type. A private test can export a vault that reproduces it and compare, and it validates against `packages/schemas/published.schema.json` with ajv in strict mode (checked).
 
 ## 1. Header to fields
 
-The mapper builds a new object field by field, in this key order: `slug, title, summary, date, url, cover, tags, meta, body, placeSlugs`. Optional fields are **omitted** when empty (no `[]`, no `null`).
+The mapper builds a new object field by field, in this key order: `slug, title, summary, date, url, cover, sensitive, tags, meta, body, placeSlugs`. Optional fields are **omitted** when empty (no `[]`, no `null`).
 
 | Vault header | Contract field | Rule |
 | --- | --- | --- |
@@ -21,6 +21,7 @@ The mapper builds a new object field by field, in this key order: `slug, title, 
 | `facts: [{label, value}]` | `meta` | Rename. One line of plain text each, label max 40, value max 200, max **10** entries, labels unique (case-insensitive). The vault's cap of 6 is stricter and fine. |
 | `links: [{label, url}]` | `link` blocks | Appended last (after the body and the gallery images), in order, as `{type:"link", title: label, url}`. The contract has no `links` field. |
 | `images` (`ImageDecl`) | `cover`, `image` blocks | See section 3. |
+| `sensitive: true` | `sensitive` | Mature content (a figure or anatomy study, for instance). **Optional boolean, omitted when false** (never write `sensitive: false`); only `true` is meaningful. Valid only on an entry that exports an image (a `cover` or an `image` block): **warn** (`sensitive-without-image`, not fatal) when it is set on an entry that has none. Any other value than a YAML boolean is an error (`sensitive-not-boolean`), not coerced: `"true"`, `yes`, `1` are all refused. The private profile adds the key to the typed header of the four kinds (artworks use it today). See section 3, "Mature content". |
 | `places: [place/x]` | `placeSlugs` | Keep only places that are published (as `mapContent` does today). |
 | `status` | (filter) | Only `published` entries are exported. |
 | `id`, `publishedAt`, `notes`, `rights`, `credit`, `readme.*`, `related`, `refKind`, `authors`, `year` | not exported | Private. A project's README snapshot is never exported; only an adopted `README.md` that passes the Markdown profile may become the body. |
@@ -65,7 +66,28 @@ Document-level limits (the contract enforces them, so the private gate must too)
 - Media policy is unchanged: raster only for real content (the demo uses SVG under `apps/web/public/media/demo/`, which the export never writes and never owns), resize, strip metadata, content-hashed names. A media path must be `/media/` followed by plain file names: slugify stems to `[A-Za-z0-9._-]`, no segment starting with a dot, no `..`, no empty segment, max 300 characters in total.
 - Collect every `cover.src` and image block `src` into `mediaSrcs`, as the place images are, so the media export copies them and `check` verifies the files exist.
 
+### Mature content (`sensitive`)
+
+An entry the owner wants published but not shown by surprise sets `sensitive: true` in its vault header (an artwork that is a figure or
+anatomy study, for example). The exporter's whole job is to carry the flag; the **web app does the rest**:
+
+- **Mapper.** Header key `sensitive: true` becomes the contract field `sensitive: true` on the entry (not on `cover`, not on an `image`
+  block: the flag covers every picture of the entry, its cover and its gallery or inline images alike). When the header has no such key, or
+  `false`, the field is absent (the key order above applies). The flag is only meaningful with images: if the entry exports no `cover` and
+  no `image` block, emit it anyway and **warn**, since it can only be a mistake (a forgotten image, or a flag on the wrong document).
+- **Do not do the web app's work.** Do not blur, resize, or replace the images, do not publish a second "safe" cover, and do not drop the
+  flag from the lists: the summaries (`/v1/<kind>`) carry `sensitive` too (they are what the cards are built from). The files are
+  exported exactly like any other media (content-hashed, in `mediaSrcs`).
+- **What the site does with it** (docs/design-system.md, "Sensitive media"): every picture of the entry is blurred from the server render
+  (entry page, cards in lists, the place panel, related entries) until the visitor presses "Show image" on the entry (not remembered: a
+  reload blurs again); the cover is never the share image, never a JSON-LD `image`, and the page asks not to have its images indexed. Alt
+  text is shown to assistive technology as authored, so write it as the description of the work, not as a warning.
+- **Conformance.** The demo fixture has exactly one: `artworks[slug="figure-study-two"]` (a made-up charcoal study, with an SVG cover and
+  one `image` block). A private export test can assert that the flag round-trips, is omitted when false and warns without images.
+
 ## 4. Poems
+
+On the site the section that lists poems is called **Poetry** (`/poetry`, entries at `/poetry/:slug`; `/poems` redirects). The kind, the vault `type`, the projection collection and the API (`/v1/poems`) stay `poem` / `poems`.
 
 A poem document is Markdown too, but its text is verse:
 
@@ -84,8 +106,11 @@ Gate 1 (JSON Schema, copy of `packages/schemas/published.schema.json`, draft 202
 4. no credentials in an https URL (`https://user:pw@host` matches the pattern);
 5. cross-references, per kind, now including `poem`: place `related` refs resolve to a published entry of that kind, `placeSlugs` resolve to published places, no duplicate slug within a kind, group rules as before;
 6. every `/media/` path (place images, covers, image blocks) exists as a file the export owns.
+Not fatal, but the gate reports it as a warning (the contract itself accepts it): 7. `sensitive: true` on an entry without a `cover` and
+without an `image` block, which can only be a mistake. `sensitive` itself is shape-checked by Gate 1 (`boolean`, optional); a value that is
+not a boolean (`"true"`, `1`) fails there.
 
-The contract change is additive: nothing changes for projections without the new fields, and `schemaVersion` stays `1`. Old plain bodies keep exporting byte for byte (`body` is new on entries only; a place's `body` is still `string[]`; blocks for place bodies would be a later, separate additive field).
+The contract change is additive (this includes `sensitive`): nothing changes for projections without the new fields, and `schemaVersion` stays `1`. Old plain bodies keep exporting byte for byte (`body` is new on entries only; a place's `body` is still `string[]`; blocks for place bodies would be a later, separate additive field).
 
 ## 6. Not representable yet (errors today, additive later)
 

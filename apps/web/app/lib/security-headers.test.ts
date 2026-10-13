@@ -147,6 +147,8 @@ describe("the static headers", () => {
     const config = JSON.parse(readFileSync(new URL("../../vercel.json", import.meta.url), "utf8")) as { headers: { source: string; headers: { key: string; value: string }[] }[] };
     const cache = (source: string) => config.headers.find((h) => h.source === source)?.headers.find((h) => h.key === "Cache-Control")?.value;
     expect(cache("/assets/(.*)")).toBe("public, max-age=31536000, immutable");
+    // the fonts: versioned file names (`-5.3.0-`), so a year and `immutable` is safe; the licences beside them are not pinned
+    expect(cache("/fonts/(.*\\.woff2)")).toBe("public, max-age=31536000, immutable");
     expect(cache("/media/(.*)")).toMatch(/^public, max-age=\d+, stale-while-revalidate=\d+$/);
     expect(cache("/media/(.*)")).not.toMatch(/immutable/);
     const media = config.headers.find((h) => h.source === "/media/(.*)")?.headers.find((h) => h.key === "Content-Security-Policy")?.value;

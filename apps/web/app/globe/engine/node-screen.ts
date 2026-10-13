@@ -17,6 +17,15 @@ export class NodeScreen {
   readonly by0: Float64Array;
   readonly bx1: Float64Array;
   readonly by1: Float64Array;
+  /**
+   * The same box as the projection puts it, NOT snapped to art cells (container CSS px; NaN when the renderer did not fill it). The drawn box
+   * is `bx0..by1`, a whole number of cells that steps as the camera moves; a label follows THIS rectangle, so it moves smoothly
+   * (engine/box-scene.ts, docs/web-architecture.md "Labels move smoothly").
+   */
+  readonly fx0: Float64Array;
+  readonly fy0: Float64Array;
+  readonly fx1: Float64Array;
+  readonly fy1: Float64Array;
 
   constructor(size: number) {
     const n = Math.max(1, size);
@@ -28,5 +37,9 @@ export class NodeScreen {
     this.by0 = new Float64Array(n);
     this.bx1 = new Float64Array(n);
     this.by1 = new Float64Array(n);
+    this.fx0 = new Float64Array(n).fill(NaN);
+    this.fy0 = new Float64Array(n).fill(NaN);
+    this.fx1 = new Float64Array(n).fill(NaN);
+    this.fy1 = new Float64Array(n).fill(NaN);
   }
 }

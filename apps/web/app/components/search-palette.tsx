@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { Frame, Glyph, KindTag } from "~/components/ui";
-import { groupResults, searchItems, SEARCH_LABELS, type SearchItem } from "~/lib/search";
+import { Frame, Icon, KeyHint, KindTag } from "~/components/ui";
+import { groupResults, rankItems, resultsStatus, SEARCH_LABELS, type SearchItem } from "~/lib/search";
 import { cn } from "~/lib/utils";
+
+/** The palette lists this many at most; its count still says how many matched (`resultsStatus`). */
+const MAX_RESULTS = 24;
 
 type Load = { state: "idle" } | { state: "loading" } | { state: "error" } | { state: "ready"; items: SearchItem[] };
 
@@ -18,12 +21,55 @@ function loadIndex(): Promise<SearchItem[]> {
   return pending;
 }
 
-const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+/** Anything on the page (the landing hero's search line) opens the palette by this event; the palette is mounted once, by the navigation. */
+const OPEN_SEARCH_EVENT = "site:open-search";
+
+/** Open the quick search palette. A no-op until the navigation has mounted it (the hydration). */
+export function openSearch(): void {
+  window.dispatchEvent(new Event(OPEN_SEARCH_EVENT));
+}
 
 /**
- * Quick search (Cmd or Ctrl + K, or the button in the navigation): a modal `dialog` holding an ARIA combobox over the places and
+ * The header's two forms of the trigger (the icon with the key hint from 28 rem of header width, the one word "Search" under it: a
+ * phone). They only send the open event: the palette itself (`SearchPalette`) is mounted once, next to the header and not inside it, so
+ * that the header can come and go (the home page's header is absent while the hero is at rest) without closing a palette that is open.
+ */
+export function SearchTriggers() {
+  return (
+    <>
+      {/* Where the icon trigger below is not shown (the header is under 28 rem: a phone), the same control as one quiet word: a 44 px target. */}
+      <button
+        type="button"
+        onClick={openSearch}
+        aria-keyshortcuts="Control+K Meta+K"
+        aria-haspopup="dialog"
+        data-slot="search-trigger-compact"
+        data-needs-script=""
+        className="nav-link pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground @md:hidden"
+      >
+        Search
+      </button>
+      <button
+        type="button"
+        onClick={openSearch}
+        aria-label="Search"
+        aria-keyshortcuts="Control+K Meta+K"
+        aria-haspopup="dialog"
+        data-slot="search-trigger"
+        data-needs-script=""
+        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2.5 px-2 text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground @md:inline-flex"
+      >
+        <Icon name="search" size="control" />
+        <KeyHint className="hidden @xl:inline-flex" />
+      </button>
+    </>
+  );
+}
+
+/**
+ * Quick search (Cmd or Ctrl + K, the hero's search line, or the header's trigger): a modal `dialog` holding an ARIA combobox over the places and
  * entries. The input owns the focus; the arrow keys move a highlight (`aria-activedescendant`) through the listbox, Enter opens it,
- * Escape closes and gives the focus back. Results are grouped (places, then the four kinds) with the same glyphs as everywhere. The index
+ * Escape closes and gives the focus back. Results are grouped (places, then the four kinds), each row led by the kind's icon at the control size. The index
  * is fetched once (`/search-index.json`) and searched in the browser (`lib/search.ts`). Nothing renders before the first open.
  */
 export function SearchPalette() {
@@ -35,11 +81,8 @@ export function SearchPalette() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [load, setLoad] = useState<Load>({ state: "idle" });
-  const [mac, setMac] = useState(false);
   const id = useId();
   const listId = `${id}-list`;
-
-  useEffect(() => setMac(isMac()), []);
 
   const show = useCallback(() => {
     setOpen(true);
@@ -47,6 +90,12 @@ export function SearchPalette() {
   const hide = useCallback(() => {
     dialogRef.current?.close();
   }, []);
+
+  useEffect(() => {
+    const onOpen = () => show();
+    window.addEventListener(OPEN_SEARCH_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_SEARCH_EVENT, onOpen);
+  }, [show]);
 
   // The shortcut works from anywhere, also while a field has the focus (it is a chord).
   useEffect(() => {
@@ -78,7 +127,8 @@ export function SearchPalette() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const results = useMemo(() => (load.state === "ready" ? searchItems(load.items, query, 24) : []), [load, query]);
+  const matches = useMemo(() => (load.state === "ready" ? rankItems(load.items, query) : []), [load, query]);
+  const results = useMemo(() => matches.slice(0, MAX_RESULTS), [matches]);
   const { groups, flat } = useMemo(() => groupResults(results), [results]);
   const current = flat[Math.min(active, flat.length - 1)];
 
@@ -120,26 +170,10 @@ export function SearchPalette() {
         ? "The search could not be loaded"
         : !hasQuery
           ? ""
-          : results.length === 0
-            ? "No results"
-            : `${results.length} ${results.length === 1 ? "result" : "results"}`;
+          : resultsStatus(results.length, matches.length);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={show}
-        aria-label="Search"
-        aria-keyshortcuts="Control+K Meta+K"
-        aria-haspopup="dialog"
-        data-slot="search-trigger"
-        className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2 px-2 text-sm text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground sm:inline-flex"
-      >
-        <Glyph name="search" size={16} />
-        <span aria-hidden="true" className="ds-micro hidden border border-border px-1.5 lg:inline">
-          {mac ? "⌘" : "Ctrl"} K
-        </span>
-      </button>
       {open && (
         <dialog
           ref={dialogRef}
@@ -156,7 +190,7 @@ export function SearchPalette() {
               Search
             </h2>
             <div className="flex items-center gap-3 border-b border-border px-4">
-              <Glyph name="search" size={16} className="shrink-0 text-muted-foreground" />
+              <Icon name="search" size="control" className="shrink-0 text-muted-foreground" />
               <input
                 ref={inputRef}
                 autoFocus
@@ -177,8 +211,14 @@ export function SearchPalette() {
                 onKeyDown={onInputKey}
                 className="min-h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
-              <button type="button" onClick={hide} aria-label="Close search" className="ds-micro min-h-11 min-w-11 shrink-0 border border-border px-2 text-muted-foreground hover:bg-accent hover:text-foreground">
-                Esc
+              {/* A plain icon, no box: the footer says the key. It is the way out for a touch screen. */}
+              <button
+                type="button"
+                onClick={hide}
+                aria-label="Close search"
+                className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground"
+              >
+                <Icon name="close" size="control" />
               </button>
             </div>
             <div className="max-h-[min(24rem,60dvh)] overflow-y-auto overscroll-contain">
@@ -186,7 +226,7 @@ export function SearchPalette() {
                 {groups.map((group) => (
                   <li key={group.type} role="presentation">
                     <ul role="group" aria-label={group.label} className="m-0 list-none p-0">
-                      <li role="presentation" className="px-4 pt-4 pb-1 text-sm font-medium text-muted-foreground" aria-hidden="true">
+                      <li role="presentation" className="type-meta px-4 pt-4 pb-1 text-muted-foreground" aria-hidden="true">
                         {SEARCH_LABELS[group.type]}
                       </li>
                       {group.items.map((item) => {
@@ -204,10 +244,10 @@ export function SearchPalette() {
                           >
                             <KindTag kind={item.type} iconOnly />
                             <span className="flex min-w-0 flex-1 flex-col">
-                              <span className="truncate text-base">{item.title}</span>
+                              <span className="truncate font-display text-base font-bold tracking-[-0.01em]">{item.title}</span>
                               {item.sub && <span className="ds-meta truncate">{item.sub}</span>}
                             </span>
-                            <Glyph name="arrow-right" size={12} className={cn("shrink-0", selected ? "opacity-100" : "opacity-0")} />
+                            <Icon name="arrow-right" size="control" className={cn("shrink-0", selected ? "opacity-100" : "opacity-0")} />
                           </li>
                         );
                       })}
@@ -224,7 +264,25 @@ export function SearchPalette() {
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2 text-sm text-muted-foreground">
               <span>
-                <span aria-hidden="true">↑↓ move · ↵ open · esc close</span>
+                {/* The keys are for a keyboard: a touch screen (a coarse pointer) has none of them, and the close icon is its way out. The
+                    screen-reader line below stays (a keyboard can be attached to anything). */}
+                <span aria-hidden="true" className="flex items-center gap-4 [@media(pointer:coarse)]:hidden">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex">
+                      <Icon name="arrow-up" size="inline" />
+                      <Icon name="arrow-down" size="inline" />
+                    </span>
+                    move
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon name="enter" size="inline" />
+                    open
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="font-meta text-[0.8125rem]">Esc</span>
+                    close
+                  </span>
+                </span>
                 <span className="sr-only">Up and Down move, Enter opens, Escape closes</span>
               </span>
               <span aria-hidden="true" className="tabular-nums">

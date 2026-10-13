@@ -5,6 +5,7 @@ import { NavScrim } from "~/components/nav-scrim";
 import { ExpandToggle } from "~/components/ui/toggle";
 import { IconButton } from "~/components/ui/icon-button";
 import type { EntryView } from "~/lib/entries";
+import { panelOwnsEscape } from "~/lib/panel-escape";
 import { duration, easeStandard } from "~/lib/tokens";
 import { cn } from "~/lib/utils";
 
@@ -131,7 +132,8 @@ export function DetailPanel({ open, isMobile, reducedMotion, routeKey, returnSlu
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) onClose();
+      // The search palette (a modal dialog) takes its own Escape: the key must not also close the panel under it.
+      if (panelOwnsEscape(e, document.querySelector("dialog[open]") !== null)) onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -170,13 +172,9 @@ export function DetailPanel({ open, isMobile, reducedMotion, routeKey, returnSlu
         >
           {/* Desktop: fades the content that scrolls under the nav links (hidden on mobile, where the header is static). */}
           <NavScrim className="absolute z-10 hidden md:block print:hidden" />
-          {/* Full screen: the panel reaches the page's left edge, where the navbar's logo floats above it, so the controls start after the logo. */}
-          <div
-            className={cn(
-              "flex min-h-12 shrink-0 items-center justify-end gap-2 px-3 print:hidden md:absolute md:inset-x-0 md:top-0 md:z-20 md:h-(--navbar-height) md:min-h-0 md:justify-start md:px-6",
-              full && "md:pl-[4.5rem]",
-            )}
-          >
+          {/* The controls sit at the panel's left edge (the page's left edge in full screen); the navigation is centred (over the map, beside
+              the panel: navbar.tsx), clear of them at every desktop width. */}
+          <div className="flex min-h-12 shrink-0 items-center justify-end gap-2 px-3 print:hidden md:absolute md:inset-x-0 md:top-0 md:z-20 md:h-(--navbar-height) md:min-h-0 md:justify-start md:px-6">
             {/* No title here: the content's own heading names the dialog. The controls have no box until they are pointed at. */}
             <IconButton icon="close" label="Close" size="sm" variant="ghost" onClick={onClose} className="md:-ml-2" />
             {onLayoutChange && !isMobile && (

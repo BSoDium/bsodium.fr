@@ -14,7 +14,9 @@ import {
   overlayOwner,
   routeLift,
   slew,
+  cutMayWait,
   cutWanted,
+  globeDraws,
   selectionZoom,
   toMapZoom,
   zoomCeiling,
@@ -161,5 +163,28 @@ describe("cut", () => {
   it("an unusable street map shows nothing, unless the camera is still above the globe's maximum (retreat)", () => {
     expect(cutWanted(true, 5.5, false)).toBe(false);
     expect(cutWanted(true, GLOBE_MAX_ZOOM + 1, false)).toBe(true);
+  });
+});
+
+describe("the cut never waits behind a globe that cannot draw the camera", () => {
+  it("globeDraws is true up to the Three.js maximum zoom and false above it", () => {
+    expect(globeDraws(HANDOVER.cutZoom)).toBe(true);
+    expect(globeDraws(GLOBE_MAX_ZOOM)).toBe(true);
+    expect(globeDraws(GLOBE_MAX_ZOOM + 0.01)).toBe(false);
+    expect(globeDraws(12)).toBe(false);
+  });
+  it("a visible stage waits for tiles only while the globe draws the camera", () => {
+    expect(cutMayWait(HANDOVER.cutZoom, true)).toBe(true);
+    expect(cutMayWait(GLOBE_MAX_ZOOM, true)).toBe(true);
+    expect(cutMayWait(GLOBE_MAX_ZOOM + 0.05, true)).toBe(false);
+    expect(cutMayWait(9, true)).toBe(false);
+  });
+  it("a stage that is not shown yet (direct load at street scale) may wait at any zoom", () => {
+    expect(cutMayWait(9, false)).toBe(true);
+    expect(cutMayWait(15, false)).toBe(true);
+  });
+  it("the swap is wanted past the maximum even with an unusable street map (retreat), unchanged", () => {
+    expect(cutWanted(false, GLOBE_MAX_ZOOM + 0.5, false)).toBe(true);
+    expect(cutWanted(false, HANDOVER.cutZoom + 0.1, false)).toBe(false);
   });
 });

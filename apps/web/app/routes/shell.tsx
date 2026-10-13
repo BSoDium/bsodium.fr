@@ -2,24 +2,29 @@ import { useReducedMotion } from "motion/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutlet } from "react-router";
 import type { Route } from "./+types/shell";
-import { ArchiveEmpty } from "~/components/archive-empty";
 import { AttributionSlot } from "~/components/attribution-slot";
 import { DetailPanel, type OpenIntent } from "~/components/detail-panel";
+import { LandingHero } from "~/components/landing-hero";
 import { PlacesNav } from "~/components/places-nav";
-import { Globe, placeFraming, type GlobeInitialView, type GlobeViewState } from "~/globe";
+import { Globe, placeFraming, ringPhrases, type GlobeInitialView, type GlobeViewState } from "~/globe";
 import { useIsMobile } from "~/hooks/use-is-mobile";
+import { useLandingHero } from "~/hooks/use-landing-hero";
 import { useViewportWidth } from "~/hooks/use-viewport-width";
 import { getProjection } from "~/lib/content.server";
 import { getTilesConfig } from "~/lib/tiles-config.server";
-import { countEntries, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
+import { parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
 import { panelInset } from "~/lib/layout";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
+import { SITE } from "~/lib/site";
+
+/** The words of the globe's ring of type: the site's identity (name, role, fields, place), the same constant the head tags and the hero read. */
+const RING_PHRASES = ringPhrases(SITE);
 
 export async function loader() {
   // `tiles` is the street map's tile source configuration (CATALYST_TILES_* read at request time, see
   // docs/street-architecture.md). The globe hands over to the street map with it (docs/web-architecture.md).
   const projection = await getProjection();
-  return { ...buildPlaceIndex(projection), entryCounts: countEntries(projection), tiles: getTilesConfig() };
+  return { ...buildPlaceIndex(projection), tiles: getTilesConfig() };
 }
 
 /** The place index never changes between navigations inside the shell. */
@@ -29,12 +34,12 @@ export function shouldRevalidate() {
 
 /**
  * Pathless layout for `/`, `/locations/:slug` and the entries (`/articles/:slug`, `/projects/:slug`, `/artworks/:slug`,
- * `/poems/:slug`): one full-bleed globe instance, the keyboard path to the places (`PlacesNav`, visually hidden until
+ * `/poetry/:slug`): one full-bleed globe instance, the keyboard path to the places (`PlacesNav`, visually hidden until
  * focused), and the detail panel (whose content is the child route). An entry opens in the side panel or, with `?view=full`,
  * in the full-screen container: the panel widens over the SAME globe, which stays mounted and keeps its view.
  */
 export default function Shell({ loaderData }: Route.ComponentProps) {
-  const { places, globePlaces, groups, routes, tiles, entryCounts } = loaderData;
+  const { places, globePlaces, groups, routes, tiles } = loaderData;
   const globeGroups = useMemo(() => toGlobeGroups(groups), [groups]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -89,9 +94,15 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
   const markUserIntent = useCallback(() => {
     intent.current.user = true;
   }, []);
-  const saveView = useCallback((view: GlobeViewState) => {
-    viewRef.current = view;
-  }, []);
+  const hero = useLandingHero(isOpen);
+  const heroOnView = hero.onView;
+  const saveView = useCallback(
+    (view: GlobeViewState) => {
+      viewRef.current = view;
+      heroOnView(view);
+    },
+    [heroOnView],
+  );
 
   // On mobile the globe is unmounted while the slide-over is open and remounted with the saved view.
   const globeActive = !(isMobile && isOpen);
@@ -104,8 +115,6 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <main id={fullScreen ? undefined : "main"} tabIndex={-1} inert={fullScreen} className="relative h-dvh overflow-hidden outline-none">
-        {/* The globe page's own h1 (the panel's title is the h1 while it is open). */}
-        {!isOpen && <h1 className="sr-only">Catalyst</h1>}
         <div className="absolute inset-0">
           {globeActive && (
             <Globe
@@ -119,8 +128,10 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
               insetRight={insetRight}
               tiles={tiles}
               attribution={AttributionSlot}
+              ringPhrases={RING_PHRASES}
               onSelect={select}
               onViewChange={saveView}
+              onInteract={hero.onInteract}
             />
           )}
           {/* Only the globe needs JavaScript: the lists, the entries and the places are server-rendered pages that read and navigate without it. */}
@@ -128,13 +139,13 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
             <p className="absolute inset-y-0 left-0 m-0 flex w-full items-center justify-center px-6 text-center text-sm text-muted-foreground md:w-1/2 [&_a]:underline">
               <span className="max-w-xs">
                 The globe needs JavaScript. The <a href="/articles">articles</a>, <a href="/projects">projects</a>, <a href="/artworks">artworks</a> and{" "}
-                <a href="/poems">poems</a> are readable without it.
+                <a href="/poetry">poetry</a> are readable without it.
               </span>
             </p>
           </noscript>
-          {/* No place published: the globe stays, with a HUD card that says so and opens the lists. */}
-          {places.length === 0 && !isOpen && <ArchiveEmpty counts={entryCounts} />}
         </div>
+        {/* The landing hero: the globe page's h1 (the panel's title is the h1 while a place or entry is open) and the way into the lists. */}
+        <LandingHero machine={hero.machine} away={isOpen} empty={places.length === 0} />
         <PlacesNav places={places} groups={groups} currentSlug={selectedSlug} onFocusSlug={setFocusedSlug} onOpen={markUserIntent} />
       </main>
       <DetailPanel

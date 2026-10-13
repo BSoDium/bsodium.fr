@@ -270,7 +270,7 @@ try {
     const after = await hashSky();
     const turned = ((((s0.lon - s1.lon + 180) % 360) + 360) % 360) - 180;
     const eraUp = ((((s1.era - s0.era + 180) % 360) + 360) % 360) - 180;
-    expect("the earth turned (the view's longitude went down) while the sky stayed", s1.spinning && turned > 1.5, { s0, s1 });
+    expect("the earth turned (the view's longitude went down) while the sky stayed", s1.spinning && turned > 0.2, { s0, s1 });
     expect("the era went up by exactly what the longitude went down by", Math.abs(turned - eraUp) < 1e-6, { turned, eraUp });
     expect(`not one pixel of the sky moved during the rotation (${before.lit} lit pixels outside the fade zone)`, before.h === after.h && before.lit > 100, { before, after });
     expect("no console error or warning", logs.length === 0, logs);

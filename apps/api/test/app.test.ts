@@ -87,7 +87,7 @@ describe("endpoints (demo content)", () => {
       ok: true,
       schemaVersion: 1,
       content: "demo",
-      counts: { places: 18, groups: 8, routes: 1, projects: 4, articles: 5, artworks: 4, poems: 4 },
+      counts: { places: 18, groups: 8, routes: 1, projects: 4, articles: 5, artworks: 5, poems: 4 },
     });
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
@@ -221,7 +221,12 @@ describe("endpoints (demo content)", () => {
     }
     // Most entries have an authored cover; the others rely on the generated art (both paths are in the demo).
     const covers = LISTS.flatMap((key) => demo[key]).filter((e) => e.cover).length;
-    expect(covers).toBe(10);
+    expect(covers).toBe(11);
+    // `sensitive` (mature content) reaches the list and the detail as `true`, and only for the entry that has it.
+    const flagged = (await json<{ slug: string; sensitive?: boolean }[]>(await app.request("/v1/artworks"))).filter((e) => "sensitive" in e);
+    expect(flagged.map((e) => [e.slug, e.sensitive])).toEqual([["figure-study-two", true]]);
+    expect((await json<{ sensitive?: boolean }>(await app.request("/v1/artworks/figure-study-two"))).sensitive).toBe(true);
+    expect(await json<{ sensitive?: boolean }>(await app.request("/v1/artworks/demo-artwork"))).not.toHaveProperty("sensitive");
     // The summaries are much smaller than the full entries they stand for.
     const sizes = async (path: string) => (await (await app.request(path)).text()).length;
     expect(await sizes("/v1/articles")).toBeLessThan(JSON.stringify(demo.articles).length);
@@ -632,7 +637,7 @@ describe("snapshot", () => {
       ...LISTS.flatMap((k) => demo[k].map((i) => `/v1/${k}/${i.slug}`)),
     ];
     expect([...entries.keys()].sort()).toEqual([...expected].sort());
-    expect(counts).toEqual({ places: 18, groups: 8, routes: 1, projects: 4, articles: 5, artworks: 4, poems: 4 });
+    expect(counts).toEqual({ places: 18, groups: 8, routes: 1, projects: 4, articles: 5, artworks: 5, poems: 4 });
   });
 
   it("an entry with no optional field serialises to exactly its required fields (no null, no undefined keys)", () => {
@@ -658,7 +663,7 @@ describe("firewall allowlist (docs/api-cost-and-abuse.md)", () => {
     const allow = new RegExp(documented!);
     const demo = loadDemoProjection();
     const served = [...buildSnapshot(demo).entries.keys(), "/health"];
-    expect(served.length).toBe(44);
+    expect(served.length).toBe(45);
     for (const path of served) expect(allow.test(path), path).toBe(true);
     for (const path of [
       "/",

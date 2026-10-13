@@ -8,7 +8,7 @@ There is no import endpoint, no admin or write endpoint, no authentication and n
 
 **The published contract is independent of how content is stored upstream.** In v1 the content is files: a private content repo opens a PR against this repo that updates `packages/published/data/projection.json`. Later it may be database-backed editing. In both cases the projection schema, the endpoints and the response shapes below stay the same. Consumers must not be able to tell which backend produced the data.
 
-- Everything is under `/v1`. Within v1 changes are additive only: new optional fields, new endpoints, and new members of a closed set where the section says so (the entry kinds gained `poem`; clients should treat an unknown kind as "something to list, not to render specially"). Removing or retyping a field, or changing an error code, needs `/v2` (which would run alongside `/v1` for a deprecation period).
+- Everything is under `/v1`. Within v1 changes are additive only: new optional fields, new endpoints, and new members of a closed set where the section says so (the entry kinds gained `poem`; clients should treat an unknown kind as "something to list, not to render specially"). Removing or retyping a field, or changing an error code, needs `/v2` (which would run alongside `/v1` for a deprecation period). Clients must ignore fields they do not know; a consumer that validates strictly (JSON Schema with `additionalProperties: false`, zod `.strict()`, such as the web app with `CATALYST_API_URL` or the private repo's contract copy) must update its schema before an entry with `sensitive` is published.
 - `schemaVersion` (currently `1`) is in `/health` and `/v1/projection`.
 - `GET /health` is operational, not part of the content contract. Do not build features on it.
 - Response types are exported from `apps/api/src/contract.ts` as **types only**. The web app may `import type { ... } from "@catalyst/api/contract"`. Never import runtime code from `@catalyst/api` into the client.
@@ -78,7 +78,7 @@ Liveness plus a summary of what is loaded. `200` when content is valid, `503` ot
   "ok": true,
   "schemaVersion": 1,
   "content": "demo",
-  "counts": { "places": 18, "groups": 8, "routes": 1, "projects": 4, "articles": 5, "artworks": 4, "poems": 4 }
+  "counts": { "places": 18, "groups": 8, "routes": 1, "projects": 4, "articles": 5, "artworks": 5, "poems": 4 }
 }
 ```
 
@@ -109,7 +109,7 @@ Array of `PlaceSummary` (`slug`, `name`, `region?`, `coordinates`, `labelPriorit
 ]
 ```
 
-`bbox` (optional, `[west, south, east, north]`, additive in schema version 1): the whole extent of the area the place names, in WGS84 degrees (GeoJSON order). For a city it is the city as a whole, not the neighbourhood where the author happened to be: a place whose `coordinates` sit in the north of Houston carries the box of all of Houston. The private export takes it from OpenStreetMap administrative boundaries (a committed cache, never fetched at export time) or from a hand-set editorial value. Rules, validated by `parsePublishedProjection` and by the private export: four finite numbers, longitudes in -180 to 180, latitudes in -90 to 90, `west < east` and `south < north` (a box never crosses the antimeridian). The box is **not** required to contain `coordinates`, and generally does not have the same centre: `coordinates` stays the marker and label anchor, the box is the framing. When `bbox` is present, clients should fit it (centred on the box); when absent there is no known extent and they fall back to `viewRadiusKm`. It carries no source text, only numbers; the underlying boundaries are © OpenStreetMap contributors (ODbL). It is part of both `PlaceSummary` and the full place; consumers that ignore it are unaffected and projections without it stay valid.
+`bbox` (optional, `[west, south, east, north]`, additive in schema version 1): the whole extent of the area the place names, in WGS84 degrees (GeoJSON order). For a city it is the city as a whole, not the neighbourhood where the author happened to be: a place whose `coordinates` sit in the north of a large city carries the box of the whole city. The private export takes it from OpenStreetMap administrative boundaries (a committed cache, never fetched at export time) or from a hand-set editorial value. Rules, validated by `parsePublishedProjection` and by the private export: four finite numbers, longitudes in -180 to 180, latitudes in -90 to 90, `west < east` and `south < north` (a box never crosses the antimeridian). The box is **not** required to contain `coordinates`, and generally does not have the same centre: `coordinates` stays the marker and label anchor, the box is the framing. When `bbox` is present, clients should fit it (centred on the box); when absent there is no known extent and they fall back to `viewRadiusKm`. It carries no source text, only numbers; the underlying boundaries are © OpenStreetMap contributors (ODbL). It is part of both `PlaceSummary` and the full place; consumers that ignore it are unaffected and projections without it stay valid.
 
 `viewRadiusKm` (optional, number, 0.5 to 500, additive in schema version 1): the radius in km of the area that should fit on screen when the place is shown. **When `bbox` is present it is derived from the box**: the radius of the circle centred on the box that covers it (half its diagonal, rounded to 0.1 and clamped to 0.5 to 500), a convenience for clients that frame with a circle; it is then NOT a circle around `coordinates`. Without `bbox` it is the authored city-wide framing around `coordinates`, typically the centre-to-edge distance of the built-up area (Lisbon 10, Paris 14, Ho Chi Minh City 18). Clients fit the whole circle into the free map area with a margin. When absent, the web app uses 12 km, a typical city-wide framing: it is large enough that a mid-size city is seen whole (so the visitor can tell where they are) and small enough that streets stay legible. Consumers that ignore the field are unaffected, and projections without it stay valid. It is part of both `PlaceSummary` and the full place.
 
@@ -196,6 +196,7 @@ An **entry** is a published piece of content that can be linked to places. There
 | `date` | optional `YYYY`, `YYYY-MM` or `YYYY-MM-DD` | |
 | `url` | optional, https only, max 2000 | The entry's external destination (live demo, repository, original publication). No credentials, no whitespace. |
 | `cover` | optional `{ src, alt, width?, height? }` | Image shown in lists and on top of the entry. `src` is a `/media/...` path, `alt` is required (1 to 300), `width` and `height` go together or not at all. |
+| `sensitive` | optional boolean | `true` = mature content: clients should draw the entry's images (`cover` and `image` blocks) blurred until the visitor asks to see them, and must not use the cover as a share or structured-data image. **The exporter omits it when false** (absent and `false` mean the same). Any kind may carry it; only artworks do today. Only meaningful with a cover or an image block. Part of the list summaries too. **`sensitive` is a presentation hint for clients, not access control**: `cover.src`, the `src` of `image` blocks, `alt`, `title` and `summary` are served as authored by every endpoint (lists, details, `/v1/projection`), and the files stay public and unblurred at their `/media/` addresses. A summary carries `sensitive` only when it is true (false is dropped there); the detail and the projection pass through whatever the projection holds. |
 | `tags` | optional, max 12 | Unique lowercase kebab-case tags (`open-source`), max 40 characters each. |
 | `meta` | optional, max 10 `{ label, value }` | Kind-specific facts as plain text, see below. |
 | `body` | optional, max 200 blocks | The content as typed blocks, see below. **Detail and projection only.** |
@@ -223,11 +224,11 @@ Limits on the whole body: at most **200 blocks** and **60,000 characters** of te
 
 **Not in the contract (yet).** There is no inline emphasis or inline link inside a text field, no nested lists, no tables, no callouts and no entry-to-entry references. They would be new **optional** fields or new block types in a later additive change (for example a `spans` array next to `text`, which renderers that do not know it can ignore in favour of `text`). Until then a text is one plain string.
 
-All of this is **additive in schema version 1**: `poems`, `cover`, `tags`, `meta` and `body` are new and optional, `schemaVersion` stays `1`, and a projection that has none of them stays valid (`poems` defaults to `[]`, like `groups`). The only observable changes for existing clients: `/health` counts gained `poems`, `contentKindSchema` and the `kind` of a place's `related` refs gained `poem` (clients with an exhaustive switch over kinds must handle it), the list endpoints gained fields, `url` and media paths are validated slightly more strictly (https without credentials or whitespace; no `..` segments in `/media/` paths: nothing that was a sane value is affected), and there are new endpoints.
+All of this is **additive in schema version 1**: `poems`, `cover`, `tags`, `meta`, `body` and `sensitive` are new and optional, `schemaVersion` stays `1`, and a projection that has none of them stays valid (`poems` defaults to `[]`, like `groups`). The only observable changes for existing clients: `/health` counts gained `poems`, `contentKindSchema` and the `kind` of a place's `related` refs gained `poem` (clients with an exhaustive switch over kinds must handle it), the list endpoints gained fields, `url` and media paths are validated slightly more strictly (https without credentials or whitespace; no `..` segments in `/media/` paths: nothing that was a sane value is affected), and there are new endpoints.
 
 #### `GET /v1/projects`, `GET /v1/articles`, `GET /v1/artworks`, `GET /v1/poems`
 
-Arrays of **summaries**, in authored order: the entry without its `body` (`ContentItemsResponse`: `slug`, `title`, `summary?`, `date?`, `url?`, `cover?`, `tags?`, `meta?`, `placeSlugs`). Optional fields are omitted when absent. A list entry is roughly 0.4 to 0.7 KB (summary, cover, tags, meta), which is what a list page needs; fetch the detail (or the projection) for the text.
+Arrays of **summaries**, in authored order: the entry without its `body` (`ContentItemsResponse`: `slug`, `title`, `summary?`, `date?`, `url?`, `cover?`, `sensitive?`, `tags?`, `meta?`, `placeSlugs`). Optional fields are omitted when absent. A list entry is roughly 0.4 to 0.7 KB (summary, cover, tags, meta), which is what a list page needs; fetch the detail (or the projection) for the text.
 
 ```json
 [
@@ -248,7 +249,7 @@ Arrays of **summaries**, in authored order: the entry without its `body` (`Conte
 ]
 ```
 
-The real `/v1/poems` answer has four such items (the demo has 5 articles, 4 projects, 4 artworks and 4 poems); only the first is shown.
+The real `/v1/poems` answer has four such items (the demo has 5 articles, 4 projects, 5 artworks and 4 poems); only the first is shown.
 
 #### `GET /v1/projects/:slug`, `GET /v1/articles/:slug`, `GET /v1/artworks/:slug`, `GET /v1/poems/:slug`
 
@@ -297,9 +298,9 @@ The projection is **bundled** into the web app and into the API function, and `/
 | | raw | gzip | brotli |
 | --- | --- | --- | --- |
 | Committed projection today (empty) | 108 | 92 | 71 |
-| Demo fixture, `/v1/projection` (18 places, 8 groups, 17 entries) | 47,551 | 16,172 | 13,703 |
-| Demo: the 17 entries with their bodies (as in the projection) | 41,233 | 14,537 | 12,330 |
-| Demo: the four lists (summaries: 5 articles, 4 projects, 4 artworks, 4 poems) / the 17 details | 10,606 / 42,682 | | |
+| Demo fixture, `/v1/projection` (18 places, 8 groups, 18 entries) | 49,059 | 16,616 | 14,070 |
+| Demo: the 18 entries with their bodies (as in the projection) | 42,692 | 14,963 | 12,699 |
+| Demo: the four lists (summaries: 5 articles, 4 projects, 5 artworks, 4 poems) / the 18 details | 11,357 / 44,249 | | |
 | Demo: one detail, the shortest (a haiku-like poem) / a typical one (a 12-block article) / the longest (a 14-block project with code) | 520 / 3,348 / 4,566 | 341 / 1,597 / 2,125 | |
 | 100 entries (25 per kind) with a ~3 KB body each, cover, 4 tags, 3 meta, 2 places, **entries only** | ~355,000 | 130,000 to 155,000 | 115,000 to 136,000 |
 | Same, one list (25 summaries) | ~16,000 | ~5,200 | ~4,600 |

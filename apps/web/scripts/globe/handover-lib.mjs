@@ -26,6 +26,8 @@ export async function openApp(browser, contextOptions, { path = "/", colorScheme
   }, opts ?? null);
   // Debug pages have the sky OFF by default (engine/sky.ts `applySkyFlags`); SKY=1 runs any handover check with it on.
   if (process.env.SKY === "1") await page.addInitScript(() => sessionStorage.setItem("sky", "1"));
+  // ... and the ring of type OFF (the lowest zoom is the fit there); RING=1 runs any check with it on.
+  if (process.env.RING === "1") await page.addInitScript(() => sessionStorage.setItem("ring", "1"));
   await page.goto(new URL(path, APP).toString());
   if (wait) await waitHandover(page);
   return { ctx, page, logs };

@@ -16,6 +16,7 @@ import { casesHierarchy, stressHierarchy } from "./engine/lod-stress";
 import { applyDebugLevels } from "./engine/palette";
 import { applySpinFlags } from "./engine/idle-spin";
 import { applySkyFlags } from "./engine/sky";
+import { applyRingFlags, ringText } from "./engine/ring";
 import { applyDebugArtPixel } from "./engine/tuning";
 import { enablePerf, perfEnd, perfStart } from "./engine/perf";
 import { startsVeiled, type GlobeProps } from "./types";
@@ -107,8 +108,10 @@ export default function GlobeCanvas({
   insetRight,
   tiles,
   attribution: Attribution,
+  ringPhrases,
   onSelect,
   onViewChange,
+  onInteract,
 }: GlobeProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const streetRef = useRef<HTMLDivElement>(null);
@@ -129,10 +132,27 @@ export default function GlobeCanvas({
   const tilesKey = tiles && !(debugEnabled() && streetDisabledForTests()) ? JSON.stringify(tiles) : "";
   const viewRef = useRef(initialView);
   const appliedSelection = useRef(selectedSlug);
-  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, onSelect, onViewChange });
+  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, onSelect, onViewChange, onInteract });
   useEffect(() => {
-    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, onSelect, onViewChange };
+    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, onSelect, onViewChange, onInteract };
   });
+
+  // `onInteract`: a gesture that starts ON the globe (its stage holds the canvas; the labels and the street map ignore the pointer, the
+  // credits control and the app's overlays are outside the stage). Two passive listeners on the stage, nothing per frame, nothing when
+  // the app does not ask. Capture phase: it must not depend on what the canvas does with the event.
+  const wantsInteract = onInteract !== undefined;
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !wantsInteract) return;
+    const note = () => latest.current.onInteract?.();
+    const options = { passive: true, capture: true } as const;
+    stage.addEventListener("pointerdown", note, options);
+    stage.addEventListener("wheel", note, options);
+    return () => {
+      stage.removeEventListener("pointerdown", note, options);
+      stage.removeEventListener("wheel", note, options);
+    };
+  }, [wantsInteract]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -144,6 +164,7 @@ export default function GlobeCanvas({
 
     applySpinFlags(); // `?no-rotate` works on any page, `?spin-idle=MS` in debug mode
     applySkyFlags(); // `?no-sky` works on any page, `?sky` turns it on in debug mode
+    applyRingFlags(); // `?no-ring` works on any page, `?ring` turns it on in debug mode
     if (debugEnabled()) {
       applyDebugLevels();
       applyDebugArtPixel();
@@ -170,6 +191,7 @@ export default function GlobeCanvas({
           reducedMotion: now.reducedMotion,
           insetRight: now.insetRight,
           tiles: tilesKey ? JSON.parse(tilesKey) : null,
+          ringText: ringText(now.ringPhrases ?? []), // the line of the ring of type, from the identity the app hands in (the words, capitals and closing seam are the engine's)
           onNotice: setNotice,
           onSelect: (slug) => latest.current.onSelect(slug),
           onViewChange: (view) => {

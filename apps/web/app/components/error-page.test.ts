@@ -20,6 +20,11 @@ describe("ErrorPage", () => {
     expect(html).not.toContain("/srv/app");
     expect(html).toContain('role="alert"');
   });
+  it("speaks in the first person singular, as a personal site does: on my side, never on 'our'", () => {
+    const html = render(new Error("boom"));
+    expect(html).toContain("that is on my side");
+    expect(html).not.toMatch(/\bour\b|\bwe\b/i);
+  });
   it("reports another error response's own status, without a retry for a client error", () => {
     const html = render({ status: 405, statusText: "Method Not Allowed", data: "no" });
     expect(html).toContain("ERR / 405");

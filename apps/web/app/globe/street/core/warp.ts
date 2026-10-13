@@ -191,6 +191,17 @@ export function buildWarpMesh(prev: WarpCamera, cur: WarpCamera, cols: number, r
   return { kind, mw, mh, data, maxShift, exact, scale };
 }
 
+/**
+ * How far content moved between two cameras: the largest displacement of a mesh node, in art cells (0 for the same view, `Infinity`
+ * for another cell size, which cannot be compared). The cheap form of `buildWarpMesh(...).maxShift` for questions like "is this
+ * picture still of the camera the map has now".
+ */
+export function cameraShift(prev: WarpCamera, cur: WarpCamera, cols: number, rows: number): number {
+  if (Math.abs(prev.cell - cur.cell) > 1e-9) return Infinity;
+  if (sameCamera(prev, cur)) return 0;
+  return buildWarpMesh(prev, cur, cols, rows).maxShift;
+}
+
 /** Where the cell centre (u + 0.5, v + 0.5) of the new frame was in the previous one (bilinear in the mesh, as the shader does), or null. */
 export function warpPoint(mesh: WarpMesh, u: number, v: number, step: number = MESH_STEP): [number, number] | null {
   const gx = Math.min(u / step, mesh.mw - 1 - 1e-9);

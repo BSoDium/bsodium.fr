@@ -5,6 +5,7 @@ import { cn } from "~/lib/utils";
 import { CoverArt } from "./cover-art";
 import { KindTag } from "./kind-tag";
 import { MetadataStrip } from "./metadata-strip";
+import { SensitiveMedia } from "./sensitive-media";
 import { StatusTag } from "./status-tag";
 import { TagList } from "./tag-list";
 
@@ -18,6 +19,8 @@ interface EntryCardProps {
   href?: string;
   /** An authored image; without one the cover is generated from `seed` (default: the title). */
   image?: { src: string; alt: string };
+  /** Mature content: the image is blurred for good and the card says why (no control: the visitor opens the entry to reveal). */
+  sensitive?: boolean;
   seed?: string;
   meta?: readonly { label: string; value: ReactNode }[];
   /** Plain tags under the metadata (not links: the card is one link). */
@@ -43,11 +46,12 @@ interface EntryCardProps {
 const CARD_TAGS = 3;
 
 /**
- * A card for a list of entries (docs/design-system.md, "Entry card"): no box. A cover (authored image, or generated), the title, a
+ * A card for a list of entries (docs/design-system.md, "Entry card"): no box. A cover (authored image, or generated; blurred and labelled
+ * "Mature content" when the entry is sensitive), the title, a
  * short summary, then the date and place as two plain lines and the first tags as muted text. One link (the title) stretched over the
  * card by a pseudo-element, so the whole card is clickable and the tab order still has a single stop per card.
  */
-export function EntryCard({ kind, showKind, title, summary, href, image, seed, meta, tags, status, linkState, id, headingLevel = 3, orientation = "vertical", priority, className }: EntryCardProps) {
+export function EntryCard({ kind, showKind, title, summary, href, image, sensitive, seed, meta, tags, status, linkState, id, headingLevel = 3, orientation = "vertical", priority, className }: EntryCardProps) {
   const horizontal = orientation === "horizontal";
   const Heading = `h${headingLevel}` as "h2" | "h3" | "h4";
   const link = href ? (
@@ -67,7 +71,12 @@ export function EntryCard({ kind, showKind, title, summary, href, image, seed, m
   return (
     <article id={id} data-slot="entry-card" data-kind={kind} data-orientation={orientation} className={cn("ds-card flex min-w-0 flex-col gap-4", horizontal && "@md:flex-row", className)}>
       <div className={cn("overflow-hidden outline outline-1 -outline-offset-1 outline-border", horizontal && "@md:w-[38%] @md:shrink-0")}>
-        {image ? (
+        {image && sensitive ? (
+          // The frame is its own size container, so the `@md` of the place panel's card is applied to the frame, outside it.
+          <SensitiveMedia className={horizontal ? "@md:h-full" : undefined}>
+            <img src={image.src} alt={image.alt} loading={priority ? "eager" : "lazy"} decoding="async" className="aspect-video size-full object-cover" />
+          </SensitiveMedia>
+        ) : image ? (
           <img
             src={image.src}
             alt={image.alt}
@@ -81,7 +90,7 @@ export function EntryCard({ kind, showKind, title, summary, href, image, seed, m
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         {showKind && <KindTag kind={kind} />}
-        <Heading data-slot="entry-card-title" className="m-0 text-xl font-semibold tracking-tight text-balance">
+        <Heading data-slot="entry-card-title" className="m-0 font-display text-xl leading-[1.1] font-bold tracking-[-0.02em] text-balance">
           {link}
         </Heading>
         {summary && <p className="m-0 line-clamp-3 text-base text-pretty text-muted-foreground">{summary}</p>}

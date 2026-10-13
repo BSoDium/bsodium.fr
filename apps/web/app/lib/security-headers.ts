@@ -61,7 +61,8 @@ export interface CspInput {
  *    on elements (positions, sizes, CSS variables), which cannot be hashed; no inline `<style>` element is allowed.
  *  - worker-src: MapLibre's tile worker is a file of ours, and `blob:` is its documented fallback.
  *  - connect-src: this origin (route data) and the tile hosts, nothing else.
- *  - img-src: ours, `data:` and `blob:` (canvas and map rasters). font-src: ours (the type is the system stack, so this is a guard).
+ *  - img-src: ours, `data:` and `blob:` (canvas and map rasters). font-src: ours (the three self-hosted families of `public/fonts/`: display,
+ *    reading and metadata type; every other glyph is the system stack's, so no font host is ever needed).
  */
 export function buildCsp({ nonce, connectOrigins, upgradeInsecure }: CspInput): string {
   const connect = ["'self'", ...new Set(connectOrigins)];

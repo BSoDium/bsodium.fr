@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import type { PlaceSummary } from "@catalyst/schemas";
 import { PANEL_HEADING_ID } from "~/components/detail-panel";
 import { EntryListCard } from "~/components/entry/entry-list-card";
-import { Button, Glyph, SectionHeader, Stack, StatePanel } from "~/components/ui";
+import { Button, Icon, SectionHeader, Stack, StatePanel } from "~/components/ui";
 import { safeMediaSrc } from "~/lib/entry-blocks";
 import { formatPlaceCoordinates } from "~/lib/labelling";
 import { imageSize, placePath, type PlaceDetailData } from "~/lib/projection";
@@ -119,7 +119,7 @@ export function PlaceNotFound({ places }: { places: PlaceSummary[] }) {
           action={
             <Button asChild variant="secondary">
               <Link to="/">
-                <Glyph name="arrow-left" size={16} />
+                <Icon name="arrow-left" size="inline" />
                 See all places
               </Link>
             </Button>

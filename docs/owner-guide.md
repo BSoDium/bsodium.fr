@@ -1,17 +1,17 @@
 # Owner's guide
 
-How to run Catalyst day to day: add and edit places, see them locally, sync from Polarsteps, publish, handle secrets, and fix what breaks. Written for the owner; commands are meant to be pasted. Everything here was checked against the scripts and workflows of both repos on 2026-10-07 (what could not be checked is marked **unverified**).
+How to run Catalyst day to day: add and edit places, see them locally, sync from Polarsteps, publish, handle secrets, and fix what breaks. Written for the owner; commands are meant to be pasted. Everything here was checked against the scripts and workflows of both repos on 2026-10-07; the entries recipe, the vault status, the debug hooks and the hosts were updated on 2026-10-13 against the public repo only (what could not be checked is marked **unverified**).
 
 Two repos, side by side on disk:
 
 | | Path | Branch | Visibility |
 |---|---|---|---|
-| Public (app, API, published data) | `~/Developer/catalyst` | `feat/places-archive-rebuild` (draft PR #234) | public |
+| Public (app, API, published data) | `~/Developer/catalyst` | `main` | public |
 | Private (sources, your editing, scripts) | `~/Developer/catalyst-content` | `main` | private |
 
 Commands below say which repo to run them in: **[private]** or **[public]**.
 
-> **Content model v2 may change this guide.** The editorial files are JSON today (`editorial/places/<slug>.json`). A Markdown "vault" (`content/<kind>/<slug>/index.md`) is proposed but **not adopted**: decisions D1 to D5 are open and nothing is migrated. Everything below describes the current (v1) workflow. If you adopt v2, the recipes in section 2 (file paths, image handling, `new-place`/`propose-places`) change; sections 3 to 10 mostly do not. Read [content-model-v2.md](../../catalyst-content/docs/content-model-v2.md) (owner summary at the top, decisions in section 9) and [content-model-v2-migration.md](../../catalyst-content/docs/content-model-v2-migration.md); the open decisions are also listed in [handoff.md](handoff.md#pending-owner-decisions-content-model-v2).
+> **Content model v2 (state on 2026-10-13).** Decisions D1 to D5 were taken as recommended ([handoff.md](handoff.md#decisions-taken-owner)). Phases P0 and P1 are done in the private repo: a shadow Markdown vault `content/` with `pnpm vault migrate | check | export-legacy`, parity gates and a CI job. **`editorial/` (JSON, `editorial/places/<slug>.json`) stays the source of truth for places until P2** (the flip), planned after a week of real use and one real edit in Obsidian or VS Code (issue Catalyst-content#2 tracks P2 to P4); the place recipes below are that workflow and stay valid until then. **Entries** (articles, projects, artworks, poems) are authored as Markdown documents under `content/<kind>s/<slug>/index.md` in the private repo: see "Add an entry" below. Read [content-model-v2.md](../../catalyst-content/docs/content-model-v2.md) (owner summary at the top, decisions in section 9) and [content-model-v2-migration.md](../../catalyst-content/docs/content-model-v2-migration.md).
 
 ## 1. Mental model
 
@@ -25,7 +25,7 @@ you ──edit──▶ private: editorial/ (+ config/)       hand-written, stat
                     packages/published/data/projection.json + apps/web/public/media/**
                                                     │ YOU MERGE IT = publication
                                                     ▼
-                    Vercel redeploys web (bsodium.fr) and API
+                    Vercel redeploys web (v2.bsodium.fr today) and API
 ```
 
 | Layer | Where | Written by | Leaves the private repo? |
@@ -49,10 +49,10 @@ All in **[private]** (`cd ~/Developer/catalyst-content`). After any edit run `pn
 ### Add a place by hand (no Polarsteps)
 
 ```bash
-pnpm new-place --name "Warsaw" --lat 52.23 --lon 21.01 --country PL   # --slug warsaw is the default
+pnpm new-place --name "Zagreb" --lat 45.81 --lon 15.98 --country HR   # --slug zagreb is the default
 ```
 
-Creates `editorial/places/warsaw.json` as a draft with your coordinates as given (the `--country` is optional, otherwise derived from the coordinates). Then edit that file. To make it publishable you need:
+Creates `editorial/places/zagreb.json` as a draft with your coordinates as given (the `--country` is optional, otherwise derived from the coordinates). Then edit that file. To make it publishable you need:
 
 - `summary`, `body` (array of plain-text paragraphs, no HTML or Markdown), `dates` (`{ "start": "2024-03", "label": "..." }`), optionally `region`, `labelPriority` (0 to 100, default 50);
 - **at least one approved image** (`requireImageForPublishedPlaces` is true in `config/publish.json`);
@@ -63,11 +63,11 @@ Minimal shape (synthetic):
 
 ```json
 {
-  "id": "plc_xxxxxxxx", "slug": "warsaw", "name": "Warsaw", "status": "published", "sourceRefs": [],
-  "coordinates": { "lat": 52.23, "lon": 21.01 },
+  "id": "plc_xxxxxxxx", "slug": "zagreb", "name": "Zagreb", "status": "published", "sourceRefs": [],
+  "coordinates": { "lat": 45.81, "lon": 15.98 },
   "summary": "One line for lists.", "dates": { "start": "2024-03", "label": "Spring 2024" },
   "body": ["First paragraph.", "Second paragraph."],
-  "images": [{ "src": "/media/warsaw/skyline.webp", "alt": "What the photo shows", "caption": "optional", "publish": true }],
+  "images": [{ "src": "/media/zagreb/skyline.webp", "alt": "What the photo shows", "caption": "optional", "publish": true }],
   "related": [], "labelPriority": 50
 }
 ```
@@ -75,10 +75,25 @@ Minimal shape (synthetic):
 Images: your own photo or cleared rights ([checklist](../../catalyst-content/docs/media-policy.md#rights-and-ownership-checklist)); about 2000 px on the long side, at most 3000 px and 2.5 MB; **strip all metadata**; put it in `editorial/media/<slug>/`:
 
 ```bash
-exiftool -all= -overwrite_original editorial/media/warsaw/skyline.webp
+exiftool -all= -overwrite_original editorial/media/zagreb/skyline.webp
 ```
 
 Originals stay out of Git. Merged images stay in the public Git history forever.
+
+### Add an entry (article, project, artwork, poem)
+
+Entries are Markdown documents in the private repo, one folder per entry: `content/<kind>s/<slug>/index.md` (`articles`, `projects`, `artworks`, `poems`). The file is a typed YAML header (title, summary, date, tags, places, facts, images, `status`) and a Markdown body that the export turns into typed blocks, never HTML ([content-entry-model.md](content-entry-model.md); the writing rules are in the private repo's `docs/writing-entries.md`). The images go beside the file.
+
+```bash
+# [private]
+pnpm new-entry --kind artwork --slug night-platform --title "Night platform"   # content/artworks/night-platform/index.md, a draft
+# write the header and the body, add the images next to index.md
+pnpm vault check                              # header, Markdown profile, images, references
+pnpm export:preview --out ../catalyst         # then look at it locally (section 3)
+# when it is right: set status: published in the header, commit, push
+```
+
+Pushing opens or refreshes the publication PR; **merging it is the publication** (section 5). For mature content (a figure or anatomy study) set `sensitive: true` in the header: the site draws that entry's pictures blurred until the visitor asks to see them, and never uses the cover as a share image. It is a hint for people looking over a shoulder, not access control: the image files stay public at their `/media/` addresses. An entry with `sensitive: true` and no image gets a warning. Not verified from this repo: the exact flags of `new-entry` and `vault` (read them from the private repo's `docs/writing-entries.md` and `pnpm new-entry --help` if they differ).
 
 ### Add places from Polarsteps steps
 
@@ -164,7 +179,7 @@ Every pull request and every push to `main` runs the `ci` workflow (`.github/wor
 
 `pnpm dev` listens on every interface and prints the URLs: `http://<LAN IP>:5173/` (same Wi-Fi) and, with Tailscale running, `http://<machine>.<tailnet>.ts.net:5173/`. WebGL works over plain http. For https on your tailnet only: `tailscale serve --bg 5173` (stop: `tailscale serve reset`); never `tailscale funnel` (public internet).
 
-Your real places are served to anyone who can reach the port. On a network you do not trust: `CATALYST_DEV_HOST=localhost pnpm dev`, or `pnpm dev:demo`. Add `?globe-debug` to the URL, then in the remote inspector: `__handoverDebug.quality()` (0 is full quality, higher means the phone cannot hold the frame budget) and `__perf.snapshot()`. Details, tile caveat (`localhost` fallback URLs do not work from a phone) and what to look at: [performance.md](performance.md#testing-on-a-phone). Not yet measured on a real phone or Safari/iOS.
+Your real places are served to anyone who can reach the port. On a network you do not trust: `CATALYST_DEV_HOST=localhost pnpm dev`, or `pnpm dev:demo`. Add `?globe-debug` to the URL, then in the remote inspector: `__globeDebug.cell()` and `__streetDebug.cellCss()` (the art cell in CSS px: constant since 2026-10-13, the frame governor and its quality ladder are gone) and `__perf.snapshot()` (phase timers). Details, tile caveat (`localhost` fallback URLs do not work from a phone) and what to look at: [performance.md](performance.md#testing-on-a-phone). Not yet measured on a real phone or Safari/iOS.
 
 ## 4. Sync from Polarsteps
 
@@ -278,7 +293,7 @@ The preview builds groups as if every place were published, so the real groups d
 
 ## 8. Vercel
 
-Two NEW projects from this repo (team `photonsquid`), created after the rebuild branch is merged: web (Root Directory `apps/web`, preset React Router, temporary domain `v2.bsodium.fr`) and API (Root Directory `apps/api`, preset Hono). `catalyst-v1` is the old app and stays as it is; it will fail on pushes to `main` once the monorepo lands, so disconnect it or set an Ignored Build Step when v2 is live. Checklist per project: Root Directory set, **Include source files outside of the Root Directory** on, Install/Build/Output/Development Command overrides all off, Node 22 or newer, **no** environment variables for the content (never `CATALYST_CONTENT=demo` or `preview`). One optional variable for the web project: `CATALYST_SITE_URL` (default `https://v2.bsodium.fr`): set it to the new origin, with `https://`, when the site moves to its final domain, so the canonical links, the sitemap and robots.txt follow; leave it unset until then. Only the host in `CATALYST_SITE_URL` is indexed (`robots.txt` disallows everything on previews and on the `*.vercel.app` address). After a deploy, `node apps/web/scripts/prod/check.mjs --base https://v2.bsodium.fr` checks headers, head tags, sitemap and icons on the live site ([web-architecture.md, Production readiness](web-architecture.md#production-readiness)). Click-by-click steps and the evidence behind them: [api-contract.md, Deployment on Vercel](api-contract.md#deployment-on-vercel). Until the merge, the PR's Vercel check (the old project) fails by design.
+Two NEW projects from this repo (team `photonsquid`), created when the rebuild was merged (#234): `catalyst-v2` (web: Root Directory `apps/web`, preset React Router, at `v2.bsodium.fr`, which is the new site's address until you repoint `bsodium.fr` to it) and `catalyst-v2-api` (Root Directory `apps/api`, preset Hono, `v2.api.bsodium.fr`). The old app is a separate project (`v1.bsodium.fr`, `v1.api.bsodium.fr`) and stays as it is; its pull-request and non-default-branch deployments are disabled, and its Git link can be disconnected or given an Ignored Build Step when convenient. Checklist per project: Root Directory set, **Include source files outside of the Root Directory** on, Install/Build/Output/Development Command overrides all off, Node 22 or newer, **no** environment variables for the content (never `CATALYST_CONTENT=demo` or `preview`). One optional variable for the web project: `CATALYST_SITE_URL` (default `https://v2.bsodium.fr`): set it to the new origin, with `https://`, when the site moves to its final domain, so the canonical links, the sitemap and robots.txt follow; leave it unset until then. Only the host in `CATALYST_SITE_URL` is indexed (`robots.txt` disallows everything on previews and on the `*.vercel.app` address). After a deploy, `node apps/web/scripts/prod/check.mjs --base https://v2.bsodium.fr` checks headers, head tags, sitemap and icons on the live site ([web-architecture.md, Production readiness](web-architecture.md#production-readiness)). Click-by-click steps and the evidence behind them: [api-contract.md, Deployment on Vercel](api-contract.md#deployment-on-vercel).
 
 ## 9. Troubleshooting
 

@@ -14,7 +14,7 @@ import type { Map as MLMap } from "maplibre-gl";
 import { PixelPass, type PassParams } from "./pixel-pass";
 import { perfEnd, perfStart } from "../../engine/perf";
 import { EASE, matchRadius, stepBudget } from "../core/ease";
-import { buildWarpMesh, type WarpCamera, type WarpMesh } from "../core/warp";
+import { buildWarpMesh, cameraShift, type WarpCamera, type WarpMesh } from "../core/warp";
 
 export interface CompositorStats {
   passes: number;
@@ -77,6 +77,13 @@ export interface CompositorOptions {
   /** Native mode: map pixels per art cell along each axis (1, 2 or 3). The pass samples the centre of the cell bilinearly. */
   scale?: number;
 }
+
+/**
+ * A held picture (a style swap) is only a picture of the camera it was drawn for: once the camera has moved by more than this (art
+ * cells, the largest displacement over the screen) the hold ends and the map's own frames are presented again. A frozen picture
+ * under overlay boxes that follow the camera is the worst thing the hold could show.
+ */
+export const HOLD_MOVE_CELLS = 0.75;
 
 const SYNC_BUF = new Uint8Array(4);
 
@@ -189,6 +196,7 @@ export class Compositor {
    * camera it was drawn for), so what arrives while the overlay was held eases in instead of popping (a style swap: the first load).
    */
   hold(on: boolean): void {
+    if (!on && !this.held) return; // already released by a camera move: nothing to resume (and a settle loop that has started must not be stopped)
     this.held = on;
     this.stopSettle();
     if (!on) this.map.triggerRepaint();
@@ -252,7 +260,25 @@ export class Compositor {
     if (!on) this.map.triggerRepaint();
   }
 
+  /** The held picture is no longer of the map's camera: release the hold (the next frames are the map's own). */
+  private releaseHeldIfMoved(): void {
+    if (!this.held || !this.pass || this.pass.artW === 0) return;
+    const cam = this.hooks.camera?.() ?? null;
+    if (cam && this.prevCam && cameraShift(this.prevCam, cam, this.pass.artW, this.pass.artH) > HOLD_MOVE_CELLS) this.held = false;
+  }
+
+  /**
+   * How far the presented picture is from the map's camera now, in art cells (0 while it follows: every presented frame is drawn for the
+   * camera it was presented at). Greater than 0 only while nothing is presented (a hold). Measurement.
+   */
+  staleCells(): number {
+    if (!this.ready || this.suspended || !this.pass || this.pass.artW === 0 || !this.prevCam) return 0;
+    const cam = this.hooks.camera?.() ?? null;
+    return cam ? cameraShift(this.prevCam, cam, this.pass.artW, this.pass.artH) : 0;
+  }
+
   private frame(): void {
+    if (this.held) this.releaseHeldIfMoved();
     if (!this.ready || this.isLost || this.held || this.suspended || this.external || !this.pass) return;
     const t0 = performance.now();
     this.pass.uploadCanvas(this.map.getCanvas());
@@ -316,14 +342,16 @@ export class Compositor {
    * the camera is pushed: the first frame the map renders afterwards shows the seed exactly, then every cell crosses over to the
    * street image at the ease's pace. `grid` is where the canvas's art cells sit (`left` and `top` in CSS px from the container's
    * corner, `cell` its CSS px per cell). Returns false when it cannot (no native grid, a lost context): the cut is then instant.
+   * `drawn`: the camera the canvas was drawn for when it differs from the one about to be pushed; the first map frame then looks the seed
+   * up through the camera delta (a large one drops it: a cut, not a double exposure).
    */
-  seed(canvas: HTMLCanvasElement, grid: { cell: number; left: number; top: number }): boolean {
+  seed(canvas: HTMLCanvasElement, grid: { cell: number; left: number; top: number }, drawn?: WarpCamera): boolean {
     if (!this.ready || this.isLost || !this.pass || !this.options.native || !this.fadeOn) return false;
     const { w, h } = this.hooks.size();
     const p = this.hooks.params(w, h);
     this.pass.uploadCanvasSource(canvas);
     this.pass.levelsFromCanvas("presented", p.levels, w, h, [-grid.left / grid.cell, -grid.top / grid.cell]);
-    this.prevCam = null; // the seed was drawn for the camera the host is about to push
+    this.prevCam = drawn ?? null; // else: the seed was drawn for the camera the host is about to push
     this.seeded = true;
     this.carry = 0;
     return true;

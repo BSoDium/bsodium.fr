@@ -8,7 +8,10 @@ import type { ComponentType } from "react";
 export interface GlobeViewState {
   lon: number;
   lat: number;
-  /** In [0, 1]. 0 = whole globe, 1 = the closest the world-scale globe goes (regional scale). */
+  /**
+   * In [0, 1]. 0 = whole globe, 1 = the closest the world-scale globe goes (regional scale). The camera may go further out than the whole
+   * globe (the ring of type's regime, docs/web-architecture.md "Ring of type"): that is still 0.
+   */
   zoom: number;
   /**
    * Street scale: extra zoom levels beyond `zoom` = 1 (>= 0, about 0 to 11). Absent (or 0) on every view that
@@ -178,6 +181,19 @@ export interface GlobeProps {
    * (the app must pass one wherever the maps are shown, they carry licence-required credits).
    */
   attribution?: ComponentType<GlobeAttributionProps>;
+  /**
+   * The words of the ring of type that circles the planet when it is zoomed out (engine/ring.ts), supplied by the app because they are the
+   * site's identity (`ringPhrases` in ring-text.ts builds them from it): capitals, the separator and the closing dot are the engine's.
+   * Read once, when the globe is created. Optional: omitted or empty = no ring.
+   */
+  ringPhrases?: readonly string[];
   onSelect(slug: string): void;
   onViewChange(view: GlobeViewState): void;
+  /**
+   * The visitor started a gesture on the globe itself: a pointer pressed on it (a drag, a pinch's fingers, a tap on a place) or a wheel
+   * turned over it. Fired at the start of each press and for each wheel event, and only for input that reaches the globe: not for hovering, not for input
+   * on the app's own controls laid over it, not for the globe's own motion (idle rotation, flights, inertia). Optional: the landing hero
+   * steps back on it (`lib/hero-machine.ts`).
+   */
+  onInteract?(): void;
 }

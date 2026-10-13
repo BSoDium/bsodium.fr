@@ -1,6 +1,6 @@
 # Catalyst
 
-A personal archive organized around places. An interactive globe is the main way to discover curated places and the stories, projects, articles and artworks attached to them. Live at https://bsodium.fr.
+A personal archive organized around places. An interactive globe is the main way to discover curated places and the stories, projects, articles and artworks attached to them. The new site runs at https://v2.bsodium.fr (`bsodium.fr` itself is repointed to it by the owner when the new site replaces the old one).
 
 This repository is the **public** half of the system: the web app, the public API, and the sanitized, published content projection. Raw travel data and editorial drafts live in a separate **private** content repository and reach this repo only as a reviewed pull request.
 
@@ -99,6 +99,7 @@ No secrets exist in this repository or in either Vercel project. The Polarsteps 
 - [Web architecture](docs/web-architecture.md): routing, data, focus management, globe lifecycle, measurements
 - [Design tokens](docs/design-tokens.md)
 - [Design system](docs/design-system.md)
+- [Landing hero](docs/landing.md): the home page's typographic hero over the globe (states, hooks, header, tests)
 - [Renderer decision](docs/renderer-decision.md): why standalone Three.js, with benchmarks
 - [Street map architecture](docs/street-architecture.md): the street-scale renderer (pixel pass, style, handover, palette, road hierarchy)
 - [Pixel line rules](docs/pixel-line-rules.md): the line and palette spec the street renderer follows
@@ -106,9 +107,10 @@ No secrets exist in this repository or in either Vercel project. The Polarsteps 
 - [Self-hosting](docs/self-hosting.md): containers and the fallback tile server
 - [Handoff](docs/handoff.md): state of the rebuild and what is left
 - [API contract](docs/api-contract.md): endpoints, caching, Vercel setup, monorepo build behaviour
+- [API cost and abuse](docs/api-cost-and-abuse.md): the free-tier quotas, what an abusive client can cost, the firewall rules applied
 - [Entry content model](docs/content-entry-model.md): how vault documents (header + Markdown) map onto the entries of the contract (articles, projects, artworks, poems, typed body blocks)
 - Private repo docs (privacy model, import contract, sync invariants, editorial workflow, publication, database migration plan) live in the content repository.
 
 ## License
 
-Source-available, not open source. You are welcome to read the code, learn from it, take inspiration, and reuse individual pieces (functions, shaders, components) in your own projects with attribution. You may not publish or deploy a copy of the site, and the Catalyst name, design and content are not licensed for reuse. See [LICENSE](LICENSE) for the exact terms. `packages/geodata` is MIT.
+Source-available, not open source. You are welcome to read the code, learn from it, take inspiration, and reuse individual pieces (functions, shaders, components) in your own projects with attribution. You may not publish or deploy a copy of the site, and the Catalyst name, design and content are not licensed for reuse. See [LICENSE](LICENSE) for the exact terms. `packages/geodata` is MIT. The three typefaces in `apps/web/public/fonts/` (Bricolage Grotesque, Newsreader, JetBrains Mono) are not covered by that licence: each is under the SIL Open Font License 1.1, with its licence text beside the files.

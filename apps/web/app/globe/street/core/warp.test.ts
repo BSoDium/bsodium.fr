@@ -4,6 +4,7 @@ import {
   MESH_STEP,
   NO_WARP,
   buildWarpMesh,
+  cameraShift,
   globeBasis,
   mercatorLonLat,
   mercatorXY,
@@ -149,5 +150,27 @@ describe("warp mesh", () => {
     expect(m.mw).toBe(Math.ceil(COLS / MESH_STEP) + 1);
     expect(m.mh).toBe(Math.ceil(ROWS / MESH_STEP) + 1);
     expect(warpPoint(m, COLS - 0.5, ROWS - 0.5)).not.toBeNull();
+  });
+});
+
+describe("camera shift (is a picture still of this camera)", () => {
+  it("is 0 for the same view and Infinity for another cell size", () => {
+    expect(cameraShift(cam(), cam(), COLS, ROWS)).toBe(0);
+    expect(cameraShift(cam(), cam({ cell: 3 }), COLS, ROWS)).toBe(Infinity);
+  });
+  it("is the largest displacement over the screen: a pan moves everything, a zoom about the centre moves the edges most", () => {
+    // a pan of 10 cells at z12 (512 * 2^12 px for the world, so one cell is cell / world of the unit square)
+    const world = 512 * 2 ** 12;
+    const dLon = ((10 * 2.5) / world) * 360;
+    expect(cameraShift(cam(), cam({ lon: 2.35 + dLon }), COLS, ROWS)).toBeCloseTo(10, 1);
+    // zoom by 0.1 about the centre (cx = 720 css px = 288 cells): the farthest mesh node is a corner, 288 cells away on x
+    const s = cameraShift(cam(), cam({ zoom: 12.1 }), COLS, ROWS);
+    const farthest = Math.hypot(288, 180);
+    expect(s).toBeGreaterThan(0.9 * farthest * (1 - 2 ** -0.1));
+    expect(s).toBeLessThanOrEqual(farthest * (2 ** 0.1 - 1) + 1);
+  });
+  it("is below the hold's tolerance for a rest and above it for a gesture frame", () => {
+    expect(cameraShift(cam(), cam({ zoom: 12 + 1e-5 }), COLS, ROWS)).toBeLessThan(0.75);
+    expect(cameraShift(cam(), cam({ zoom: 12.05 }), COLS, ROWS)).toBeGreaterThan(0.75);
   });
 });

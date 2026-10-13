@@ -408,6 +408,9 @@
           ],
           "additionalProperties": false
         },
+        "sensitive": {
+          "type": "boolean"
+        },
         "tags": {
           "maxItems": 12,
           "type": "array",

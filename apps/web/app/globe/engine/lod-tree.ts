@@ -21,16 +21,20 @@
  *     Top down from the roots, a group is either ONE rectangle (closed) or REPLACED by some of its children (open), never both: no node is
  *     ever drawn together with a drawn ancestor. A group OPENS EARLY, as soon as at least `LOD.open.quota` (2; all of them when it has
  *     fewer) of its MOST IMPORTANT children (`labelPriority`, then the true size, then the slug; a child group is as important as the
- *     most important place below it) can be drawn, each as the rectangle and the label it would be drawn with, clear of every other
- *     drawn rectangle and label (`gapPx.enter`) and within the screen's box budget. When it opens, ONLY the children that pass that test
- *     are drawn (the others stay hidden, still counted by the group's total, and come in as the zoom lets them in); a child group is
- *     judged the same way once it is drawn (a closed child opens when its own top children fit). It closes again, with an easier
- *     test (`gapPx.leave`, the budget plus `budgetKeep`), when fewer than the quota still pass: a hysteresis, so a camera jittering around a
- *     threshold cannot flap. A group box bigger than `boxMaxTo` of the screen opens whatever the spacing, with ALL its children (it may
- *     close again below `boxMaxFrom`), and every group is open from street scale (`forceOpenZoom`: places at the same spot cannot be told
- *     apart). A group with one visible child is that child's rectangle. The decisions are taken group by group in a camera independent
- *     order (importance, then depth, then slug: a parent before its children), each against what the groups before it left drawn, so
- *     the result never depends on the order of the input and a group's choice never depends on a group decided after it.
+ *     most important place below it) can be drawn, each as the rectangle and the label it would be drawn with, KEEPING ROOM: `gapPx.enter`
+ *     (24 px, relaxed with the zoom: `clearanceAt`) from every other drawn rectangle and label plate (both lines of the label) and from each
+ *     other, within the screen's box budget. When it opens, ONLY the children that keep the room are drawn (the others stay hidden, still counted
+ *     by the group's total, and come in as the zoom lets them in: crowded children are not shown, the most important ones are kept); a child
+ *     group is judged the same way once it is drawn, so the screen shows a mix of regions, countries and places that do not crowd each other,
+ *     the coarsest grouping that has such nodes (a crowded group stays ONE rectangle with its count). It closes again, with an easier test
+ *     (`gapPx.leave`, 12 px, the budget plus `budgetKeep`), when fewer than the quota still keep that room: a hysteresis, so a camera jittering
+ *     around a threshold cannot flap. A group box bigger than `boxMaxTo` of the screen opens whatever the spacing, with its most important
+ *     child that keeps the room (or, failing that, its first child whatever the room) and the others as they keep it (it may close again below
+ *     `boxMaxFrom`), every group is open from street scale (`forceOpenZoom`: places at the same spot cannot be told apart) and no room is asked
+ *     from `crowdOffZoom` (a cluster of places whose boxes overlap is drawn as it is). A group with one visible child is that child's
+ *     rectangle. The decisions are taken group by group in a camera independent order (importance, then depth, then slug: a parent before
+ *     its children), each against what the groups before it left drawn, so the result never depends on the order of the input and a group's
+ *     choice never depends on a group decided after it.
  *   - So a place alone, and a group whose members are spread out, are never boxed together: a lone place is its own rectangle
  *     at every zoom, a country with two distant places shows two rectangles, ten places 50 km apart are one rectangle (the
  *     group, whose second line says "10 places") until its two most important ones fit, and continents and subregions are only drawn on
@@ -109,7 +113,18 @@ export const LOD = {
     /** A group opens when at least this many of its most important children fit (all of them when it has fewer). */
     quota: 2,
     /** Clear gap from every other drawn box and label (the larger of the gaps along x and y): a child is taken at `enter`, kept down to `leave`. */
-    gapPx: { enter: 8, leave: 3 },
+    gapPx: { enter: 24, leave: 12 },
+    /**
+     * The room a label's PLATE (both lines) keeps from every other box and plate is this fraction of `gapPx` (a plate is padded, its edge feathered:
+     * 16 px of a box's 24). At the full 24 px the groups of the complaint opened 0.65 (Western Europe) and 1.15 (Central Europe, its second node)
+     * of a level later than before in the browser, at 2/3 they are within 0.3.
+     */
+    plateGapRatio: 2 / 3,
+    /** The clearance relaxes with the zoom, from `gapPx` below `relaxZoom.from` to this at `relaxZoom.to` and above (close up the places are individually small and what crowds is a cluster whose boxes overlap: nothing is kept out of the screen for ever). */
+    gapRelaxedPx: { enter: 8, leave: 3 },
+    relaxZoom: { from: 6.5, to: 9 },
+    /** From this zoom no clearance is asked at all (the budget still holds): a cluster of places whose boxes overlap is drawn as it is. */
+    crowdOffZoom: 10,
     /** Boxes on the screen (a 1440 x 900 free area; scaled by the free area, within `budgetMin`..`budgetMax`): a new child needs fewer than `budget`, a kept one fewer than `budget + budgetKeep`. */
     budget: 30,
     budgetKeep: 4,
@@ -117,14 +132,17 @@ export const LOD = {
     budgetMin: 8,
     budgetMax: 60,
     /**
-     * An incumbent (a node drawn in the last evaluation as a child of an open group) is kept WITHOUT a geometry test while the zoom is at most
-     * this many levels below the zoom it was taken at: what was clear when it came in stays, so zooming in never takes a node away again
-     * (the true extents of two neighbours can grow into each other faster than the gap grows), and a camera that jitters cannot flap it. Below
-     * that it keeps only while it passes the LEAVE test.
+     * A group that was open (also through one unit) merges back into its box only on a zoom-out, this many levels below the zoom it opened at, and
+     * when the box keeps the room of a newcomer (`LodTree.stayThrough`). (An incumbent BOX on a zoom-in or a pan is kept without the leave test, the
+     * gaps only grow, as long as nothing touches it: `touchPx`; on a zoom-out it is judged by the leave test at every step.)
      */
     stickyZoom: 0.4,
     /** At most this many children of a group (the most important ones) are tried per evaluation: a safety for flat groups of thousands of places. */
     maxTried: 64,
+    /** An incumbent kept without the leave test (a zoom-in, a pan) must still be at least this far from every other box and label. */
+    touchPx: 3,
+    /** A group that does not fit as a box and cannot open into two children (an area, a country, or any group that is an extra) is replaced by the first of this many of its most important children that fits (a minor place does not stand in for it). */
+    throughTop: 3,
     /** A group is judged only while its box is within this many px of the free area (further out nothing of it is seen: it stays closed, and one that pans in is judged before it is seen). */
     judgeMarginPx: 160,
   },
@@ -134,6 +152,17 @@ const smooth = (t: number) => {
   const x = t < 0 ? 0 : t > 1 ? 1 : t;
   return x * x * (3 - 2 * x);
 };
+
+/**
+ * The clearance (px) a child has to keep from every other box and label at a unified zoom: taken at `enter`, kept down to `leave`
+ * (`LOD.open.gapPx`), relaxed from `relaxZoom.from` to `relaxZoom.to` to `gapRelaxedPx`, and not asked at all from `crowdOffZoom`. Pure.
+ */
+export function clearanceAt(zoom: number): { enter: number; leave: number } {
+  const O = LOD.open;
+  if (zoom >= O.crowdOffZoom) return { enter: -1e9, leave: -1e9 };
+  const r = smooth((zoom - O.relaxZoom.from) / (O.relaxZoom.to - O.relaxZoom.from));
+  return { enter: O.gapPx.enter + (O.gapRelaxedPx.enter - O.gapPx.enter) * r, leave: O.gapPx.leave + (O.gapRelaxedPx.leave - O.gapPx.leave) * r };
+}
 
 /** What the tree needs from a node (`GlobePlace` and `GlobeGroup` both fit through `buildLodNodes`). */
 export interface LodNodeInput {
@@ -302,6 +331,8 @@ export class LodTree {
   private readonly sizeOpen: Uint8Array;
   private readonly decided: Uint8Array;
   private readonly admitted: Uint8Array;
+  /** Node was drawn as a BOX in the last cut (in the plan, not open): only such an incumbent keeps its box without a geometry test (`fits`); an open group's box was never drawn. */
+  private readonly boxedPrev: Uint8Array;
   /** The zoom a node was taken at (the start of its tenure as a child of an open group); meaningful while `admitted`. */
   private readonly admitZoom: Float64Array;
   /** The zoom a group was last opened at (the start of its being open, not of its being in the plan); meaningful while `open`. `openPrev` is `open` of the evaluation before. */
@@ -345,6 +376,8 @@ export class LodTree {
   private readonly rank: Int32Array;
   /** Which of the six plate positions a child's label took (-1: none): an incumbent tries it first, so a position does not flip between two that are both free. */
   private readonly plateCand: Int8Array;
+  /** The position the last cut RESERVED for a drawn box's label (`plateSlot`), -1 when it was not tested (a box drawn whatever the room). */
+  private readonly slotNow: Int8Array;
   /** Obstacles of the judgement: rectangles (4 numbers each), the node they belong to and 0 for its box, 1 for its label's plate, 2 for the reserved box of an incumbent. */
   private obs: Float64Array;
   private obsOwner: Int32Array;
@@ -356,6 +389,9 @@ export class LodTree {
   private boxes = 0;
   private readonly inBoxes: Uint8Array;
   private budget = 0;
+  /** The clearance of the evaluation (`LOD.open.gapPx`, relaxed with the zoom). */
+  private gapEnter = 0;
+  private gapLeave = 0;
   /** The free area of the evaluation (x range; y is 0 .. height) and the plate `fits` found. */
   private vx0 = 0;
   private vx1 = 0;
@@ -488,6 +524,7 @@ export class LodTree {
     this.open = new Uint8Array(n);
     this.sizeOpen = new Uint8Array(n);
     this.admitted = new Uint8Array(n);
+    this.boxedPrev = new Uint8Array(n);
     this.admitZoom = new Float64Array(n);
     this.openZoom = new Float64Array(n);
     this.openPrev = new Uint8Array(n);
@@ -501,6 +538,7 @@ export class LodTree {
     this.extraList = new Int32Array(n + 8);
     this.inBoxes = new Uint8Array(n);
     this.plateCand = new Int8Array(n).fill(-1);
+    this.slotNow = new Int8Array(n).fill(-1);
     this.obs = new Float64Array(4 * (4 * n + 16));
     this.obsOwner = new Int32Array(4 * n + 16);
     this.obsKind = new Uint8Array(4 * n + 16);
@@ -642,6 +680,15 @@ export class LodTree {
    */
   isOpen(i: number): boolean {
     return this.open[i] === 1;
+  }
+
+  /**
+   * The position of node `i`'s label the last cut RESERVED when it took the box, clear of every other box and label by the cut's gap: 0 above the
+   * box's left edge, 1 above its right edge, 2 below the left edge, 3 below the right edge, 4 right of the box, 5 left of it; -1 for a node whose
+   * box was drawn whatever the room. The label planner takes it first (`PlanItem.pref`), so the labels it places keep the room the cut checked.
+   */
+  plateSlot(i: number): number {
+    return this.slotNow[i]!;
   }
 
   /** Alpha of every drawn node at rest for a camera, for tests and checks (allocates; not for frames). */
@@ -815,12 +862,16 @@ export class LodTree {
     this.zoomingOut = cam.zoom < this.prevZoom;
     this.prevZoom = cam.zoom;
     this.gone.fill(0);
+    this.slotNow.fill(-1);
     this.inBoxes.fill(0);
     this.planIndex.fill(-1);
     this.nPlan = 0;
     this.nObs = 0;
     this.boxes = 0;
     this.kidTop = 0;
+    const room = clearanceAt(cam.zoom);
+    this.gapEnter = room.enter;
+    this.gapLeave = room.leave;
     this.vx0 = cam.centreX - cam.freeWidth / 2;
     this.vx1 = this.vx0 + cam.freeWidth;
     this.vy1 = cam.height;
@@ -844,10 +895,12 @@ export class LodTree {
     wasPlanned.fill(0);
     for (let k = 0; k < this.nPlan; k++) if (!this.admitted[this.planNode[k]!]) this.admitZoom[this.planNode[k]!] = cam.zoom; // (a new tenure)
     this.admitted.fill(0);
+    this.boxedPrev.fill(0);
     for (let k = 0; k < this.nPlan; k++) {
       const i = this.planNode[k]!;
       wasPlanned[i] = 1;
       this.admitted[i] = 1;
+      if (this.planKids[k]! < 0) this.boxedPrev[i] = 1;
       if (this.planKids[k]! >= 0) {
         this.open[i] = 1;
         if (!this.openPrev[i]) this.openZoom[i] = cam.zoom; // (a new opening)
@@ -919,7 +972,11 @@ export class LodTree {
       const start = this.nObs;
       if (!this.growing) for (let t = 0; t < n; t++) this.addObstacle(list[t]!, 2, this.boxX0[list[t]!]!, this.boxY0[list[t]!]!, this.boxX1[list[t]!]!, this.boxY1[list[t]!]!);
       const before = this.nPlan;
-      for (let t = 0; t < n; t++) this.tryKid(list[t]!);
+      for (let t = 0; t < n; t++) {
+        this.tryKid(list[t]!, true);
+        // its reservation is over once it is decided (taken, its real rectangles stand; not taken, it must not keep a better neighbour out)
+        if (!this.growing) this.obsKind[start + t] = 3;
+      }
       for (let k = start; k < this.nObs; k++) if (this.obsKind[k] === 2) this.obsKind[k] = 3; // (the reservations are over)
       if (this.nPlan === before) return;
     }
@@ -997,17 +1054,39 @@ export class LodTree {
       this.gone[g] = 1;
       this.boxes -= this.inBoxes[g]!;
       this.inBoxes[g] = 0;
-      if (k0 >= 0) this.planKids[k0] = nk;
+      // The group's own rectangle is gone, so something of it must be there. At street scale, or with one visible child, all its children are drawn
+      // whatever the room. Otherwise the first of its most important children that keeps the clearance is (as a box, or opened into its own), and when
+      // none does, the most important one is drawn all the same: the others are EXTRAS, drawn as they keep the room (`fillExtras`).
+      const all = nk === 1 || cam.zoom >= LOD.forceOpenZoom - LOD.forceOpenSpan;
+      if (k0 >= 0) this.planKids[k0] = all ? nk : 0;
       else {
         this.planIndex[g] = this.nPlan;
         this.planNode[this.nPlan] = g;
-        this.planKids[this.nPlan++] = nk;
+        this.planKids[this.nPlan++] = all ? nk : 0;
       }
-      for (let pass = 0; pass < 2; pass++) {
-        for (let t = 0; t < nk; t++) {
-          const c = this.kidStack[base + t]!;
-          if ((this.admitted[c] === 1) === (pass === 0) && this.slotOf(c) < 0) this.present(c);
+      if (all) {
+        // (the incumbents are decided first, so the children are presented in that order)
+        for (let pass = 0; pass < 2; pass++) {
+          for (let t = 0; t < nk; t++) {
+            const c = this.kidStack[base + t]!;
+            if ((this.admitted[c] === 1) === (pass === 0) && this.slotOf(c) < 0) this.present(c);
+          }
         }
+      } else {
+        const top = Math.min(nk, O.throughTop);
+        let chosen = -1;
+        for (let t = 0; t < top && chosen < 0; t++) {
+          const c = this.kidStack[base + t]!;
+          if (!this.growing && this.admitted[c] !== 1) continue; // (a child that was not drawn is a newcomer: GROW's)
+          if (this.slotOf(c) >= 0 || this.tryKid(c, true)) chosen = t;
+        }
+        if (chosen < 0) {
+          const c = this.kidStack[base]!;
+          if (this.slotOf(c) < 0) this.present(c);
+          chosen = 0;
+        }
+        const entry = this.slotOf(g);
+        if (chosen === 0) this.planKids[entry] = 1;
       }
       this.kidTop = base;
       return true;
@@ -1018,12 +1097,20 @@ export class LodTree {
     const h = this.boxY1[g]! - this.boxY0[g]!;
     const holds = Math.max(w, h) >= 2 * LOD.minBoxCells * cam.cell + O.gapPx.leave;
     const near = this.boxX1[g]! > this.vx0 - m && this.boxX0[g]! < this.vx1 + m && this.boxY1[g]! > -m && this.boxY0[g]! < this.vy1 + m;
-    // a group opened THROUGH (its own box did not fit, `tryKid`) is replaced by its single most important unit, so its box needs no room for two
-    const need = Math.min(through ? 1 : O.quota, nk);
+    // a group opened THROUGH (its own box did not fit, `tryKid`) is replaced by ONE unit, the most important of its first `throughTop` children
+    // that fits, so its box needs no room for two; nothing is required of the others (they come in as extras)
+    const need = Math.min(through ? O.throughTop : O.quota, nk);
     const wasOpen = this.open[g] === 1;
     // (`holds` is a newcomer's test, a group that is open is judged by its children: a box that grows or shrinks across that size does not flap it)
     let ok = this.early && (through || ((holds || wasOpen) && near)) && (this.growing || wasOpen);
-    if (ok && !this.growing) for (let t = 0; t < need && ok; t++) ok = this.admitted[this.kidStack[base + t]!] === 1; // (a child that was not drawn is a newcomer: GROW's)
+    if (ok && !this.growing) {
+      // (a child that was not drawn is a newcomer: GROW's)
+      if (through) {
+        let any = false;
+        for (let t = 0; t < need; t++) any ||= this.admitted[this.kidStack[base + t]!] === 1;
+        ok = any;
+      } else for (let t = 0; t < need && ok; t++) ok = this.admitted[this.kidStack[base + t]!] === 1;
+    }
     if (!ok) {
       this.kidTop = base;
       return this.mustOpen[g] === 1 && this.openEmpty(g, k0);
@@ -1038,8 +1125,8 @@ export class LodTree {
     this.planIndex[g] = entry;
     this.planNode[entry] = g;
     const keptKids = k0 >= 0 ? this.planKids[k0]! : 0;
-    this.planKids[entry] = need;
-    if (!this.growing) {
+    this.planKids[entry] = through ? 0 : need;
+    if (!this.growing && !through) {
       // the incumbents' rectangles are reserved while they are judged, against the plates of the others: a more important incumbent does not put
       // its label over a less important one that is about to be kept, which would drop it for nothing and bring it back a step later
       for (let t = 0; t < need; t++) {
@@ -1047,14 +1134,28 @@ export class LodTree {
         this.addObstacle(c, 2, this.boxX0[c]!, this.boxY0[c]!, this.boxX1[c]!, this.boxY1[c]!);
       }
     }
-    for (let t = 0; t < need && ok; t++) ok = this.tryKid(this.kidStack[base + t]!); // one of the first `quota` children has no place: the group stays closed
+    if (through) {
+      // the first child that fits stands for the group (a unit that was drawn last time is the only one tried in KEEP)
+      ok = false;
+      for (let t = 0; t < need && !ok; t++) {
+        const c = this.kidStack[base + t]!;
+        if (this.growing || this.admitted[c] === 1) ok = this.tryKid(c);
+      }
+    } else for (let t = 0; t < need && ok; t++) ok = this.tryKid(this.kidStack[base + t]!); // one of the first `quota` children has no place: the group stays closed
     for (let k = savedObs; k < this.nObs; k++) if (this.obsKind[k] === 2) this.obsKind[k] = 3; // (the reservations are over)
     this.kidTop = base;
     if (ok) {
       this.inBoxes[g] = 0;
       return true;
     }
-    // not enough room: the trial leaves no trace
+    // not enough room: the trial leaves no trace (the groups it opened below are not open, and not counted, any more)
+    for (let k = savedPlan; k < this.nPlan; k++) {
+      const i = this.planNode[k]!;
+      if (i !== g) {
+        this.gone[i] = 0;
+        this.inBoxes[i] = 0;
+      }
+    }
     this.nObs = savedObs;
     this.nPlan = savedPlan;
     this.boxes = savedBoxes;
@@ -1084,11 +1185,15 @@ export class LodTree {
    * traded for its group's box. In KEEP the test is the incumbent's (LEAVE thresholds), in GROW the newcomer's. Returns whether something of `c`
    * is on the screen now, with the plan, the obstacles and the budget updated; nothing changes when not.
    */
-  private tryKid(c: number): boolean {
+  private tryKid(c: number, extra = false): boolean {
     if (!this.isGroup[c]) return this.takeBox(c);
     if (this.resolve(c)) return true;
-    if (!this.growing && this.stayThrough(c)) return this.resolve(c, true) || this.takeBox(c);
-    return this.takeBox(c) || this.resolve(c, true);
+    // (a unit that a group NEEDS in order to open is its box, its own children or, for an AREA, its single most important unit: a country or a
+    // region that does not fit does not count, a city does not stand in for it. An extra decides nothing: a group that fits in no other form is
+    // replaced by its most important unit)
+    const through = extra || this.kind[c] === "area" || this.kind[c] === "country";
+    if (!this.growing && this.stayThrough(c)) return this.resolve(c, true) || this.takeBox(c); // (kept as it was: whatever it is, it was open)
+    return this.takeBox(c) || (through && this.resolve(c, true));
   }
 
   /**
@@ -1103,9 +1208,12 @@ export class LodTree {
 
   /** Node `c` as a box if it `fits`: it joins the plan, its rectangle and its label's plate become obstacles and it counts for the budget. */
   private takeBox(c: number): boolean {
+    // (KEEP keeps what was drawn as a box: a node that was not is a newcomer, judged with the ENTER thresholds in GROW)
+    if (!this.growing && this.boxedPrev[c] !== 1) return false;
     if (!this.fits(c, !this.growing)) return false;
     if (this.slotOf(c) < 0) this.planBox(c);
     this.bigHidden[c] = 0;
+    this.slotNow[c] = this.plateCand[c]!;
     this.addObstacle(c, 0, this.boxX0[c]!, this.boxY0[c]!, this.boxX1[c]!, this.boxY1[c]!);
     this.addObstacle(c, 1, this.plateX, this.plateY, this.plateX + this.labelW[c]!, this.plateY + this.labelH[c]!);
     this.countBox(c);
@@ -1126,12 +1234,30 @@ export class LodTree {
     const y1 = this.boxY1[c]!;
     // the screen only counts for the budget: a box off it is judged like any other (so what is drawn does not depend on where the edge is, and
     // a box that pans in is already there), its label has its place wherever the planner will put it
-    if (keep && this.cam.zoom >= this.admitZoom[c]! - O.stickyZoom && this.plateCand[c]! >= 0) return this.plateAt(c, this.plateCand[c]!); // (an incumbent: see `stickyZoom`)
+    if (keep && this.boxedPrev[c] === 1 && !this.zoomingOut && this.plateCand[c]! >= 0) {
+      // an incumbent on a zoom-in or a pan keeps its box and its plate without the leave test (the gaps only grow: see `stickyZoom`), as long as neither touches
+      // another node (`TOUCH_PX`) and the plate is still on the canvas
+      const touch = Math.min(LOD.open.touchPx, this.gapLeave);
+      if (this.clear(x0, y0, x1, y1, touch, c, false, this.isGroup[c] ? -1 : c)) {
+        this.plateAt(c, this.plateCand[c]!);
+        if (this.plateOnCanvas(c) && this.clear(this.plateX, this.plateY, this.plateX + this.labelW[c]!, this.plateY + this.labelH[c]!, touch, c, false)) return true;
+      }
+    }
     const onScreen = x1 > this.vx0 && x0 < this.vx1 && y1 > 0 && y0 < this.vy1;
     if (onScreen && this.boxes >= (keep ? this.budget + O.budgetKeep : this.budget)) return false;
-    const gap = keep ? O.gapPx.leave : O.gapPx.enter;
-    if (!this.clear(x0, y0, x1, y1, gap, c, false)) return false;
-    return this.plateFor(c, gap, keep);
+    const gap = keep ? this.gapLeave : this.gapEnter;
+    if (!this.clear(x0, y0, x1, y1, gap, c, false, this.isGroup[c] ? -1 : c)) return false;
+    return this.plateFor(c, gap * O.plateGapRatio, keep);
+  }
+
+  /** The plate in `plateX`, `plateY` is nested inside child `c`'s own rectangle (`plateAt` 6). */
+  private plateInside(c: number): boolean {
+    return this.plateX >= this.boxX0[c]! && this.plateY >= this.boxY0[c]! && this.plateX < this.boxX1[c]! && this.plateY < this.boxY1[c]!;
+  }
+
+  /** The true boxes (no minimum size) of places `a` and `b` overlap. */
+  private trueOverlap(a: number, b: number): boolean {
+    return this.trueX0[a]! < this.trueX1[b]! && this.trueX1[a]! > this.trueX0[b]! && this.trueY0[a]! < this.trueY1[b]! && this.trueY1[a]! > this.trueY0[b]!;
   }
 
   private addObstacle(owner: number, kind: number, x0: number, y0: number, x1: number, y1: number) {
@@ -1149,13 +1275,16 @@ export class LodTree {
    * The rectangle keeps `gap` px from every obstacle (the larger of the gaps along x and y), except those of `own` and of a group on trial or
    * opened (`gone`). The reserved boxes of the incumbents other than `own` count only when `reserved` (a plate while the incumbents are judged).
    */
-  private clear(ax0: number, ay0: number, ax1: number, ay1: number, gap: number, own: number, reserved: boolean): boolean {
+  private clear(ax0: number, ay0: number, ax1: number, ay1: number, gap: number, own: number, reserved: boolean, boxOf = -1): boolean {
     const o = this.obs;
     for (let k = 0; k < this.nObs; k++) {
       const kind = this.obsKind[k]!;
       const owner = this.obsOwner[k]!;
       if (kind === 3 || owner === own || this.gone[owner]) continue;
       if (kind === 2 && !reserved) continue;
+      // two places whose TRUE boxes overlap (two neighbouring communes cut out of each other) never come apart with the zoom: the room between
+      // their rectangles is not asked of them (their labels still keep clear)
+      if (kind === 0 && boxOf >= 0 && !this.isGroup[owner] && this.trueOverlap(boxOf, owner)) continue;
       const dx = Math.max(o[4 * k]! - ax1, ax0 - o[4 * k + 2]!);
       const dy = Math.max(o[4 * k + 1]! - ay1, ay0 - o[4 * k + 3]!);
       if ((dx > dy ? dx : dy) < gap) return false;
@@ -1172,28 +1301,49 @@ export class LodTree {
     const w = this.labelW[c]!;
     const h = this.labelH[c]!;
     const mine = keep ? this.plateCand[c]! : -1;
-    const cam = this.cam;
-    // a box that touches the canvas gets a plate on it (a plate below the bottom edge is a position the planner does not have); a box wholly off it is judged like any other
-    const touches = this.boxX1[c]! > 0 && this.boxX0[c]! < cam.width && this.boxY1[c]! > 0 && this.boxY0[c]! < cam.height;
-    for (let t = 0; t < 7; t++) {
-      // the position it had first (while kept), then the six in the planner's order
-      const cand = t === 0 ? mine : t - 1;
-      if (cand < 0 || (t > 0 && cand === mine)) continue;
-      this.plateAt(c, cand);
-      if (touches && (this.plateX < 0 || this.plateY < 0 || this.plateX + w > cam.width || this.plateY + h > cam.height)) continue; // (the planner keeps a plate on the canvas)
-      if (!this.clear(this.plateX, this.plateY, this.plateX + w, this.plateY + h, gap, c, keep)) continue;
-      this.plateCand[c] = cand;
-      return true;
+    // An incumbent first looks for a position that is also clear of the reserved boxes of the other incumbents, then, failing that, for one that is clear of what is really there: a more
+    // important incumbent is never dropped for a less important one that may itself be dropped (it would come back a step later and flap).
+    for (let pass = 0; pass < (keep ? 2 : 1); pass++) {
+      for (let t = 0; t < 8; t++) {
+        // the position it had first (while kept), then the seven in the planner's order (the nested one last: a box too big for a plate outside it)
+        const cand = t === 0 ? mine : t - 1;
+        if (cand < 0 || (t > 0 && cand === mine)) continue;
+        this.plateAt(c, cand);
+        if (!this.plateOnCanvas(c)) continue; // (the planner keeps a plate on the canvas)
+        if (!this.clear(this.plateX, this.plateY, this.plateX + w, this.plateY + h, gap, c, keep && pass === 0, this.isGroup[c] ? -1 : c)) continue;
+        this.plateCand[c] = cand;
+        return true;
+      }
     }
     return false;
   }
 
-  /** The plate of child `c`'s label at position `cand` (0 above-left, 1 above-right, 2 below-left, 3 below-right, 4 right, 5 left): left in `plateX`, `plateY`. Always true. */
+  /**
+   * The plate in `plateX`, `plateY` (child `c`'s label) is on the canvas, or its box is wholly off it: a box that touches the canvas gets a plate on
+   * it (a plate beyond an edge is a position the planner does not have); a box wholly off it is judged like any other.
+   */
+  private plateOnCanvas(c: number): boolean {
+    const cam = this.cam;
+    const touches = this.boxX1[c]! > 0 && this.boxX0[c]! < cam.width && this.boxY1[c]! > 0 && this.boxY0[c]! < cam.height;
+    if (this.plateInside(c)) return this.plateX + this.labelW[c]! <= Math.min(this.boxX1[c]!, cam.width) && this.plateY + this.labelH[c]! <= Math.min(this.boxY1[c]!, cam.height);
+    return !touches || (this.plateX >= 0 && this.plateY >= 0 && this.plateX + this.labelW[c]! <= cam.width && this.plateY + this.labelH[c]! <= cam.height);
+  }
+
+  /**
+   * The plate of child `c`'s label at position `cand` (0 above-left, 1 above-right, 2 below-left, 3 below-right, 4 right, 5 left, 6 nested in the
+   * top-left corner of the part of the box on the canvas: the planner's own positions): left in `plateX`, `plateY`. Always true.
+   */
   private plateAt(c: number, cand: number): boolean {
     const w = this.labelW[c]!;
     const h = this.labelH[c]!;
     const g = LABEL_TYPE.boxGap;
     const bleed = LABEL_TYPE.bleed;
+    if (cand === 6) {
+      const inset = this.cam.cell + LABEL_TYPE.nestInset;
+      this.plateX = Math.max(this.boxX0[c]!, 0) + inset;
+      this.plateY = Math.max(this.boxY0[c]!, 0) + inset;
+      return true;
+    }
     this.plateX = cand === 0 || cand === 2 ? this.boxX0[c]! - bleed : cand === 1 || cand === 3 ? this.boxX1[c]! - w + bleed : cand === 4 ? this.boxX1[c]! + g : this.boxX0[c]! - w - g;
     this.plateY = cand < 2 ? this.boxY0[c]! - h - g : cand < 4 ? this.boxY1[c]! + g : this.boxY0[c]!;
     return true;

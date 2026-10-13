@@ -17,13 +17,13 @@ import type { GlobePlace, GlobeRoute } from "../types";
 import type { GlobeTheme } from "./colors";
 import { attachControls, type ControlsHost, type PointerKind } from "./controls";
 import { watchDevicePixelRatio } from "./dpr";
-import { FRAME_CLOCK } from "./governor";
 import { groupFitZoom, radiusFitZoom } from "./framing";
 import {
   DEG,
   FOV_DEG,
   clamp,
   fitZoom,
+  silhouetteRadiusPx,
   normalizeLon,
   projectLonLat,
   viewBasis,
@@ -51,6 +51,8 @@ import { snapBox } from "./group-square";
 import { IdleSpin, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
+import { ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
+import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
 import { INSET_EASE, SKY, TUNING } from "./tuning";
 import { fromViewState } from "./view";
@@ -97,6 +99,11 @@ export interface RendererOptions {
   onHover?(slug: string | null): void;
   /** The GL context was lost (true) or restored (false). */
   onContextChange(lost: boolean): void;
+  /**
+   * The line that goes round the planet in the zoomed-out regime (engine/ring.ts `ringText`). Absent or empty, or `RING_STATE.enabled` false
+   * (`?no-ring`): no ring, and the lowest zoom is the whole-globe fit.
+   */
+  ringText?: string;
 }
 
 export interface StartView {
@@ -131,7 +138,12 @@ export class GlobeRenderer {
   private bufH = 1;
   private canvasLeft = 0;
   private canvasTop = 0;
+  /** Lowest zoom the camera may go to: the whole-globe `fit`, or (with the ring) the zoom at which the ring fits, below it. */
   private minZoom = 1;
+  /** The zoom at which the whole globe fits the free area (`TUNING.fitMargin`): the 0 of `GlobeViewState.zoom`, the world view of the idle rotation, the floor of programmatic framing. */
+  private fit = 1;
+  /** The ring of type, when there is one (engine/ring-layer.ts). */
+  private ring: RingLayer | null = null;
   /** Highest zoom reachable now (the globe's maximum unless the street map is available); see `setZoomLimit`. */
   private zoomLimit: number = TUNING.maxZoom;
   /** Skip drawing the Three.js scene (the street map covers it); the camera, flights and `onFrame` still run. */
@@ -229,6 +241,7 @@ export class GlobeRenderer {
     opts.container.append(this.canvas);
 
     this.globe = new GlobeScene(opts);
+    if (opts.ringText && RING_STATE.enabled) this.ring = new RingLayer(opts.container, opts.ringText, opts.theme, this.reduced);
     this.setTheme(opts.theme);
 
     const ro = new ResizeObserver(() => this.resize(true));
@@ -257,11 +270,6 @@ export class GlobeRenderer {
   }
 
   /* ------------------------------ sizing ------------------------------ */
-
-  /** Re-derive the art pixel size and the buffers (the frame governor changed `QUALITY`). */
-  refit(): void {
-    this.resize(true);
-  }
 
   private resize(redraw: boolean) {
     if (this.disposed) return;
@@ -305,11 +313,28 @@ export class GlobeRenderer {
     const { width: w, height: h, pixel: P } = this;
     const inset = clampInset(this.inset, w);
     this.shiftBuf = insetShiftBuf(inset, P);
-    this.minZoom = fitZoom(freeWidth(w, inset), h, TUNING.fitMargin);
+    this.fit = fitZoom(freeWidth(w, inset), h, TUNING.fitMargin);
+    this.minZoom = this.ring ? Math.min(this.fit, ringFloorZoom({ fit: this.fit, freeWidth: freeWidth(w, inset), height: h })) : this.fit;
     this.containerMask = fadeMask(w, inset);
+    this.ring?.setMask(this.containerMask);
+    this.layoutRing();
     const mask = fadeMask(w, inset, this.canvasLeft) ?? "";
     this.canvas.style.maskImage = mask;
     this.canvas.style.setProperty("-webkit-mask-image", mask);
+  }
+
+  /** The number of times the line goes round follows the viewport and the panel's SETTLED inset (not the animated one: the text must not reflow while the panel slides). */
+  private ringLayoutKey = "";
+  private layoutRing() {
+    if (!this.ring) return;
+    const { width: w, height: h } = this;
+    const key = `${w}x${h}@${this.insetTarget}`;
+    if (key === this.ringLayoutKey) return;
+    this.ringLayoutKey = key;
+    const free = freeWidth(w, clampInset(this.insetTarget, w));
+    const fit = fitZoom(free, h, TUNING.fitMargin);
+    const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h }));
+    this.ring.setLayout(silhouetteRadiusPx(floor, h));
   }
 
   /**
@@ -349,10 +374,11 @@ export class GlobeRenderer {
   /** Where the camera starts, once the minimum zoom is known. */
   private startView(): ViewState {
     const s = this.start;
-    if (!s) return { lon: 15, lat: 28, zoom: this.minZoom };
-    if (s.fitRadiusKm !== undefined) return { lon: s.lon, lat: s.lat, zoom: Math.max(this.minZoom, this.fitZoomFor(s.fitRadiusKm)) };
+    // The world view is the whole-globe fit, not the ring's lowest zoom: the ring is found by zooming out.
+    if (!s) return { lon: 15, lat: 28, zoom: this.fit };
+    if (s.fitRadiusKm !== undefined) return { lon: s.lon, lat: s.lat, zoom: Math.max(this.fit, this.fitZoomFor(s.fitRadiusKm)) };
     if (s.zoom01 === null) return { lon: s.lon, lat: s.lat, zoom: TUNING.selectZoom };
-    return fromViewState({ lon: s.lon, lat: s.lat, zoom: s.zoom01, street: s.street }, this.minZoom, TUNING.maxZoom);
+    return fromViewState({ lon: s.lon, lat: s.lat, zoom: s.zoom01, street: s.street }, this.fit, TUNING.maxZoom);
   }
 
   /** The animated inset now (CSS px). */
@@ -385,8 +411,13 @@ export class GlobeRenderer {
     return this.flight !== null;
   }
 
+  /** The lowest zoom the camera may go to (below `getFitZoom()` by the ring's room when the ring is on). */
   getMinZoom() {
     return this.minZoom;
+  }
+  /** The whole-globe fit: the 0 of `GlobeViewState.zoom` (the zoomed-out regime of the ring below it reports 0 too). */
+  getFitZoom() {
+    return this.fit;
   }
   getView(): ViewState {
     return { ...this.view };
@@ -477,6 +508,7 @@ export class GlobeRenderer {
 
   setReducedMotion(on: boolean) {
     this.reduced = on;
+    this.ring?.setReduced(on);
     this.noteActivity();
     if (on) {
       if (this.flight) this.view = this.clampView(this.flight.to);
@@ -493,6 +525,7 @@ export class GlobeRenderer {
 
   setTheme(theme: GlobeTheme) {
     this.theme = theme;
+    this.ring?.setTheme(theme);
     // Tones of the semantic zoom: group squares in map levels per kind (below the ink), a place marker the ink.
     this.lod.setTones(theme.ramp.length);
     this.gl.setClearColor(new Color(...theme.background), 1);
@@ -632,6 +665,11 @@ export class GlobeRenderer {
       screen.by0[i] = r.r0 * P + this.canvasTop;
       screen.bx1[i] = r.c1 * P + this.canvasLeft;
       screen.by1[i] = r.r1 * P + this.canvasTop;
+      // the box as projected, for the labels (they move smoothly; the drawn box steps by cells)
+      screen.fx0[i] = lod.boxX0[i]! + this.canvasLeft;
+      screen.fy0[i] = lod.boxY0[i]! + this.canvasTop;
+      screen.fx1[i] = lod.boxX1[i]! + this.canvasLeft;
+      screen.fy1[i] = lod.boxY1[i]! + this.canvasTop;
       screen.x[i] = (screen.bx0[i]! + screen.bx1[i]!) / 2;
       screen.y[i] = (screen.by0[i]! + screen.by1[i]!) / 2;
       // Drawn = the node's places passed the visibility rule and its rectangle touches the buffer.
@@ -802,7 +840,7 @@ export class GlobeRenderer {
     if (this.flight) {
       const dt = now - this.flightLast;
       this.flightLast = now;
-      const s = sampleFlight(this.flight, now, this.minZoom);
+      const s = sampleFlight(this.flight, now, this.fit);
       const lat = clamp(s.view.lat, -TUNING.maxLat, TUNING.maxLat);
       if (this.flightBeyond && s.view.zoom > this.maxZoomAt(lat) + 1e-6) {
         // The street map is not available yet: hold at the limit and pause the flight's clock; it resumes from here.
@@ -841,9 +879,14 @@ export class GlobeRenderer {
     c.focused = this.focused !== null;
     c.inset = this.insetTarget;
     c.zoom = this.view.zoom;
-    c.minZoom = this.minZoom;
+    c.minZoom = this.fit; // the world view is the whole-globe fit; the ring's regime below it is part of it
     c.busy = this.flight !== null || !isStill(this.velocity) || this.insetAnim !== null || this.pressed.size > 0;
     return c;
+  }
+
+  /** The idle rotation is turning the globe now (a plain read: asked every camera frame, so it builds nothing, unlike `spinInfo`). */
+  get spinning(): boolean {
+    return this.spin.spinning;
   }
 
   /** Why the globe is not turning (checks), or null while it is allowed to. */
@@ -916,15 +959,9 @@ export class GlobeRenderer {
     }
   }
 
-  /** Whether the last tick asked for another frame: the next tick is then part of a running animation (see `FRAME_CLOCK`). */
-  private chained = false;
-
   private tick = () => {
     this.raf = 0;
-    if (this.disposed || this.hidden || this.lost) {
-      this.chained = false;
-      return;
-    }
+    if (this.disposed || this.hidden || this.lost) return;
     const now = performance.now();
     // The rotation's own frame chain follows the display (a frame per refresh) but not faster than `SPIN.minFrameMs`: a frame that nothing else asked for is skipped when it is too soon.
     if (!this.forced && this.spin.spinning && !spinFrameDue(now, this.lastTickAt)) {
@@ -933,10 +970,6 @@ export class GlobeRenderer {
     }
     this.forced = false;
     this.lastTickAt = now;
-    // The frame governor (engine/governor.ts) must tell a slow device from a quiet one: a frame that is not part of a running
-    // animation was caused by an input event, and its interval says nothing about the device.
-    FRAME_CLOCK.live = true;
-    FRAME_CLOCK.continuous = this.chained;
     const flying = this.flight !== null;
     const moving = this.advance(now);
     if (moving) this.spin.settle(now); // a flight, inertia or the inset slide is camera motion: not idle (a turning globe coasts to rest)
@@ -944,13 +977,10 @@ export class GlobeRenderer {
     if (flying && this.flight === null) this.spin.activity(now);
     this.stepSpin(now);
     this.renderNow();
-    FRAME_CLOCK.continuous = false;
     // A timed transition of the boxes or of the borders (engine/fade.ts) that has not reached its end keeps the loop going, camera or not.
     // While the street map owns the view the globe draws nothing and its transitions are not advanced here (the street engine runs the
     // boxes' own), so they must not keep this loop spinning.
     const more = moving || (!this.suspended && (this.lod.animating || this.globe.animating || !!this.opts.labelsAnimating?.()));
-    // `chained` is about real animations only: the idle rotation's frames are decoration, and the frame governor must read them by their own cost, not their pace.
-    this.chained = more;
     if (more) this.keepGoing(moving);
     else if (this.spin.spinning) this.chainSpin();
     else this.armSpin();
@@ -960,16 +990,16 @@ export class GlobeRenderer {
   renderNow() {
     if (this.disposed || this.lost || !this.sized) return;
     this.cancelFrame();
-    const w0 = performance.now();
     if (this.suspended) {
       this.ticks++;
+      this.syncRing();
       this.opts.onFrame();
-      FRAME_CLOCK.workMs = performance.now() - w0;
       return;
     }
     const tp = perfStart();
     this.syncCamera();
     this.syncNodes();
+    this.syncRing();
     perfEnd("three.sync", tp);
     // The whole buffer is drawn: a GL scissor limited to the free area saved nothing measurable (docs/web-architecture.md)
     // and left the area outside it stale, which the CSS edge-fade mask then revealed.
@@ -982,10 +1012,38 @@ export class GlobeRenderer {
     const t1 = perfStart();
     this.opts.onFrame();
     perfEnd("frame.callbacks", t1);
-    FRAME_CLOCK.workMs = performance.now() - w0;
     // Whoever drew this frame (the tick, a resize, a check), the transitions run to their end, and the idle rotation's chain (cancelled above) goes on.
     if (this.lod.animating || this.globe.animating || this.opts.labelsAnimating?.()) this.keepGoing(false);
     else if (this.spin.spinning) this.chainSpin();
+  }
+
+  /**
+   * The ring goes where the planet is, in the same frame (a camera frame, drawn or suspended). Cheap when it is not shown: one comparison.
+   * It runs on its own clock for the slow turn (engine/ring-layer.ts) and never asks for a frame of the globe.
+   */
+  private syncRing() {
+    const ring = this.ring;
+    if (!ring) return;
+    const alpha = ringAlpha(this.view.zoom, this.fit, this.minZoom);
+    if (alpha <= 0 && !ring.isShown) return;
+    const P = this.pixel;
+    const ch = this.bufH * P;
+    ring.update({
+      cx: (this.bufW * P) / 2 - this.shiftBuf * P + this.canvasLeft,
+      cy: ch / 2 + this.canvasTop,
+      r: silhouetteRadiusPx(this.view.zoom, ch),
+      alpha,
+      width: this.width,
+      height: this.height,
+    });
+  }
+
+  /** The ring's state (checks): shown, tone, glyphs, size of its canvas; null when there is none. */
+  ringState() {
+    const ring = this.ring;
+    if (!ring) return null;
+    const alpha = ringAlpha(this.view.zoom, this.fit, this.minZoom);
+    return { ...ring.state(), zoomAlpha: alpha, fit: this.fit, floor: this.minZoom, silhouettePx: silhouetteRadiusPx(this.view.zoom, this.bufH * this.pixel) };
   }
 
   private syncCamera() {
@@ -1062,6 +1120,8 @@ export class GlobeRenderer {
     this.cancelFrame();
     for (const c of this.cleanups) c();
     this.cleanups = [];
+    this.ring?.dispose();
+    this.ring = null;
     this.globe.dispose();
     this.gl.dispose();
     this.gl.forceContextLoss();

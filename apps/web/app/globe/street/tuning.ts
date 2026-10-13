@@ -31,9 +31,9 @@ export const STREET_TUNING = {
    * Native art-resolution render: map pixels per art cell along each axis. 3 is the smallest that keeps the line rules of
    * docs/pixel-line-rules.md (the line gate, `pnpm test:street-lines`): the classify sample is then exactly one texel, a
    * 1-cell line is 3 px wide and a dotted line keeps its dashes. 2 samples the average of a 2x2 block, which softens short
-   * dashes (dotted roads lose up to a fifth of their cells and the 2x2-block check fails); 1 loses them. The frame
-   * governor (engine/governor.ts) steps to 2 on slow devices. Costs 9 map pixels per cell, against 36 for the
-   * device-resolution render at DPR 2.
+   * dashes (dotted roads lose up to a fifth of their cells and the 2x2-block check fails); 1 loses them. Constant at
+   * runtime (it is read once when the map is created; `?globe-debug` with `street-opts` `{"renderScale":2}` is for A/B
+   * runs). Costs 9 map pixels per cell, against 36 for the device-resolution render at DPR 2.
    */
   renderScale: 3,
   /**
