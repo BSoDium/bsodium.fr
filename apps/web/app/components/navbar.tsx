@@ -1,9 +1,70 @@
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { NavLink, useLocation, useMatches } from "react-router";
 import { SearchPalette, SearchTriggers } from "~/components/search-palette";
 import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView } from "~/lib/entries";
 import { useHeroResting } from "~/lib/hero-rest";
 import { SITE_NAME } from "~/lib/site";
 import { cn } from "~/lib/utils";
+
+/**
+ * How long after the pointer sequence that made the header appear its controls ignore the pointer, ms. A touch tap fires its click at whatever is
+ * under the finger when the finger lifts: if the press collapsed the hero, the header's row is there by then, and a tap near the top of the
+ * globe would activate a link nobody aimed at (observed: "Articles", navigating away).
+ */
+export const GESTURE_GUARD_MS = 350;
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/**
+ * Guards the header that appears BECAUSE OF a gesture on the home page (the hero stepping back): while `data-guard` is on it, CSS (app.css,
+ * `[data-slot="site-header"][data-guard]`) makes its controls ignore the pointer, so the click that gesture produces lands on the globe
+ * beneath, which has no click behaviour. The guard ends `GESTURE_GUARD_MS` after the pointer sequence that is going on has ended (or after
+ * the header appeared when none is). Only `pointer-events`: the header stays visible, keyboard focus and assistive technology are not
+ * affected (activating a link by them dispatches a click on the element itself). Every other way the header comes (a route change, a load)
+ * is not guarded.
+ */
+function useGestureGuard(bar: boolean, onHome: boolean, ref: { current: HTMLElement | null }) {
+  const was = useRef(bar);
+  const pointers = useRef(0);
+  const lastEnd = useRef(0);
+  useEffect(() => {
+    const down = (e: Event) => {
+      if (e.type === "pointerdown") pointers.current++;
+    };
+    const up = () => {
+      pointers.current = Math.max(0, pointers.current - 1);
+      lastEnd.current = performance.now();
+    };
+    window.addEventListener("pointerdown", down, { capture: true, passive: true });
+    window.addEventListener("pointerup", up, { capture: true, passive: true });
+    window.addEventListener("pointercancel", up, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener("pointerdown", down, { capture: true });
+      window.removeEventListener("pointerup", up, { capture: true });
+      window.removeEventListener("pointercancel", up, { capture: true });
+    };
+  }, []);
+  useIsoLayoutEffect(() => {
+    const appeared = bar && !was.current;
+    was.current = bar;
+    const el = ref.current;
+    if (!appeared || !onHome || !el) return;
+    el.setAttribute("data-guard", "");
+    lastEnd.current = Math.max(lastEnd.current, performance.now());
+    let timer = 0;
+    const release = () => {
+      if (pointers.current > 0 || performance.now() - lastEnd.current < GESTURE_GUARD_MS) {
+        timer = window.setTimeout(release, 50);
+        return;
+      }
+      el.removeAttribute("data-guard");
+    };
+    timer = window.setTimeout(release, GESTURE_GUARD_MS);
+    return () => {
+      window.clearTimeout(timer);
+      el.removeAttribute("data-guard");
+    };
+  }, [bar, onHome, ref]);
+}
 
 /** The first item names the globe (the home page): the site's own name is the landing hero's headline and the document title, not the row's. */
 const HOME_LABEL = "Globe";
@@ -59,11 +120,14 @@ export function Navbar({ heroResting: forced }: NavbarProps) {
   const stored = useHeroResting();
   const heroResting = forced ?? stored;
   const bar = !(pathname === "/" && heroResting);
+  const headerRef = useRef<HTMLElement>(null);
+  useGestureGuard(bar, pathname === "/", headerRef);
 
   return (
     <>
       {bar && (
         <header
+          ref={headerRef}
           data-slot="site-header"
           className={cn(
             "@container pointer-events-none fixed top-0 right-0 left-0 z-40",

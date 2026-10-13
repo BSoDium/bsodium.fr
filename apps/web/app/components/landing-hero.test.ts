@@ -5,10 +5,10 @@ import { createStaticHandler, createStaticRouter, StaticRouterProvider, type Sta
 import { describe, expect, it } from "vitest";
 import { createHeroMachine } from "~/lib/hero-machine";
 import { SITE_FOCUS, SITE_IDENTITY, SITE_NAME, SITE_TAGLINE } from "~/lib/site";
-import { LandingHero } from "./landing-hero";
+import { NAME_TRAVEL_MS, LandingHero } from "./landing-hero";
 
-async function render(props: { away?: boolean; empty?: boolean } = {}, machine = createHeroMachine()): Promise<string> {
-  const routes = [{ id: "routes/shell", path: "*", Component: () => createElement(LandingHero, { machine, away: props.away ?? false, empty: props.empty ?? false }) }];
+async function render(props: { away?: boolean; empty?: boolean; orbit?: boolean | null } = {}, machine = createHeroMachine()): Promise<string> {
+  const routes = [{ id: "routes/shell", path: "*", Component: () => createElement(LandingHero, { machine, away: props.away ?? false, empty: props.empty ?? false, orbit: props.orbit ?? null }) }];
   const handler = createStaticHandler(routes);
   const context = (await handler.query(new Request("http://localhost/"))) as StaticHandlerContext;
   const router = createStaticRouter(handler.dataRoutes, context);
@@ -105,8 +105,48 @@ describe("LandingHero", () => {
     const mini = html.slice(html.indexOf('<p aria-hidden="true" class="hero-mini">'));
     expect(mini).toContain("Drag to explore. Back to start after a moment.");
     // the same weights as the name: the given name heavy (the line's own 800), the family name at the thin end
-    expect(mini).toMatch(/<span class="hero-mini-name">Elliot <span class="type-thin"><span>Négrel<\/span>/);
+    expect(mini).toMatch(/<span class="hero-mini-name"><span class="hero-mini-given">Elliot<\/span> <span class="hero-mini-family type-thin"><span>Négrel<\/span>/);
     expect(html.match(/<h[1-6][ >]/g)).toHaveLength(1);
+  });
+});
+
+describe("the orbiting caption and the hero's how-to line", () => {
+  it("keeps the line in the markup whatever the globe says (visually hidden by CSS while the caption says it): pending on the server, true with the type, false without it", async () => {
+    for (const [orbit, attr] of [
+      [null, "pending"],
+      [true, "true"],
+      [false, "false"],
+    ] as const) {
+      const html = await render({ orbit });
+      expect(html).toContain(`data-orbit="${attr}"`);
+      expect(html).toContain('<p class="hero-hint">');
+    }
+    // the empty archive has no globe to point at: never the caption
+    expect(await render({ empty: true, orbit: true })).toContain('data-orbit="false"');
+  });
+});
+
+describe("the name's travel (item 10 of the owner's round)", () => {
+  const css = readFileSync(new URL("../app.css", import.meta.url), "utf8");
+  const tokens = readFileSync(new URL("../app.css", import.meta.url), "utf8");
+
+  it("takes the panel's duration and ease, so the hero and the panel move as one family", () => {
+    expect(tokens).toMatch(/--duration-slow:\s*360ms/);
+    expect(NAME_TRAVEL_MS).toBe(360);
+  });
+
+  it("is a transform animation of the two halves: no font-size, layout or per-frame script, and the source has no requestAnimationFrame", () => {
+    const src = readFileSync(new URL("./landing-hero.tsx", import.meta.url), "utf8");
+    expect(src).toContain("el.animate(");
+    expect(src).not.toMatch(/requestAnimationFrame|setInterval/);
+    const frames = [...src.matchAll(/\{ transform: [^}]*\}/g)].map((m) => m[0]);
+    expect(frames).toHaveLength(2);
+    expect(css).toMatch(/\.hero-given,\s*\.hero-family \{\s*display: inline-block;\s*transform-origin: 0 0;/);
+  });
+
+  it("is instant under reduced motion", () => {
+    const src = readFileSync(new URL("./landing-hero.tsx", import.meta.url), "utf8");
+    expect(src).toContain("prefers-reduced-motion: reduce");
   });
 });
 

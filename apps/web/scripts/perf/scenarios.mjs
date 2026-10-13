@@ -98,7 +98,7 @@ export const SCENARIOS = [
   },
   {
     id: "ring-rest",
-    title: "ring of type: zoomed out to its lowest zoom at rest, the ring turning (5 s; no GL frame is wanted, the cost is the ring's own)",
+    title: "orbiting type: the home screen at rest at its lowest zoom, the type turning (5 s; no GL frame is wanted, the cost is the layer's own)",
     ring: true,
     async setup(page) {
       await settleWorld(page);
@@ -117,20 +117,23 @@ export const SCENARIOS = [
     },
   },
   {
-    id: "ring-wheel",
-    title: "ring of type: wheel zoom out from the fit to the lowest zoom and back (the ring fades in step with the globe's frames)",
+    id: "ring-fade",
+    title: "orbiting type: the showcase turned off and on five times, 600 ms apart (boxes and labels fade in and out against the type; each fade is the globe's own timed opacity)",
     ring: true,
     async setup(page) {
       await settleWorld(page);
+      await waitQuiet(page, { quietMs: 600, minMs: 300 });
     },
     async run(page) {
-      const c = centre(page);
-      await wheel(page, 40, 2500, c);
-      await sleep(600);
-      await wheel(page, -40, 2500, c);
-      await waitQuiet(page, { quietMs: 600, minMs: 200, maxMs: 4000 });
-      const r = await page.evaluate(() => window.__globeDebug.ring());
-      return { ringFrames: r.frames, ringMs: r.totalMs, shown: r.shown, zoom: await zoomNow(page) };
+      const a = await page.evaluate(() => ({ r: window.__globeDebug.ring(), draws: window.__pf.drawsTotal }));
+      for (let k = 0; k < 5; k++) {
+        await page.evaluate(() => window.__globeDebug.showcase(false));
+        await sleep(600);
+        await page.evaluate(() => window.__globeDebug.showcase(true));
+        await sleep(600);
+      }
+      const b = await page.evaluate(() => ({ r: window.__globeDebug.ring(), draws: window.__pf.drawsTotal }));
+      return { ringFrames: b.r.frames - a.r.frames, ringMs: b.r.totalMs - a.r.totalMs, glDraws: b.draws - a.draws, shown: b.r.shown, showcase: b.r.showcase };
     },
   },
   {

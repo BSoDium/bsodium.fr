@@ -69,21 +69,25 @@ The globe's skybox (`SKY` in `app/globe/engine/tuning.ts`; architecture in web-a
 | `eraDeg` | 70 | the earth rotation angle at load (the sky's one placement against the earth) |
 | `seed` | `0x5ca1ab1e` | every random choice (positions, tiers, keep ranks) |
 
-### Ring of type
+### Orbiting type
 
-The ring of type that circles the planet's disc when the globe is zoomed out below its whole-globe fit (`RING` in `app/globe/engine/tuning.ts`; web-architecture.md, "Ring of type") has no colour of its own either: one palette tone, no alpha, the `coast` role (3.1:1 dark / 3.2:1 light on the page: the loudest the MAP itself gets, never above a coastline), its fade a staircase of tones; decorative and `aria-hidden`, so not held to WCAG, and below the boxes (5.2:1) and the labels (ink). Type: `--font-mono` (the labels' stack), weight 500, tracking about 0.14 em like `.nav-link` (adjusted per viewport so the line closes the circle), uppercase, about 11 px (10 to 13) at the lowest zoom, scaling with the planet. No new token.
+The orbiting type of the home screen (`RING` and `LIFT` in `app/globe/engine/tuning.ts`; web-architecture.md, "Orbiting type") has no colour of its own either: the ring is one palette tone (the `peak` role, no alpha; the far arc is drawn at `farAlpha` of it), the caption is the ink with a keyline in the page colour. Decorative and `aria-hidden` (the hero's how-to line is the text).
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `gap` | 0.06 | the baseline's distance from the silhouette, a fraction of its radius (17 px at the lowest zoom on 1440 x 900) |
-| `degPerSec`, `direction`, `startDeg` | 3, 1 (clockwise), 0 | its own turn on its own clock (the globe's idle rotation is 0.2 degrees a second, so the ring turns 15 times faster); degrees clockwise from twelve o'clock at the start |
+| `gap` | 0.22 | the ring's baseline radius over the planet's: 1 + gap |
+| `tiltDeg`, `rollDeg` | 72, -8 | the ring's plane: tipped about the view's horizontal axis (top away from the viewer), then rolled about the view axis |
+| `degPerSec`, `direction`, `startDeg` | 3, -1, 0 | its own turn on its own clock (the globe's idle rotation is 0.2 degrees a second); the near arc slides left |
 | `type` | weight 500, tracking 0.14, advance 0.6 em, target 11 px, slack 15 % | the line goes round a whole number of times, nearest the target em; the em may move by the slack and the tracking takes the rest, so the seam closes |
+| `tone`, `farAlpha` | `peak`, 0.5 | palette role of the ring's letters, opacity of the far arc |
+| `band.radius`, `emR`, `leading`, `lines` | 1.04, 0.2, 1.0, 2 | the caption's shell (planet radii), its em (planet radii), the line gap (em) and the number of lines |
+| `band.leanDeg`, `riseDeg`, `rollDeg` | -18, 22, -9 | the lines' axis leans away from the viewer (so they arch), sits higher on the face, rolled |
+| `band.weight`, `tracking`, `outlineEm`, `minGapEm` | 800, -0.02, 0.11, 2 | the display face at its heaviest, tight; the keyline round each letter; the air kept at each loop's seam |
+| `band.degPerSec` | 4 | the caption's own slide, on the same clock |
 | `zoom.floorBelowFit`, `zoom.fitMargin` | 0.5 levels, 0.12 | the camera goes at least this far below the whole-globe fit, and further until the ring fits the free area with this margin |
 | `zoom.fade` | from 0.08, to 0.6 | strength by the way from the fit (0) to the lowest zoom (1): absent up to `from`, full from `to` |
-| `tone` | `coast` | palette role of the letters |
 | `frameMs`, `maxStepMs`, `maxDpr` | 32, 100, 2 | at most 30 repaints a second, the largest step of its clock, the largest device pixel ratio its canvas is drawn at |
-
-Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251), because at those values it reads as the same barely-there haze as the dark one and the stipple does not compete with the boxes; `?no-sky` is the off switch.
+| `LIFT.gapPx`, `marginPx` | 14, 14 | air between the planet and what covers it; the least room kept above the highest thing (the lift's tween is `TUNING.insetMs` / `INSET_EASE`) |
 
 ### Map card and credits line
 

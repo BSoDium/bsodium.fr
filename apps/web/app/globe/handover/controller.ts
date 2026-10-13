@@ -69,6 +69,10 @@ export interface HandoverOptions {
   onNotice(notice: Notice | null): void;
   /** The line of the ring of type round the planet when zoomed out (`engine/ring.ts`); absent = no ring. Handed to the globe unchanged. */
   ringText?: string;
+  /** The phrases of the caption that wraps the planet with the ring (`GlobeProps.captionPhrases`), the cover and the showcase at start: handed to the globe unchanged. */
+  captionPhrases?: readonly string[];
+  coverBottom?: number;
+  showcase?: boolean;
   /** Testing and tuning: street engine options (pinned source, timings ...). */
   streetOptions?: Record<string, unknown>;
   /** Testing: override `HANDOVER.dissolve` (true = the dither dissolve instead of the cut). */
@@ -125,6 +129,12 @@ export interface HandoverHandle {
   setFocused(slug: string | null): void;
   setReducedMotion(on: boolean): void;
   setInset(px: number): void;
+  /** The app covers the bottom `px` of the globe (the landing hero at rest): the planet is lifted clear of it as far as there is room. */
+  setCover(px: number): void;
+  /** The home screen is at rest: boxes and labels out, the orbiting type in. */
+  setShowcase(on: boolean): void;
+  /** The globe has an orbiting type (it is not switched off). */
+  hasOrbit(): boolean;
   debug(): HandoverDebug;
   dispose(): void;
 }
@@ -213,6 +223,9 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     insetRight: opts.insetRight,
     zoomLimit: restoring ? Infinity : GLOBE_MAX_ZOOM,
     ringText: opts.ringText,
+    captionPhrases: opts.captionPhrases,
+    coverBottom: opts.coverBottom,
+    showcase: opts.showcase,
     onSelect: opts.onSelect,
     onSelectGroup: (slug) => selectGroup(slug),
     onHover: (slug) => street?.setHovered(slug),
@@ -773,6 +786,13 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     setInset(px) {
       globe.setInset(px);
     },
+    setCover(px) {
+      globe.setCover(px);
+    },
+    setShowcase(on) {
+      globe.setShowcase(on);
+    },
+    hasOrbit: () => renderer.hasOrbit(),
     debug(): HandoverDebug {
       const g = globe.debug();
       return {

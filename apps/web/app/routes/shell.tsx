@@ -15,13 +15,16 @@ import { getTilesConfig } from "~/lib/tiles-config.server";
 import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
 import { panelInset } from "~/lib/layout";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
-import { SITE } from "~/lib/site";
+import { SITE, SITE_CALL } from "~/lib/site";
 
 /** The sections the no-script text lists, in the order of the header (the names and addresses are `lib/sections.ts`'s). */
 const NOSCRIPT_KINDS = ["project", "article", "artwork", "poem"] as const;
 
 /** The words of the globe's ring of type: the site's identity (name, role, fields, place), the same constant the head tags and the hero read. */
 const RING_PHRASES = ringPhrases(SITE);
+/** The caption that wraps the planet with it: what to do (it replaces the hero's how-to line while the globe has the orbiting type). */
+const CAPTION_PHRASES = [...SITE_CALL];
+const NO_PHRASES: readonly string[] = [];
 
 export async function loader() {
   // `tiles` is the street map's tile source configuration (CATALYST_TILES_* read at request time, see
@@ -98,6 +101,10 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
     intent.current.user = true;
   }, []);
   const hero = useLandingHero(isOpen);
+  // The globe has the orbiting type (it is up, and the page does not switch it off): the hero's how-to line is then said by the caption and is
+  // kept for assistive technology only (visually hidden). Nothing else of the shell depends on it.
+  const [orbit, setOrbit] = useState<boolean | null>(null);
+  const empty = places.length === 0;
   const heroOnView = hero.onView;
   const saveView = useCallback(
     (view: GlobeViewState) => {
@@ -132,6 +139,9 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
               tiles={tiles}
               attribution={AttributionSlot}
               ringPhrases={RING_PHRASES}
+              captionPhrases={empty ? NO_PHRASES : CAPTION_PHRASES}
+              showcase={hero.showcase}
+              onOrbit={setOrbit}
               onSelect={select}
               onViewChange={saveView}
               onInteract={hero.onInteract}
@@ -154,7 +164,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
           </noscript>
         </div>
         {/* The landing hero: the globe page's h1 (the panel's title is the h1 while a place or entry is open) and the way into the lists. */}
-        <LandingHero machine={hero.machine} away={isOpen} empty={places.length === 0} />
+        <LandingHero machine={hero.machine} away={isOpen} empty={empty} orbit={orbit} onCover={hero.setCover} />
         <PlacesNav places={places} groups={groups} currentSlug={selectedSlug} onFocusSlug={setFocusedSlug} onOpen={markUserIntent} />
       </main>
       <DetailPanel

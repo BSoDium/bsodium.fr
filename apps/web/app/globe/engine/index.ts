@@ -53,6 +53,11 @@ interface GlobeOptions {
   pickOverride?: RendererOptions["pickOverride"];
   /** The line of the ring of type (see `RendererOptions.ringText`); absent = no ring. */
   ringText?: string;
+  /** The phrases of the caption that wraps the planet (see `RendererOptions.captionPhrases`). */
+  captionPhrases?: readonly string[];
+  /** See `GlobeProps.coverBottom` and `GlobeProps.showcase`: read at creation. */
+  coverBottom?: number;
+  showcase?: boolean;
 }
 
 /** Read-only introspection for automated checks (exposed on `window` only with `?globe-debug`). */
@@ -104,14 +109,16 @@ export interface GlobeDebug {
   spin(): ReturnType<GlobeRenderer["spinInfo"]> & { idleMs: number; degPerSec: number; easeInMs: number; stopMs: number; enabled: boolean };
   /** The sky: the earth rotation angle, its timed value (0..1), whether it is wanted and drawn, the farthest corner in earth radii; null when switched off (debug pages default to off, `?sky`). */
   sky(): ReturnType<GlobeRenderer["skyState"]>;
-  /** The ring of type: whether it is drawn, its tone, glyphs, repeats, canvas size and the zoom numbers behind it; null when there is none (`?no-ring`, a debug page without `?ring`). */
+  /** The orbiting type (ring and caption): whether it is drawn, its glyphs, repeats, canvas size, the showcase and the zoom numbers behind it; null when there is none (`?no-ring`, a debug page without `?ring`). */
   ring(): ReturnType<GlobeRenderer["ringState"]>;
+  /** Turn the showcase (the orbiting type in, the boxes out) on or off as the app's hero would (checks and the perf scenarios). */
+  showcase(on: boolean): void;
   /** Set the earth rotation angle in degrees (moves the sky against the earth) and draw. */
   setSkyEra(deg: number): void;
   gpuSync(): void;
   info(): ReturnType<GlobeRenderer["renderInfo"]>;
   loseContext(lose: boolean): void;
-  /** Inset state: current / target inset (CSS px), centre shift (buffer px). */
+  /** Inset state: current / target inset (CSS px), centre shift (buffer px), and the lift (CSS px, buffer px) with the cover it answers. */
   inset(): ReturnType<GlobeRenderer["insetInfo"]>;
   /** The semantic zoom for the CURRENT camera: one entry per drawn node (alpha, tone level, size in CSS px, whether its centre is shown, and whether the cut wants it), in tree order. Allocates; for checks. */
   lod(): LodDebugNode[];
@@ -159,6 +166,10 @@ export interface GlobeHandle {
   setReducedMotion(on: boolean): void;
   /** `GlobeProps.insetRight` changed. */
   setInset(px: number): void;
+  /** `GlobeProps.coverBottom` changed. */
+  setCover(px: number): void;
+  /** `GlobeProps.showcase` changed. */
+  setShowcase(on: boolean): void;
   debug(): GlobeDebug;
   /** Frees all GL resources, DOM nodes and listeners. */
   dispose(): void;
@@ -229,6 +240,9 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         pickLabel: (x, y, kind) => labels.hit(x, y, kind),
         pickOverride: opts.pickOverride,
         ringText: opts.ringText,
+        captionPhrases: opts.captionPhrases,
+        coverBottom: opts.coverBottom,
+        showcase: opts.showcase,
         onSelect: opts.onSelect,
         onSelectGroup: opts.onSelectGroup,
         onHover: (slug) => {
@@ -282,6 +296,8 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       labels.setReducedMotion(on);
     },
     setInset: (px) => renderer.setInset(px),
+    setCover: (px) => renderer.setCover(px),
+    setShowcase: (on) => renderer.setShowcase(on),
     debug: () => ({
       minZoom: () => renderer.getFitZoom(),
       fitZoom: () => renderer.getFitZoom(),
@@ -327,6 +343,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       spin: () => ({ ...renderer.spinInfo(), idleMs: SPIN.idleMs, degPerSec: SPIN.degPerSec, easeInMs: SPIN.easeInMs, stopMs: SPIN.stopMs, enabled: SPIN.enabled }),
       sky: () => renderer.skyState(),
       ring: () => renderer.ringState(),
+      showcase: (on) => renderer.setShowcase(on),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),
       info: () => renderer.renderInfo(),

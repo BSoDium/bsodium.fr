@@ -605,6 +605,196 @@ for (const width of [320, 360, 390, 430]) {
   await ctx.close();
 }
 
+// --- 10. Round 3: the showcase (the orbiting type in, the boxes out, the planet lifted), the name's travel -----------------------------------------
+// Pages in debug mode have the type off unless `?ring`; `window.__globeDebug.ring()` is its introspection.
+const RING_QUERY = "?globe-debug&ring&no-street&hero-idle=2500";
+const ringOf = (page) => page.evaluate(() => window.__globeDebug.ring());
+const planetOf = (page) =>
+  page.evaluate(() => {
+    const r = window.__globeDebug.ring();
+    const i = window.__globeDebug.inset();
+    const h = innerHeight;
+    return { r: r.silhouettePx, lift: i.lift, cover: i.cover, cy: h / 2 - i.lift, h, w: innerWidth, shown: r.shown, showcase: r.showcase, labels: window.__globeDebug.labelsShown().length };
+  });
+/** Freeze every running animation (the CSS transitions and the name's) at `t` ms and read the two halves' widths. */
+const widthsAt = (page, t) =>
+  page.evaluate((t) => {
+    for (const a of document.getAnimations()) {
+      a.pause();
+      a.currentTime = t;
+    }
+    const w = (s) => document.querySelector(s).getBoundingClientRect().width;
+    const box = (s) => {
+      const b = document.querySelector(s).getBoundingClientRect();
+      return { l: b.left, t: b.top, r: b.right, b: b.bottom };
+    };
+    return { given: w(".hero-given"), family: w(".hero-family"), givenBox: box(".hero-given"), familyBox: box(".hero-family"), vw: innerWidth, vh: innerHeight };
+  }, t);
+const resume = (page) => page.evaluate(() => document.getAnimations().forEach((a) => a.play()));
+
+{
+  const { ctx, page, logs } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/${RING_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(1500);
+  const p = await planetOf(page);
+  const r = await ringOf(page);
+  const v = await view(page);
+  const nums = await page.evaluate(() => ({ fit: window.__globeDebug.fitZoom(), floor: window.__globeDebug.floorZoom() }));
+  ok(Math.abs(v.zoom - nums.floor) < 1e-6 && nums.floor < nums.fit - 0.3, `showcase: the page opens fully zoomed out (zoom ${v.zoom.toFixed(2)}, the fit is ${nums.fit.toFixed(2)})`);
+  ok(r.shown && r.showcase && r.alpha === 1 && r.fonts, "showcase: the orbiting type is shown from the first frame, in the real faces");
+  ok(r.overlayHidden && p.labels === 0, "showcase: every box and label is out");
+  ok(p.lift > 20 && p.cy - p.r >= 0, `showcase: the planet is lifted by ${p.lift.toFixed(0)} px (cover ${p.cover}) and its top is inside the window (${Math.round(p.cy - p.r)} px)`);
+  const nameTop = await page.evaluate(() => document.querySelector(".hero-name").getBoundingClientRect().top);
+  ok(p.cy + p.r <= nameTop + 1, `showcase: the planet clears the name (its lowest point ${Math.round(p.cy + p.r)}, the name's top ${Math.round(nameTop)})`);
+  ok((await page.locator(".hero-hint").count()) === 1 && /Pick a point on the globe/.test(await page.locator(".hero-hint").textContent()), "showcase: the how-to line is still in the page's text");
+  ok((await hero(page).getAttribute("data-orbit")) === "true", "showcase: the hero knows the globe has the type");
+  const hint = await page.locator(".hero-hint").boundingBox();
+  ok(hint !== null && hint.width <= 1.5 && hint.height <= 1.5, `showcase: the line is visually hidden, not removed (${hint ? `${hint.width} x ${hint.height}` : "none"})`);
+  ok((await page.evaluate(() => document.querySelector("[data-orbit-layer]").getAttribute("aria-hidden"))) === "true", "showcase: the type is aria-hidden");
+  const picked = await page.evaluate(() => window.__globeDebug.pick(720, 330));
+  ok(picked === null, "showcase: a hidden box takes no pick");
+  await page.screenshot({ path: `${OUT_DIR}/hero-showcase-1440-dark.png` });
+
+  // The first press ends it: boxes back, the type fading, and the press selects nothing.
+  const path0 = new URL(page.url()).pathname;
+  await page.mouse.move(720, 120);
+  await page.mouse.down();
+  await waitState(page, "collapsed", 1500);
+  // the name's travel, sampled on the compositor's animations at 0, 120, 240 and 360 ms
+  const w0 = await widthsAt(page, 0);
+  const w1 = await widthsAt(page, 120);
+  const w2 = await widthsAt(page, 240);
+  const w3 = await widthsAt(page, 360);
+  const miniW = await page.evaluate(() => ({ given: document.querySelector(".hero-mini-given").getBoundingClientRect().width, family: document.querySelector(".hero-mini-family").getBoundingClientRect().width }));
+  ok(w0.given > 300 && w0.family > 600, `name travel: it starts at full size (${Math.round(w0.given)} + ${Math.round(w0.family)} px)`);
+  ok(w1.given < w0.given * 0.75 && w2.given < w1.given && w3.given <= w2.given, `name travel: it shrinks (${[w0, w1, w2, w3].map((w) => Math.round(w.given)).join(" > ")} px)`);
+  ok(Math.abs(w3.given - miniW.given) < 2 && Math.abs(w3.family - miniW.family) < 2, `name travel: it ends at the small line's size (${w3.given.toFixed(1)} / ${w3.family.toFixed(1)} against ${miniW.given.toFixed(1)} / ${miniW.family.toFixed(1)})`);
+  ok(Math.abs(w3.given / w0.given - w3.family / w0.family) < 0.02, `name travel: one uniform scale for the two halves (${(w3.given / w0.given).toFixed(3)} and ${(w3.family / w0.family).toFixed(3)})`);
+  ok([w0, w1, w2, w3].every((w) => w.givenBox.l >= -1 && w.familyBox.r <= w.vw + 1 && w.givenBox.b <= w.vh + 1 && w.familyBox.b <= w.vh + 1), "name travel: both halves stay inside the window the whole way");
+  ok((await page.evaluate(() => document.querySelector(".hero-name").style.fontSize)) === "", "name travel: no font size is written (a transform only)");
+  const kinds = await page.evaluate(() => document.querySelector(".hero-given").getAnimations().map((a) => Object.keys(a.effect.getKeyframes()[0]).filter((k) => !["offset", "computedOffset", "easing", "composite"].includes(k)).join("+")));
+  ok(kinds.length === 1 && kinds[0] === "transform", `name travel: one animation per half, of transform only (${kinds.join(", ")})`);
+  await resume(page);
+  await page.mouse.up();
+  await sleep(500);
+  const after = await planetOf(page);
+  const ar = await ringOf(page);
+  ok(!after.showcase && after.lift === 0 && !ar.shown, `showcase: the press ended it (type out, the planet back down, lift ${after.lift})`);
+  ok(after.labels > 0 && !ar.overlayHidden, `showcase: the boxes and labels are back (${after.labels} labels)`);
+  ok(new URL(page.url()).pathname === path0, "showcase: the press that ended it selected nothing");
+  ok((await page.locator(".hero-given").evaluate((e) => e.getAnimations().length === 0 && getComputedStyle(e).willChange === "auto")), "name travel: nothing is left running or promoted afterwards (no will-change)");
+  await page.screenshot({ path: `${OUT_DIR}/hero-collapsed-showcase-1440-dark.png` });
+
+  // The way back is the same motion reversed.
+  await waitState(page, "rest", 6000);
+  const b0 = await widthsAt(page, 0);
+  const b1 = await widthsAt(page, 120);
+  const b3 = await widthsAt(page, 360);
+  ok(Math.abs(b0.given - miniW.given) < 2 && b1.given > b0.given && b3.given > w0.given * 0.97, `name travel, back: it grows out of the small line (${[b0, b1, b3].map((w) => Math.round(w.given)).join(" < ")} px)`);
+  await resume(page);
+  await sleep(500);
+  const again = await ringOf(page);
+  ok(again.showcase && again.shown && again.overlayHidden, "showcase: back at rest, the type is in and the boxes are out again");
+  ok(logs.length === 0, `showcase: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// The planet's top is inside the window and clear of the name, at every shape (from 320 x 480), dark.
+for (const [name, options] of VIEWPORTS) {
+  const { ctx, page, logs } = await newPage(options);
+  await page.goto(`${BASE_URL}/${RING_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(900);
+  const p = await planetOf(page);
+  ok(p.shown && p.showcase && p.labels === 0, `${name}: the type is in and the boxes are out`);
+  ok(p.cy - p.r >= -0.5, `${name}: the lifted planet's top is inside the window (${Math.round(p.cy - p.r)} px, lift ${p.lift.toFixed(0)}, cover ${p.cover})`);
+  ok(p.cy + p.r <= p.h - p.cover + 1 || p.cy - p.r <= 20, `${name}: it clears what covers the bottom, or the room above is used up`);
+  ok(logs.length === 0, `${name}: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// Reduced motion: the showcase is there at once and the name does not travel.
+{
+  const { ctx, page, logs } = await newPage(DESKTOP, { reducedMotion: "reduce" });
+  await page.goto(`${BASE_URL}/${RING_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(800);
+  const r = await ringOf(page);
+  const i = await page.evaluate(() => window.__globeDebug.inset());
+  ok(r.shown && r.showcase && i.lift > 20 && i.lift === i.liftTarget, "reduced motion: the type is in and the planet lifted at once");
+  await page.mouse.move(720, 120);
+  await page.mouse.down();
+  await page.mouse.up();
+  await sleep(60);
+  ok((await heroState(page)) === "collapsed" && (await page.locator(".hero-given").evaluate((e) => e.getAnimations().length)) === 0, "reduced motion: the name does not travel (no animation), the hero is collapsed within 60 ms");
+  const r2 = await ringOf(page);
+  ok(!r2.showcase && r2.showcaseFade === 0 && (await page.evaluate(() => window.__globeDebug.inset().lift)) === 0, "reduced motion: the type is out and the planet down at once");
+  ok(logs.length === 0, `reduced motion (type): no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// ?no-ring: the previous home page (boxes, hint visible, no type, the world view is the fit).
+{
+  const { ctx, page, logs } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/?no-ring`);
+  await waitGlobe(page);
+  await sleep(1200);
+  ok((await page.locator("[data-orbit-layer]").count()) === 0, "no-ring: no orbiting type is mounted");
+  ok((await hero(page).getAttribute("data-orbit")) === "false", "no-ring: the hero is told there is none");
+  const hint = await page.locator(".hero-hint").boundingBox();
+  ok(hint !== null && hint.width > 100, "no-ring: the how-to line is visible");
+  ok(logs.length === 0, `no-ring: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// --- 11. A header that appears because of a gesture does not receive that gesture's click ------------------------------------------------
+// On a phone a tap on the globe collapses the hero in the same task as the press and the header row appears; the browser then fires the
+// tap's click at what is under the finger NOW. A tap near the top used to land on a header link ("Articles") and navigate. The header's
+// controls ignore the pointer until the pointer sequence has ended plus a short guard (keyboard, focus and assistive technology unaffected).
+{
+  const TOUCH = { ...MOBILE, viewport: { width: 390, height: 844 } };
+  // Where the "Articles" link is once the header is there (two steps: collapse, read the box).
+  const probe = await newPage(TOUCH);
+  await probe.page.goto(`${BASE_URL}/${IDLE_QUERY}`);
+  await waitGlobe(probe.page);
+  await waitDebug(probe.page);
+  await sleep(800);
+  await probe.page.touchscreen.tap(380, 400);
+  await waitState(probe.page, "collapsed", 1500);
+  await sleep(500);
+  const box = await probe.page.locator("header a[href='/articles']").boundingBox();
+  await probe.ctx.close();
+  ok(box !== null && box.y + box.height / 2 < 60, `tap-through: the header's Articles link is in the top strip (${box ? Math.round(box.y + box.height / 2) : "none"} px)`);
+  const tx = box.x + box.width / 2;
+  const ty = box.y + box.height / 2;
+
+  const { ctx, page, logs } = await newPage(TOUCH);
+  await page.goto(`${BASE_URL}/${IDLE_QUERY.replace("hero-idle=1500", "hero-idle=20000")}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(800);
+  ok((await page.locator("header").count()) === 0, "tap-through: no header before the tap");
+  await page.touchscreen.tap(tx, ty);
+  await sleep(700);
+  ok(new URL(page.url()).pathname === "/", `tap-through: the tap's click did not reach the header link that appeared under it (${new URL(page.url()).pathname})`);
+  if (new URL(page.url()).pathname === "/") ok((await heroState(page)) === "collapsed", "tap-through: the tap on the globe collapsed the hero");
+  ok((await page.locator("header a[href='/articles']").count()) === 1 && (await page.locator("header a[href='/articles']").isVisible()), "tap-through: the header is there and visible");
+  ok((await page.locator("header").getAttribute("data-guard")) === null, "tap-through: the guard is off a moment after the tap");
+  // after the guard the link works with a real tap, and keyboard focus was never blocked
+  await page.locator("header a[href='/projects']").focus();
+  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/projects"), "tap-through: the header's links can be focused at once (keyboard and assistive technology are not guarded)");
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.touchscreen.tap(tx, ty);
+  await page.waitForURL("**/articles", { timeout: 4000 }).catch(() => {});
+  ok(new URL(page.url()).pathname === "/articles", `tap-through: after the guard a tap on the link navigates (${new URL(page.url()).pathname})`);
+  ok(logs.length === 0, `tap-through: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
 await browser.close();
 if (failures.length) {
   console.error(`\n${failures.length} check(s) failed:`);
