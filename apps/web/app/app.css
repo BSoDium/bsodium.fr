@@ -33,16 +33,32 @@
   /* UI system (docs/design-system.md). Surfaces: the panel plate is a step off the page, never a shadow. */
   --surface: #f4f4f4;
   --line-faint: rgb(0 0 0 / 0.07);
-  /* The one accent: a signal cyan. Text and fills of it are AA on the page, the surface and the accent grey. */
-  --signal: #00698c;
-  --signal-foreground: #fbfbfb;
-  --signal-wash: rgb(0 105 140 / 0.08);
+  /*
+   * The one accent: BSoD blue (the reference hue is Windows' #0078d7, 206.5 degrees; the fill is #0076d4, two steps deeper, because white
+   * text on #0078d7 itself is 4.499:1, a thousandth under AA). `--signal` is the same fill in both schemes and is for LARGE display text
+   * (24 px, or 18.66 px bold, and up), non-text marks (a tick, a rule, a cover's mark, an underline) and fills: 3:1 or more on the page,
+   * the surface and the paper in both schemes. Text of any smaller size takes `--signal-text`: the same hue, deeper in the light scheme
+   * and lighter in the dark one, AA (4.5:1) on the page, the surface and the hover grey. Text on a signal fill is `--signal-foreground`,
+   * white. The whole accent is these five lines (times the four copies of the list).
+   */
+  --signal: #0076d4;
+  --signal-text: #0067b8;
+  --signal-foreground: #ffffff;
+  --signal-wash: rgb(0 118 212 / 0.08);
+  /* Reading surface of the entries and their lists (docs/design-tokens.md, "Reading surface"): paper in the light scheme, night in the dark. */
+  --paper: #efeadf;
+  --paper-foreground: #16130f;
+  --paper-muted: #6b665b;
+  --paper-hover: #ebe7dc;
+  --paper-signal: #0076d4;
+  --paper-signal-text: #0067b8;
   /* The opposite scheme's page tokens: what an inverted frame rebinds the tokens to (a cycle-free swap). */
   --inverse-background: #0a0a0a;
   --inverse-foreground: #fbfbfb;
   --inverse-muted: #a3a3a3;
   --inverse-border: rgb(255 255 255 / 0.3);
-  --inverse-signal: #38d4f5;
+  --inverse-signal: #0076d4;
+  --inverse-signal-text: #0a93ff;
   /* Faint hue per entry kind: decorative and redundant (a glyph and a word always carry the kind); never used for text. */
   --kind-article: oklch(0.58 0.1 275);
   --kind-project: oklch(0.58 0.1 150);
@@ -59,6 +75,13 @@
   --hairline: 1px;
   --tick-step: 8px;
 
+  /* Icons (docs/design-system.md, "Icons"): one stroke weight in the library's 24-unit grid (it scales with the icon, as a glyph's
+     stems do with its size), three sizes named for what they sit beside. `components/ui/icon.tsx` picks one by name. */
+  --icon-stroke: 1.75;
+  --icon-inline: 1.1em;
+  --icon-control: 1.25rem;
+  --icon-large: 1.5rem;
+
   /* Motion. Mirrored in app/lib/tokens.ts (seconds); a test keeps them in sync. */
   --duration-fast: 120ms;
   --duration-base: 220ms;
@@ -69,8 +92,9 @@
 
   /* Layout. */
   --navbar-height: 3.5rem;
-  /* The nav scrim fades content out under the floating nav (see `.nav-scrim`). */
+  /* The nav scrim fades content out under the floating nav (see `.nav-scrim`); the nav's own fade over the globe is a little taller (`.nav-fade`). */
   --scrim-height: calc(var(--navbar-height) + 2.5rem);
+  --fade-height: calc(var(--navbar-height) + 3.5rem);
   /* Width of the places list when it is revealed by keyboard focus. */
   --list-width: 18rem;
   /* Panel grid: 12 columns on a 4 px base; control heights follow the touch rule (44 px below md). */
@@ -105,14 +129,22 @@
 
     --surface: #121212;
     --line-faint: rgb(255 255 255 / 0.09);
-    --signal: #38d4f5;
-    --signal-foreground: #0a0a0a;
-    --signal-wash: rgb(56 212 245 / 0.09);
+    --signal: #0076d4;
+    --signal-text: #0a93ff;
+    --signal-foreground: #ffffff;
+    --signal-wash: rgb(0 118 212 / 0.12);
+    --paper: #0b0c0f;
+    --paper-foreground: #ece8df;
+    --paper-muted: #8d8a82;
+    --paper-hover: #17181b;
+    --paper-signal: #0076d4;
+    --paper-signal-text: #0a93ff;
     --inverse-background: #f5f5f5;
     --inverse-foreground: #0a0a0a;
     --inverse-muted: #595959;
     --inverse-border: rgb(0 0 0 / 0.3);
-    --inverse-signal: #00698c;
+    --inverse-signal: #0076d4;
+    --inverse-signal-text: #0067b8;
     --kind-article: oklch(0.76 0.1 275);
     --kind-project: oklch(0.76 0.1 150);
     --kind-artwork: oklch(0.76 0.1 55);
@@ -165,10 +197,64 @@
   --tracking-micro: 0.12em;
 }
 
+/*
+ * Typography tokens (docs/design-tokens.md, "Typography"). `static`: always emitted, because components and inline styles read
+ * them with var() outside what Tailwind scans. The three new families sit BESIDE the system ones, which stay untouched
+ * (`--font-sans`, `--font-mono`: the map's labels, the credits line and the label planner's measurement read `--font-mono`).
+ */
+@theme static {
+  /* Display: a very heavy weight against a very thin one, set large. Reading: long text, roman and italic. Meta: page metadata only, never map text. */
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque Fallback", var(--font-sans);
+  --font-reading: "Newsreader Variable", "Newsreader Fallback", ui-serif, Georgia, "Times New Roman", serif;
+  --font-meta: "JetBrains Mono Variable", var(--font-mono);
+
+  /* Weights. The display pair is thin against heavy ("Cata" 200, "lyst" 800); the rest serve the reading face and the small sizes. */
+  --weight-thin: 200;
+  --weight-light: 300;
+  --weight-reading: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+
+  /* The measure of a reading column: 28.5 em of the reading size is about 66 characters of running text (see `.type-reading`). */
+  --measure-reading: calc(var(--text-reading) * 28.5);
+
+  /*
+   * The roles (class `.type-<role>` sets the whole role; `text-<role>` plus `font-display` / `font-reading` / `font-meta` does it in
+   * utilities). Display sizes are fluid between a 390 px phone and a wide screen and never go under 3.5 rem for the wordmark.
+   */
+  --text-display-xl: clamp(3.5rem, 11vw, 10rem);
+  --text-display-xl--line-height: 0.88;
+  --text-display-xl--letter-spacing: -0.045em;
+  --text-display-xl--font-weight: 800;
+  --text-display-lg: clamp(2.25rem, 1.35rem + 3.7vw, 4.5rem);
+  --text-display-lg--line-height: 0.98;
+  --text-display-lg--letter-spacing: -0.035em;
+  --text-display-lg--font-weight: 800;
+  --text-display-md: clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem);
+  --text-display-md--line-height: 1.06;
+  --text-display-md--letter-spacing: -0.025em;
+  --text-display-md--font-weight: 700;
+  --text-standfirst: clamp(1.5rem, 1.25rem + 0.9vw, 1.9rem);
+  --text-standfirst--line-height: 1.3;
+  --text-standfirst--letter-spacing: -0.01em;
+  --text-standfirst--font-weight: 300;
+  --text-reading: clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem);
+  --text-reading--line-height: 1.65;
+  --text-reading--letter-spacing: 0;
+  --text-reading--font-weight: 400;
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1rem;
+  --text-meta--letter-spacing: 0.1em;
+  --text-meta--font-weight: 500;
+}
+
 @theme inline {
   --color-surface: var(--surface);
   --color-line-faint: var(--line-faint);
   --color-signal: var(--signal);
+  --color-signal-text: var(--signal-text);
   --color-signal-foreground: var(--signal-foreground);
   --color-signal-wash: var(--signal-wash);
   --color-kind-article: var(--kind-article);
@@ -201,14 +287,22 @@
   --globe-limb: rgb(0 0 0 / 0.3);
   --surface: #f4f4f4;
   --line-faint: rgb(0 0 0 / 0.07);
-  --signal: #00698c;
-  --signal-foreground: #fbfbfb;
-  --signal-wash: rgb(0 105 140 / 0.08);
+  --signal: #0076d4;
+  --signal-text: #0067b8;
+  --signal-foreground: #ffffff;
+  --signal-wash: rgb(0 118 212 / 0.08);
+  --paper: #efeadf;
+  --paper-foreground: #16130f;
+  --paper-muted: #6b665b;
+  --paper-hover: #ebe7dc;
+  --paper-signal: #0076d4;
+  --paper-signal-text: #0067b8;
   --inverse-background: #0a0a0a;
   --inverse-foreground: #fbfbfb;
   --inverse-muted: #a3a3a3;
   --inverse-border: rgb(255 255 255 / 0.3);
-  --inverse-signal: #38d4f5;
+  --inverse-signal: #0076d4;
+  --inverse-signal-text: #0a93ff;
   --kind-article: oklch(0.58 0.1 275);
   --kind-project: oklch(0.58 0.1 150);
   --kind-artwork: oklch(0.58 0.1 55);
@@ -234,19 +328,132 @@
   --globe-limb: rgb(255 255 255 / 0.34);
   --surface: #121212;
   --line-faint: rgb(255 255 255 / 0.09);
-  --signal: #38d4f5;
-  --signal-foreground: #0a0a0a;
-  --signal-wash: rgb(56 212 245 / 0.09);
+  --signal: #0076d4;
+  --signal-text: #0a93ff;
+  --signal-foreground: #ffffff;
+  --signal-wash: rgb(0 118 212 / 0.12);
+  --paper: #0b0c0f;
+  --paper-foreground: #ece8df;
+  --paper-muted: #8d8a82;
+  --paper-hover: #17181b;
+  --paper-signal: #0076d4;
+  --paper-signal-text: #0a93ff;
   --inverse-background: #f5f5f5;
   --inverse-foreground: #0a0a0a;
   --inverse-muted: #595959;
   --inverse-border: rgb(0 0 0 / 0.3);
-  --inverse-signal: #00698c;
+  --inverse-signal: #0076d4;
+  --inverse-signal-text: #0067b8;
   --kind-article: oklch(0.76 0.1 275);
   --kind-project: oklch(0.76 0.1 150);
   --kind-artwork: oklch(0.76 0.1 55);
   --kind-poem: oklch(0.76 0.1 340);
   --kind-place: var(--muted-foreground);
+}
+
+/*
+ * Self-hosted type (docs/design-tokens.md, "Typography"): three variable families from public/fonts/ (SIL OFL 1.1, licences beside
+ * the files), the file names carry the version so they are cached `immutable` for a year (vercel.json). Latin subset only: the
+ * `unicode-range` sends every other script (Vietnamese place names, Arabic ...) to the system stack glyph by glyph, which is what
+ * the fallback stacks below are for. `font-display: swap` shows the text at once in the metric-matched fallback face (below), so
+ * the swap moves nothing much. The weight range is the file's own: a request for 200 and for 800 is the same file, no synthesis.
+ */
+@font-face {
+  font-family: "Bricolage Grotesque Variable";
+  src: url("/fonts/bricolage-grotesque-5.3.0-latin-wght-opsz.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Newsreader Variable";
+  src: url("/fonts/newsreader-5.3.0-latin-wght-opsz.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Newsreader Variable";
+  src: url("/fonts/newsreader-5.3.0-latin-wght-opsz-italic.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  src: url("/fonts/jetbrains-mono-5.3.0-latin-wght.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * Fallback faces: a local system font scaled and re-spaced to the web font's metrics (size-adjust from the frequency-weighted
+ * average advance of English text measured in Chrome at the weights each face stands for; the overrides are the font's own
+ * hhea ascent / descent over its em, divided by size-adjust), so the text does not reflow when the real face arrives. Where the
+ * system font is missing, `local()` fails and the next family of the stack answers. Mono has none: every system monospace is
+ * 0.6 em wide, like JetBrains Mono, and the stack already ends in the right one.
+ * Display: Arial for 200-500 and Arial Bold for 600-800 (Bricolage: upm 1000, 930 / 270). Reading: Georgia (Newsreader: upm 2000,
+ * 1470 / 530), Georgia Bold, Georgia Italic.
+ */
+@font-face {
+  font-family: "Bricolage Grotesque Fallback";
+  src: local("Arial"), local("ArialMT");
+  font-weight: 200 500;
+  size-adjust: 99%;
+  ascent-override: 93.9%;
+  descent-override: 27.3%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT");
+  font-weight: 600 800;
+  size-adjust: 99%;
+  ascent-override: 93.9%;
+  descent-override: 27.3%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Newsreader Fallback";
+  src: local("Georgia");
+  font-weight: 200 500;
+  font-style: normal;
+  size-adjust: 95.3%;
+  ascent-override: 77.1%;
+  descent-override: 27.8%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Newsreader Fallback";
+  src: local("Georgia Bold"), local("Georgia-Bold");
+  font-weight: 600 800;
+  font-style: normal;
+  size-adjust: 87%;
+  ascent-override: 84.5%;
+  descent-override: 30.5%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Newsreader Fallback";
+  src: local("Georgia Italic"), local("Georgia-Italic");
+  font-weight: 200 800;
+  font-style: italic;
+  size-adjust: 86%;
+  ascent-override: 85.5%;
+  descent-override: 30.8%;
+  line-gap-override: 0%;
 }
 
 @layer base {
@@ -284,6 +491,169 @@
   }
 }
 
+/*
+ * Type roles (docs/design-system.md, "Type"; the tokens are in `@theme static` above). One class sets one whole role: family, size,
+ * leading, tracking, weight and wrapping. Components compose them; none of them names a family itself. The display roles are the
+ * studio-site voice: tight leading, negative tracking, a very heavy weight against a very thin one (`.type-thin` / `.type-heavy`
+ * switch a run of the same heading: "Cata" thin, "lyst" heavy). Colour is never part of a role.
+ */
+@layer components {
+  .type-display-xl,
+  .type-display-lg,
+  .type-display-md {
+    margin: 0;
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    /* Bricolage has no italic: an <em> in a headline stays upright rather than being slanted by the browser. */
+    font-synthesis: none;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  .type-display-xl {
+    font-size: var(--text-display-xl);
+    line-height: var(--text-display-xl--line-height);
+    letter-spacing: var(--text-display-xl--letter-spacing);
+    font-weight: var(--text-display-xl--font-weight);
+  }
+
+  .type-display-lg {
+    font-size: var(--text-display-lg);
+    line-height: var(--text-display-lg--line-height);
+    letter-spacing: var(--text-display-lg--letter-spacing);
+    font-weight: var(--text-display-lg--font-weight);
+  }
+
+  .type-display-md {
+    font-size: var(--text-display-md);
+    line-height: var(--text-display-md--line-height);
+    letter-spacing: var(--text-display-md--letter-spacing);
+    font-weight: var(--text-display-md--font-weight);
+  }
+
+  /* The pair: a run of a display heading at the thin end or the heavy end of the weight axis. */
+  .type-thin {
+    font-weight: var(--weight-thin);
+  }
+
+  .type-heavy {
+    font-weight: var(--weight-heavy);
+  }
+
+  /* Standfirst: the line under a headline. Thin italic of the reading face; wraps to even lines. */
+  .type-standfirst {
+    margin: 0;
+    font-family: var(--font-reading);
+    font-style: italic;
+    font-optical-sizing: auto;
+    font-size: var(--text-standfirst);
+    line-height: var(--text-standfirst--line-height);
+    letter-spacing: var(--text-standfirst--letter-spacing);
+    font-weight: var(--text-standfirst--font-weight);
+    text-wrap: balance;
+  }
+
+  /*
+   * Reading: the body of an entry. The reading face at 18 to 20 px, 1.65 leading, no widows (`pretty`), proportional figures. The
+   * column is `.type-measure`. `ch` is the width of a "0", which Newsreader draws wide, so the measure is written in em of the
+   * reading size instead: 28.5 em is about 66 characters of running text.
+   */
+  .type-reading {
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    font-size: var(--text-reading);
+    line-height: var(--text-reading--line-height);
+    letter-spacing: var(--text-reading--letter-spacing);
+    font-weight: var(--text-reading--font-weight);
+    font-variant-numeric: proportional-nums;
+    text-wrap: pretty;
+  }
+
+  .type-measure {
+    max-width: var(--measure-reading);
+  }
+
+  /* Meta: page metadata (a date, a place, a count, a reading time). Mono, small capitals-free uppercase, tracked, figures aligned. Not for the map's text. */
+  .type-meta {
+    font-family: var(--font-meta);
+    font-size: var(--text-meta);
+    line-height: var(--text-meta--line-height);
+    letter-spacing: var(--text-meta--letter-spacing);
+    font-weight: var(--text-meta--font-weight);
+    font-variant-numeric: tabular-nums;
+    /* No "->" or "!=" ligatures in a date or a code. */
+    font-feature-settings: "calt" 0;
+    text-transform: uppercase;
+  }
+
+  /* A link in running text: the text keeps its colour, the underline is the accent (a mark, 3:1 or more) and thickens under the pointer. */
+  .type-link {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.2em;
+    transition: text-decoration-thickness var(--duration-fast) var(--ease-standard);
+  }
+
+  .type-link:hover {
+    text-decoration-thickness: 0.16em;
+  }
+
+  /*
+   * Drop cap: the first letter of the first paragraph, in the reading face at 700 and the ink (the "Article on paper" board), a
+   * float five lines of the body tall. A float and not `initial-letter` on purpose: the board's letter sits on the third line of the
+   * body, and `initial-letter` sinks differently in each engine. A narrow column (a phone, the half panel) takes a smaller letter.
+   */
+  .drop-cap::first-letter {
+    float: left;
+    padding: 0.07em 0.13em 0 0;
+    font-family: var(--font-reading);
+    font-weight: 700;
+    font-size: 5.33em;
+    line-height: 0.8;
+    letter-spacing: 0;
+    font-optical-sizing: auto;
+    font-synthesis: none;
+    color: var(--foreground);
+  }
+
+  @container (max-width: 40rem) {
+    .drop-cap::first-letter {
+      font-size: 4.2em;
+    }
+  }
+
+  /*
+   * Pull quote: the reading face in thin italic, large, to even lines, between two ink rules (the board: 40 px at 1328 px, 1.15
+   * leading). `cqi` is the width of the nearest container (the entry), the viewport where there is none.
+   */
+  .type-pullquote {
+    margin: 0;
+    padding-block: 1.125rem;
+    border-block: var(--hairline) solid var(--foreground);
+    font-family: var(--font-reading);
+    font-style: italic;
+    font-optical-sizing: auto;
+    font-size: clamp(1.5rem, 0.9rem + 1.9cqi, 2.5rem);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    font-weight: var(--weight-light);
+    text-wrap: balance;
+    hanging-punctuation: first;
+  }
+
+  /* A hairline rule between sections of a text. */
+  .type-rule {
+    height: 0;
+    margin: 0;
+    border: 0;
+    border-top: var(--hairline) solid var(--border-strong);
+  }
+}
+
 @layer components {
   /* A quiet caption: sans, sentence case, muted (the places list's group names and regions). */
   .label {
@@ -313,7 +683,7 @@
   }
 
   .ds-micro[data-tone="signal"] {
-    color: var(--signal);
+    color: var(--signal-text);
   }
 
   /* Meta: a date or a coordinate pair. Mono (the face of figures), but plain case and untracked: it is a value, not a label. */
@@ -372,6 +742,7 @@
     --border-strong: var(--inverse-border);
     --ring: var(--inverse-foreground);
     --signal: var(--inverse-signal);
+    --signal-text: var(--inverse-signal-text);
     --surface: var(--inverse-background);
     --accent: color-mix(in srgb, var(--inverse-foreground) 14%, var(--inverse-background));
     --accent-foreground: var(--inverse-foreground);
@@ -528,7 +899,7 @@
   }
 
   .ds-status[data-tone="signal"] {
-    color: var(--signal);
+    color: var(--signal-text);
   }
 
   .ds-status[data-tone="solid"] {
@@ -543,17 +914,58 @@
     color: var(--signal-foreground);
   }
 
-  /* Kind tag: the kind's glyph, drawn plain beside its word. */
-  .ds-kind-glyph {
+  /*
+   * Icons (components/ui/icon.tsx). The library draws on a 24-unit grid with round ends; the system's are square (ends and joins),
+   * one stroke weight at every size. `inline` follows the text it sits beside (1.1 em), `control` is a fixed 20 px for controls and
+   * the head of a row, `large` 24 px for an icon on its own. Colour is `currentColor`: an icon is never tinted on its own.
+   */
+  .ui-icon {
+    display: inline-block;
+    flex: none;
+    width: var(--icon-control);
+    height: var(--icon-control);
+    vertical-align: -0.2em;
+    stroke-width: var(--icon-stroke);
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+
+  .ui-icon[data-size="inline"] {
+    width: var(--icon-inline);
+    height: var(--icon-inline);
+  }
+
+  .ui-icon[data-size="large"] {
+    width: var(--icon-large);
+    height: var(--icon-large);
+  }
+
+  /* The shortcut hint (components/ui/key-hint.tsx): a modifier icon or word, then the key, in plain mono text (no border, no
+     background); its space is held before hydration (the platform is only known in the browser). */
+  .ds-kbd {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35em;
+    min-width: 3.25em;
+    font-family: var(--font-meta);
+    font-size: 0.8125rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    color: inherit;
+  }
+
+  /* Kind tag: the kind's icon, drawn plain beside its word. */
+  .ds-kind-icon {
     display: inline-grid;
     place-items: center;
-    width: 1rem;
-    height: 1rem;
     flex: none;
     color: var(--muted-foreground);
   }
 
-  .ds-kind-glyph[data-solid] {
+  .ds-kind-icon[data-solid] {
     color: var(--foreground);
   }
 
@@ -832,6 +1244,65 @@
   }
 
   /*
+   * Nav fade: the navigation's own backdrop over the globe and the map (the shell), where the page-wide scrim is not drawn. It sits behind
+   * the row inside the header and is only as wide as the row plus a soft margin, so the globe is not dimmed across its whole width.
+   *  - vertical: the page colour at 85 % from the top edge down past the row's text, then an eased (smoothstep) fall to nothing over
+   *    `--fade-height` (112 px): no stop has a visible edge;
+   *  - horizontal: the same easing in a mask on both ends (6 rem), so the band melts into the map on either side.
+   * No blur (a backdrop blur over the WebGL canvas costs a composited layer for nothing: the fade alone keeps the text at 4.5:1 or more).
+   * Colours are the page colour only: the fade follows both schemes with no token of its own, and is invisible where the page colour is
+   * what is behind it.
+   */
+  .nav-fade {
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: -6rem;
+    right: -6rem;
+    height: var(--fade-height);
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--background) 85%, transparent) 0%,
+      color-mix(in srgb, var(--background) 85%, transparent) 20%,
+      color-mix(in srgb, var(--background) 81%, transparent) 30%,
+      color-mix(in srgb, var(--background) 72%, transparent) 40%,
+      color-mix(in srgb, var(--background) 58%, transparent) 50%,
+      color-mix(in srgb, var(--background) 43%, transparent) 60%,
+      color-mix(in srgb, var(--background) 27%, transparent) 70%,
+      color-mix(in srgb, var(--background) 13%, transparent) 80%,
+      color-mix(in srgb, var(--background) 4%, transparent) 90%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      rgb(0 0 0 / 0.16) 1.5rem,
+      rgb(0 0 0 / 0.5) 3rem,
+      rgb(0 0 0 / 0.84) 4.5rem,
+      #000 6rem,
+      #000 calc(100% - 6rem),
+      rgb(0 0 0 / 0.84) calc(100% - 4.5rem),
+      rgb(0 0 0 / 0.5) calc(100% - 3rem),
+      rgb(0 0 0 / 0.16) calc(100% - 1.5rem),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      rgb(0 0 0 / 0.16) 1.5rem,
+      rgb(0 0 0 / 0.5) 3rem,
+      rgb(0 0 0 / 0.84) 4.5rem,
+      #000 6rem,
+      #000 calc(100% - 6rem),
+      rgb(0 0 0 / 0.84) calc(100% - 4.5rem),
+      rgb(0 0 0 / 0.5) calc(100% - 3rem),
+      rgb(0 0 0 / 0.16) calc(100% - 1.5rem),
+      transparent 100%
+    );
+  }
+
+  /*
    * The places list: always in the DOM and the accessibility tree, visually hidden like a skip link, and revealed as
    * a compact floating overlay while keyboard focus is inside it (:focus-visible, so a pointer user whose click
    * moved focus there does not get a surprise popup). It is also shown when the globe cannot run (no WebGL), as
@@ -866,11 +1337,20 @@
 
 /* Entry reading, filters and rows (docs/design-system.md, "Entry view", "Lists"). */
 @layer components {
-  /* Reading text: 18 / 28 on the 4 px grid; a measure of about 65 characters is set per block (`max-w-[60ch]`); no widows or orphans. */
+  /*
+   * Reading text: the reading face at its role size (`.type-reading`), blocks held to the measure (`--measure-reading`), no widows.
+   * Headings are the display face; the thin / heavy pair lives in the headline, so the section headings are heavy and the
+   * third level is light. A quote is the pull quote. The markup's own utilities (weight, tracking, size) still win where a
+   * component sets them: this is the base they sit on.
+   */
   .ds-prose {
-    font-size: 1.125rem;
-    line-height: 1.75rem;
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
     font-kerning: normal;
+    font-size: var(--text-reading);
+    line-height: var(--text-reading--line-height);
+    font-weight: var(--weight-reading);
+    font-variant-numeric: proportional-nums;
   }
 
   .ds-prose p,
@@ -880,9 +1360,83 @@
     overflow-wrap: anywhere;
   }
 
+  .ds-prose p,
+  .ds-prose ul,
+  .ds-prose ol,
+  .ds-prose h2,
+  .ds-prose h3,
+  .ds-prose h4 {
+    max-width: var(--measure-reading);
+  }
+
+  .ds-prose h2,
+  .ds-prose h3,
+  .ds-prose h4 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-synthesis: none;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  /* The section heading is the heavy end of the display face, the third level its thin end. Sizes follow the body (em). */
+  .ds-prose h2 {
+    font-size: 1.7em;
+    font-weight: var(--weight-heavy);
+    letter-spacing: -0.03em;
+  }
+
+  .ds-prose h3,
+  .ds-prose h4 {
+    font-size: 1.3em;
+    font-weight: var(--weight-light);
+    letter-spacing: -0.02em;
+  }
+
+  .ds-prose blockquote {
+    font-style: italic;
+    font-weight: var(--weight-light);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  /* A quote of the body is the pull quote role (`.type-pullquote` on its figure): its text is that role's, not the body's. */
+  .ds-prose .type-pullquote blockquote {
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+  }
+
+  .ds-prose hr {
+    height: 0;
+    border: 0;
+    border-top: var(--hairline) solid var(--border-strong);
+  }
+
+  .ds-prose p a,
+  .ds-prose li a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.2em;
+  }
+
   .ds-prose [data-slot="verse"] {
     text-wrap: wrap;
     font-size: 1.0625rem;
+    line-height: 1.7;
+  }
+
+  /* Figures and their captions: mono, small, muted, under a hairline of the ink (the boards' "Fig. N"). */
+  .ds-caption {
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "calt" 0;
+    color: var(--muted-foreground);
   }
 
   /* Heading anchor: the `#` link of a section. Drawn on hover and focus; always on devices without hover. */
@@ -893,8 +1447,8 @@
     align-items: center;
     align-self: center;
     justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1.75rem;
+    height: 1.75rem;
     color: var(--muted-foreground);
     opacity: 0;
     border: var(--hairline) solid transparent;
@@ -955,6 +1509,262 @@
     left: -0.625rem;
     width: 2px;
     background: var(--signal);
+  }
+
+  /*
+   * Entry pages (docs/design-system.md, "Entry pages"): the "Article on paper" and "Poem at night" boards of the owner's canvas.
+   * The entry is a container (`cqi`): the headline, the body and the poem scale with the width of the column they sit in, so the half
+   * panel and the full screen are the same design at two widths. From 1024 px of a full screen the page is a 12-column grid with
+   * 28 px gutters: marginalia in 1-3, the text in 4-9, the figures in 10-12 (an article, a project); an artwork's image and a poem's
+   * lines take 4-12 and 4-10. Everything else is one column: header, dateline, marginalia (compact), text, figures. The markup order is
+   * the reading order in both; only the placement changes.
+   */
+  .entry {
+    container-type: inline-size;
+    --entry-title: clamp(2.375rem, 8cqi, 4.5rem);
+    --entry-body: clamp(1.125rem, 1rem + 0.6cqi, 1.25rem);
+    --poem-title: clamp(2.5rem, 9cqi, 5rem);
+    --poem-size: clamp(1.375rem, 0.9rem + 2.2cqi, 1.875rem);
+    --measure-reading: 31em;
+  }
+
+  .entry[data-layout="full"] {
+    --entry-title: clamp(2.375rem, 9.9cqi, 8.25rem);
+    --entry-body: clamp(1.125rem, 0.78rem + 0.9cqi, 1.3125rem);
+    --poem-title: clamp(2.75rem, 9.64cqi, 8rem);
+    --poem-size: clamp(1.375rem, 0.6rem + 2.2cqi, 2.25rem);
+  }
+
+  /* The page of an entry: one column; a 12-column grid from 1024 px of a full screen (below). */
+  .entry-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* The newspaper's double rule under the masthead: 3 px, a 3 px gap, 1 px. */
+  .entry-rule {
+    box-sizing: content-box;
+    height: 3px;
+    margin: 0;
+    border: 0;
+    border-top: 3px solid var(--foreground);
+    border-bottom: 1px solid var(--foreground);
+  }
+
+  /* The headline: the reading face at 700, balanced, tight (the board: 132 px, 0.92, -0.03em, optical size 72 by `auto`). */
+  .entry-title {
+    max-width: 8.95em;
+    margin: 0;
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    font-synthesis: none;
+    font-size: calc(var(--entry-title) * var(--title-scale, 1));
+    font-weight: 700;
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  /* The clause after a comma, a colon or a dash: the thin end of the same face against the heavy headline. */
+  .entry-title-tail {
+    font-weight: 300;
+  }
+
+  /* A poem's title: thin italic, much larger than the lines (the night board: 128 px, 200, 0.95). */
+  .entry-title[data-poem] {
+    max-width: none;
+    font-size: var(--poem-title);
+    font-style: italic;
+    font-weight: 200;
+    line-height: 0.95;
+  }
+
+  /* The meta row under the standfirst: a hairline of the ink, then mono 12 px. Not uppercase: it holds a date and a link. */
+  .entry-dateline {
+    border-top: 1px solid var(--foreground);
+    padding-top: 0.75rem;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "calt" 0;
+    color: var(--muted-foreground);
+  }
+
+  /* Marginalia: mono 12 px / 1.7 muted under a rule; the labels (`.type-meta` in the ink) are the markup's. A column from 1024 px of a full screen. */
+  .entry-margin {
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+    border-top: 1px solid var(--foreground);
+    padding-top: 0.75rem;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    font-feature-settings: "calt" 0;
+    color: var(--muted-foreground);
+  }
+
+  /* The facts: a label over its value, two or three to a row where the column is wide (a phone, the half panel), one to a row in the margin. */
+  .entry-margin dl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 1.125rem 1.5rem;
+  }
+
+  .entry-margin dd,
+  .entry-margin ul {
+    margin: 0;
+  }
+
+  .entry-margin a,
+  .entry-dateline a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.25em;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .entry-margin a:hover,
+  .entry-dateline a:hover {
+    color: var(--foreground);
+  }
+
+  /*
+   * A 44 px target for a 12 px link, below `md` (where fingers are): the rows of a list of links are as tall as the target, so the
+   * hit areas of neighbours do not overlap, and the link keeps its small text. From `md` the line is the target.
+   */
+  .entry-link {
+    position: relative;
+  }
+
+  @media (max-width: 767.98px) {
+    .entry-link::before {
+      content: "";
+      position: absolute;
+      inset: -0.8125rem -0.5rem;
+    }
+
+    .entry-margin li {
+      display: flex;
+      align-items: center;
+      min-height: 2.75rem;
+    }
+
+    /* The tags of the marginalia are 12 px mono (an 18 px line): their hit area is taller than the sans tags' to make 44 px. */
+    .entry-margin .ds-tags a::before,
+    .entry-row .ds-tags a::before {
+      inset: -0.875rem -0.25rem;
+    }
+  }
+
+  /* The body: the board's 21 px / 1.55 at full width, the reading role's size in the half panel and on a phone. */
+  .entry-text .ds-prose {
+    font-size: var(--entry-body);
+    line-height: 1.55;
+  }
+
+  .entry-text .ds-prose h2,
+  .entry-text .ds-prose h3 {
+    line-height: 1.08;
+  }
+
+  /* Figures: a rule of the ink, the image, a mono caption. */
+  .entry-figure {
+    border-top: 1px solid var(--foreground);
+    padding-top: 0.75rem;
+  }
+
+  /* A poem: the lines are the page's type (the night board: roman 300, 36 px / 1.38 at full width, one block per authored line). */
+  .entry[data-kind="poem"] .ds-prose [data-slot="verse"] {
+    font-size: var(--poem-size);
+    font-weight: var(--weight-light);
+    line-height: 1.38;
+    letter-spacing: -0.005em;
+  }
+
+  .entry[data-kind="poem"] .ds-prose p:not([data-slot="verse"] p) {
+    color: var(--muted-foreground);
+    font-style: italic;
+    font-weight: var(--weight-light);
+  }
+
+  @media (min-width: 1024px) {
+    .entry[data-layout="full"] .entry-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: 1.75rem;
+      row-gap: 2.5rem;
+      align-items: start;
+    }
+
+    .entry[data-layout="full"] .entry-margin dl {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-head,
+    .entry[data-layout="full"] .entry-grid > .entry-dateline {
+      grid-column: 1 / -1;
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-margin {
+      grid-column: 1 / span 3;
+      grid-row: span 2;
+      align-self: stretch;
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-cover {
+      grid-column: 4 / -1;
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-text {
+      grid-column: 4 / span 6;
+      border-top: 1px solid var(--foreground);
+      padding-top: 0.75rem;
+    }
+
+    .entry[data-layout="full"] .entry-grid > .entry-figures {
+      grid-column: 10 / span 3;
+    }
+
+    /* An artwork: the image is the page, wide; the text keeps its measure on the left of the 9 columns. */
+    .entry[data-kind="artwork"][data-layout="full"] .entry-grid > .entry-text {
+      grid-column: 4 / -1;
+    }
+
+    /* A poem: the title and the lines in 4-10, the marginalia beside the title, 34 px down (the board). */
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid {
+      padding-top: 5.5rem;
+    }
+
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid > .entry-head {
+      grid-column: 4 / span 7;
+      grid-row: 1;
+    }
+
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid > .entry-margin {
+      grid-column: 1 / span 3;
+      grid-row: 1 / span 2;
+      border-top: 0;
+      padding-top: 2.125rem;
+    }
+
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid > .entry-text {
+      grid-column: 4 / span 7;
+      grid-row: 2;
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .entry[data-kind="poem"][data-layout="full"] .entry-grid > .entry-cover {
+      grid-column: 4 / span 7;
+    }
   }
 
   /*
@@ -1020,6 +1830,32 @@
     align-items: baseline;
     gap: 0.75rem;
   }
+}
+
+/*
+ * Reading surface: an entry (in the panel or full screen) and the four lists sit on paper in the light scheme and on night in the
+ * dark (`--paper*`, design-tokens.md). UNLAYERED on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The page tokens are rebound for the subtree, so every component of it (rules, muted text, hover,
+ * focus ring, the accent) follows without naming a colour. The entry's panel is the element that is rebound, so its own `bg-background`
+ * (and the navigation scrim inside it) takes the paper; the list pages rebind the root, since the page is their surface; `data-reading-surface`
+ * does it for one element (the styleguide's specimens). Contrast is
+ * tested for the pairs that are used (`design-system.test.ts`, "reading surface").
+ */
+[data-panel]:has([data-surface="reading"]),
+:root:has(main[data-surface="reading"]),
+[data-reading-surface] {
+  --background: var(--paper);
+  --surface: var(--paper);
+  --foreground: var(--paper-foreground);
+  --muted-foreground: var(--paper-muted);
+  --subtle-foreground: var(--paper-muted);
+  --accent: var(--paper-hover);
+  --border: color-mix(in srgb, var(--paper-foreground) 18%, transparent);
+  --border-strong: color-mix(in srgb, var(--paper-foreground) 55%, transparent);
+  --ring: var(--paper-foreground);
+  --signal: var(--paper-signal);
+  --signal-text: var(--paper-signal-text);
+  --primary: var(--paper-foreground);
+  --primary-foreground: var(--paper);
 }
 
 /* Entry headings are focus targets by script, not controls: no ring on them (the panel announces the change). */
@@ -1101,10 +1937,28 @@ h1[tabindex="-1"]:focus-visible {
   }
 }
 
+@media (forced-colors: active) {
+  /* System colours: the fade is the canvas colour, as opaque at the row as the scrim is. */
+  .nav-fade {
+    background: linear-gradient(to bottom, Canvas 0%, Canvas 30%, transparent 100%);
+  }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   /* No blur, and a band that stays solid longer. */
   .nav-scrim > span {
     display: none;
+  }
+
+  .nav-fade {
+    background: linear-gradient(
+      to bottom,
+      var(--background) 0%,
+      var(--background) 40%,
+      color-mix(in srgb, var(--background) 60%, transparent) 60%,
+      color-mix(in srgb, var(--background) 25%, transparent) 80%,
+      transparent 100%
+    );
   }
 
   .nav-scrim {
@@ -1187,6 +2041,7 @@ h1[tabindex="-1"]:focus-visible {
     --border: rgb(0 0 0 / 0.3);
     --border-strong: rgb(0 0 0 / 0.6);
     --signal: #000;
+    --signal-text: #000;
   }
 
   html,
@@ -1252,5 +2107,513 @@ h1[tabindex="-1"]:focus-visible {
     content: " (" attr(href) ")";
     font-size: 0.75em;
     word-break: break-all;
+  }
+}
+
+/* ==================================================================================================================================
+ * Landing hero and the header's type (docs/landing.md). Everything for the home page's hero is in this block, and the header's
+ * `.nav-link`: the hero is `components/landing-hero.tsx`, its state `lib/hero-machine.ts`. Tokens only; no colour of its own.
+ * ================================================================================================================================== */
+
+@layer components {
+  /*
+   * The header's items: mono capitals. The header is a size container (`@container` in navbar.tsx), so size, tracking and the gap
+   * between items follow the room the ROW has (half the viewport while the panel is open), not the viewport. The gaps are the padding:
+   * 44 px between items from 44 rem, down to 6 px on a small phone, always a 44 px tall target. The accent is the pointer / keyboard
+   * state (--signal-text: this is text under 24 px).
+   */
+  .nav-link {
+    font-family: var(--font-meta);
+    font-size: 0.6875rem;
+    line-height: 1;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    font-feature-settings: "calt" 0;
+    padding-inline: 0.1875rem;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .nav-link:hover,
+  .nav-link:focus-visible {
+    color: var(--signal-text);
+  }
+
+  @container (min-width: 23rem) {
+    .nav-link {
+      letter-spacing: 0.06em;
+      padding-inline: 0.25rem;
+    }
+  }
+
+  @container (min-width: 28rem) {
+    .nav-link {
+      font-size: 0.75rem;
+      padding-inline: 0.5rem;
+    }
+  }
+
+  @container (min-width: 32rem) {
+    .nav-link {
+      letter-spacing: 0.1em;
+      padding-inline: 0.625rem;
+    }
+  }
+
+  @container (min-width: 44rem) {
+    .nav-link {
+      letter-spacing: 0.14em;
+      padding-inline: 1.375rem;
+    }
+  }
+
+  /*
+   * The hero. `position: absolute` in the shell's `main`, over the globe (z 10: above the labels, below the credits line at 20, the
+   * navigation at 40 and the detail panel at 30), bottom-anchored, and `pointer-events: none`: only the search line and the rows take
+   * the pointer, so the globe is draggable and zoomable beneath all the rest. Three states in `data-hero`:
+   *   rest       the page: wordmark, intro, search, lists, and a soft page-colour fade behind them for the thin type.
+   *   collapsed  one small line bottom-left (the name and, at the world view, a hint); the text is gone and its links are out of the tab order.
+   *   away       a place or an entry is open: nothing of it is shown or exposed.
+   * Only opacity and transform change (compositor only); `visibility` follows the fade so hidden links are not tab stops.
+   *
+   * Sizes. `--hero-size` is the name's font size. The name is the owner's: "Elliot" at 800 and "Négrel-Jerzy" at 200, -0.055em. On
+   * a wide screen it is one line that takes `--hero-span` of the viewport's width (72 %: deliberately NOT the full width between the
+   * gutters; the size is that share of the width over `--hero-fit`, the name's width in em), never more than a third of the viewport's
+   * height (a short window) nor 30 rem. Stacked (under 48 rem) the two halves are two lines and the longer one, the family name,
+   * fills the width between the gutters. The block rises by the credits line's height (the
+   * line is bottom right and sits at 8 to 30 px from the bottom) plus what the "y" hangs below the line box, so no letter is ever over it.
+   */
+  .landing-hero {
+    --hero-gutter: clamp(1rem, 3.9vw, 3.5rem);
+    /* The name's width in em at the 800 / 200 split (6.6 measured, the given name set at -0.02em; the font's optical size is the same
+       from 98 px up; scripts/home/hero.mjs checks the share it takes) and the share of the viewport's width it takes on a wide screen. */
+    --hero-fit: 6.6;
+    --hero-span: 0.72;
+    --hero-size: min(calc(100vw * var(--hero-span) / var(--hero-fit)), 33vh, 30rem);
+    /* The credits line's top edge (0.5 rem + its card) and a little air; a phone's dev badge sits higher (below). */
+    --hero-clear: 2.25rem;
+    --hero-fade: var(--duration-base) var(--ease-standard);
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 10;
+    padding-inline: var(--hero-gutter);
+    padding-bottom: calc(var(--hero-clear) + env(safe-area-inset-bottom, 0px) + 0.15 * var(--hero-size));
+    pointer-events: none;
+  }
+
+  /* Phones: the name stacks, the family name fills the width; the credits line takes the whole bottom edge and the dev-only content badge sits above it. */
+  @media (max-width: 47.99rem) {
+    .landing-hero {
+      /* The family name (the longer line, 4.57 em at 390 px, 4.7 on the smallest) fills the width between the gutters. */
+      --hero-fit: 4.7;
+      --hero-size: min(calc((100vw - 2 * var(--hero-gutter)) / var(--hero-fit)), 24vh);
+    }
+
+    body:has([data-dev-content-badge]) .landing-hero {
+      --hero-clear: 4.75rem;
+    }
+  }
+
+  /* Behind the thin type: the page colour at the bottom edge easing to nothing above the block. No blur (a layer over the canvas for nothing). */
+  .landing-hero::before {
+    content: "";
+    position: absolute;
+    inset: -7rem 0 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      to top,
+      color-mix(in srgb, var(--background) 82%, transparent) 0%,
+      color-mix(in srgb, var(--background) 80%, transparent) 30%,
+      color-mix(in srgb, var(--background) 66%, transparent) 50%,
+      color-mix(in srgb, var(--background) 44%, transparent) 68%,
+      color-mix(in srgb, var(--background) 20%, transparent) 84%,
+      color-mix(in srgb, var(--background) 5%, transparent) 94%,
+      transparent 100%
+    );
+    transition: opacity var(--hero-fade);
+  }
+
+  /* The grid: intro and search left (470 px), the four rows right (360 px), the name across the whole width under them. */
+  .hero-block {
+    display: grid;
+    grid-template-columns: minmax(0, 29.375rem) minmax(14rem, 22.5rem);
+    grid-template-areas:
+      "lead list"
+      "name name";
+    justify-content: space-between;
+    align-items: end;
+    column-gap: 2.5rem;
+    row-gap: 2.125rem;
+  }
+
+  /* Under 48 rem the hero stacks: name, intro and search, the rows (the search line's hairline is the first rule of the list). */
+  @media (max-width: 47.99rem) {
+    .hero-block {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "name"
+        "lead"
+        "list";
+      row-gap: 0;
+    }
+
+    .hero-name {
+      line-height: 0.86;
+      margin-block-end: 1.5rem;
+    }
+
+    .hero-given,
+    .hero-family {
+      display: block;
+    }
+
+    .hero-list li:first-child {
+      border-top: 0;
+    }
+
+    /* The text is all over the globe here: the plate is solid across the block and falls off in the last 5 rem above it. */
+    .landing-hero::before {
+      inset: -5rem 0 0;
+      background: linear-gradient(
+        to top,
+        color-mix(in srgb, var(--background) 84%, transparent) 0,
+        color-mix(in srgb, var(--background) 84%, transparent) calc(100% - 5rem),
+        color-mix(in srgb, var(--background) 66%, transparent) calc(100% - 3.75rem),
+        color-mix(in srgb, var(--background) 38%, transparent) calc(100% - 2.5rem),
+        color-mix(in srgb, var(--background) 12%, transparent) calc(100% - 1.25rem),
+        transparent 100%
+      );
+    }
+  }
+
+  .hero-name {
+    grid-area: name;
+    /* The type role gives family, weight, leading and tracking; the size is the hero's own (it fills the width), and the line box is the
+       board's 0.78 so the letters sit tight. The -0.035em is the "C"'s side bearing at this size (optical alignment with the column). */
+    font-size: var(--hero-size);
+    line-height: 0.78;
+    letter-spacing: -0.055em;
+    margin-inline-start: -0.035em;
+    white-space: nowrap;
+    text-wrap: nowrap;
+    transform-origin: left bottom;
+  }
+
+  /* The given name is the heavy half: at 800 and the name's -0.055em the three l, l, i of "Elliot" touch, so it is set looser (the thin
+     family name keeps the tight tracking: its strokes are light enough). */
+  .hero-given {
+    letter-spacing: -0.02em;
+  }
+
+  /* A family name with a hyphen never breaks there: it is one word. The hyphen gets air: at 800 and -0.055em it fuses with its neighbours. */
+  .hero-family {
+    white-space: nowrap;
+  }
+
+  .hero-hyphen {
+    margin-inline: 0.045em;
+  }
+
+  .hero-lead {
+    grid-area: lead;
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+  }
+
+  .hero-intro {
+    margin: 0;
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-size: clamp(1.125rem, 0.75rem + 0.72vw, 1.4375rem);
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    font-weight: var(--weight-light);
+    text-wrap: pretty;
+  }
+
+  /* How to use the page, under who the owner is: the same face, a step smaller and muted. */
+  .hero-hint {
+    margin: -0.375rem 0 0;
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-size: clamp(1rem, 0.8rem + 0.35vw, 1.1875rem);
+    line-height: 1.35;
+    font-weight: var(--weight-light);
+    color: var(--muted-foreground);
+    text-wrap: pretty;
+  }
+
+  /* The search line: a button that looks like the board's input (the search icon, placeholder text, key hint, one hairline under). */
+  .hero-search {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    min-height: 2.75rem;
+    margin: 0;
+    padding: 0.75rem 0;
+    border: 0;
+    border-bottom: var(--hairline) solid var(--border-strong);
+    background: transparent;
+    color: var(--muted-foreground);
+    font-family: var(--font-meta);
+    font-size: 0.8125rem;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .hero-search:hover,
+  .hero-search:focus-visible {
+    color: var(--foreground);
+  }
+
+  .hero-search-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Filled in after hydration (the command key or "Ctrl", then K); the box holds its place, and a touch screen has no use for it. */
+  .hero-kbd {
+    min-width: 4.25em;
+    font-size: 0.875rem;
+    justify-content: flex-end;
+  }
+
+  @media (hover: none) {
+    .hero-kbd {
+      display: none;
+    }
+  }
+
+  .hero-list {
+    grid-area: list;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .hero-list ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .hero-list li {
+    border-top: var(--hairline) solid var(--border);
+  }
+
+  .hero-row {
+    pointer-events: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.6875rem 0;
+    color: var(--foreground);
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-size: clamp(1.5rem, 1.1rem + 1vw, 1.875rem);
+    line-height: 1.2;
+    font-weight: var(--weight-light);
+    letter-spacing: -0.02em;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  /* 30 px display text: --signal is allowed here (3:1 at 24 px and up). */
+  .hero-row:hover,
+  .hero-row:focus-visible {
+    color: var(--signal);
+  }
+
+  /* An icon at the row's own size (1.1 em of 30 px display text): it is a full part of the row, not a footnote to it. */
+  .hero-arrow {
+    color: var(--muted-foreground);
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .hero-row:hover .hero-arrow,
+  .hero-row:focus-visible .hero-arrow {
+    color: inherit;
+  }
+
+  /* A window that is wide and short (a phone on its side): the rows in two columns, the name smaller, and the how-to line gone (the
+     globe is in plain view, and every line saved is room for it). */
+  @media (min-width: 48rem) and (max-height: 34rem) {
+    .landing-hero {
+      --hero-size: min(calc(100vw * var(--hero-span) / var(--hero-fit)), 26vh, 30rem);
+    }
+
+    .hero-block {
+      row-gap: 0.75rem;
+    }
+
+    .hero-lead {
+      gap: 0.5rem;
+    }
+
+    .hero-intro {
+      font-size: 1.125rem;
+    }
+
+    .hero-hint {
+      display: none;
+    }
+
+    .hero-list ul {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 1.5rem;
+    }
+
+    .hero-row {
+      font-size: 1.375rem;
+      padding-block: 0.4375rem;
+    }
+
+    .hero-search {
+      padding-block: 0.5rem;
+    }
+  }
+
+  /* The small line that stays when the hero steps back: the board's bottom-left corner (40 px, 32 px), the hint beside it. */
+  .hero-mini {
+    --hero-mini-bottom: 2rem;
+    position: absolute;
+    left: var(--hero-mini-left, 2.5rem);
+    bottom: calc(var(--hero-mini-bottom) + env(safe-area-inset-bottom, 0px));
+    right: var(--hero-gutter);
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 1.125rem;
+    row-gap: 0.25rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--hero-fade), visibility 0s linear var(--duration-base);
+  }
+
+  @media (max-width: 47.99rem) {
+    .hero-mini {
+      --hero-mini-left: var(--hero-gutter);
+      --hero-mini-bottom: 3.25rem;
+    }
+
+    body:has([data-dev-content-badge]) .hero-mini {
+      --hero-mini-bottom: 4.75rem;
+    }
+  }
+
+  /* Development only: the content badge sits bottom left (8 to 34 px). */
+  @media (min-width: 48rem) {
+    body:has([data-dev-content-badge]) .hero-mini {
+      --hero-mini-bottom: 2.75rem;
+    }
+  }
+
+  .hero-mini-name {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-synthesis: none;
+    font-size: 1.875rem;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-weight: var(--weight-heavy);
+    color: var(--foreground);
+  }
+
+  .hero-mini-hint {
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    letter-spacing: 0.06em;
+    color: var(--muted-foreground);
+    transition: opacity var(--hero-fade);
+  }
+
+  /* The way back is only real at the world view: zoomed in, the hint would be a promise. */
+  .landing-hero[data-world="false"] .hero-mini-hint {
+    opacity: 0;
+  }
+
+  /* ---- States: every moving part is opacity and transform; visibility follows the fade so that hidden controls leave the tab order. ---- */
+  .hero-name,
+  .hero-intro,
+  .hero-hint,
+  .hero-search,
+  .hero-list {
+    transition-property: opacity, transform, visibility;
+    transition-duration: var(--duration-base), var(--duration-base), 0s;
+    transition-timing-function: var(--ease-standard), var(--ease-standard), linear;
+  }
+
+  /* `.hero-search` and `.hero-row` also change colour: keep that transition beside the state one. */
+  .hero-search {
+    transition-property: opacity, transform, visibility, color;
+    transition-duration: var(--duration-base), var(--duration-base), 0s, var(--duration-fast);
+    transition-timing-function: var(--ease-standard), var(--ease-standard), linear, var(--ease-standard);
+  }
+
+  .landing-hero[data-hero="collapsed"] .hero-name,
+  .landing-hero[data-hero="collapsed"] .hero-intro,
+  .landing-hero[data-hero="collapsed"] .hero-hint {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  /* The name stays in the accessibility tree (it is the page's h1): opacity only. The controls are removed from the tab order. */
+  .landing-hero[data-hero="collapsed"] .hero-search,
+  .landing-hero[data-hero="collapsed"] .hero-list {
+    opacity: 0;
+    transform: translateY(0.5rem);
+    visibility: hidden;
+    transition-delay: 0s, 0s, var(--duration-base), 0s;
+  }
+
+  .landing-hero[data-hero="collapsed"]::before {
+    opacity: 0;
+  }
+
+  .landing-hero[data-hero="collapsed"] .hero-mini {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--hero-fade) 80ms, visibility 0s;
+  }
+
+  /* Away: a place or an entry is open. Instant: the panel is arriving, the hero is not the page. */
+  .landing-hero[data-hero="away"],
+  .landing-hero[data-hero="away"]::before {
+    opacity: 0;
+    visibility: hidden;
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-hero *,
+    .landing-hero::before {
+      transition: none !important;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .landing-hero::before {
+      background: linear-gradient(to top, var(--background) 0%, var(--background) 45%, transparent 100%);
+    }
+  }
+
+  @media (forced-colors: active) {
+    .landing-hero::before {
+      background: Canvas;
+    }
   }
 }

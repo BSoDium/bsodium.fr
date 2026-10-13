@@ -26,7 +26,7 @@ describe("entryJsonLd", () => {
       image: `${ORIGIN}/media/x/c.jpg`,
       keywords: "a, b",
       contentLocation: [{ "@type": "Place", name: "Lisbon", url: `${ORIGIN}/locations/lisbon` }],
-      isPartOf: { "@type": "WebSite", name: "Catalyst", url: `${ORIGIN}/` },
+      isPartOf: { "@type": "WebSite", name: "Elliot Négrel-Jerzy", url: `${ORIGIN}/` },
     });
   });
   it("invents nothing: no author, publisher or empty value when the data lacks them", () => {
@@ -47,7 +47,7 @@ describe("entryJsonLd", () => {
     expect(entryJsonLd(entry({ kind: "project", href: "/projects/a" }), ORIGIN)["@type"]).toBe("CreativeWork");
   });
   it("types a poem as a CreativeWork of genre Poem and an artwork as a CreativeWork", () => {
-    expect(entryJsonLd(entry({ kind: "poem", href: "/poems/a" }), ORIGIN)).toMatchObject({ "@type": "CreativeWork", genre: "Poem" });
+    expect(entryJsonLd(entry({ kind: "poem", href: "/poetry/a" }), ORIGIN)).toMatchObject({ "@type": "CreativeWork", genre: "Poem" });
     const art = entryJsonLd(entry({ kind: "artwork", href: "/artworks/a" }), ORIGIN);
     expect(art["@type"]).toBe("CreativeWork");
     expect(art).not.toHaveProperty("genre");
@@ -85,6 +85,6 @@ describe("isCodeRepository", () => {
 
 describe("websiteJsonLd", () => {
   it("is a minimal WebSite", () => {
-    expect(websiteJsonLd(ORIGIN)).toEqual({ "@context": "https://schema.org", "@type": "WebSite", name: "Catalyst", description: "A personal archive organized around places.", url: `${ORIGIN}/`, inLanguage: "en" });
+    expect(websiteJsonLd(ORIGIN)).toEqual({ "@context": "https://schema.org", "@type": "WebSite", name: "Elliot Négrel-Jerzy", description: "Front-end and UX software engineer in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.", url: `${ORIGIN}/`, inLanguage: "en" });
   });
 });

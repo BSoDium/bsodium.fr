@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <!-- Default share image (1200x630). Hand-written; `node scripts/brand/build.mjs` renders it to public/og-default.png.
-       Language of docs/design-system.md: near-black page, 16 px grid, hairlines, corner brackets, mono micro-labels, one cyan accent. -->
+       Language of docs/design-system.md: near-black page, 16 px grid, hairlines, big type at 200 against 800 (Bricolage Grotesque, embedded
+       by build.mjs), one orange accent. The words are the site's identity (app/lib/site.ts, SITE): lib/identity.test.ts keeps them equal. -->
   <defs>
     <pattern id="grid" width="16" height="16" patternUnits="userSpaceOnUse">
       <path d="M16 0H0V16" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>
@@ -25,49 +26,32 @@
   </g>
 
   <!-- A route between two places, and the places: square markers with a leader and a micro-label. -->
-  <path d="M812 400 Q 850 270 960 226" fill="none" stroke="#38d4f5" stroke-width="2.5" stroke-linecap="square"/>
+  <path d="M812 400 Q 850 270 960 226" fill="none" stroke="#0a93ff" stroke-width="2.5" stroke-linecap="square"/>
   <g fill="#f5f5f5">
     <rect x="1038" y="352" width="8" height="8"/>
     <rect x="707" y="262" width="8" height="8"/>
     <rect x="930" y="500" width="8" height="8"/>
     <rect x="760" y="150" width="8" height="8"/>
   </g>
-  <g fill="#38d4f5">
+  <g fill="#0a93ff">
     <rect x="806" y="394" width="12" height="12"/>
     <rect x="954" y="220" width="12" height="12"/>
   </g>
-  <g fill="none" stroke="#38d4f5" stroke-width="1.25">
+  <g fill="none" stroke="#0a93ff" stroke-width="1.25">
     <path d="M800 388h8M800 388v8M824 388h-8M824 388v8M800 412h8M800 412v-8M824 412h-8M824 412v-8" transform="translate(0 0)"/>
     <path d="M948 214h8M948 214v8M972 214h-8M972 214v8M948 238h8M948 238v-8M972 238h-8M972 238v-8"/>
   </g>
-  <g fill="none" stroke="#f5f5f5" stroke-opacity="0.5" stroke-width="1">
-    <path d="M966 220L1010 196H1090"/>
-    <path d="M818 406L850 456H930"/>
+  <!-- Text: the name, the given name at 800 over the family name at 200, then who. -->
+  <g font-family="'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" fill="#f5f5f5" letter-spacing="-3">
+    <text x="74" y="230" font-size="104" font-weight="800">Elliot</text>
+    <text x="74" y="332" font-size="104" font-weight="200">Négrel-Jerzy</text>
   </g>
-  <g font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="14" letter-spacing="1.7" fill="#f5f5f5" fill-opacity="0.72">
-    <text x="1014" y="188">PLACE / 001</text>
-    <text x="854" y="478">PLACE / 002</text>
+  <g font-family="'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="30" font-weight="300" fill="#a3a3a3">
+    <text x="80" y="418">Front-end and UX software engineer</text>
+    <text x="80" y="458">based in Paris</text>
   </g>
-
-  <!-- Frame brackets. -->
-  <g fill="none" stroke="#f5f5f5" stroke-opacity="0.5" stroke-width="1.5">
-    <path d="M40 72V40H72"/>
-    <path d="M1128 40H1160V72"/>
-    <path d="M1160 558V590H1128"/>
-    <path d="M72 590H40V558"/>
-  </g>
-
-  <!-- Text. -->
+  <path d="M80 500H300" stroke="#f5f5f5" stroke-opacity="0.34" stroke-width="1"/>
   <g font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="16" letter-spacing="2.4" fill="#a3a3a3">
-    <rect x="80" y="104" width="10" height="10" fill="#38d4f5"/>
-    <text x="102" y="114">ARCHIVE / 001</text>
-    <text x="80" y="554">ARTICLES / PROJECTS / ARTWORKS / POEMS</text>
+    <text x="80" y="554">ARTICLES / PROJECTS / ARTWORKS / POETRY</text>
   </g>
-  <text x="76" y="268" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="132" font-weight="600" letter-spacing="-4" fill="#f5f5f5">Catalyst</text>
-  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="34" fill="#a3a3a3">
-    <text x="80" y="340">A personal archive</text>
-    <text x="80" y="386">organized around places.</text>
-  </g>
-  <path d="M80 430H300" stroke="#f5f5f5" stroke-opacity="0.34" stroke-width="1"/>
-  <path d="M80 424v12M120 427v6M160 427v6M200 427v6M240 427v6M280 427v6M300 424v12" stroke="#f5f5f5" stroke-opacity="0.34" stroke-width="1"/>
 </svg>

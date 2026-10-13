@@ -36,17 +36,18 @@ Run from the repo root with `pnpm --filter @catalyst/web <script>` or inside `ap
 
 ```
 app/
-  root.tsx            html shell (`lang`, theme-color per scheme, icons, manifest), SkipLinks, page-wide nav scrim, Navbar, NavProgress, MotionConfig, root ErrorBoundary (404 page, error page); loader returns `siteUrl`; dev-only content badge (the mode only when import.meta.env.DEV)
+  root.tsx            html shell (`lang`, theme-color per scheme, icons, manifest), SkipLinks, page nav scrim (lists), Navbar, NavProgress, MotionConfig, root ErrorBoundary (404 page, error page); loader returns `siteUrl`; dev-only content badge (the mode only when import.meta.env.DEV)
   entry.server.tsx    per-response CSP nonce, security headers, cache policy, X-Robots-Tag off the production host (lib/security-headers.ts); `handleDataRequest`, `handleError`
   entry.client.tsx    the stock hydration entry
-  routes.ts           pathless layout (shell) wrapping `/`, `/locations/:slug` and the entries `/{articles,projects,artworks,poems}/:slug`;
-                      the lists /projects /articles /artworks /poems (no globe); resource routes `/sitemap.xml` and `/robots.txt`
+  routes.ts           pathless layout (shell) wrapping `/`, `/locations/:slug` and the entries `/{articles,projects,artworks,poetry}/:slug`;
+                      the lists /projects /articles /artworks /poetry (no globe); resource routes `/sitemap.xml` and `/robots.txt`,
+                      and the permanent redirects `/poems` and `/poems/:slug` -> `/poetry` (routes/legacy-poems.ts)
   routes/shell.tsx    layout: full-bleed globe + PlacesNav + detail panel; owns focusedSlug, the saved GlobeViewState,
                       the panel inset passed to the globe and the container of an entry (`?view=full`)
   routes/home.tsx     `/` (renders nothing in the panel slot; meta only)
   routes/location.tsx `/locations/:slug` loader (404 via data()), meta, PlaceDetail, route ErrorBoundary
   routes/entry-{article,project,artwork,poem}.tsx   `/<kind>/:slug`: loader (lib/entry-loader.server.ts), meta, EntryRoute; no error boundary (404 -> root)
-  routes/{projects,articles,artworks,poems}.tsx     the lists: summaries -> EntryListPage
+  routes/{projects,articles,artworks,poetry}.tsx    the lists: summaries -> EntryListPage ("Poetry" is the poems' list)
   routes/{sitemap,robots}.ts   resource routes (no UI): the crawlers' files, built from the projection and `CATALYST_SITE_URL`
   routes/search-index.ts   `/search-index.json` (no UI): titles, kinds, tags and one-line summaries of places and entries, for the quick search
   routes/dev-design.tsx   DEV ONLY `/dev/design`: the UI system's styleguide (guarded like `/dev/street`; docs/design-system.md)
@@ -86,7 +87,7 @@ app/
   throws `data({ message }, { status: 404 })`. Its `ErrorBoundary` renders `PlaceNotFound` inside the panel
   (message, link to `/`, a plain inline list of all places); the shell and globe stay mounted. Status is a real 404.
 - Unmatched URLs fall to the root `ErrorBoundary` (404 page inside the navbar).
-- The list pages (`/projects`, `/articles`, `/artworks`, `/poems`) are plain pages outside the shell: a title with a plain count ("5 articles",
+- The list pages (`/projects`, `/articles`, `/artworks`, `/poetry`) are plain pages outside the shell: a title with a plain count ("5 articles",
   "2 of 5 articles" when filtered; no eyebrow, no index codes), then an `EntryCard` grid (1 / 2 / 3 columns; each card: cover, title, a three-line
   summary, the date and the places as two plain lines, the first three tags as muted text; no box, and no kind: the page already says it) whose cards
   keep `id={slug}` anchors (`/projects#slug`) and link to the entry route; an empty collection is one muted line ("Nothing here yet.", no card).
@@ -116,13 +117,14 @@ What a deployment needs beyond the features, in one place. Everything here is ve
 
 ### Site identity, head tags and sharing
 
-- `lib/site.ts` holds the name, the description, the home title (`Catalyst · A personal archive organized around places`), the default share image and the theme colours; `CATALYST_SITE_URL` (server env, default `https://v2.bsodium.fr`) is the origin of every absolute URL. The root loader returns it as `siteUrl`, so a route's `meta` (server and client) reads it from `matches` (`metaBase(args)` in `lib/meta.ts`) and the two agree.
-- Every route's `meta` goes through `pageMeta`: title `<Page> · Catalyst`, description, `<link rel="canonical">` (origin + path, never the query: `?view=full` is the same page), `og:site_name/type/title/description/url/locale/image(+type,width,height,alt)`, `twitter:card summary_large_image/title/description/image/image:alt`. An entry is `og:type article` (+ `article:published_time`, `article:tag`) when it is an article, `website` otherwise.
+- `lib/site.ts` holds the site's identity as ONE constant, `SITE` (the owner's name "Elliot Négrel-Jerzy", its two halves for the hero, a short form "Elliot N.-J." for tight spots, the role, the place and the specialities: facts the owner stated, nothing else), and what is derived from it: the description, the home title (`Elliot Négrel-Jerzy · Front-end and UX software engineer`), the sentence under the hero's name, the default share image's alt text; plus the theme colours. The project's code name ("Catalyst") is for the repository, the packages and the environment variables only: it appears in no text the site serves (`lib/identity.test.ts` checks the markup, the head tags, the manifest and the source; `scripts/prod/check.mjs` checks every document, the manifest and the sitemap over HTTP). The one file that still carries it, `public/media/.catalyst-manifest.json`, belongs to the content export, which writes and verifies that name; `CATALYST_SITE_URL` (server env, default `https://v2.bsodium.fr`) is the origin of every absolute URL. The root loader returns it as `siteUrl`, so a route's `meta` (server and client) reads it from `matches` (`metaBase(args)` in `lib/meta.ts`) and the two agree.
+- Every route's `meta` goes through `pageMeta`: title `<Page> · Elliot Négrel-Jerzy` (the name from `SITE`), description, `<link rel="canonical">` (origin + path, never the query: `?view=full` is the same page), `og:site_name/type/title/description/url/locale/image(+type,width,height,alt)`, `twitter:card summary_large_image/title/description/image/image:alt`. An entry is `og:type article` (+ `article:published_time`, `article:tag`) when it is an article, `website` otherwise.
 - The share image of an entry is its authored cover when scrapers can read the format (png, jpg, gif, webp: never SVG, which Facebook, X, LinkedIn and Slack do not render), absolute; else `public/og-default.png` (1200x630, 28 kB). A place uses its first raster image the same way. Covers are authored paths under `/media/` (the contract), never external URLs.
-- `<html lang="en">`, `color-scheme`, `theme-color` for each scheme (`#fbfbfb` / `#0a0a0a`, kept equal to `--background` by a test), the SVG and `.ico` favicons, `apple-touch-icon.png` (180), `manifest.webmanifest` (192, 512 and a maskable 512 PNG; dark theme and background colours: a manifest cannot vary by scheme).
+- `<html lang="en">`, `color-scheme`, `theme-color` for each scheme (`#fbfbfb` / `#0a0a0a`, kept equal to `--background` by a test), the SVG and `.ico` favicons, `apple-touch-icon.png` (180), `manifest.webmanifest` (192, 512 and a maskable 512 PNG; dark theme and background colours: a manifest cannot vary by scheme). All of them show the site's mark (below).
 - JSON-LD, from published fields only (no author, publisher or invented date): the home page is a `WebSite`; an article an `Article` (`headline` capped at 110 characters); a project `SoftwareSourceCode` when its `url` is a repository on a known forge, else `CreativeWork`; an artwork `CreativeWork`; a poem `CreativeWork` with `genre: "Poem"`. Each has `url`, `datePublished` (the authored partial ISO date), `image` (raster covers only), `keywords` (tags), `contentLocation` (its places) and `isPartOf` the site. `lib/json-ld.ts`; React Router escapes the script's content.
 - Not-found and error pages carry `noindex` (their status is 404/5xx anyway).
-- The brand files are drawn, not downloaded: `apps/web/scripts/brand/og.svg` is hand-written in the language of `design-system.md` (near-black page, 16 px grid, hairline globe, corner brackets, mono micro-labels, one cyan route); the icons are the navbar's Orbit glyph (lucide, ISC) with cyan satellites. `pnpm --filter @catalyst/web brand` renders them with headless Chrome and, if `pngquant` is installed, palette-quantizes them. Edit the SVG, run it, commit the PNGs.
+- The brand files are drawn, not downloaded: `apps/web/scripts/brand/og.svg` is hand-written in the language of `design-system.md` (near-black page, 16 px grid, hairline globe, corner brackets, mono micro-labels, one cyan route); the icons are the site's mark (next point). `pnpm --filter @catalyst/web brand` renders them with headless Chrome and, if `pngquant` is installed, palette-quantizes them (`-- --only=icons` or `--only=og` renders one set; the output is byte-for-byte reproducible). Edit the SVG or the mark, run it, commit the files.
+- **The mark** (2026-10-12, replaces a lucide `Orbit` glyph that read as an icon-set icon; redrawn the same day when the owner described the look as a design studio's: heavy type, hairlines, restraint): `scripts/brand/mark.mjs` holds it as data, a 16 x 16 one-bit grid: a square (the bounding box) and a disc (the globe) overlapping, the overlap knocked out. Two solid shapes, no outline, texture or curve beyond the disc's pixel steps: legible at 16 px, and it sits beside a wordmark as it is (`LogoWordmark`: the mark and the site's name as text, semibold and tight). `build.mjs` writes `favicon.svg` (ink follows `prefers-color-scheme`: `#0a0a0a` / `#f5f5f5`, the two page colours), `favicon.ico` (PNG entries at 16, 32 and 48 px, each a whole number of device pixels per cell, under 0.5 kB), `apple-touch-icon.png` (180), `icon-192.png`, `icon-512.png` and `icon-maskable-512.png` (the mark on the dark page colour at 7, 7, 20 and 16 px per cell; the maskable one is 256 px of mark, its corners 181 px from the centre, inside a launcher's 205 px safe circle). Monochrome on purpose: the accent is for state. The default share image does not carry it (it never used the old glyph; its own drawing is unchanged). `components/ui/logo-mark.tsx` (`LogoMark`, `currentColor`, `size` a multiple of 16) carries the same path; `logo-mark.test.ts` fails when the component, the favicon and `mark.mjs` differ, and `lib/public-assets.test.ts` checks the files. The header does not show the mark (see "Floating navbar and scrim"); `/dev/design` section 12 does.
 
 ### Crawlers: sitemap.xml and robots.txt
 
@@ -152,7 +154,7 @@ The CSP is **enforced** (not report-only) and was verified with zero violations 
 | `style-src` | `'self'` | the one stylesheet; no inline `<style>` |
 | `style-src-attr` | `'unsafe-inline'` | React and the label overlay put `style=""` on elements (positions, sizes, CSS variables); measured: without it, 24 violations in one run of the home page with the street map open. Attributes cannot run script |
 | `img-src` | `'self' data: blob:` | our images; `data:` and `blob:` are MapLibre's documented needs for sprites and raster sources (neither is used today: removing them gave no violation) |
-| `font-src` | `'self'` | the type is the system stack; this is a guard |
+| `font-src` | `'self'` | the three self-hosted families of `public/fonts/` (display, reading, metadata: design-tokens.md, "Typography"); no font host, ever |
 | `connect-src` | `'self'` + the origin of `CATALYST_TILES_PRIMARY_URL` (default `https://tiles.openfreemap.org`) + the origin of `CATALYST_TILES_FALLBACK_URL` + `CATALYST_CSP_CONNECT_EXTRA` | route data and the tile requests (TileJSON, `.pbf`, PMTiles range reads). Computed from `getTilesConfig()` at request time, like the config itself |
 | `worker-src` | `'self' blob:` | MapLibre's tile worker is a hashed file of ours (`setWorkerUrl`); `blob:` is its fallback |
 | `manifest-src` | `'self'` | the web manifest |
@@ -183,7 +185,7 @@ The Vite dev server sends no CSP (its inline preamble and HMR socket are not our
 | icons, manifest, share image | `public, max-age=86400, stale-while-revalidate=604800` | stable names |
 | sitemap.xml, robots.txt | `public, max-age=0, s-maxage=3600, stale-while-revalidate=86400` | |
 
-No web font is loaded (system stacks), so there is nothing to preload; the one stylesheet (48 kB, 9.8 kB gzip) is linked in the head by React Router. The globe is a lazy chunk (`globe-canvas`, then `engine`): it is not preloaded and not on the critical path of the lists or of an entry's HTML. Measured CLS in Chrome (`check:prod`): 0.0000 on the home page, a place, an entry, a list, the 404 page, mobile, and both street-map passes (the globe's box is reserved by the page layout; the canvas mounts into it).
+Three self-hosted font families (design-tokens.md, "Typography", 240 kB of woff2 in all, each fetched only when a glyph of it is drawn) are declared in the stylesheet with `font-display: swap` and metric-matched fallback faces; only the display face is preloaded, and only on the home page (`routes/home.tsx`, `links`). Their files are cached `immutable` for a year (`vercel.json`, `/fonts/*.woff2`; the names carry the version). The stylesheet (48 kB, 9.8 kB gzip before the type work) is linked in the head by React Router. The globe is a lazy chunk (`globe-canvas`, then `engine`): it is not preloaded and not on the critical path of the lists or of an entry's HTML. Measured CLS in Chrome (`check:prod`): 0.0000 on the home page, a place, an entry, a list, the 404 page, mobile, and both street-map passes (the globe's box is reserved by the page layout; the canvas mounts into it).
 
 JavaScript (gzip) that the HTML of each page preloads, from `check:prod`: home 179 kB, a list 137 kB, an entry 187 kB, a place 185 kB (of which the React Router and React DOM entry is 67 kB and the detail panel with Motion 44 kB). The lazily loaded globe is `globe-canvas` 173 kB + `engine` 304 kB. Total client JS 705 kB gzip by this script's count (733 kB before the schema library left the browser bundle: the `projection` chunk went from 100 kB, 29 kB gzip, to 0.9 kB). `docs/performance.md` has no JS size budget; these are the numbers to compare against.
 
@@ -197,14 +199,41 @@ Not verified: how Vercel merges the `vercel.json` headers with the ones our serv
 
 ### Floating navbar and scrim
 
-- `Navbar` has no background, border or blur. Left: the `Orbit` icon (lucide-react, shadcn's icon set) as a link home,
-  accessible name "Catalyst, home". Right: text links Projects, Articles, Artworks, Poems (`aria-current="page"` on the
-  active one via `NavLink`). The `<header>` is `pointer-events-none`; only the links take the pointer. 44px targets.
-- Readability over scrolling content comes from `NavScrim` (`.nav-scrim` in `app.css`, documented in
-  `docs/design-tokens.md`): a fixed, `pointer-events-none` band between content (z 30) and the nav (z 40).
-  `PageNavScrim` (in `root.tsx`) renders it on every route except the globe shell, where the page colour is the ocean
-  and the map must not be dimmed. The open detail panel renders its own `absolute` scrim, scoped to the panel, so the
-  nav links over the panel stay legible while its content scrolls beneath them.
+- `Navbar` has no background, border or blur and **no logo** (owner, 2026-10-12: the icon in the top-left corner went; the mark is
+  not in the header for now). One row of text, centred at the top of the viewport, in reading and focus order: the site's name
+  "Globe" (a plain text link home, accessible name "Globe, Elliot Négrel-Jerzy home"; the site's name is the home hero's headline and the
+  title template's suffix, not the row's), Projects, Articles, Artworks, Poetry (`aria-current="page"` on the active one, underlined, via
+  `NavLink`), the search trigger. **On the home page, while the landing hero is at rest, there is no `<header>` at all**: the hero's
+  four rows are the sections and its search line is the search with its key hint (docs/landing.md), and the hero's list is the page's one
+  "Primary" navigation. `SearchPalette` (the dialog and Cmd/Ctrl-K) is mounted by `Navbar` next to the header, not in it, so the shortcut and
+  an open palette survive the header's absence. The hero publishes its state (`lib/hero-rest.ts`, an external store: the header is a
+  sibling of the shell, not a child) and the header comes back, tabs and search with a plain-text key hint, whenever the rows are hidden (the
+  hero collapsed after a gesture, a zoomed-in view), so the visitor is never left without a way to the lists. Every other route has the row
+  above, unchanged. The `<header>` is `pointer-events-none`; only the links take the pointer. 44 px targets (links 44 px tall, at least 52 px
+  wide; the search trigger 44 x 44).
+- **Where the row is centred.** Over the whole viewport (home, lists, 404, the full-screen entry view); **over the map** while the place
+  or entry panel is open beside the globe (desktop, `md` and up): the header's right edge goes to 50 % (`md:right-1/2`, decided in
+  `Navbar` from the path and `?view`, so the server renders the final position and a reload does not jump), with a `right`
+  transition on the panel's duration and easing, so the row glides with the panel. Why the map and not the whole viewport: a row centred
+  on the viewport would cross the panel's left edge and its Close and expand controls (they sit at the panel's left, 24 px in);
+  centred over the map it is clear of them at every width (measured: 156 px at 1440, 69 px at 1024, 46 px at 768) and it sits over the
+  globe, which the panel re-centres onto the same half. In the full-screen entry view the panel's controls are at the page's left edge
+  (17 to 89 px) and the row is centred on the viewport (410 px clear at 1440, 74 px at 768). On a phone the panel is a dialog above
+  the header, which stays centred over the whole screen.
+- **What the row shows follows its own width** (the header is an `@container`; Tailwind `@md`, `@xl`, `@min-[...]`): below 28 rem the
+  name and the four sections only (about 305 px at 320, 325 px at 360 to 390: they fit, with 44 px targets, down to a 320 px phone,
+  the padding between links going 4, 6, 8, 10 px per side at 0, 340, 400 px and 32 rem); from 28 rem the search trigger; from 36 rem its
+  `Ctrl K` hint. So a phone has no search trigger (as before: it was hidden below `sm`; `Ctrl K` and the
+  search dialog are unchanged), a phone in landscape and a half-width map have the icon, a desktop the hint.
+- Readability: **lists, 404, error pages** (content scrolls under the row) have `NavScrim` (`.nav-scrim` in `app.css`, documented in
+  `docs/design-tokens.md`): a fixed, `pointer-events-none` band between content (z 30) and the nav (z 40), rendered by `PageNavScrim`
+  (in `root.tsx`) on every route except the shell. **The globe and the map** (the shell: home, place, entry beside the globe) have
+  `.nav-fade`, a child of the row behind the links (`z-index: -1` inside the header): the page colour at 85 % from the top edge past the
+  row's text, then an eased fall to nothing over `--fade-height` (112 px), as wide as the row plus 6 rem each side with the same easing
+  in a mask, so the globe is not dimmed across the whole width and no edge shows. No blur there. Over the page colour (dark or light
+  ocean) it is invisible; over the street map it quiets lines under the links. **The full-screen entry view** has the panel's own
+  `absolute` scrim (full width of the panel), and the page-wide ones are off there. The open detail panel keeps its scrim over the panel's
+  width so its header controls stay legible while content scrolls beneath them.
 - Stacking: content 0, panel 30, page scrim 35, navbar 40, places list overlay 45, mobile slide-over 50, skip links 60.
 
 ### Places list (keyboard path)
@@ -250,12 +279,24 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
 
 | URL | Shows |
 | --- | --- |
-| `/articles/:slug`, `/projects/:slug`, `/artworks/:slug`, `/poems/:slug` | the entry in the side panel over the globe (SSR; the globe stays interactive on the left half) |
+| `/articles/:slug`, `/projects/:slug`, `/artworks/:slug`, `/poetry/:slug` | the entry in the side panel over the globe (SSR; the globe stays interactive on the left half) |
 | the same with `?view=full` | the same entry in the full-screen container |
 | `/locations/:slug` | the place panel: its linked entries as cards grouped by kind |
-| `/articles`, ... `/poems` | the list pages (outside the shell, no globe) |
+| `/articles`, ... `/poetry` | the list pages (outside the shell, no globe) |
+| `/poems`, `/poems/:slug` (and the same with a query: `?tag=`, `?view=full`) | **301** to `/poetry`, `/poetry/:slug`, the query kept (see "The poems' section is Poetry" below) |
 | unknown slug, or a slug under the wrong kind (`/projects/demo-poem`) | a real 404 through the root boundary and the site's not-found page |
 
+- **The poems' section is "Poetry" (owner, 2026-10-13).** The section that lists poems is named Poetry, in its label (`KIND_PLURALS.poem`: header
+  and hero rows in mono capitals POETRY, the list's title and landmark, "More poetry" under an entry, the search palette's group, the place
+  panel's group, titles and descriptions) and in its address: the list is `/poetry` and an entry `/poetry/:slug` (`KIND_PATHS.poem`;
+  canonical URLs, sitemap, the panel's route table and JSON-LD `url` follow from it). The entry route used to be `/poems/:slug`, so entries
+  moved with the list and **every previously valid address redirects**: `routes/legacy-poems.ts`, mounted at `poems` and `poems/:slug` in
+  `routes.ts`, answers `301` with `Location: /poetry[/:slug]` and the query string untouched (`lib/legacy-paths.ts`, tested), before any
+  page is built, so it works on any host (not a `vercel.json` rule, which the local servers and the checks would not exercise). Anything
+  deeper (`/poems/a/b`) was a 404 and stays one. What stays "poem(s)": the singular noun (an entry's kicker "Poem", the kind chip, aria
+  labels of one entry, `genre: "Poem"` in JSON-LD), the `poem` kind in the schemas, the vault and the API (`/v1/poems`, `poems` in the
+  projection: the contract is not touched) and the **counts** ("4 poems", "1 poem", "2 of 4 poems", via `KIND_NOUNS`): "Poetry" names the
+  section, not a count noun ("4 poetry" would not be English). The search keywords of a poem include "poem", "poems" and "poetry".
 - **The container is the URL.** `?view=full` was chosen over a nested route: the route tree stays one route per kind, the URL is
   shareable and SSR-friendly (the server reads the query: a reload or a pasted link renders the full view at once), and the query
   is not part of the loader's identity: `entryShouldRevalidate` returns false when only the query changes, so toggling never
@@ -274,7 +315,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   same objects after toggling. Under the full view the globe's `main` is `inert` (no tab stops in the places list behind it).
 - **Landmarks.** Panel: `role="complementary"` labelled by the h1. Full: the same element becomes `role="main"` with `id="main"`
   (the globe's `main` gives up the id), so "Skip to content" lands on the full view and there is one `main`. One h1 per view: the
-  entry's (or the place's) title while the panel is open; a visually hidden "Catalyst" h1 on the globe page when it is closed. Body
+  entry's (or the place's) title while the panel is open; the landing hero's name (the owner's, `SITE.name`) on the globe page when it is closed. Body
   headings are h2/h3 (an h3 before any h2 is drawn as h2: the outline never skips a level); the sections after the body are h2.
 - **Place -> entry -> place.** The place panel's cards link with `state={{ from: "<place slug>" }}`; the entry shows "Back to
   <place>" (read and validated against the shell's places by `resolveBackTarget`) and the shell keeps that place selected on the globe
@@ -303,9 +344,9 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   summary, date and cover so a tile needs no other fetch. Tags on an entry link to the kind's list filtered by that tag.
 - **Navigation feedback.** While another entry or place loads, the panel's content stays, dimmed and `aria-busy` (only when the
   path changes: a `?view` toggle is not a page); the top line of `NavProgress` shows after 150 ms.
-- **Quick search.** `components/search-palette.tsx`, mounted by the navbar (a trigger button from `sm` up, and Cmd/Ctrl-K anywhere): a
+- **Quick search.** `components/search-palette.tsx`, mounted by the navbar (a trigger button from 28 rem of header width up, and Cmd/Ctrl-K anywhere): a
   modal `<dialog>` with an ARIA combobox (the input keeps the focus, `aria-activedescendant` follows the highlighted option, arrows /
-  Home / End move, Enter opens, Escape closes), results grouped into places and the four kinds, with the same glyphs. The index
+  Home / End move, Enter opens, Escape closes), results grouped into places and the four kinds, each row led by the kind's icon (`Icon`, control size, the same set as everywhere). The index
   (`/search-index.json`, built from the projection by `buildSearchIndex`: titles, kind, region or code and date, tags and summaries, never
   a body) is fetched once when the palette first opens and searched in the browser (`searchItems`: accents and case folded, every word
   must match, a word that starts a title word ranks above one inside it, then the tags and the summary). Nothing is rendered before the
@@ -1022,7 +1063,7 @@ Measured behaviour (same build, same environment):
 | Panel, reduced motion | after two frames: inset 720 at once and the panel at x = 720 (no animation) |
 | Panel, idle | 0 rAF over 2.5 s with the panel open |
 | Panel, picking | a click at the marker's shifted position keeps the place selected (no navigation elsewhere) |
-| Keyboard flow | Tab order: Skip to content, Skip to places, logo, Projects, Articles, Artworks, then the places (list revealed, 288x528 px); Enter on Reykjavík opens it and focus moves to its heading (list hidden again); Escape closes and focus returns to its link (list revealed); tabbing out hides it |
+| Keyboard flow | Tab order: Skip to content, Skip to places, Catalyst (home), Projects, Articles, Artworks, Poetry, Search, then the places (list revealed, 288x528 px); Enter on Reykjavík opens it and focus moves to its heading (list hidden again); Escape closes and focus returns to its link (list revealed); tabbing out hides it |
 | Reduced transparency | with `prefers-reduced-transparency: reduce` (CDP) the blur layers are `display: none` and the gradient is the longer solid one |
 | Mobile (390x844) | panel is a modal dialog (`aria-modal`, body scroll locked, focus on the heading), globe unmounted |
 | Console | no errors or warnings in any scenario, no hydration warnings (production and dev server) |

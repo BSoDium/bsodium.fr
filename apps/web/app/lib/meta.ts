@@ -1,7 +1,7 @@
 import { DEFAULT_SHARE_IMAGE, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "./site";
 
 export interface PageMeta {
-  /** The page's own name; the title becomes `<title> · Catalyst`. Absent = the home title (`SITE_TITLE`). */
+  /** The page's own name; the title becomes `<title> · <site name>`. Absent = the home title (`SITE_TITLE`). */
   title?: string;
   description?: string;
   /** `website` (default) or `article`. */
@@ -43,7 +43,7 @@ const SCRAPABLE = /\.(?:png|jpe?g|gif|webp)$/i;
 
 export const isScrapableImage = (src: string) => SCRAPABLE.test(src);
 
-/** The title of a page: `<Page> · Catalyst`, or the home title. */
+/** The title of a page: `<Page> · <site name>`, or the home title. */
 export const pageTitle = (title?: string) => (title ? `${title} · ${SITE_NAME}` : SITE_TITLE);
 
 /**

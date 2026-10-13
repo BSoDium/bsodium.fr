@@ -99,6 +99,7 @@ No secrets exist in this repository or in either Vercel project. The Polarsteps 
 - [Web architecture](docs/web-architecture.md): routing, data, focus management, globe lifecycle, measurements
 - [Design tokens](docs/design-tokens.md)
 - [Design system](docs/design-system.md)
+- [Landing hero](docs/landing.md): the home page's typographic hero over the globe (states, hooks, header, tests)
 - [Renderer decision](docs/renderer-decision.md): why standalone Three.js, with benchmarks
 - [Street map architecture](docs/street-architecture.md): the street-scale renderer (pixel pass, style, handover, palette, road hierarchy)
 - [Pixel line rules](docs/pixel-line-rules.md): the line and palette spec the street renderer follows
@@ -111,4 +112,4 @@ No secrets exist in this repository or in either Vercel project. The Polarsteps 
 
 ## License
 
-Source-available, not open source. You are welcome to read the code, learn from it, take inspiration, and reuse individual pieces (functions, shaders, components) in your own projects with attribution. You may not publish or deploy a copy of the site, and the Catalyst name, design and content are not licensed for reuse. See [LICENSE](LICENSE) for the exact terms. `packages/geodata` is MIT.
+Source-available, not open source. You are welcome to read the code, learn from it, take inspiration, and reuse individual pieces (functions, shaders, components) in your own projects with attribution. You may not publish or deploy a copy of the site, and the Catalyst name, design and content are not licensed for reuse. See [LICENSE](LICENSE) for the exact terms. `packages/geodata` is MIT. The three typefaces in `apps/web/public/fonts/` (Bricolage Grotesque, Newsreader, JetBrains Mono) are not covered by that licence: each is under the SIL Open Font License 1.1, with its licence text beside the files.

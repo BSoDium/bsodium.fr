@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SHARE_IMAGE, THEME_COLORS } from "./site";
+import { DEFAULT_SHARE_IMAGE, SITE, SITE_DESCRIPTION, THEME_COLORS } from "./site";
 
 const pub = (name: string) => new URL(`../../public/${name}`, import.meta.url);
 const pngSize = (name: string) => {
@@ -23,8 +23,10 @@ describe("public/ brand assets", () => {
       name: string; short_name: string; display: string; start_url: string; theme_color: string; background_color: string;
       icons: { src: string; sizes: string; type: string; purpose?: string }[];
     };
-    expect(manifest.name).toBe("Catalyst");
-    expect(manifest.short_name).toBeTruthy();
+    expect(manifest.name).toBe(SITE.name);
+    expect(manifest.short_name).toBe(SITE.shortName);
+    expect(manifest.short_name.length).toBeLessThanOrEqual(12);
+    expect((manifest as unknown as { description: string }).description).toBe(SITE_DESCRIPTION);
     expect(manifest.display).toBe("standalone");
     expect(manifest.start_url).toBe("/");
     expect(manifest.theme_color).toBe(THEME_COLORS.dark);
@@ -39,14 +41,35 @@ describe("public/ brand assets", () => {
       expect(`${width}x${height}`).toBe(icon.sizes);
     }
   });
-  it("has a vector favicon that follows the colour scheme, and a favicon.ico holding a PNG", () => {
+  it("has a vector favicon drawn on the mark's 16 px grid that follows the colour scheme, with square pixels only", () => {
     const svg = readFileSync(pub("favicon.svg"), "utf8");
-    expect(svg).toContain('viewBox="0 0 24 24"');
-    expect(svg).toContain("prefers-color-scheme: dark");
-    expect(svg).not.toMatch(/<script|onload|href=/i);
+    expect(svg).toContain('viewBox="0 0 16 16"');
+    expect(svg).toContain("prefers-color-scheme:dark");
+    expect(svg).toContain('shape-rendering="crispEdges"');
+    expect(svg).not.toMatch(/<script|onload|href=|<image|<linearGradient|<radialGradient/i);
+    // no curves: only moves, horizontal and vertical runs, whole numbers
+    const d = /<path d="([^"]+)"/.exec(svg)?.[1] ?? "";
+    expect(d).toMatch(/^[MhvzM0-9 -]+$/);
+  });
+  it("has a favicon.ico holding the three PNG sizes, 16, 32 and 48 px, each the size it declares", () => {
     const ico = readFileSync(pub("favicon.ico"));
-    expect([ico.readUInt16LE(0), ico.readUInt16LE(2), ico.readUInt16LE(4)]).toEqual([0, 1, 1]);
-    expect(ico.toString("latin1", 23, 26)).toBe("PNG");
+    expect([ico.readUInt16LE(0), ico.readUInt16LE(2), ico.readUInt16LE(4)]).toEqual([0, 1, 3]);
+    expect(ico.length).toBeLessThan(8 * 1024);
+    for (let i = 0; i < 3; i++) {
+      const at = 6 + 16 * i;
+      const declared = ico.readUInt8(at);
+      const size = ico.readUInt32LE(at + 8);
+      const offset = ico.readUInt32LE(at + 12);
+      expect(declared).toBe([16, 32, 48][i]);
+      expect(ico.toString("latin1", offset + 1, offset + 4)).toBe("PNG");
+      expect([ico.readUInt32BE(offset + 16), ico.readUInt32BE(offset + 20)]).toEqual([declared, declared]);
+      expect(offset + size).toBeLessThanOrEqual(ico.length);
+    }
+  });
+  it("draws every PNG icon from the mark: the maskable one keeps it inside the launcher's safe circle", () => {
+    expect(pngSize("icon-maskable-512.png")).toEqual({ width: 512, height: 512 });
+    // 16 cells at 16 px each: its corners are at 181 px from the centre, the safe circle's radius is 0.4 x 512 = 205 px.
+    expect((16 * 16 * Math.SQRT2) / 2).toBeLessThan(0.4 * 512);
   });
   it("leaves robots.txt and sitemap.xml to their resource routes (a static file would shadow them)", () => {
     expect(existsSync(pub("robots.txt"))).toBe(false);

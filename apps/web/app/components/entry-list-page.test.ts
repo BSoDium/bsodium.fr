@@ -43,6 +43,26 @@ describe("EntryListPage", () => {
     expect((html.match(/aria-current="true"/g) ?? []).length).toBe(1);
     expect(html).toContain("Showing 2 of 3 articles tagged rail");
   });
+  it("calls the poems' section \"Poetry\" (title, list, filter) and counts its entries as poems", () => {
+    const poems = listEntries(demo, "poem");
+    const at = (items: EntrySummary[], search = "") =>
+      renderToStaticMarkup(createElement(StaticRouter, { location: `/poetry${search}` }, createElement(EntryListPage, { kind: "poem", items })));
+    const html = at(poems);
+    expect(html).toMatch(/<h1[^>]*>Poetry<\/h1>/);
+    expect(html).toContain(`>${poems.length} poems<`);
+    expect(html).toContain('aria-label="Filter poetry by tag"');
+    expect(html).toContain('role="list" aria-label="Poetry"');
+    expect(html).not.toMatch(/<h1[^>]*>Poems<\/h1>/);
+    // one poem is "1 poem", never "1 poetry"
+    expect(at(poems.slice(0, 1))).toContain(">1 poem<");
+    expect(at(poems.slice(0, 1))).not.toMatch(/\bPoems\b|1 poetry/);
+    // the filter says how many of how many, in poems
+    const tag = poems.find((p) => p.tags.length > 0)?.tags[0];
+    expect(tag).toBeTruthy();
+    expect(at(poems, `?tag=${encodeURIComponent(tag!)}`)).toMatch(new RegExp(`Showing \\d+ of ${poems.length} poems tagged`));
+    // the entry's own kicker (singular) is not the list's business
+    expect(html).not.toContain("Poetry /");
+  });
   it("ignores an unknown tag", () => {
     expect((render(articles, "?tag=nope").match(/<article/g) ?? []).length).toBe(articles.length);
   });
@@ -50,5 +70,28 @@ describe("EntryListPage", () => {
     const html = render([]);
     expect(html).toContain("Nothing here yet");
     expect(html).not.toContain('data-slot="tag-filter"');
+  });
+  it("sets the entries as hairline rows of type: a mono dateline, the title in the display role, no card, box or generated cover for an article", () => {
+    const html = render(articles);
+    expect(html).toContain('data-surface="reading"');
+    expect(html).toMatch(/<h1[^>]*class="entry-title/);
+    expect(html).toContain('class="entry-rule"');
+    expect((html.match(/entry-row/g) ?? []).length).toBe(articles.length);
+    expect(html).toMatch(/<h2[^>]*class="type-display-md[^"]*"/);
+    expect(html).toContain("type-meta");
+    expect(html).not.toMatch(/ds-grid|ds-col|border-border-strong|rounded/);
+    // an article has no generated cover (type is the page); an authored one stays
+    const withoutImage = articles.map((a) => ({ ...a, cover: undefined }));
+    expect(render(withoutImage)).not.toContain('data-slot="cover-art"');
+    expect(html).toContain("<img");
+  });
+  it("gives an artwork without an image its generated cover (the image is the artwork)", () => {
+    const artworks = listEntries(demo, "artwork").map((a) => ({ ...a, cover: undefined }));
+    const html = renderToStaticMarkup(createElement(StaticRouter, { location: "/artworks" }, createElement(EntryListPage, { kind: "artwork", items: artworks })));
+    expect((html.match(/data-slot="cover-art"/g) ?? []).length).toBe(artworks.length);
+  });
+  it("says the year as a thin display numeral when years group entries", () => {
+    const items = [make("a", "2022-01", ["x"]), make("b", "2024-05", ["x"]), make("c", "2024-02", ["y"]), make("d", "2022-09", ["y"])];
+    expect(render(items)).toMatch(/<h2[^>]*class="ds-year type-display-lg type-thin[^"]*"/);
   });
 });

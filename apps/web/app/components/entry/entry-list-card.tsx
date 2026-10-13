@@ -1,4 +1,6 @@
-import { EntryCard } from "~/components/ui";
+import { Link } from "react-router";
+import { CoverArt, EntryCard, StatusTag, TagList } from "~/components/ui";
+import { cn } from "~/lib/utils";
 import { formatEntryDate } from "~/lib/dates";
 import { splitMeta, type EntryRef, type EntrySummary } from "~/lib/entries";
 import { safeMediaSrc } from "~/lib/entry-blocks";
@@ -72,5 +74,83 @@ export function EntryRefCard({ entry, linkState, headingLevel = 3 }: { entry: En
       headingLevel={headingLevel}
       className="h-full [&_h2]:text-lg [&_h3]:text-lg [&_h4]:text-lg"
     />
+  );
+}
+
+/**
+ * A row of a list page (`/articles` ...): type, not a card. A mono column (date, places), the title in the display face at its heavy
+ * end over a summary in the reading face at its thin end, and the image where there is one; hairline between rows, no box. The title is the
+ * one link, stretched over the row (`.ds-card`), so there is one tab stop per row and the whole row is the target. A generated
+ * cover stands in only for an artwork (the image IS its page); an article, a project or a poem without an image is type only.
+ */
+export function EntryRow({
+  entry,
+  headingLevel = 2,
+  priority,
+  className,
+}: {
+  entry: EntrySummary;
+  headingLevel?: 2 | 3 | 4;
+  priority?: boolean;
+  className?: string;
+}) {
+  const Heading = `h${headingLevel}` as "h2" | "h3" | "h4";
+  const date = formatEntryDate(entry.date);
+  const place = placeLine(entry.places);
+  const { status } = splitMeta(entry.meta);
+  const cover = entry.cover && safeMediaSrc(entry.cover.src) ? { src: entry.cover.src, alt: entry.cover.alt } : null;
+  const showCover = !!cover || entry.kind === "artwork";
+  const tags = entry.tags.slice(0, 4);
+  return (
+    <article
+      id={entry.slug}
+      data-slot="entry-card"
+      data-kind={entry.kind}
+      className={cn("ds-card entry-row grid min-w-0 gap-x-7 gap-y-4 border-t border-border py-7 md:grid-cols-12", className)}
+    >
+      <dl className="type-meta m-0 flex min-w-0 flex-col gap-1 text-muted-foreground md:col-span-2">
+        {date && (
+          <div>
+            <dt className="sr-only">Date</dt>
+            <dd className="m-0">
+              <time dateTime={date.dateTime}>{date.text}</time>
+            </dd>
+          </div>
+        )}
+        {place && (
+          <div>
+            <dt className="sr-only">Place</dt>
+            <dd className="m-0 [overflow-wrap:anywhere]">{place}</dd>
+          </div>
+        )}
+        {status && (
+          <div>
+            <dd className="m-0">
+              <StatusTag status={status} className="text-[length:inherit] leading-[inherit] [font:inherit] tracking-[inherit] uppercase" />
+            </dd>
+          </div>
+        )}
+      </dl>
+      <div className={cn("flex min-w-0 flex-col gap-3", showCover ? "md:col-span-7" : "md:col-span-9")}>
+        <Heading data-slot="entry-card-title" className="type-display-md m-0 font-extrabold">
+          <Link to={entry.href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+            {entry.title}
+          </Link>
+        </Heading>
+        {entry.summary && <p className="m-0 line-clamp-3 max-w-[34em] font-reading text-[1.1875rem] leading-[1.4] font-light text-pretty text-muted-foreground">{entry.summary}</p>}
+        {tags.length > 0 && <TagList label="Tags" tags={tags.map((label) => ({ label }))} className="font-meta text-xs" />}
+      </div>
+      {showCover && (
+        <div className="min-w-0 md:col-span-3">
+          <div className="overflow-hidden">
+            {cover ? (
+              <img src={cover.src} alt={cover.alt} loading={priority ? "eager" : "lazy"} decoding="async" className="aspect-video w-full object-cover" />
+            ) : (
+              <CoverArt seed={entry.slug} kind={entry.kind} cols={48} rows={27} />
+            )}
+          </div>
+        </div>
+      )}
+    </article>
   );
 }

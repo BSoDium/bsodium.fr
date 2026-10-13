@@ -19,8 +19,13 @@ import {
   ExpandToggle,
   Frame,
   Grid,
+  ICONS,
+  Icon,
   IconButton,
+  KeyHint,
   KindTag,
+  LogoMark,
+  LogoWordmark,
   MetadataStrip,
   MicroLabel,
   SectionHeader,
@@ -31,12 +36,14 @@ import {
   StatusTag,
   TagList,
   Toggle,
-  type GlyphName,
+  type IconName,
+  type IconSize,
 } from "~/components/ui";
 import { parseColor, contrastRatio, over } from "~/lib/contrast";
 import { COVER_PATTERNS } from "~/lib/cover-art";
 import { ENTRY_KINDS, ENTRY_KIND_LABEL, type EntryKind } from "~/lib/entry-kind";
 import { formatPlaceCoordinates, formatStamp, STATUSES } from "~/lib/labelling";
+import { SITE } from "~/lib/site";
 import { cn } from "~/lib/utils";
 
 const enabled = () => import.meta.env.DEV || process.env.CATALYST_DEV_ROUTES === "1";
@@ -139,7 +146,9 @@ const SWATCHES: { token: string; role: string }[] = [
   { token: "--border", role: "Hairline" },
   { token: "--border-strong", role: "Control line" },
   { token: "--line-faint", role: "Grid, texture" },
-  { token: "--signal", role: "The one accent" },
+  { token: "--signal", role: "The one accent: large text, marks, fills" },
+  { token: "--signal-text", role: "The accent as text under 24 px" },
+  { token: "--signal-foreground", role: "Text on a signal fill" },
   { token: "--signal-wash", role: "Active plate" },
   { token: "--kind-article", role: "Article hue" },
   { token: "--kind-project", role: "Project hue" },
@@ -154,7 +163,11 @@ const PAIRS: { fg: string; bg: string; need: number; use: string }[] = [
   { fg: "--muted-foreground", bg: "--surface", need: 4.5, use: "Secondary text on a frame" },
   { fg: "--muted-foreground", bg: "--accent", need: 4.5, use: "Secondary text on hover" },
   { fg: "--subtle-foreground", bg: "--surface", need: 4.5, use: "Credits on a frame" },
-  { fg: "--signal", bg: "--surface", need: 4.5, use: "Signal text" },
+  { fg: "--signal-text", bg: "--background", need: 4.5, use: "Accent text, any size" },
+  { fg: "--signal-text", bg: "--surface", need: 4.5, use: "Accent text on a frame" },
+  { fg: "--signal-text", bg: "--accent", need: 4.5, use: "Accent text on hover" },
+  { fg: "--signal", bg: "--background", need: 3, use: "Accent, large display text and marks" },
+  { fg: "--signal", bg: "--surface", need: 3, use: "Accent mark on a frame" },
   { fg: "--signal-foreground", bg: "--signal", need: 4.5, use: "Text on a signal fill" },
   { fg: "--border-strong", bg: "--background", need: 2.8, use: "Control outline" },
 ];
@@ -189,8 +202,8 @@ function Colour({ scheme }: { scheme: Scheme }) {
   return (
     <Stack gap={6}>
       <Note>
-        One grey family (the map's near-black and near-white) and one accent, which marks state: focus, the active thing, a link under the pointer. The
-        faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
+        One grey family (the map's near-black and near-white) and one accent, BSoD blue. The accent is large display text, a mark (a tick, an underline, a
+        cover's mark) or a fill; text under 24 px takes its text variant (deeper in the light scheme, lighter in the dark one). The faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
       </Note>
       <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-5">
         {SWATCHES.map((s) => (
@@ -219,16 +232,147 @@ function Colour({ scheme }: { scheme: Scheme }) {
   );
 }
 
+/* ------------------------------------------------------------------- icons */
+
+const ICON_SIZES: { size: IconSize; value: string; where: string }[] = [
+  { size: "inline", value: "1.1em", where: "beside running text or a label: it takes that text's size" },
+  { size: "control", value: "1.25rem", where: "inside a control, or at the head of a row" },
+  { size: "large", value: "1.5rem", where: "alone, with no text to follow" },
+];
+
+/** The icon library's set under the names the interface uses, the three sizes next to the text each is for, and the shortcut hint. */
+function Icons() {
+  return (
+    <Stack gap={8}>
+      <Spec caption="The set (lucide-react, one library: nothing is drawn by hand). Stroke 1.75 in the library's 24-unit grid, square ends and joins.">
+        <ul className="m-0 grid list-none grid-cols-2 gap-x-6 gap-y-3 p-0 sm:grid-cols-3 lg:grid-cols-4">
+          {(Object.keys(ICONS) as IconName[]).map((name) => (
+            <li key={name} className="flex min-h-11 items-center gap-3">
+              <Icon name={name} size="control" />
+              <code className="ds-meta">{name}</code>
+            </li>
+          ))}
+        </ul>
+      </Spec>
+      <Spec caption="The three sizes, each beside the text it is for">
+        <ul className="m-0 flex list-none flex-col gap-4 p-0">
+          {ICON_SIZES.map(({ size, value, where }) => (
+            <li key={size} className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <span className="ds-meta w-40">
+                {size} {value}
+              </span>
+              <span className="inline-flex items-center gap-2 text-base">
+                <Icon name="search" size={size} />
+                Search places and entries
+              </span>
+              <span className="font-display text-3xl font-light">
+                Projects <Icon name="arrow-right" size={size} />
+              </span>
+              <span className="text-sm text-muted-foreground">{where}</span>
+            </li>
+          ))}
+        </ul>
+      </Spec>
+      <Spec caption="The shortcut hint (the command key on a Mac, Ctrl elsewhere): plain muted text, never a box">
+        <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
+          <KeyHint />
+        </div>
+      </Spec>
+    </Stack>
+  );
+}
+
 /* -------------------------------------------------------------------- type */
+
+/**
+ * The type specimen (docs/design-system.md, "Type"): every role, set in the page's colours. Drawn once per scheme, so the thin / heavy pair,
+ * the accent sizes and the reading text can be compared in light and dark side by side. All text is made up.
+ */
+function TypeSpecimen() {
+  return (
+    <Stack gap={8}>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Display XL / the name, 200 against 800</p>
+        <p className="type-display-xl">
+          <span className="type-thin">{SITE.givenName}</span> {SITE.familyName}
+        </p>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Display LG / an entry's headline</p>
+        <h3 className="type-display-lg">
+          Notes on a <span className="type-thin">quiet</span> compiler
+        </h3>
+        <p className="type-standfirst mt-4 max-w-[34ch]">
+          A made-up standfirst under the headline, in the reading face at a thin weight and in italic, to even lines.
+        </p>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Display MD / a card's title, a section</p>
+        <p className="type-display-md">Harbour at low tide, study 3</p>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Meta / metadata only</p>
+        <p className="type-meta m-0 text-muted-foreground">Placeholder Bay &middot; 2026.03.14 &middot; 6 min read</p>
+        <p className="type-meta m-0 mt-1 text-muted-foreground">0123456789 &middot; 12.35&deg; N, 65.43&deg; E</p>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Reading / drop cap, link, pull quote, rule (a column of 66 characters)</p>
+        <div className="ds-prose flex flex-col gap-5">
+          <p className="drop-cap m-0">
+            Every sentence on this page is a placeholder. The quick brown fox jumps over the lazy dog, in 1984 and again in 2026, at a size and a
+            leading chosen for long reading, with a measure that lets the eye return to the next line without searching.
+          </p>
+          <p className="m-0">
+            A second paragraph carries a <a href="#s2" className="type-link">link in running text</a>, its underline in the accent, and some
+            figures: 12.5 km, 7 p.m., 0123456789.
+          </p>
+          <h4 className="m-0 text-2xl">A third-level heading, light</h4>
+          <blockquote className="type-pullquote m-0">A pull quote is the reading face in a light italic, between two hairlines.</blockquote>
+          <hr className="type-rule" />
+          <p className="m-0">After the rule the text resumes, and a <em>word in italic</em> is the real italic, not a slanted roman.</p>
+        </div>
+      </div>
+      <div>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Accent / the one blue, by size</p>
+        <div className="flex flex-col gap-3">
+          <p className="type-display-lg m-0 text-signal">Display text in the accent</p>
+          <p className="m-0 text-2xl font-extrabold text-signal">24 px bold, large text (accent)</p>
+          <p className="m-0 text-xl font-bold text-signal">20 px bold, large text (accent)</p>
+          <p className="m-0 text-base text-signal-text">16 px in the text variant (AA on the page and the surface)</p>
+          <p className="type-meta m-0 text-signal-text">12 px meta in the text variant</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="inline-block h-1 w-16 bg-signal" />
+            <span className="ds-status" data-tone="signal-solid">New</span>
+            <span className="type-link text-base">Underline in the accent</span>
+          </div>
+        </div>
+      </div>
+    </Stack>
+  );
+}
 
 function Type() {
   return (
     <Stack gap={8}>
+      <Note>
+        Three self-hosted families (OFL, Latin subset, <code>public/fonts/</code>) and the system stack behind them: Bricolage Grotesque for display (a very
+        heavy weight against a very thin one), Newsreader for reading, JetBrains Mono for page metadata. The map's labels and credits stay the system mono.
+        Each role is a class (<code>.type-display-xl</code>, <code>.type-reading</code>, <code>.type-meta</code> ...) or the utilities
+        <code> font-display text-display-xl</code>.
+      </Note>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {(["light", "dark"] as const).map((scheme) => (
+          <div key={scheme} data-scheme={scheme} className="min-w-0 border border-border-strong bg-background p-6 text-foreground">
+            <p className="ds-meta m-0 mb-6">Scheme: {scheme}</p>
+            <TypeSpecimen />
+          </div>
+        ))}
+      </div>
       <Grid>
         <Col span={12} spanMd={7}>
           <Frame>
             <Stack gap={3}>
-              <p className="m-0 text-sm text-muted-foreground">Sans: titles, reading and every sentence (system grotesk stack)</p>
+              <p className="m-0 text-sm text-muted-foreground">System sans (the interface until a component takes a role)</p>
               <p className="m-0 text-4xl leading-[3.25rem] font-semibold tracking-tight">Display 48 / 52</p>
               <p className="m-0 text-3xl font-semibold tracking-tight">Page title 36 / 40</p>
               <p className="m-0 text-2xl font-semibold tracking-tight">Panel title 28 / 34</p>
@@ -242,7 +386,7 @@ function Type() {
         <Col span={12} spanMd={5}>
           <Frame>
             <Stack gap={3}>
-              <p className="m-0 text-sm text-muted-foreground">Mono: dates, coordinates, codes (system mono stack)</p>
+              <p className="m-0 text-sm text-muted-foreground">System mono: dates, coordinates, codes, the map's text</p>
               <p className="ds-meta m-0">{formatStamp("2026-10-08")}</p>
               <p className="ds-meta m-0">{SAMPLE_COORDS}</p>
               <p className="m-0 font-mono text-sm tabular-nums">const slashed0 = 0O; // tabular 1111</p>
@@ -252,10 +396,26 @@ function Type() {
           </Frame>
         </Col>
       </Grid>
-      <Note>
-        No web font is loaded: the system stacks give crisp, native-feeling grotesk and mono at zero bytes. Changing a face is one token (`--font-sans`, `--font-mono`).
-        Body is never under 16 px and secondary text never under 14 px; reading text is held to about 60 characters of measure.
-      </Note>
+      <DataList>
+        <DataRow label="display-xl" mono>
+          clamp(3.5rem, 11vw, 10rem) / 0.88 / -0.045em / 800
+        </DataRow>
+        <DataRow label="display-lg" mono>
+          clamp(2.25rem, 1.35rem + 3.7vw, 4.5rem) / 0.98 / -0.035em / 800
+        </DataRow>
+        <DataRow label="display-md" mono>
+          clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem) / 1.06 / -0.025em / 700
+        </DataRow>
+        <DataRow label="standfirst" mono>
+          clamp(1.5rem, 1.25rem + 0.9vw, 1.9rem) / 1.3 / italic 300
+        </DataRow>
+        <DataRow label="reading" mono>
+          clamp(1.125rem, 1.07rem + 0.25vw, 1.25rem) / 1.65 / 400, 28.5 em measure
+        </DataRow>
+        <DataRow label="meta" mono>
+          0.75rem / 1rem / 0.1em / 500, uppercase
+        </DataRow>
+      </DataList>
     </Stack>
   );
 }
@@ -346,7 +506,7 @@ function Controls() {
         <Col span={12} spanMd={6}>
           <Spec caption="IconButton, Toggle, ExpandToggle">
             <div className="flex flex-wrap items-center gap-3">
-              {(["close", "expand", "arrow-right", "arrow-up-right"] as GlyphName[]).map((icon) => (
+              {(["close", "expand", "arrow-right", "arrow-up-right"] as IconName[]).map((icon) => (
                 <IconButton key={icon} icon={icon} label={icon.replace("-", " ")} />
               ))}
               <IconButton icon="close" label="Close ghost" variant="ghost" />
@@ -725,6 +885,156 @@ function Motion() {
   );
 }
 
+function Brand() {
+  return (
+    <Stack gap={6}>
+      <Note>
+        The mark: a square (the bounding box) and a disc (the globe) overlapping, the overlap knocked out, on a 16 px grid, one bit per cell. It
+        takes the text colour, so it follows the scheme; whole multiples of 16 px keep every pixel crisp. The wordmark is the same shapes beside
+        the site's name in semibold type. Neither is in the header (the header carries the name as text); the favicon, the home-screen icons and
+        the LogoMark component are all drawn from the same data (scripts/brand/mark.mjs).
+      </Note>
+      <div className="flex flex-wrap items-end gap-8">
+        {[16, 32, 64, 128].map((size) => (
+          <Spec key={size} caption={`${size} px`}>
+            <LogoMark size={size} />
+          </Spec>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end gap-8">
+        <Spec caption="Wordmark, 16 px mark">
+          <LogoWordmark size={16} />
+        </Spec>
+        <Spec caption="Wordmark, 32 px mark">
+          <LogoWordmark size={32} />
+        </Spec>
+        <Spec caption="Wordmark, 64 px mark">
+          <LogoWordmark size={64} />
+        </Spec>
+      </div>
+      <Spec caption="On the inverted frame">
+        <Frame variant="inverted" padding="sm" className="w-fit">
+          <LogoWordmark size={32} />
+        </Frame>
+      </Spec>
+    </Stack>
+  );
+}
+
+/* ------------------------------------------------------------ entry pages */
+
+/**
+ * The entry pages' grammar (docs/design-system.md, "Entry pages") at the width of a column, in both reading surfaces: the double rule, the
+ * kicker, a headline whose clause after a comma is thin, the standfirst, the dateline, the marginalia, the body with its drop cap and
+ * pull quote, a figure with its caption; then a poem. Made-up text. The surface is the page's reading surface (paper / night), bound
+ * for the element by `data-reading-surface`; the sizes follow the width of the block (`cqi`), as they do on the page.
+ */
+function EntrySpecimen({ scheme }: { scheme: "light" | "dark" }) {
+  return (
+    <div data-scheme={scheme} data-reading-surface data-layout="full" data-kind="article" className="entry min-w-0 border border-border bg-background p-6 text-foreground">
+      <p className="ds-meta m-0 mb-6">Surface: {scheme === "light" ? "paper" : "night"}</p>
+      <div className="entry-rule" aria-hidden="true" />
+      <p className="type-meta m-0 mt-[1.375rem] flex justify-between text-muted-foreground">
+        <span>Article &middot; Placeholder Bay</span>
+        <span>6 min read</span>
+      </p>
+      <h3 className="entry-title mt-[1.625rem]">
+        Notes on a quiet compiler<span className="entry-title-tail">, written on a slow train</span>
+      </h3>
+      <p className="type-standfirst mt-6 max-w-[25.4em]">One made-up sentence that says what the piece is, set thin and italic against the heavy headline.</p>
+      <div className="entry-dateline mt-8 flex flex-wrap gap-x-8">
+        <span>2026.03.14</span>
+        <span>
+          Placeholder Bay <Icon name="arrow-up-right" size="inline" /> open on the globe
+        </span>
+      </div>
+      <div className="entry-margin mt-8">
+        <div>
+          <p className="type-meta m-0 text-foreground">Where</p>
+          <p className="m-0">Placeholder Bay, Sample country</p>
+        </div>
+        <dl className="m-0">
+          <div>
+            <dt className="type-meta text-foreground">Written</dt>
+            <dd>March 2026</dd>
+          </div>
+          <div>
+            <dt className="type-meta text-foreground">Linked</dt>
+            <dd>1 place, 2 entries</dd>
+          </div>
+        </dl>
+      </div>
+      <div className="entry-text mt-8">
+        <div className="ds-prose flex flex-col gap-[1.1em]">
+          <p className="drop-cap m-0">
+            Every sentence here is a placeholder, set to show the measure and the rhythm of a reading column under a heavy headline, with a drop cap
+            that is the first letter of the text and nothing else. A second sentence follows to give the cap three lines of company.
+          </p>
+          <h4 className="m-0">A section heading, in the light end of the display face</h4>
+          <figure className="type-pullquote my-[0.4em]">
+            <blockquote className="m-0">
+              <p className="m-0">A pull quote is larger and thinner than anything else on the page.</p>
+            </blockquote>
+          </figure>
+          <p className="m-0">
+            A <a href="#s13" className="type-link">link in running text</a> is an underline in the accent, not a button.
+          </p>
+        </div>
+      </div>
+      <figure className="entry-figure m-0 mt-8">
+        <div className="aspect-video bg-accent" />
+        <figcaption className="ds-caption mt-2.5">
+          <span className="text-foreground">Fig. 1 </span>A made-up caption, in mono, under a rule of the ink.
+        </figcaption>
+      </figure>
+    </div>
+  );
+}
+
+/** The night board's poem: the title in thin italic, the lines in a light weight at the size of a page of verse, one block per line. */
+function PoemSpecimen({ scheme }: { scheme: "light" | "dark" }) {
+  return (
+    <div data-scheme={scheme} data-reading-surface data-layout="full" data-kind="poem" className="entry min-w-0 border border-border bg-background p-6 text-foreground">
+      <p className="type-meta m-0 mb-6 text-muted-foreground">Poem</p>
+      <h3 className="entry-title" data-poem="">
+        Low tide
+      </h3>
+      <div className="ds-prose mt-8">
+        <div data-slot="verse" className="flex flex-col gap-[1.4em]">
+          <p className="m-0 flex flex-col">
+            <span className="block">A first line, short, set thin</span>
+            <span className="block">and given the room a poem needs.</span>
+          </p>
+          <p className="m-0 flex flex-col">
+            <span className="block">A second stanza, breathing apart,</span>
+            <span className="block">where the page is mostly dark.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EntryPages() {
+  return (
+    <Stack gap={8}>
+      <Note>
+        The article and poem boards of the owner's canvas, as the entry pages build them: Newsreader 700 for the headline (its clause after a comma, a colon or
+        a dash at 300), thin italic for the standfirst and the pull quote, mono for the kicker, the dateline, the marginalia and the captions, a drop cap in the
+        ink, ink rules, and a poem set as its own page: a thin italic title over lines at 300. Paper in the light scheme, night in the dark.
+      </Note>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {(["light", "dark"] as const).map((scheme) => (
+          <div key={scheme} className="flex min-w-0 flex-col gap-6">
+            <EntrySpecimen scheme={scheme} />
+            <PoemSpecimen scheme={scheme} />
+          </div>
+        ))}
+      </div>
+    </Stack>
+  );
+}
+
 export default function DevDesign() {
   const [params] = useSearchParams();
   const initial = params.get("scheme");
@@ -747,7 +1057,7 @@ export default function DevDesign() {
             ]}
           />
         </div>
-        <h1 className="m-0 text-4xl leading-[3.25rem] font-semibold tracking-tight">Catalyst UI system</h1>
+        <h1 className="m-0 text-4xl leading-[3.25rem] font-semibold tracking-tight">UI system</h1>
         <p className="m-0 max-w-[60ch] text-lg text-muted-foreground">
           A quiet archive: few boxes, no decorative numbering, a label only where it adds information, generative covers, and one accent for state. Sample text on
           this page is made up.
@@ -786,6 +1096,15 @@ export default function DevDesign() {
       </Section>
       <Section index={11} title="Motion">
         <Motion />
+      </Section>
+      <Section index={12} title="Brand">
+        <Brand />
+      </Section>
+      <Section index={13} title="Entry pages">
+        <EntryPages />
+      </Section>
+      <Section index={14} title="Icons">
+        <Icons />
       </Section>
     </main>
   );

@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { contrastRatio, over, parseColor, type Rgba } from "./contrast";
+import { contrastRatio, luminance, over, parseColor, type Rgba } from "./contrast";
 import { ENTRY_KINDS } from "./entry-kind";
 
 /**
@@ -42,7 +42,7 @@ function color(scheme: "light" | "dark", name: string): Rgba {
 
 describe("scheme blocks", () => {
   it("the dark media rule and the forced-scheme rules carry the same colour tokens as the root rule", () => {
-    const colorNames = [...light.keys()].filter((k) => /^--(background|foreground|muted-foreground|subtle-foreground|border|border-strong|ring|primary|primary-foreground|accent|accent-foreground|globe-grid|globe-limb|surface|line-faint|signal|signal-foreground|signal-wash|inverse-[a-z]+|kind-[a-z]+)$/.test(k));
+    const colorNames = [...light.keys()].filter((k) => /^--(background|foreground|muted-foreground|subtle-foreground|border|border-strong|ring|primary|primary-foreground|accent|accent-foreground|globe-grid|globe-limb|surface|line-faint|signal|signal-text|signal-foreground|signal-wash|inverse-[a-z-]+|kind-[a-z]+)$/.test(k));
     expect(colorNames.length).toBeGreaterThan(25);
     for (const name of colorNames) {
       expect(dark.has(name), `dark ${name}`).toBe(true);
@@ -69,14 +69,29 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
     const fg = color(scheme, "--foreground");
     const muted = color(scheme, "--muted-foreground");
     const subtle = color(scheme, "--subtle-foreground");
-    const signal = color(scheme, "--signal");
+    const signalText = color(scheme, "--signal-text");
     for (const under of [bg, surface, accentGrey]) {
       expect(contrastRatio(fg, under)).toBeGreaterThanOrEqual(7);
       expect(contrastRatio(muted, under)).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(signal, under)).toBeGreaterThanOrEqual(4.5);
+      // the accent as text of any size: its text variant is AA wherever muted text is
+      expect(contrastRatio(signalText, under)).toBeGreaterThanOrEqual(4.5);
     }
     // subtle text (the map credits) stays on the page and the surface only
     for (const under of [bg, surface]) expect(contrastRatio(subtle, under)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("the accent itself is for large display text and marks: 3:1 on the page and the surface (WCAG large text and graphics)", () => {
+    const signal = color(scheme, "--signal");
+    for (const under of [bg, surface]) expect(contrastRatio(signal, under)).toBeGreaterThanOrEqual(3);
+  });
+
+  it("the signal fill carries AA text, and the inverted frame's accent is as good against its own page", () => {
+    const signal = color(scheme, "--signal");
+    expect(contrastRatio(color(scheme, "--signal-foreground"), signal)).toBeGreaterThanOrEqual(4.5);
+    const inverseBg = color(scheme, "--inverse-background");
+    expect(contrastRatio(color(scheme, "--inverse-signal"), inverseBg)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(color(scheme, "--inverse-signal-text"), inverseBg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color(scheme, "--signal-foreground"), color(scheme, "--inverse-signal"))).toBeGreaterThanOrEqual(4.5);
   });
 
   it("fills with their text: primary, signal and the inverse pair are AA", () => {
@@ -85,7 +100,6 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
     const inverseBg = color(scheme, "--inverse-background");
     expect(contrastRatio(color(scheme, "--inverse-foreground"), inverseBg)).toBeGreaterThanOrEqual(7);
     expect(contrastRatio(color(scheme, "--inverse-muted"), inverseBg)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(color(scheme, "--inverse-signal"), inverseBg)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("the inverse tokens swap the page and the ink (the map's selected label); the muted tone is the other scheme's", () => {
@@ -110,6 +124,87 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
 
   it("every kind has a hue token", () => {
     for (const kind of ENTRY_KINDS) expect(SCHEMES[scheme].has(`--kind-${kind}`), `--kind-${kind}`).toBe(true);
+  });
+});
+
+describe("the accent is BSoD blue", () => {
+  /** HSL hue in degrees and saturation (0 to 1) of an opaque colour. */
+  function hueSat([r, g, b]: Rgba): { hue: number; sat: number } {
+    const [R, G, B] = [r / 255, g / 255, b / 255];
+    const max = Math.max(R, G, B);
+    const min = Math.min(R, G, B);
+    const d = max - min;
+    const l = (max + min) / 2;
+    const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    const h = d === 0 ? 0 : max === R ? ((G - B) / d) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4;
+    return { hue: (h * 60 + 360) % 360, sat };
+  }
+  const TONES = ["--signal", "--signal-text", "--paper-signal", "--paper-signal-text", "--inverse-signal", "--inverse-signal-text"] as const;
+
+  it("is the Windows stop-screen blue (#0078d7 is 206.5 degrees, fully saturated): every tone of it, in both schemes, within 6 degrees: not cyan, not purple", () => {
+    expect(hueSat(parseColor("#0078d7")!).hue).toBeCloseTo(206.5, 1);
+    for (const scheme of ["light", "dark"] as const)
+      for (const name of TONES) {
+        const { hue, sat } = hueSat(color(scheme, name));
+        expect(Math.abs(hue - 206.5), `${scheme} ${name} hue ${hue.toFixed(1)}`).toBeLessThanOrEqual(6);
+        expect(sat, `${scheme} ${name} saturation`).toBeGreaterThanOrEqual(0.95);
+      }
+  });
+
+  it("the fill is the same blue in both schemes; only the small-text tone changes (deeper in light, lighter in dark)", () => {
+    expect(light.get("--signal")).toBe(dark.get("--signal"));
+    expect(light.get("--signal-foreground")).toBe(dark.get("--signal-foreground"));
+    const lum = (scheme: "light" | "dark", name: string) => luminance(color(scheme, name));
+    expect(lum("light", "--signal-text")).toBeLessThan(lum("light", "--signal"));
+    expect(lum("dark", "--signal-text")).toBeGreaterThan(lum("dark", "--signal"));
+  });
+});
+
+describe("reading surface (paper in the light scheme, night in the dark)", () => {
+  const PAPER = ["--paper", "--paper-foreground", "--paper-muted", "--paper-hover", "--paper-signal", "--paper-signal-text"] as const;
+
+  it("is declared in the root rule, the dark media rule and both forced-scheme rules, with the same values", () => {
+    for (const name of PAPER) {
+      expect(light.has(name), `light ${name}`).toBe(true);
+      expect(dark.has(name), `dark ${name}`).toBe(true);
+      expect(forcedLight.get(name), `forced light ${name}`).toBe(light.get(name));
+      expect(forcedDark.get(name), `forced dark ${name}`).toBe(dark.get(name));
+    }
+  });
+
+  it("rebinds the page tokens for an entry's panel and for the list pages' root, after the root rule (unlayered, so it wins)", () => {
+    const at = css.indexOf('[data-panel]:has([data-surface="reading"])');
+    expect(at).toBeGreaterThan(css.indexOf(":root {"));
+    const body = ruleBody(css, at);
+    for (const token of ["--background", "--foreground", "--muted-foreground", "--accent", "--border", "--signal", "--signal-text"]) expect(body, token).toContain(`${token}:`);
+    expect(css.slice(at, at + 200)).toContain(':root:has(main[data-surface="reading"])');
+  });
+
+  describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
+    const paper = color(scheme, "--paper");
+    const ink = color(scheme, "--paper-foreground");
+    const muted = color(scheme, "--paper-muted");
+    const hover = color(scheme, "--paper-hover");
+
+    it("the ink is body text (7:1) and the muted text is AA on the paper and on its hover grey", () => {
+      expect(contrastRatio(ink, paper)).toBeGreaterThanOrEqual(7);
+      expect(contrastRatio(ink, hover)).toBeGreaterThanOrEqual(7);
+      expect(contrastRatio(muted, paper)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(muted, hover)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it("the accent as text (small) is AA, and as large text or a mark it is 3:1, on the paper", () => {
+      expect(contrastRatio(color(scheme, "--paper-signal-text"), paper)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(color(scheme, "--paper-signal-text"), hover)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(color(scheme, "--paper-signal"), paper)).toBeGreaterThanOrEqual(3);
+    });
+
+    it("the hairlines are quiet (1.1 to 2:1) and the ink rules are the ink itself", () => {
+      const hairline = over([ink[0], ink[1], ink[2], 0.18], paper);
+      expect(contrastRatio(hairline, paper)).toBeGreaterThan(1.1);
+      expect(contrastRatio(hairline, paper)).toBeLessThan(2);
+      expect(contrastRatio(over([ink[0], ink[1], ink[2], 0.55], paper), paper)).toBeGreaterThanOrEqual(2.8);
+    });
   });
 });
 
@@ -166,8 +261,11 @@ describe("restraint (no decorative chrome)", () => {
       expect(body, rule).not.toMatch(/font-family:\s*var\(--font-mono\)/);
     }
   });
-  it("the micro-label stays the one uppercase mono unit and nothing else in the system sets uppercase", () => {
+  it("the micro-label stays the one uppercase mono unit of the UI components; the type roles add exactly one more, the metadata role", () => {
     expect([...ui.matchAll(/text-transform:\s*uppercase/g)].length).toBe(1);
+    const roles = css.slice(css.indexOf("Type roles (docs/design-system.md"), css.indexOf(".ds-micro {"));
+    expect([...roles.matchAll(/text-transform:\s*uppercase/g)].length).toBe(1);
+    expect(ruleBody(css, css.indexOf(".type-meta {"))).toMatch(/text-transform:\s*uppercase/);
   });
   it("the component sources carry no index code, numbered section or bracketed status", () => {
     const dirs = [new URL("../components/ui/", import.meta.url), new URL("../components/entry/", import.meta.url), new URL("../components/", import.meta.url)];

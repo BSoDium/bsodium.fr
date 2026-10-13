@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadDemoProjection } from "@catalyst/published";
-import { buildSearchIndex, foldText, groupResults, searchItems, SEARCH_TYPES, type SearchItem } from "./search";
+import { buildSearchIndex, foldText, groupResults, searchItems, SEARCH_LABELS, SEARCH_SINGULAR, SEARCH_TYPES, type SearchItem } from "./search";
 
 const demo = loadDemoProjection();
 const index = buildSearchIndex(demo);
@@ -55,6 +55,16 @@ describe("searchItems", () => {
     expect(titles(searchItems(index, "night platform"))).toEqual(["Night Platform, Split"]);
     expect(searchItems(index, "night zzzz")).toEqual([]);
   });
+  it("finds the poems by the section's name and by the word for one or many", () => {
+    const poems = demo.poems.map((p) => p.title);
+    for (const word of ["poetry", "poem", "poems"]) {
+      const found = searchItems(index, word, 50).filter((i) => i.type === "poem").map((i) => i.title);
+      expect(found, word).toEqual(expect.arrayContaining(poems));
+    }
+  });
+  it("names the poems' group \"Poetry\" and its place group \"Places\"", () => {
+    expect([SEARCH_LABELS.place, SEARCH_LABELS.poem, SEARCH_SINGULAR.poem]).toEqual(["Places", "Poetry", "Poem"]);
+  });
   it("finds entries by their tags", () => {
     expect(searchItems(index, "plotter").some((i) => i.type === "artwork")).toBe(true);
   });
@@ -65,7 +75,7 @@ describe("searchItems", () => {
   });
   it("breaks ties by the group order", () => {
     const items: SearchItem[] = [
-      { type: "poem", title: "Alpha", href: "/poems/a" },
+      { type: "poem", title: "Alpha", href: "/poetry/a" },
       { type: "place", title: "Alpha", href: "/locations/a" },
       { type: "article", title: "Alpha", href: "/articles/a" },
     ];
@@ -80,7 +90,7 @@ describe("groupResults", () => {
       { type: "place", title: "L", href: "/l" },
       { type: "poem", title: "Q", href: "/q" },
     ]);
-    expect(groups.map((g) => [g.type, g.label, g.items.length])).toEqual([["place", "Places", 1], ["poem", "Poems", 2]]);
+    expect(groups.map((g) => [g.type, g.label, g.items.length])).toEqual([["place", "Places", 1], ["poem", "Poetry", 2]]);
     expect(flat.map((i) => i.title)).toEqual(["L", "P", "Q"]);
     expect(SEARCH_TYPES[0]).toBe("place");
   });

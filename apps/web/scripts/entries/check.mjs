@@ -12,8 +12,9 @@ import { BASE_URL, OUT_DIR, DESKTOP, MOBILE, launch } from "../globe/_lib.mjs";
 // The four legacy slugs are the first entry of their kind in the demo fixture; the whole fixture is also read, so that every entry (long
 // title, long verse line, wide code, many tags, no cover) goes through the layout checks below.
 const FIXTURE = JSON.parse(readFileSync(new URL("../../../../packages/published/fixtures/demo.json", import.meta.url), "utf8"));
-const COLLECTIONS = [["article", "articles"], ["project", "projects"], ["artwork", "artworks"], ["poem", "poems"]];
-const ALL_ENTRIES = COLLECTIONS.flatMap(([kind, key]) => FIXTURE[key].map((e) => ({ kind, key, slug: e.slug, title: e.title, path: `/${key}/${e.slug}` })));
+// [kind, projection key (the fixture's), route segment]: the poems' section is `/poetry`, the other three are named after their plural.
+const COLLECTIONS = [["article", "articles", "articles"], ["project", "projects", "projects"], ["artwork", "artworks", "artworks"], ["poem", "poems", "poetry"]];
+const ALL_ENTRIES = COLLECTIONS.flatMap(([kind, key, segment]) => FIXTURE[key].map((e) => ({ kind, key, slug: e.slug, title: e.title, path: `/${segment}/${e.slug}` })));
 const ENTRIES = ["demo-article", "demo-poem", "demo-project", "demo-artwork"].map((slug) => ALL_ENTRIES.find((e) => e.slug === slug));
 
 const failures = [];
@@ -167,7 +168,7 @@ for (const entry of ENTRIES) {
 }
 
 // --- 3. Unknown slugs are real 404s through the not-found page ----------------------------------------------------------------------------
-for (const path of ["/articles/nope", "/projects/demo-poem", "/poems/Demo-Poem"]) {
+for (const path of ["/articles/nope", "/projects/demo-poem", "/poetry/Demo-Poem"]) {
   const { ctx, page } = await newPage(DESKTOP);
   const r = await page.goto(`${BASE_URL}${path}`);
   ok(r?.status() === 404, `${path}: 404`);
@@ -175,9 +176,32 @@ for (const path of ["/articles/nope", "/projects/demo-poem", "/poems/Demo-Poem"]
   await ctx.close();
 }
 
+// The poems' section is "Poetry" at /poetry; /poems (and every entry under it) is a permanent redirect that keeps the query.
+for (const [from, to] of [["/poems", "/poetry"], ["/poems?tag=night", "/poetry?tag=night"], ["/poems/demo-poem", "/poetry/demo-poem"], ["/poems/demo-poem?view=full", "/poetry/demo-poem?view=full"]]) {
+  const { ctx, page, logs } = await newPage(DESKTOP);
+  const first = await page.request.get(`${BASE_URL}${from}`, { maxRedirects: 0 });
+  ok(first.status() === 301 && first.headers().location === to, `${from}: 301 to ${to} (${first.status()} ${first.headers().location})`);
+  const r = await page.goto(`${BASE_URL}${from}`);
+  const url = new URL(page.url());
+  ok(r?.status() === 200 && url.pathname + url.search === to, `${from}: the browser lands on ${to} (${url.pathname}${url.search})`);
+  if (to.startsWith("/poetry/")) await waitPanel(page);
+  ok(logs.length === 0, `${from}: no console errors${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/poetry`);
+  ok((await page.locator("h1").first().innerText()) === "Poetry", "/poetry: the page is called Poetry");
+  const count = await page.locator("[data-slot=list-count]").innerText();
+  ok(/^\d+ poems$/i.test(count.trim()), `/poetry: the count says poems (${count.trim()})`);
+  const nav = await page.locator('nav[aria-label="Primary"] a').allInnerTexts();
+  ok(nav.some((t) => /^poetry$/i.test(t.trim())) && !nav.some((t) => /^poems$/i.test(t.trim())), `/poetry: the header's section is Poetry (${nav.join(", ")})`);
+  await ctx.close();
+}
+
 // --- 4. Lists ----------------------------------------------------------------------------------------------------------------------------
-for (const [kind, key] of COLLECTIONS) {
-  const path = `/${key}`;
+for (const [kind, key, segment] of COLLECTIONS) {
+  const path = `/${segment}`;
   const { ctx, page, logs } = await newPage(DESKTOP);
   await page.goto(`${BASE_URL}${path}`);
   const slugs = FIXTURE[key].map((e) => e.slug);
@@ -191,7 +215,7 @@ for (const [kind, key] of COLLECTIONS) {
   ok(covers.every(Boolean), `${path}: every authored cover in the list loaded (${covers.length} images)`);
   const wide = await overflow(page);
   ok(wide <= 0, `${path}: no horizontal overflow on desktop (${wide})`);
-  await page.screenshot({ path: `${OUT_DIR}/list-${key}-desktop-dark.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT_DIR}/list-${segment}-desktop-dark.png`, fullPage: true });
   await page.locator(`#${slug} a`).first().click();
   await page.waitForURL(`**${path}/${slug}`);
   await waitPanel(page);
@@ -209,18 +233,18 @@ if (process.env.BASE_URL_EMPTY) {
 
 // --- 5. 390 px: no horizontal overflow, slide-over, no expand toggle ----------------------------------------------------------------------
 for (const scheme of ["dark", "light"]) {
-  for (const path of [...ALL_ENTRIES.map((e) => e.path), "/locations/lisbon", "/locations/cusco", "/locations/zagreb", "/articles", "/poems", "/projects", "/artworks"]) {
+  for (const path of [...ALL_ENTRIES.map((e) => e.path), "/locations/lisbon", "/locations/cusco", "/locations/zagreb", "/articles", "/poetry", "/projects", "/artworks"]) {
     const { ctx, page, logs } = await newPage(MOBILE, scheme);
     await page.goto(`${BASE_URL}${path}`);
     await page.waitForTimeout(700);
     const o = await overflow(page);
     ok(o <= 0, `390px ${scheme} ${path}: no horizontal overflow (${o})`);
-    if (/\/(articles|projects|artworks|poems|locations)\/./.test(path)) {
+    if (/\/(articles|projects|artworks|poetry|locations)\/./.test(path)) {
       await page.waitForSelector("[role=dialog]");
       ok((await page.getByRole("button", { name: "Full screen" }).count()) === 0 || !(await page.getByRole("button", { name: "Full screen" }).isVisible()), `390px ${path}: no expand toggle (the slide-over is full screen)`);
       ok(await page.evaluate(() => document.activeElement?.id === "panel-heading"), `390px ${path}: focus moves to the heading`);
-      if (/^\/(articles|projects|artworks|poems)\//.test(path) || path.startsWith("/locations/")) await page.screenshot({ path: `${OUT_DIR}/${path.slice(1).replace(/\//g, "-")}-${scheme}-390.png` });
-    } else if (path === "/poems" || path === "/articles" || path === "/projects" || path === "/artworks") await page.screenshot({ path: `${OUT_DIR}/list${path.replace("/", "-")}-${scheme}-390.png` });
+      if (/^\/(articles|projects|artworks|poetry)\//.test(path) || path.startsWith("/locations/")) await page.screenshot({ path: `${OUT_DIR}/${path.slice(1).replace(/\//g, "-")}-${scheme}-390.png` });
+    } else if (path === "/poetry" || path === "/articles" || path === "/projects" || path === "/artworks") await page.screenshot({ path: `${OUT_DIR}/list${path.replace("/", "-")}-${scheme}-390.png` });
     // 44 px targets
     const small = await page.evaluate(() => [...document.querySelectorAll("a, button")].filter((e) => e.getClientRects().length && !e.closest("[inert]") && !e.classList.contains("sr-only")).map((e) => {
       // A control may reach 44 px with a ::before hit area (tag links, heading anchors): count the larger of the two boxes.
@@ -237,7 +261,7 @@ for (const scheme of ["dark", "light"]) {
 
 // --- 6. Desktop screenshots in both schemes, and reduced motion ---------------------------------------------------------------------------
 for (const scheme of ["dark", "light"]) {
-  for (const [name, path] of [["article", "/articles/demo-article"], ["poem", "/poems/demo-poem"], ["project", "/projects/demo-project"], ["artwork", "/artworks/demo-artwork"], ["article-full", "/articles/demo-article?view=full"], ["poem-full", "/poems/demo-poem?view=full"], ["list-articles", "/articles"]]) {
+  for (const [name, path] of [["article", "/articles/demo-article"], ["poem", "/poetry/demo-poem"], ["project", "/projects/demo-project"], ["artwork", "/artworks/demo-artwork"], ["article-full", "/articles/demo-article?view=full"], ["poem-full", "/poetry/demo-poem?view=full"], ["list-articles", "/articles"]]) {
     const { ctx, page } = await newPage(DESKTOP, scheme);
     await page.goto(`${BASE_URL}${path}`);
     await page.waitForTimeout(1500);
@@ -348,9 +372,10 @@ if (process.env.BASE_URL_EMPTY) {
   await page.goto(process.env.BASE_URL_EMPTY);
   await waitGlobeMounted(page);
   await page.waitForTimeout(800);
-  ok((await page.locator("[data-slot=archive-empty]").count()) === 1 && (await page.locator("[data-globe]").count()) === 1, "empty home: the globe stays and the archive card is there");
-  ok(/Nothing on the globe yet/.test(await page.locator("[data-slot=archive-empty]").innerText()), "empty home: the card says there is nothing on the globe yet");
-  ok((await page.locator("[data-slot=archive-empty] a").count()) === 4, "empty home: the card opens the four lists");
+  // The landing hero is the empty home too (docs/landing.md): the globe stays, the intro says no place is published, the four lists are its rows.
+  ok((await page.locator("[data-slot=landing-hero]").count()) === 1 && (await page.locator("[data-globe]").count()) === 1, "empty home: the globe stays and the landing hero is there");
+  ok(/No place is published yet/.test(await page.locator("[data-slot=landing-hero]").innerText()), "empty home: the hero says no place is published yet");
+  ok((await page.locator("[data-slot=landing-hero] a").count()) === 4, "empty home: the hero opens the four lists");
   ok((await page.locator("h1").count()) === 1, "empty home: one h1");
   await page.screenshot({ path: `${OUT_DIR}/home-empty-dark.png` });
   ok(logs.length === 0, `empty home: no console errors${logs.length ? ` (${logs.join(" | ")})` : ""}`);
@@ -363,7 +388,7 @@ if (process.env.BASE_URL_EMPTY) {
   await waitPanel(page);
   ok((await page.locator("[data-slot=place-entries]").count()) === 0 && (await page.locator("[data-panel] h2").count()) === 0, "a place without entries has no entries section and no empty box at all");
   // print: the chrome goes, the entry stays
-  await page.goto(`${BASE_URL}/poems/cuesta-arriba?view=full`);
+  await page.goto(`${BASE_URL}/poetry/cuesta-arriba?view=full`);
   await waitPanel(page);
   await waitGlobeMounted(page);
   await page.emulateMedia({ media: "print" });

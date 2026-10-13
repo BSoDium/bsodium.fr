@@ -1,11 +1,12 @@
 import { Link } from "react-router";
-import { Button, Glyph, StatePanel } from "~/components/ui";
+import { pageTitle } from "~/lib/meta";
+import { Button, Icon, StatePanel } from "~/components/ui";
 
 /** Global 404 (unmatched URL, or an entry slug that does not exist): the empty state of the UI system on the plain page. */
 export function NotFoundPage() {
   return (
     <main id="main" tabIndex={-1} className="mx-auto max-w-2xl px-6 pt-[calc(var(--navbar-height)+3rem)] pb-24 outline-none">
-      <title>Page not found · Catalyst</title>
+      <title>{pageTitle("Page not found")}</title>
       <meta name="robots" content="noindex" />
       <StatePanel
         state="empty"
@@ -15,7 +16,7 @@ export function NotFoundPage() {
         action={
           <Button asChild variant="secondary">
             <Link to="/">
-              <Glyph name="arrow-left" size={16} />
+              <Icon name="arrow-left" size="inline" />
               Back to the globe
             </Link>
           </Button>
