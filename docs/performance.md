@@ -102,11 +102,9 @@ Headless (60 Hz) medians of the budget run, for the same scenarios, are in `budg
 
 The Milky Way and stars behind the earth (web-architecture.md, "Skybox") are drawn inside frames that happen anyway and add none. Idle: zero rAF, zero frames, zero `gl.clear` with the sky on (`sky.mjs rest`, `groups.mjs idle at-rest` and `handover-perf.mjs idle`, all run with `SKY=1` and without). Per frame: one full-buffer triangle (a matrix, `atan`, `asin`, one 8-bit texture fetch, a Bayer lookup per pixel) and 20,000 one-pixel points (vertex work only; 7,000 until 2026-10-08, not re-measured), drawn after the disc with the depth test at the far plane, so the pixels the earth covers fail early and a globe that fills the picture switches the layer off. The GPU-synced `renderNow` (400 frames of a turning globe, p50): 0.4 to 0.5 ms with and without it at 1440 x 900 @2, 0.5 to 0.6 ms at 390 x 844 @3, equal within the 0.1 ms resolution of the timer (p95 noise 1 to 3.8 ms either way). Memory: a 16 KB texture, 400 KB of star attributes (140 KB at 7,000 stars). Bundle: the globe chunk grew by 11.2 KB raw and 3.7 KB gzip (the main chunk is byte-identical). Not measured: a real low-end phone; no performance budget was run for this change.
 
-## Ring of type (rounds 1 and 2) and orbiting type (round 3)
+## Ring of type
 
-(Rounds 1 and 2: the flat ring. Round 3 replaced it by the orbiting type of the home screen, "Orbiting type" below; what is measured here about the trap and the backing store still holds.)
-
-The ring of text that circles the planet's disc below the whole-globe fit (web-architecture.md, "Ring of type") is the only thing in the app that animates at rest, so it has its own accounting. It costs nothing while it is not shown (the world view at load, zoomed in): `idle` is 0 draws and 0 rAF calls, and the unchanged `perf --quick` passes with it (it is OFF on debug pages, which every scenario runs in, so the scenarios `ring-rest` and `ring-wheel` (the latter replaced by `ring-fade` in round 3) and `RING=1` turn it on).
+The ring of text that circles the planet's disc below the whole-globe fit (web-architecture.md, "Ring of type") is the only thing in the app that animates at rest, so it has its own accounting. It costs nothing while it is not shown (the world view at load, zoomed in): `idle` is 0 draws and 0 rAF calls, and the unchanged `perf --quick` passes with it (it is OFF on debug pages, which every scenario runs in, so the scenarios `ring-rest` and `ring-wheel` and `RING=1` turn it on).
 
 - **A frame** (the flat ring of round 2): `placeGlyphs` (about 175 glyphs: a sine and a cosine each, no allocation), a clear of the ring's bounding square and one `drawImage` of an atlas cell per glyph with a rotation. The layer's own JS is 0.10 to 0.17 ms a frame (`ring-rest`: 150 frames in 5 s, 15 to 19 ms of JS; `ring.mjs cost`: p50 0.20 ms, p95 0.50 to 0.80 ms for a `renderNow` with the ring drawn in step with a camera that moves every frame). 30 frames a second (`RING.frameMs`), so about 4 ms of JS a second.
 - **Main thread and GPU, `ring-rest`** (5 s at the lowest zoom of 1440 x 900 @2, production build, headless, 2 repeats): `RunTask` 117 to 137 ms against 48 to 51 ms for 3.2 s of nothing (the harness's own probe is most of both): about +6 ms of main thread a second, under 1 % of a core; `Commit` 28 to 35 ms for 150 compositor frames, none dropped; GPU 41 to 49 ms in 5 s (under 1 %). `ring-wheel` (2.5 s wheel out from the fit to the lowest zoom, 0.6 s, 2.5 s back in): 193 ring frames, 23 ms of ring JS, no frame of the globe added.
@@ -114,31 +112,28 @@ The ring of text that circles the planet's disc below the whole-globe fit (web-a
 - **The backing store**: the ring's bounding square at the device's resolution (1594 x 1594 px at 1440 x 900 @2, 10 MB; drawn at most at DPR 2 and released to 0 x 0 when the ring goes). It is grown in steps and shrunk when twice (1.35 times while it turns) what is needed.
 - **Not measured**: a real phone, a 120 Hz headed run (the ring is capped at 30 a second whatever the display does), a CPU-throttled run, battery. The ring is a continuous animation, which a page at rest otherwise never has: on a laptop on battery it keeps the compositor at 30 Hz for as long as the ring is visible (never at the world view, which is where the page rests).
 
-### Round 3: the orbiting type is the home screen's resting state (2026-10-13)
+### Round 3: the home screen rests on the ring, and the caption is part of the globe's own frames (2026-10-14)
 
-The ring became 3D type (a mono ring and a heavy caption through the globe's own camera, web-architecture.md "Orbiting type") and the home page now opens at its lowest zoom with it shown, so **the page at rest is no longer idle**: with the type on screen it repaints 30 times a second (a visitor who has pressed on the globe, zoomed in, or opened a place is back to zero frames; reduced motion is a static composition with no timer). That is the one standing cost of the change; the rest is on demand.
+The home page now opens at the globe's lowest zoom, where the ring of type (round 2, unchanged: restored exactly after the owner's review) is shown, so **the page at rest is no longer idle**: it repaints 30 times a second for the ring, until a gesture, a zoom in or a place opening (reduced motion: a static ring, no timer). That is the one standing cost, and it is the ring's own, above. **The caption adds nothing at rest**: it is textured geometry in the globe's scene, drawn in frames the globe draws anyway, and the frame loop is asked for frames only while an entrance (1.14 s) or a departure (200 ms) runs.
 
-Measured on a production build served by `react-router-serve` (demo build, the owner's preview projection at run time), headless Chrome for Testing 153 with the GPU, 1440 x 900 @2, 2 repeats, `node apps/web/scripts/perf/run.mjs --scenarios idle,ring-rest,ring-fade`:
+Measured on a production build served by `react-router-serve` (demo content), headless Chrome for Testing 153 with the GPU, 1440 x 900 @2, 2 repeats, `node apps/web/scripts/perf/run.mjs --scenarios idle,ring-rest,caption-enter`:
 
-| | idle (type off, 3.2 s) | `ring-rest` (type on, 5.5 s) | per second, difference |
-| --- | --- | --- | --- |
-| main thread `RunTask` | 85 to 88 ms | 226 to 237 ms | +15 ms a second (about 1.5 % of a core) |
-| `Commit` | 11.5 ms (180 frames) | 56 to 58 ms (300 frames) | +6.6 ms a second |
-| GPU tasks | none | 94 to 103 ms | about 18 ms a second (under 2 %) |
-| the layer's own JS | | 41 to 46 ms for 150 repaints: 0.27 to 0.31 ms a frame | 8 to 9 ms a second |
-| GL draws, GL frames of the globe | 0 | 0 | none: the type never asks for a frame of the globe |
+| | idle (3.2 s) | `ring-rest` (5.5 s, ring shown) |
+| --- | --- | --- |
+| main thread `RunTask` | 116 ms (36 ms a second) | 324 to 332 ms (about 60 ms a second) |
+| `Commit` | 17.5 ms (181 frames) | 83 to 88 ms (300 frames) |
+| ring repaints, their JS | | 150 in 5 s (30 a second), 43 to 44 ms: 0.29 ms each |
+| GL draws | 0 | 0 |
 
-The round 2 flat ring cost +6 ms of main thread a second and 8 to 10 ms of GPU: the type is about 2.5 times that (a few hundred glyphs with an affine each and the caption's keyline sheet drawn before its fill: two `drawImage` calls per caption glyph; two `clip("evenodd")` passes a frame for the far arc, which the planet's disc must hide; a canvas 892 x 343 CSS px, 1783 x 686 device px at DPR 2, against the ring's square), still no layout and no `fillText`. `ring.mjs cost`: `renderNow` with the type drawn in step with a camera that moves every frame: p50 0.30 ms, p95 1.00 ms; the idle turn 0.45 ms a repaint on average (a laptop screenshot-sized canvas, GC and the harness included), `ring.mjs spin`: 29.9 repaints a second, 0.28 ms a frame, 218 + 29 glyphs.
+(The harness's own probe is most of the idle column; the machine was busier than on the 2026-10-13 runs above, which measured +6 ms a second for the same ring: the difference between the columns is what to read, and it is the ring's, which has not changed.)
 
-`ring-fade` (the showcase turned off and on five times, 600 ms apart: the boxes and labels cross-fade with the type): 340 active frames of the globe in 6.7 s at 16.7 ms p50, p95 and p99 (none missed against the 60 Hz compositor), GPU 0.15 ms a frame (mean), 0 long tasks, the type's 183 repaints cost 33 to 55 ms of JS, and the fades are the globe's own timed opacities (no extra loop).
+`caption-enter` (the showcase turned off and on five times, 700 ms and 1.4 s apart: the boxes and labels cross-fade with the caption's entrance and departure): 421 GL frames in 14.3 s, **p50, p95 and max frame interval 16.7 / 16.7 to 16.8 / 16.8 ms, 0 missed against the 60 Hz compositor, 0 long tasks**, GPU 0.17 to 0.18 ms a frame (mean), and **0 GL draws in the 1.5 s of rest after the last entrance**. The two lines are two draw calls over one shared shader; the geometry is built once (a strip of one column per 2 degrees: about 60 columns x 2 rows x 2 lines), each frame of an entrance is a matrix per line.
 
-The lift is free after the first frame: a view offset of the camera, one extra comparison per projection; it re-derives on a resize, not per frame, and its tween rides the inset's loop (a CSS-free, compositor-free number: the camera's offset, in whole buffer pixels).
+The texture (one small canvas per line, drawn once per face and size class: about 900 x 150 texels with mipmaps for Jacquard at 64 texels a cap height) is the only new memory: well under 1 MB.
 
-The name's travel on the hero (owner item 10) is the Web Animations API on `transform` only: two animations, two rectangle reads at the state change, no frame loop of ours, nothing left promoted afterwards (`hero.mjs` checks `getAnimations()` and `will-change`).
+Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 669.7 KB raw / 182.1 KB gzip against the release's 658.8 / 179.6 (+10.9 KB raw, +2.5 KB gzip: `caption.ts`, `caption-layer.ts`, `lift.ts`, the showcase wiring). The two fonts (18.9 kB and 3.9 kB) are fetched only when the page's caption face is that one, by the globe, after the page is up; Jacquard is the default so it is 18.9 kB on the home page, once (immutable cache).
 
-Bundle (production build, gzip -9 of the chunk): `globe-canvas` 670.7 KB raw / 183.0 KB gzip against the release's 658.8 / 179.6 (+11.9 KB raw, +3.4 KB gzip: `orbit.ts`, `orbit-layer.ts`, `lift.ts` and the showcase wiring, less the removed `ring-layer.ts`); the home page's critical path 187 kB gzip (186 before: the hero's travel and the showcase signal).
-
-**Not measured:** a real phone, a CPU-throttled run, a 120 Hz headed run, battery (30 repaints a second as the resting state of the home page is the thing to watch: the knob is `RING.frameMs`, 32; a 20 fps tick or a pause while the tab is not focused would halve it). The perf budgets (`pnpm perf`) were not run in full for this change.
+**Not measured:** a real phone, a CPU-throttled run, a 120 Hz headed run, battery (30 repaints a second as the resting state of the home page is the thing to watch: the knob is `RING.frameMs`, 32). The perf budgets (`pnpm perf`) were not run in full for this change.
 
 ## Testing on a phone
 
