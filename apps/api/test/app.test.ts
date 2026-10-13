@@ -100,6 +100,31 @@ describe("endpoints (demo content)", () => {
     expect(parsePublishedProjection(body)).toEqual(loadDemoProjection());
   });
 
+  it("GET /v1/projection carries the career document of the demo, as validated, and nothing of it anywhere else", async () => {
+    const app = demoApp();
+    const body = (await (await app.request("/v1/projection")).json()) as PublishedProjection;
+    expect(body.career).toEqual(loadDemoProjection().career);
+    expect(body.career?.roles.length).toBeGreaterThan(0);
+    // the career is part of the projection only: it is not a list, a detail or a count
+    const health = await json<HealthResponse>(await app.request("/health"));
+    expect(Object.keys(health.counts)).not.toContain("career");
+    for (const path of [...STATIC.filter((p) => p !== "/v1/projection"), ...DETAILS]) {
+      expect(await (await app.request(path)).text(), path).not.toContain("Example Studio");
+    }
+    expect((await app.request("/v1/career")).status).toBe(404);
+  });
+
+  it("GET /v1/projection has no `career` key when the content has none (an old projection), and carries it exactly when the committed one does", async () => {
+    expect(JSON.parse(buildSnapshot(EMPTY_PROJECTION).entries.get("/v1/projection")!.body)).not.toHaveProperty("career");
+    const { career: _omit, ...legacy } = loadDemoProjection();
+    const snapshot = buildSnapshot(parsePublishedProjection(JSON.parse(JSON.stringify(legacy))));
+    expect(JSON.parse(snapshot.entries.get("/v1/projection")!.body)).not.toHaveProperty("career");
+    // the committed projection: the document is a draft until the owner publishes it, and the API serves whatever is committed
+    const committed = loadPublishedProjection();
+    const served = (await (await emptyApp().request("/v1/projection")).json()) as PublishedProjection;
+    expect("career" in served).toBe(committed.career !== undefined);
+  });
+
   it("GET /v1/places returns strict summaries sorted by slug", async () => {
     const res = await demoApp().request("/v1/places");
     const body = await json<{ slug: string }[]>(res);

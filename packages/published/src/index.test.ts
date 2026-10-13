@@ -2,7 +2,8 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadDemoProjection, loadPreviewProjection, loadProjection, loadPublishedProjection, previewCandidates } from "./index";
+import { getCareer, loadDemoProjection, loadPreviewProjection, loadProjection, loadPublishedProjection, previewCandidates } from "./index";
+import { parsePublishedProjection } from "@catalyst/schemas";
 import { MAX_SVG_BYTES, MEDIA, MEDIA_DIR, mediaSrc, renderImage } from "../scripts/demo/generate-media.mjs";
 
 describe("published package", () => {
@@ -149,6 +150,56 @@ describe("published package", () => {
     // no stray placeholder wording in the copy
     const text = JSON.stringify([demo.projects, demo.articles, demo.artworks, demo.poems]);
     expect(text).not.toMatch(/lorem|ipsum|demo fixture|placeholder/i);
+  });
+});
+
+describe("career", () => {
+  it("the committed projection has none while the owner has not published the document, and an old projection stays valid without it", () => {
+    expect(loadPublishedProjection()).not.toHaveProperty("career");
+    expect(getCareer()).toBeUndefined();
+    expect(getCareer("published")).toBeUndefined();
+    const { career: _omit, ...withoutCareer } = loadDemoProjection();
+    expect(parsePublishedProjection(JSON.parse(JSON.stringify(withoutCareer)))).not.toHaveProperty("career");
+  });
+
+  it("the demo has a plainly fictional career that uses every field of the contract", () => {
+    const career = getCareer("demo")!;
+    expect(career).toBeDefined();
+    expect(career).toEqual(loadDemoProjection().career);
+    const roles = career.roles;
+    expect(roles.length).toBeGreaterThanOrEqual(4);
+    // an ongoing role, a role with no end, a closed one, a year-only start, a month start
+    expect(roles.some((r) => r.end === "present")).toBe(true);
+    expect(roles.some((r) => r.end === undefined)).toBe(true);
+    expect(roles.some((r) => r.end !== undefined && r.end !== "present")).toBe(true);
+    expect(new Set(roles.map((r) => r.start.length))).toEqual(new Set([4, 7]));
+    expect(roles.some((r) => r.orgUrl !== undefined) && roles.some((r) => r.orgUrl === undefined)).toBe(true);
+    expect(roles.some((r) => r.employment !== undefined) && roles.some((r) => r.employment === undefined)).toBe(true);
+    expect(roles.some((r) => r.place !== undefined) && roles.some((r) => r.place === undefined)).toBe(true);
+    expect(roles.some((r) => r.highlights.length === 0)).toBe(true);
+    expect(career.education.length).toBeGreaterThanOrEqual(2);
+    expect(career.education.some((e) => e.place !== undefined)).toBe(true);
+    expect(career.languages.some((l) => l.label !== undefined) && career.languages.some((l) => l.label === undefined)).toBe(true);
+    expect(career.skills.length).toBeGreaterThanOrEqual(3);
+    expect(career.links.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("the demo career is plainly made up: every address is on an example domain, every place reference is a place of the demo", () => {
+    const demo = loadDemoProjection();
+    const career = demo.career!;
+    const urls = [...career.links.map((l) => l.url), ...career.roles.flatMap((r) => (r.orgUrl ? [r.orgUrl] : []))];
+    expect(urls.length).toBeGreaterThanOrEqual(4);
+    for (const u of urls) expect(new URL(u).hostname, u).toMatch(/^(?:[a-z0-9-]+\.)*example\.(?:org|com)$/);
+    const places = new Set(demo.places.map((p) => p.slug));
+    for (const slug of [...career.roles, ...career.education].flatMap((x) => (x.place ? [x.place] : []))) expect(places.has(slug), slug).toBe(true);
+    expect(career.roles.map((r) => r.org)).toContain("Example Studio");
+    expect(JSON.stringify(career)).not.toMatch(/lorem|ipsum|@|\+\d{2}|tel:|mailto:/i);
+  });
+
+  it("the demo career is small (a few KB), and the demo projection still validates strictly", () => {
+    const bytes = Buffer.byteLength(JSON.stringify(loadDemoProjection().career));
+    expect(bytes).toBeGreaterThan(1500);
+    expect(bytes).toBeLessThan(8000);
   });
 });
 
