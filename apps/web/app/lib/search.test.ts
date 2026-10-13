@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadDemoProjection } from "@catalyst/published";
-import { buildSearchIndex, foldText, groupResults, searchItems, SEARCH_LABELS, SEARCH_SINGULAR, SEARCH_TYPES, type SearchItem } from "./search";
+import { buildSearchIndex, foldText, groupResults, rankItems, resultsStatus, searchItems, SEARCH_LABELS, SEARCH_SINGULAR, SEARCH_TYPES, type SearchItem } from "./search";
 
 const demo = loadDemoProjection();
 const index = buildSearchIndex(demo);
@@ -33,6 +33,22 @@ describe("buildSearchIndex", () => {
   });
   it("is empty for an empty projection", () => {
     expect(buildSearchIndex({ ...demo, places: [], articles: [], projects: [], artworks: [], poems: [] })).toEqual([]);
+  });
+});
+
+describe("the count of results", () => {
+  it("ranks the whole list; searchItems is its first part", () => {
+    const all = rankItems(index, "a");
+    expect(all.length).toBeGreaterThan(3);
+    expect(searchItems(index, "a", 3)).toEqual(all.slice(0, 3));
+    expect(rankItems(index, "")).toEqual([]);
+  });
+  it("says the real count, and when the list is capped how much of it is shown", () => {
+    expect(resultsStatus(0, 0)).toBe("No results");
+    expect(resultsStatus(1, 1)).toBe("1 result");
+    expect(resultsStatus(7, 7)).toBe("7 results");
+    expect(resultsStatus(24, 24)).toBe("24 results");
+    expect(resultsStatus(24, 31)).toBe("Showing 24 of 31");
   });
 });
 

@@ -425,6 +425,180 @@ if (process.env.BASE_URL_EMPTY) {
   await ctx.close();
 }
 
+// --- 10. Review fixes: print in the dark scheme, the palette's Escape, long titles, small screens, forced colours, artwork covers -----------------------
+
+// 10a. Print is ink on white whatever the scheme: the list pages (their root is rebound to the paper tokens) and an entry, emulated dark.
+for (const path of ["/articles", "/poetry", "/articles/demo-article?view=full", "/poetry/demo-poem?view=full"]) {
+  const { ctx, page } = await newPage(DESKTOP, "dark");
+  await page.goto(`${BASE_URL}${path}`);
+  await page.waitForTimeout(700);
+  await page.emulateMedia({ media: "print", colorScheme: "dark" });
+  await page.waitForTimeout(50);
+  const ink = await page.evaluate(() => {
+    const channels = (c) => (c.match(/[\d.]+/g) ?? []).map(Number);
+    const lum = (c) => { const [r, g, b] = channels(c).map((v) => v / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+    const h1 = document.querySelector("h1");
+    const root = document.documentElement;
+    const bg = getComputedStyle(document.body).backgroundColor;
+    const fg = getComputedStyle(h1).color;
+    const muted = [...document.querySelectorAll("main p, [data-panel] p")].filter((p) => p.getClientRects().length > 0 && p.textContent.trim()).slice(0, 6).map((p) => getComputedStyle(p).color);
+    const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+    const panel = document.querySelector("[data-panel]");
+    const panelBg = panel ? getComputedStyle(panel).backgroundColor : bg;
+    return { bg: panelBg === bg ? bg : `${bg} / panel ${panelBg}`, panelBg, fg, rootBg: getComputedStyle(root).backgroundColor, ratio: contrast(fg, bg), muted: muted.map((m) => contrast(m, bg)) };
+  });
+  ok(ink.ratio >= 15 && ink.muted.every((r) => r >= 7) && ink.panelBg === "rgb(255, 255, 255)", `print + dark ${path}: ink on white (heading ${ink.fg} on ${ink.bg} = ${ink.ratio.toFixed(1)}:1, text ${ink.muted.map((r) => r.toFixed(1)).join(", ")}:1)`);
+  await page.screenshot({ path: `${OUT_DIR}/print-dark-${path.replace(/[/?=]/g, "-")}.png`, fullPage: false });
+  await ctx.close();
+}
+
+// 10b. The palette's Escape closes the palette only: the open panel stays (desktop), and the next Escape closes the panel.
+{
+  const { ctx, page, logs } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/articles/demo-article`);
+  await waitPanel(page);
+  await page.waitForTimeout(600);
+  await page.keyboard.press("Control+k");
+  await page.waitForSelector("dialog[open]");
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => !document.querySelector("dialog"));
+  await page.waitForTimeout(300);
+  ok(new URL(page.url()).pathname === "/articles/demo-article" && (await page.locator("[data-panel]").count()) === 1, "palette Escape: the palette closes and the open entry stays");
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => location.pathname === "/");
+  ok(true, "palette Escape: a second Escape (no dialog) closes the panel");
+  ok(logs.length === 0, `palette Escape: no console errors${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// 10c. A long title is scaled down, not squeezed: its column is the role's, whatever the scale (320 px phone slide-over, a 512 px panel, full screen).
+for (const [label, options, path] of [
+  ["320px", { ...MOBILE, viewport: { width: 320, height: 640 } }, "/articles/vietnam-by-rail"],
+  ["512px panel", { viewport: { width: 1024, height: 800 }, deviceScaleFactor: 1 }, "/articles/vietnam-by-rail"],
+  ["full", DESKTOP, "/articles/vietnam-by-rail?view=full"],
+]) {
+  const { ctx, page } = await newPage(options);
+  await page.goto(`${BASE_URL}${path}`);
+  await page.waitForSelector("h1.entry-title", { timeout: 15000 });
+  await page.waitForTimeout(500);
+  const t = await page.evaluate(() => {
+    const h = document.querySelector("h1.entry-title");
+    const cs = getComputedStyle(h);
+    const entry = h.closest(".entry") ?? h.parentElement;
+    const role = parseFloat(getComputedStyle(entry).getPropertyValue("--entry-title")) || null;
+    const scale = parseFloat(h.style.getPropertyValue("--title-scale")) || 1;
+    return { font: parseFloat(cs.fontSize), max: parseFloat(cs.maxWidth), width: h.getBoundingClientRect().width, scale, role, col: h.parentElement.getBoundingClientRect().width };
+  });
+  const expected = (t.font / t.scale) * 8.95;
+  ok(Math.abs(t.max - expected) < 1.5, `long title ${label}: its measure is 8.95 of the role's size, not of the scaled size (max-width ${t.max.toFixed(0)} px, role size ${(t.font / t.scale).toFixed(1)} px, scale ${t.scale})`);
+  ok(t.width <= t.col + 1, `long title ${label}: it fits its column (${t.width.toFixed(0)} of ${t.col.toFixed(0)} px)`);
+  await ctx.close();
+}
+
+// 10d. Small screens: the filter's "All" and the header's "Globe" are 44 px wide targets, tags never start a line with a dot, no keyboard legend on touch.
+{
+  const { ctx, page } = await newPage({ ...MOBILE, viewport: { width: 320, height: 700 } });
+  await page.goto(`${BASE_URL}/articles`);
+  await page.waitForTimeout(600);
+  const boxes = await page.evaluate(() => {
+    const b = (e) => { const r = e.getBoundingClientRect(); return { w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10 }; };
+    const filters = [...document.querySelectorAll("[data-slot=tag-filter] a")].map((a) => ({ t: a.textContent.trim(), ...b(a) }));
+    const globe = document.querySelector("header nav a[href='/']");
+    return { filters, globe: globe ? b(globe) : null };
+  });
+  ok(boxes.filters.length > 0 && boxes.filters.every((f) => f.w >= 43.5 && f.h >= 43.5), `320px: every filter toggle is 44 x 44 or more (${boxes.filters.map((f) => `${f.t}:${f.w}x${f.h}`).join(", ")})`);
+  ok(boxes.globe && boxes.globe.w >= 43.5 && boxes.globe.h >= 43.5, `320px: the header's Globe link is 44 x 44 or more (${boxes.globe?.w}x${boxes.globe?.h})`);
+  const navFits = await page.evaluate(() => { const n = document.querySelector("header nav").getBoundingClientRect(); return { l: n.left, r: n.right, vw: innerWidth }; });
+  ok(navFits.l >= -0.5 && navFits.r <= navFits.vw + 0.5, `320px: the header row still fits (${Math.round(navFits.l)} to ${Math.round(navFits.r)} of ${navFits.vw})`);
+  // (a touch browser widens its layout viewport to fit what overflows: innerWidth is the proof that nothing does)
+  ok(navFits.vw === 320, `320px: the list page is not wider than the phone (layout viewport ${navFits.vw})`);
+  await page.goto(`${BASE_URL}/articles/vietnam-by-rail`);
+  await page.waitForSelector("[data-slot=tag-list]");
+  await page.waitForTimeout(500);
+  const tags = await page.evaluate(() => [...document.querySelectorAll("[data-slot=tag-list]")].map((ul) => {
+    const lis = [...ul.children];
+    const before = lis.map((li) => getComputedStyle(li, "::before").content);
+    const after = lis.map((li) => getComputedStyle(li, "::after").content);
+    // first item of each wrapped line: the dot belongs to the item before it, so the item that starts a line has no dot in front
+    const tops = [...new Set(lis.map((li) => Math.round(li.getBoundingClientRect().top)))];
+    return { n: lis.length, lines: tops.length, noBefore: before.every((c) => c === "none" || c === "normal"), dots: after.slice(0, -1).every((c) => c.includes("·")), lastClean: after.at(-1) === "none" || after.at(-1) === "normal" };
+  }));
+  ok(tags.length > 0 && tags.every((t) => t.noBefore && t.dots && t.lastClean), `tags: the dot ends the item before it, none starts a line, none ends the list (${JSON.stringify(tags)})`);
+  await ctx.close();
+}
+{
+  // a touch screen (a coarse pointer) has no key legend in the palette; the real count is said when the list is capped
+  const { ctx, page } = await newPage({ ...MOBILE });
+  await page.goto(`${BASE_URL}/articles`);
+  await page.waitForTimeout(600);
+  await page.getByRole("button", { name: "Search" }).first().tap();
+  await page.waitForSelector("dialog[open]");
+  const legend = await page.evaluate(() => {
+    const el = [...document.querySelectorAll("dialog [aria-hidden=true]")].find((e) => /move/.test(e.textContent ?? "") && /close/.test(e.textContent ?? ""));
+    return { shown: el ? getComputedStyle(el).display !== "none" : null, coarse: matchMedia("(pointer: coarse)").matches };
+  });
+  ok(legend.coarse ? legend.shown === false : true, `palette on touch: the keyboard legend is not drawn (coarse pointer ${legend.coarse}, shown ${legend.shown})`);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/articles`);
+  await page.waitForTimeout(500);
+  await page.keyboard.press("Control+k");
+  await page.waitForSelector("dialog[open]");
+  const legend = await page.evaluate(() => {
+    const el = [...document.querySelectorAll("dialog [aria-hidden=true]")].find((e) => /move/.test(e.textContent ?? "") && /close/.test(e.textContent ?? ""));
+    return el ? getComputedStyle(el).display : null;
+  });
+  ok(legend !== null && legend !== "none", `palette on a mouse and keyboard: the legend is there (${legend})`);
+  await page.keyboard.type("a");
+  await page.waitForFunction(() => document.querySelectorAll("[role=option]").length > 0);
+  const shown = await page.locator("[role=option]").count();
+  const status = (await page.locator("dialog [role=status]").innerText()).trim();
+  const total = await page.evaluate(async () => (await (await fetch("/search-index.json")).json()).length);
+  ok(shown <= 24 && (shown < 24 ? /^\d+ results?$/.test(status) : /^(Showing 24 of \d+|24 results)$/.test(status)), `palette: the count is honest (${shown} rows of an index of ${total}: "${status}")`);
+  await ctx.close();
+}
+
+// 10e. Forced colours: the header's backdrop is a solid canvas-colour band and the hero's plate a solid block (gradients are dropped there).
+for (const path of ["/", "/projects"]) {
+  const ctx = await browser.newContext({ ...DESKTOP, forcedColors: "active", colorScheme: "light" });
+  const page = await ctx.newPage();
+  await page.goto(`${BASE_URL}${path}`);
+  await page.waitForTimeout(1200);
+  if (path === "/") {
+    const plate = await page.evaluate(() => { const c = getComputedStyle(document.querySelector("[data-slot=landing-hero]"), "::before"); return { image: c.backgroundImage, color: c.backgroundColor, mask: c.maskImage }; });
+    ok(plate.image === "none" && /rgb\(255, 255, 255\)/.test(plate.color), `forced colours: the hero's plate is solid Canvas (${plate.color}, image ${plate.image})`);
+    await page.screenshot({ path: `${OUT_DIR}/forced-home.png` });
+  } else {
+    // the shell's header carries the fade: collapse the home hero's way, a list has the scrim; check the shell's `.nav-fade` on a place page
+    await page.goto(`${BASE_URL}/locations/lisbon`);
+    await page.waitForSelector(".nav-fade", { state: "attached", timeout: 10000 });
+    const fade = await page.evaluate(() => { const c = getComputedStyle(document.querySelector(".nav-fade")); return { image: c.backgroundImage, color: c.backgroundColor, mask: c.maskImage, h: c.height }; });
+    ok(fade.image === "none" && fade.mask === "none" && /rgb\(255, 255, 255\)/.test(fade.color) && parseFloat(fade.h) === 56, `forced colours: the header's backdrop is a solid Canvas band (${JSON.stringify(fade)})`);
+    await page.screenshot({ path: `${OUT_DIR}/forced-place.png` });
+  }
+  await ctx.close();
+}
+
+// 10f. An artwork's cover keeps its own proportions (never cropped to 1.91:1), at most 80 % of the window tall; a banner kind is cropped.
+{
+  const { ctx, page } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/artworks/demo-artwork`);
+  await waitPanel(page);
+  await page.waitForSelector("[data-slot=entry-cover] img", { timeout: 10000 });
+  await page.waitForTimeout(500);
+  const art = await page.evaluate(() => { const i = document.querySelector("[data-slot=entry-cover] img"); const r = i.getBoundingClientRect(); const cs = getComputedStyle(i); return { fit: cs.objectFit, maxH: cs.maxHeight, w: r.width, h: r.height, natural: i.naturalWidth / i.naturalHeight, attr: i.width / i.height || null, vh: innerHeight }; });
+  ok(art.fit === "contain" && art.h <= art.vh * 0.8 + 1, `artwork cover: object-fit contain, at most 80 % of the window (${art.fit}, ${Math.round(art.h)} of ${art.vh})`);
+  ok(Math.abs(art.w / art.h - art.natural) / art.natural < 0.02 || art.h >= art.vh * 0.8 - 1, `artwork cover: drawn in its own proportions (${(art.w / art.h).toFixed(2)} for ${art.natural.toFixed(2)})`);
+  await page.goto(`${BASE_URL}/articles/demo-article`);
+  await waitPanel(page);
+  await page.waitForSelector("[data-slot=entry-cover] img");
+  const banner = await page.evaluate(() => { const i = document.querySelector("[data-slot=entry-cover] img"); const r = i.getBoundingClientRect(); return { fit: getComputedStyle(i).objectFit, ratio: r.width / r.height }; });
+  ok(banner.fit === "cover" && Math.abs(banner.ratio - 1.91) < 0.03, `article cover: still the 1.91:1 banner (${banner.fit}, ${banner.ratio.toFixed(2)})`);
+  await ctx.close();
+}
+
 await browser.close();
 console.log(failures.length ? `\n${failures.length} FAILED` : "\nall checks passed");
 process.exit(failures.length ? 1 : 0);

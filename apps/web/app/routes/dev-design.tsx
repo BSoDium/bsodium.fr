@@ -338,7 +338,7 @@ function TypeSpecimen() {
         <div className="flex flex-col gap-3">
           <p className="type-display-lg m-0 text-signal">Display text in the accent</p>
           <p className="m-0 text-2xl font-extrabold text-signal">24 px bold, large text (accent)</p>
-          <p className="m-0 text-xl font-bold text-signal">20 px bold, large text (accent)</p>
+          <p className="m-0 text-xl font-bold text-signal-text">20 px bold, under 24 px: the text variant</p>
           <p className="m-0 text-base text-signal-text">16 px in the text variant (AA on the page and the surface)</p>
           <p className="type-meta m-0 text-signal-text">12 px meta in the text variant</p>
           <div className="flex flex-wrap items-center gap-4">
@@ -843,7 +843,7 @@ function SchemePair() {
             </div>
             <EntryCard kind="artwork" title={SAMPLES.artwork.title} summary={SAMPLES.artwork.summary} meta={SAMPLES.artwork.meta} />
             <Frame variant="active" padding="sm">
-              <p className="m-0 text-sm font-medium text-signal">Active frame</p>
+              <p className="m-0 text-sm font-medium text-signal-text">Active frame</p>
               <p className="mt-1 mb-0 text-sm">Selected thing: strong line and a faint wash.</p>
             </Frame>
             <Frame variant="inverted" padding="sm">
@@ -879,7 +879,7 @@ function States() {
             state="error"
             code="ERR / 500"
             title="This entry did not load"
-            description="Something went wrong on our side. Try again in a moment."
+            description="The page could not be built, and that is on my side. Try again in a moment."
             action={
               <Button variant="primary" size="sm">
                 Try again

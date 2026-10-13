@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createStaticHandler, createStaticRouter, StaticRouterProvider, type StaticHandlerContext } from "react-router";
 import { describe, expect, it } from "vitest";
 import { createHeroMachine } from "~/lib/hero-machine";
-import { SITE_NAME, SITE_TAGLINE } from "~/lib/site";
+import { SITE_FOCUS, SITE_IDENTITY, SITE_NAME, SITE_TAGLINE } from "~/lib/site";
 import { LandingHero } from "./landing-hero";
 
 async function render(props: { away?: boolean; empty?: boolean } = {}, machine = createHeroMachine()): Promise<string> {
@@ -39,11 +39,14 @@ describe("LandingHero", () => {
 
   it("says who the owner is from the published facts only, then how to use the page; with no place a line that does not point at an empty globe", async () => {
     const html = await render();
-    expect(html).toContain(`<p class="hero-intro">${SITE_TAGLINE}</p>`);
+    // who the owner is, then what they work on: the second sentence is its own span, the first all that stays of the line in a very short window
+    expect(html).toContain(`<p class="hero-intro">${SITE_IDENTITY}<span class="hero-intro-more"> ${SITE_FOCUS}</span></p>`);
+    expect(`${SITE_IDENTITY} ${SITE_FOCUS}`).toBe(SITE_TAGLINE);
     expect(SITE_TAGLINE).toBe(
       "Front-end and UX software engineer based in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.",
     );
-    expect(html).toContain('<p class="hero-hint">Pick a point on the globe, or start from a list.</p>');
+    // the how-to line: the globe is a script, so the part about it is marked and a no-script variant stands beside it
+    expect(html).toContain('<p class="hero-hint"><span data-needs-script="">Pick a point on the globe, or start</span><noscript>Start</noscript> from a list.</p>');
     const empty = await render({ empty: true });
     expect(empty).toContain('<p class="hero-hint">No place is published yet: start from a list.</p>');
     expect(empty).not.toContain("Pick a point");
@@ -154,8 +157,30 @@ describe("the hero's CSS (app.css, 'Landing hero')", () => {
     expect(css).toMatch(/--hero-span: 0\.7[0-5];/);
     expect(css).toMatch(/--hero-size: min\(calc\(100vw \* var\(--hero-span\) \/ var\(--hero-fit\)\), 33vh, 30rem\);/);
     // the phone's rule is the gutter-to-gutter fill
-    expect(css).toMatch(/max-width: 47\.99rem\) \{\s*\.landing-hero \{[^}]*--hero-size: min\(calc\(\(100vw - 2 \* var\(--hero-gutter\)\) \/ var\(--hero-fit\)\), 24vh\);/);
+    expect(css).toMatch(/max-width: 47\.99rem\) \{\s*\.landing-hero \{[^}]*calc\(\(100vw - 2 \* var\(--hero-gutter\)\) \/ var\(--hero-fit\)\),\s*24vh,/);
     expect(rule(".hero-mini-name")).toContain("font-weight: var(--weight-heavy)");
+  });
+
+  it("fits the whole block in a short window: the stacked name's size takes the height that is left, and each short tier drops what it can", () => {
+    // the stacked name is also capped by what the window leaves after the rest of the block (the figure per tier is in `--hero-fixed`)
+    expect(css).toMatch(/--hero-fixed: 26\.5rem;/);
+    expect(css).toMatch(/calc\(\(100dvh - var\(--hero-fixed\) - var\(--hero-clear\) - env\(safe-area-inset-bottom, 0px\) - 1rem\) \/ 1\.9\)/);
+    // up to 40 rem tall: no how-to line; up to 36 rem: the rows in two columns; a phone on its side: the wide layout in small
+    expect(css).toMatch(/\(max-width: 47\.99rem\) and \(max-height: 40rem\) \{[^@]*--hero-fixed: 24\.5rem;[^@]*\.hero-hint \{\s*display: none;/);
+    expect(css).toMatch(/\(max-width: 47\.99rem\) and \(max-height: 36rem\) \{[^@]*--hero-fixed: 17rem;[^@]*grid-template-columns: 1fr 1fr;/);
+    expect(css).toMatch(/\(min-width: 30rem\) and \(max-width: 47\.99rem\) and \(max-height: 34rem\) \{[^@]*grid-template-areas:\s*"lead list"\s*"name name";/);
+    // the very short ones keep who the owner is and drop what they work on
+    expect(css).toMatch(/\.hero-intro-more \{\s*display: none;/);
+  });
+
+  it("draws the plate and the header's backdrop as solid canvas colour in forced colours (gradients and masks are dropped there)", () => {
+    expect(css).toMatch(/@media \(forced-colors: active\) \{\s*\.landing-hero::before \{\s*background: Canvas;\s*background-image: none;\s*-webkit-mask-image: none;\s*mask-image: none;/);
+    expect(css).toMatch(/\.nav-fade \{[^}]*background: Canvas;[^}]*mask-image: none;/);
+  });
+
+  it("hides what needs a script when there is none (`scripting: none`), and marks the search lines", async () => {
+    expect(css).toMatch(/@media \(scripting: none\) \{\s*\[data-needs-script\] \{\s*display: none !important;/);
+    expect(await render()).toMatch(/<button[^>]*data-needs-script=""[^>]*class="hero-search"|<button[^>]*class="hero-search"[^>]*data-needs-script=""/);
   });
 
   it("keeps the header's accent state at the text-safe token (these are under 24 px)", () => {

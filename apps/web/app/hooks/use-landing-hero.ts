@@ -18,6 +18,36 @@ function idleMs(): number {
   }
 }
 
+/** Where the visitor's focus makes the hero hold still: the header (it goes away when the hero comes back) and any open dialog (the search palette). */
+const HOLD_SELECTOR = '[data-slot="site-header"], dialog[open]';
+
+/**
+ * Holds the machine's idle clock while the keyboard focus is inside the header or a dialog (`HeroMachine.hold`). The way back to rest
+ * removes the header, so it must not happen under a focused header link, nor under the open search palette whose way back to its opener
+ * is the header's trigger. Returns the cleanup. Exported for the browser check's reading, not for use elsewhere.
+ */
+export function watchFocusHold(machine: HeroMachine): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const sync = () => {
+    const active = document.activeElement;
+    machine.hold(!!active && active !== document.body && active.closest(HOLD_SELECTOR) !== null);
+  };
+  // `focusout` fires before the focus has moved: read it after the event has finished.
+  const later = () => {
+    clearTimeout(timer);
+    timer = setTimeout(sync, 0);
+  };
+  document.addEventListener("focusin", sync);
+  document.addEventListener("focusout", later);
+  sync();
+  return () => {
+    clearTimeout(timer);
+    document.removeEventListener("focusin", sync);
+    document.removeEventListener("focusout", later);
+    machine.hold(false);
+  };
+}
+
 export interface LandingHero {
   machine: HeroMachine;
   /** `GlobeProps.onInteract`: a gesture started on the globe. Stable. */
@@ -54,6 +84,7 @@ export function useLandingHero(open: boolean): LandingHero {
     sync();
   }, [open, sync]);
   useEffect(() => () => machine.stop(), [machine]);
+  useEffect(() => watchFocusHold(machine), [machine]);
 
   return useMemo(() => ({ machine, onInteract, onView }), [machine, onInteract, onView]);
 }

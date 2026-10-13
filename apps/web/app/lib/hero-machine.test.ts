@@ -115,6 +115,44 @@ describe("hero machine", () => {
     expect(state()).toBe("rest");
   });
 
+  describe("hold (the focus is in the header or in a dialog)", () => {
+    it("keeps a collapsed hero collapsed however long the idle time, then starts a whole idle period when released", () => {
+      machine.interact();
+      vi.advanceTimersByTime(2000);
+      machine.hold(true);
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(10 * HERO_IDLE_MS);
+      expect(state()).toBe("collapsed");
+      machine.hold(false);
+      expect(vi.getTimerCount()).toBe(1);
+      vi.advanceTimersByTime(HERO_IDLE_MS - 1);
+      expect(state()).toBe("collapsed");
+      vi.advanceTimersByTime(1);
+      expect(state()).toBe("rest");
+    });
+
+    it("arms nothing on an input while held, and on release only when the way back is real (collapsed, at the world view)", () => {
+      machine.hold(true);
+      machine.interact();
+      expect(state()).toBe("collapsed");
+      expect(vi.getTimerCount()).toBe(0);
+      machine.setWorld(false);
+      machine.hold(false);
+      expect(vi.getTimerCount()).toBe(0);
+      machine.setWorld(true);
+      expect(vi.getTimerCount()).toBe(1);
+    });
+
+    it("releasing a hold that was never taken, or a hold at rest, owns no timer and changes nothing", () => {
+      machine.hold(false);
+      machine.hold(true);
+      machine.hold(false);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(changes).toBe(0);
+      expect(machine.getSnapshot()).toEqual({ state: "rest", world: true });
+    });
+  });
+
   it("honours another idle delay and injected timers", () => {
     const timers = { setTimeout: vi.fn(() => 7), clearTimeout: vi.fn() };
     const custom = createHeroMachine({ idleMs: 250, timers });

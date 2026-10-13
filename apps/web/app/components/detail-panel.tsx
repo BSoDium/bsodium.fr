@@ -5,6 +5,7 @@ import { NavScrim } from "~/components/nav-scrim";
 import { ExpandToggle } from "~/components/ui/toggle";
 import { IconButton } from "~/components/ui/icon-button";
 import type { EntryView } from "~/lib/entries";
+import { panelOwnsEscape } from "~/lib/panel-escape";
 import { duration, easeStandard } from "~/lib/tokens";
 import { cn } from "~/lib/utils";
 
@@ -131,7 +132,8 @@ export function DetailPanel({ open, isMobile, reducedMotion, routeKey, returnSlu
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) onClose();
+      // The search palette (a modal dialog) takes its own Escape: the key must not also close the panel under it.
+      if (panelOwnsEscape(e, document.querySelector("dialog[open]") !== null)) onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);

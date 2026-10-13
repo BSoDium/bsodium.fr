@@ -54,7 +54,7 @@ app/
   components/         navbar, nav-scrim, skip-links, places-nav, detail-panel, place-detail, entry-list-page,
                       not-found-page, error-page, nav-progress, ui/ (the UI system: Frame, KindTag, Button, CoverArt, EntryCard, ... see docs/design-system.md)
   components/entry/   entry-view (the one view for both containers), blocks (the body renderer), toc (full-screen contents with scroll-spy), entry-route (route glue), entry-list-card
-  components/         + search-palette (Cmd/Ctrl-K combobox, mounted by the navbar), archive-empty (the home page when no place is published)
+  components/         + search-palette (Cmd/Ctrl-K combobox, mounted by the navbar)
   lib/content.server.ts   ContentSource + bundled/API sources + cache (server only)
   lib/projection.ts       pure selectors: place index, routes -> points, place detail (with its entries)
   lib/entries.ts          pure selectors of entries: lists (summaries), one entry with body/places/related/neighbours, entries of a place, `?view`/panel-path parsing
@@ -98,9 +98,9 @@ app/
   with a plain year heading (h2, the cards then h3) only when the years hold two entries or more on average (`shouldGroupByYear`): a heading over
   every single card would be a timeline, so a sparse list stays one grid, newest first. The loaders do not change (the query is read in the
   component) and `root.tsx` has `shouldRevalidate() => false`, so a filter link or `?view` toggle fetches nothing.
-- **The empty home.** With no published place the shell still draws the globe (sky, rotation) and `ArchiveEmpty`, a small plate at the
-  bottom left (one hairline): "Nothing on the globe yet", a short line and the four lists with their counts. The counts are real (`countEntries` in
-  the shell loader): a projection with entries but no places says so and links to them. On a phone the card is compact (two columns of links).
+- **The empty home.** With no published place the shell still draws the globe (sky, rotation) and the landing hero (`docs/landing.md`) is the
+  empty home: its how-to line says "No place is published yet: start from a list." and its four rows open the lists. (The earlier `ArchiveEmpty`
+  plate was removed: nothing rendered it.)
 - **The place panel.** The name (h1) and one quiet line: region and country (the country's English name derived from `countryCode`, each word
   once), the coordinates at the precision they are stored with (`48.85° N, 2.35° E`, never padded: `formatPlaceCoordinates`) and the dates. The
   entries follow grouped by kind under their own headings (h2 "Articles" with a count, the cards h3, no kind on a card); a place without entries
@@ -273,7 +273,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   effect is keyed on `routeKey` (the pathname), so toggling the container (a query change) never moves focus: it stays on the toggle.
 - Close (button, Escape, or history): for a place, focus returns to its link in the places list (which reveals the overlay
   when the user is on the keyboard); for an entry, to the page's `main`. Skipped if the user already moved focus elsewhere.
-- Escape closes (document listener while open), in both containers. Close navigates to `/` (history-correct; back reopens).
+- Escape closes (document listener while open), in both containers, unless the key belongs to a dialog: with the search palette (a modal `dialog`) open, its Escape closes the palette and the panel stays (`lib/panel-escape.ts`, tested). Close navigates to `/` (history-correct; back reopens).
 
 ### Entries in the shell: routes, containers, URL scheme
 

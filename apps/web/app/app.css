@@ -500,8 +500,8 @@
 /*
  * Type roles (docs/design-system.md, "Type"; the tokens are in `@theme static` above). One class sets one whole role: family, size,
  * leading, tracking, weight and wrapping. Components compose them; none of them names a family itself. The display roles are the
- * studio-site voice: tight leading, negative tracking, a very heavy weight against a very thin one (`.type-thin` / `.type-heavy`
- * switch a run of the same heading: "Cata" thin, "lyst" heavy). Colour is never part of a role.
+ * studio-site voice: tight leading, negative tracking, a very heavy weight against a very thin one (`.type-thin` switches a run of
+ * the same heading to the thin end: "Elliot" heavy, "Négrel-Jerzy" thin). Colour is never part of a role.
  */
 @layer components {
   .type-display-xl,
@@ -538,13 +538,9 @@
     font-weight: var(--text-display-md--font-weight);
   }
 
-  /* The pair: a run of a display heading at the thin end or the heavy end of the weight axis. */
+  /* A run of a display heading at the thin end of the weight axis (the other end is the heading's own weight: "Elliot" heavy, "Négrel-Jerzy" thin). */
   .type-thin {
     font-weight: var(--weight-thin);
-  }
-
-  .type-heavy {
-    font-weight: var(--weight-heavy);
   }
 
   /* Standfirst: the line under a headline. Thin italic of the reading face; wraps to even lines. */
@@ -562,8 +558,8 @@
 
   /*
    * Reading: the body of an entry. The reading face at 18 to 20 px, 1.65 leading, no widows (`pretty`), proportional figures. The
-   * column is `.type-measure`. `ch` is the width of a "0", which Newsreader draws wide, so the measure is written in em of the
-   * reading size instead: 28.5 em is about 66 characters of running text.
+   * column's width is the entry's own (`--measure-reading`, in em of the reading size: `ch` is the width of a "0", which Newsreader draws
+   * wide; 28.5 em is about 66 characters of running text).
    */
   .type-reading {
     font-family: var(--font-reading);
@@ -575,10 +571,6 @@
     font-weight: var(--text-reading--font-weight);
     font-variant-numeric: proportional-nums;
     text-wrap: pretty;
-  }
-
-  .type-measure {
-    max-width: var(--measure-reading);
   }
 
   /* Meta: page metadata (a date, a place, a count, a reading time). Mono, small capitals-free uppercase, tracked, figures aligned. Not for the map's text. */
@@ -859,7 +851,9 @@
     align-items: center;
   }
 
-  .ds-tags > li + li::before {
+  /* The separator belongs to the item BEFORE it (a dot after every item but the last): when the list wraps, a dot ends a line and no line
+     starts with one. */
+  .ds-tags > li:not(:last-child)::after {
     content: "·";
     content: "·" / "";
     padding-inline: 0.5ch;
@@ -1584,14 +1578,12 @@
     display: none !important;
   }
 
-  /* A row of links (places, contents): the hover grey and a signal tick on the left edge. */
-  .ds-row,
+  /* A row of links in the contents: the hover grey and a signal tick on the left edge. */
   .ds-toc-link {
     position: relative;
     transition: background-color var(--duration-fast) var(--ease-standard);
   }
 
-  .ds-row:hover,
   .ds-toc-link:hover {
     background: var(--accent);
   }
@@ -1652,7 +1644,9 @@
 
   /* The headline: the reading face at 700, balanced, tight (the board: 132 px, 0.92, -0.03em, optical size 72 by `auto`). */
   .entry-title {
-    max-width: 8.95em;
+    /* The measure follows the role's size (`--entry-title`), not the title's own: a long title is set smaller by `--title-scale`, and
+       8.95 of its own em would squeeze it into a narrower column the smaller it gets. */
+    max-width: calc(8.95 * var(--entry-title));
     margin: 0;
     font-family: var(--font-reading);
     font-optical-sizing: auto;
@@ -1873,8 +1867,11 @@
     display: inline-flex;
     flex: none;
     align-items: center;
+    justify-content: center;
+    /* 44 px by 44 px on a phone, also for the shortest word ("All"); the row's gap is this padding, so the text keeps its spacing. */
     min-height: 2.75rem;
-    padding-inline: 0.125rem;
+    min-width: 2.75rem;
+    padding-inline: 0.5rem;
     color: var(--muted-foreground);
     font-size: var(--text-sm);
     line-height: var(--text-sm--line-height);
@@ -1903,8 +1900,12 @@
 
   /* The toggles: one row that scrolls sideways on a phone (it bleeds to the screen edges), wrapped from md. */
   .ds-filter-row {
-    margin: 0 calc(var(--panel-pad) * -1);
-    padding: 0 var(--panel-pad) 0.25rem;
+    /* The list page's side padding below md is 1 rem (`px-4`): the row bleeds exactly to the screen edges, no further (a 24 px bleed on a
+       16 px page made the page 8 px wider than a 320 px phone). */
+    --bleed: 1rem;
+    margin: 0 calc(var(--bleed) * -1);
+    /* (the first toggle's own padding is outside the text column: the row starts that much earlier) */
+    padding: 0 var(--bleed) 0.25rem calc(var(--bleed) - 0.5rem);
     overflow-x: auto;
     scrollbar-width: thin;
   }
@@ -1912,13 +1913,14 @@
   @media (min-width: 768px) {
     .ds-filter-row {
       flex-wrap: wrap;
-      margin: 0;
+      margin: 0 0 0 -0.5rem;
       padding: 0;
       overflow-x: visible;
     }
 
     .ds-filter {
       min-height: 2rem;
+      min-width: 0;
     }
   }
 
@@ -2039,9 +2041,15 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 @media (forced-colors: active) {
-  /* System colours: the fade is the canvas colour, as opaque at the row as the scrim is. */
+  /* System colours: forced colours drop gradient backgrounds (and the WebGL canvas behind stays as it was drawn), so the row's backdrop is a
+     SOLID canvas-colour band, exactly the row (the header's 56 px; the row's own box is 44 px of it): the icons and the words stay readable. */
   .nav-fade {
-    background: linear-gradient(to bottom, Canvas 0%, Canvas 30%, transparent 100%);
+    top: -0.375rem;
+    height: var(--navbar-height);
+    background: Canvas;
+    background-image: none;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }
 
@@ -2148,6 +2156,14 @@ h1[tabindex="-1"]:focus-visible {
     --border-strong: rgb(0 0 0 / 0.6);
     --signal: #000;
     --signal-text: #000;
+    /* The reading surface rebinds the page tokens from these (`:root:has(main[data-surface="reading"])`, more specific than this
+       block): in the dark scheme they would be night and ivory on paper. Ink on white, whatever the scheme. */
+    --paper: #fff;
+    --paper-foreground: #000;
+    --paper-muted: #404040;
+    --paper-hover: #fff;
+    --paper-signal: #000;
+    --paper-signal-text: #000;
   }
 
   html,
@@ -2163,6 +2179,8 @@ h1[tabindex="-1"]:focus-visible {
     transform: none !important;
     border: 0 !important;
     background: #fff !important;
+    /* The panel's colour transition (`md:transition-[width,background-color]`) must not be caught half way: print is the colours at once. */
+    transition: none !important;
   }
 
   [data-panel] > div {
@@ -2340,7 +2358,18 @@ h1[tabindex="-1"]:focus-visible {
     .landing-hero {
       /* The family name (the longer line, 4.57 em at 390 px, 4.7 on the smallest) fills the width between the gutters. */
       --hero-fit: 4.7;
-      --hero-size: min(calc((100vw - 2 * var(--hero-gutter)) / var(--hero-fit)), 24vh);
+      /* What the stacked block holds besides the name (intro, hint, search, rows, the gaps), at its tallest: the name takes the rest of
+         the height, so the whole block is inside the window whatever its shape (the short tiers below shrink this figure with what they
+         drop). The name is two lines of 0.86 em plus the 0.15 em the block rises by. */
+      --hero-fixed: 26.5rem;
+      --hero-size: max(
+        1.75rem,
+        min(
+          calc((100vw - 2 * var(--hero-gutter)) / var(--hero-fit)),
+          24vh,
+          calc((100dvh - var(--hero-fixed) - var(--hero-clear) - env(safe-area-inset-bottom, 0px) - 1rem) / 1.9)
+        )
+      );
     }
 
     body:has([data-dev-content-badge]) .landing-hero {
@@ -2618,6 +2647,115 @@ h1[tabindex="-1"]:focus-visible {
     }
   }
 
+  /*
+   * Stacked and short (a phone upright with its browser bars, a window at 200 % zoom): the block must be inside the window, so it gives
+   * up what the globe needs less than the room. Each tier lowers `--hero-fixed` by what it drops, so the name takes what is left.
+   *   up to 40 rem tall   the how-to line goes (the list and the search say the same)
+   *   up to 36 rem tall   the four rows in two columns (still 44 px targets)
+   */
+  @media (max-width: 47.99rem) and (max-height: 40rem) {
+    .landing-hero {
+      --hero-fixed: 24.5rem;
+    }
+
+    .hero-hint {
+      display: none;
+    }
+  }
+
+  @media (max-width: 47.99rem) and (max-height: 36rem) {
+    .landing-hero {
+      --hero-fixed: 17rem;
+    }
+
+    .hero-list ul {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 1rem;
+    }
+
+    /* The search line's hairline is the rule above both of the first two. */
+    .hero-list li:nth-child(2) {
+      border-top: 0;
+    }
+
+    .hero-row {
+      font-size: 1.25rem;
+      padding-block: 0.4375rem;
+    }
+
+    .hero-search {
+      padding-block: 0.5rem;
+    }
+  }
+
+  /* A very short window, narrow (a phone in a split view, a browser at 300 % zoom): who the owner is is all of the introduction. */
+  @media (max-width: 29.99rem) and (max-height: 28rem) {
+    .landing-hero {
+      --hero-fixed: 13.5rem;
+    }
+
+    .hero-intro-more {
+      display: none;
+    }
+
+    .hero-name {
+      margin-block-end: 1rem;
+    }
+  }
+
+  /* A phone on its side (480 to 768 px wide, 34 rem tall at most): the wide layout in small, the name across the bottom on one line,
+     the introduction and the search left of the rows. When the room is that small (22 rem tall, or 28 rem and under 40 rem wide) only who
+     the owner is stays of the introduction. */
+  @media (min-width: 30rem) and (max-width: 47.99rem) and (max-height: 34rem) {
+    .landing-hero {
+      --hero-fit: 6.6;
+      --hero-size: min(calc(100vw * var(--hero-span) / var(--hero-fit)), 26vh, 30rem);
+    }
+
+    .hero-block {
+      grid-template-columns: minmax(0, 1fr) minmax(14.5rem, 16rem);
+      grid-template-areas:
+        "lead list"
+        "name name";
+      column-gap: 1.5rem;
+      row-gap: 0.75rem;
+    }
+
+    .hero-name {
+      line-height: 0.78;
+      margin-block-end: 0;
+    }
+
+    .hero-given,
+    .hero-family {
+      display: inline;
+    }
+
+    .hero-lead {
+      gap: 0.5rem;
+    }
+
+    .hero-intro {
+      font-size: 1.125rem;
+    }
+
+    /* Beside the search line, not under it: the list has its own first rule. */
+    .hero-list li:first-child {
+      border-top: var(--hairline) solid var(--border);
+    }
+
+    .hero-list li:nth-child(2) {
+      border-top: var(--hairline) solid var(--border);
+    }
+  }
+
+  @media (min-width: 30rem) and (max-width: 47.99rem) and (max-height: 22rem), (min-width: 30rem) and (max-width: 39.99rem) and (max-height: 28rem) {
+    .hero-intro-more {
+      display: none;
+    }
+  }
+
   /* The small line that stays when the hero steps back: the board's bottom-left corner (40 px, 32 px), the hint beside it. */
   .hero-mini {
     --hero-mini-bottom: 2rem;
@@ -2744,9 +2882,24 @@ h1[tabindex="-1"]:focus-visible {
     }
   }
 
+  /* The plate is a solid canvas-colour block (no gradient, no mask: forced colours drop them): the hero's text is always on Canvas. */
   @media (forced-colors: active) {
     .landing-hero::before {
       background: Canvas;
+      background-image: none;
+      -webkit-mask-image: none;
+      mask-image: none;
     }
+  }
+}
+
+/*
+ * Without scripts (`scripting: none`): what only works with them is not drawn, so nothing on the page is a dead control. The hero's
+ * search line and the header's search triggers open the palette (a script), the globe's how-to line points at the globe (a script).
+ * The lists, the entries and the links all work as plain pages. Mark such an element with `data-needs-script`.
+ */
+@media (scripting: none) {
+  [data-needs-script] {
+    display: none !important;
   }
 }

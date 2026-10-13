@@ -17,7 +17,7 @@ interactive) or full screen (`?view=full`, same component, same URL scheme, SSR,
 cards; the four list pages use the card grid and an intentional empty state; the body renderer covers every block type of the contract.
 Details: [web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme), [design-system.md](design-system.md#entry-view-the-panel-and-the-full-screen-view). Check: `apps/web/scripts/entries/check.mjs` on `pnpm dev:demo`.
 Open points: the index code is the position in the kind (shifts when entries are inserted); no tag pages (tags are plain chips); covers
-are shown at full column width (a cap may be wanted once real covers exist); Safari/iOS and real phones were not tried; the
+are shown at full column width, an artwork's picture whole in its own proportions at 80 dvh at most (2026-10-13); Safari/iOS and real phones were not tried; the
 `open.test.ts` sweeps over the owner's preview data fail in this tree (globe engine, not touched by this work).
 
 ## Production readiness (branch `feat/entry-polish`)
@@ -48,6 +48,11 @@ share image or JSON-LD `image` (the default image instead, plus `robots: noimage
 `sensitive: true` -> `sensitive: true`, warn when the entry has no image). Check: `apps/web/scripts/entries/sensitive.mjs` on `pnpm dev:demo`.
 Open: the private exporter and its header profile do not carry the key yet (somebody else's work); the image files stay public at their
 `/media/` addresses (the blur is for shoulders, not access control); Safari/iOS and real printing were not tried.
+
+## Release review fixes (branch `fix/release-web`, 2026-10-13)
+
+Done: the landing hero's whole block inside the window from 320 x 480 and 568 x 320 up (height tiers, `docs/landing.md`); print in the dark scheme prints ink on white (the paper tokens are rebound); the hero's idle clock is held while the focus is in the header or a dialog; an artwork's cover keeps its proportions (80 dvh at most; the banner kinds stay 1.91:1); forced colours get a solid Canvas under the header and the hero; the entry title's measure follows the role's size; the palette's Escape no longer closes the panel under it; and the nits: "UX" in the share image's alt, no dead search control without scripts and no line about picking a point on the globe, 44 px "All" filter and "Globe" link, tag separators that never start a line, an honest result count ("Showing 24 of N") and no key legend on touch, "on my side" on the 500 page, the dead `ArchiveEmpty`, `.type-heavy`, `.type-measure`, `.ds-row` removed, the og.svg comment, `--signal-text` on small text in `/dev/design`, and the filter row's 8 px page overflow at 320 px.
+Not done (decided): latin-ext font subsets, the manifest's theme colours, the 1 px border; windows under 320 x 480 (a hero of 320 x 320 overflows by up to 25 px).
 
 ## Where the details are
 

@@ -17,7 +17,7 @@ import { entryMeta, listMeta } from "./entry-meta";
 import { entryJsonLd, websiteJsonLd } from "./json-ld";
 import { pageMeta } from "./meta";
 import { buildSearchIndex } from "./search";
-import { DEFAULT_SHARE_IMAGE, SITE, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_TITLE } from "./site";
+import { DEFAULT_SHARE_IMAGE, ROLE_IN_SENTENCE, SITE, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_TITLE } from "./site";
 import { sitemapUrls, sitemapXml } from "./sitemap";
 
 /**
@@ -61,6 +61,15 @@ describe("the site's identity is one constant", () => {
     expect(SITE_DESCRIPTION).toBe("Front-end and UX software engineer in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.");
     expect(SITE_DESCRIPTION.length).toBeLessThanOrEqual(160);
     for (const value of [SITE, SITE_TAGLINE, SITE_DESCRIPTION, SITE_TITLE, DEFAULT_SHARE_IMAGE]) expect(has(value)).toBe(false);
+  });
+});
+
+describe("the role inside a sentence", () => {
+  it("is the role in lower case where a clause starts with it, and keeps the acronym: the share image's alt says UX, not ux", () => {
+    expect(ROLE_IN_SENTENCE.toLowerCase()).toBe(SITE.role.toLowerCase());
+    expect(ROLE_IN_SENTENCE).toContain("UX");
+    expect(DEFAULT_SHARE_IMAGE.alt).toBe(`${SITE.name}, front-end and UX software engineer in Paris: a wireframe globe with two places joined by a route.`);
+    expect(DEFAULT_SHARE_IMAGE.alt).not.toMatch(/\bux\b/);
   });
 });
 

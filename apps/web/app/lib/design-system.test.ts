@@ -180,6 +180,19 @@ describe("reading surface (paper in the light scheme, night in the dark)", () =>
     expect(css.slice(at, at + 200)).toContain(':root:has(main[data-surface="reading"])');
   });
 
+  it("prints as ink on white whatever the scheme: the print rule rebinds the paper tokens too (the list pages' root rule is more specific than the page tokens)", () => {
+    const at = css.indexOf("@media print {");
+    expect(at).toBeGreaterThan(css.indexOf('[data-panel]:has([data-surface="reading"])'));
+    const printRoot = declarations(ruleBody(css, css.indexOf(":root {", at)));
+    expect(printRoot.get("--paper")).toBe("#fff");
+    expect(printRoot.get("--paper-foreground")).toBe("#000");
+    expect(printRoot.get("--paper-hover")).toBe("#fff");
+    const white = parseColor("#fff")!;
+    for (const name of ["--paper-foreground", "--paper-muted", "--paper-signal", "--paper-signal-text"]) {
+      expect(contrastRatio(parseColor(printRoot.get(name)!)!, white), name).toBeGreaterThanOrEqual(7);
+    }
+  });
+
   describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
     const paper = color(scheme, "--paper");
     const ink = color(scheme, "--paper-foreground");
@@ -205,6 +218,28 @@ describe("reading surface (paper in the light scheme, night in the dark)", () =>
       expect(contrastRatio(hairline, paper)).toBeLessThan(2);
       expect(contrastRatio(over([ink[0], ink[1], ink[2], 0.55], paper), paper)).toBeGreaterThanOrEqual(2.8);
     });
+  });
+});
+
+describe("small-screen details", () => {
+  it("the dot between tags ends the item before it, so a wrapped line never starts with one", () => {
+    expect(css).toContain(".ds-tags > li:not(:last-child)::after {");
+    expect(css).not.toContain(".ds-tags > li + li::before");
+  });
+
+  it("the filter toggles are 44 px targets on a phone, also the shortest word", () => {
+    const body = ruleBody(css, css.indexOf("  .ds-filter {"));
+    expect(body).toContain("min-height: 2.75rem;");
+    expect(body).toContain("min-width: 2.75rem;");
+    expect(body).toContain("padding-inline: 0.5rem;");
+  });
+
+  it("the headline's measure follows the role's size, not the size a long title is scaled to", () => {
+    expect(ruleBody(css, css.indexOf("  .entry-title {"))).toContain("max-width: calc(8.95 * var(--entry-title));");
+  });
+
+  it("carries no class nothing uses (checked against the sources when this was removed)", () => {
+    for (const dead of [".type-measure {", ".type-heavy {", ".ds-row,", ".ds-row {"]) expect(css, dead).not.toContain(dead);
   });
 });
 
