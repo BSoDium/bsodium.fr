@@ -5,7 +5,7 @@ import { Icon, KeyHint } from "~/components/ui";
 import { KIND_PATHS, KIND_PLURALS } from "~/lib/entries";
 import type { HeroMachine, HeroSnapshot } from "~/lib/hero-machine";
 import { setHeroResting } from "~/lib/hero-rest";
-import { SITE, SITE_TAGLINE } from "~/lib/site";
+import { SITE, SITE_FOCUS, SITE_IDENTITY } from "~/lib/site";
 
 /** The four shortcuts, in the header's order. Paths and words come from the one table the lists and the navigation use. */
 const SHORTCUTS = (["project", "article", "artwork", "poem"] as const).map((kind) => ({ to: KIND_PATHS[kind], label: KIND_PLURALS[kind] }));
@@ -13,8 +13,10 @@ const SHORTCUTS = (["project", "article", "artwork", "poem"] as const).map((kind
 /** What the server (and the hydration pass) renders: the full hero. Stable object: a valid server snapshot. */
 const SERVER_SNAPSHOT: HeroSnapshot = { state: "rest", world: true };
 
-/** Under who the owner is (`SITE_TAGLINE`): how to use the page. With no published place it must not send the visitor to a globe with nothing on it. */
-const HINT_GLOBE = "Pick a point on the globe, or start from a list.";
+/** Under who the owner is (`SITE_IDENTITY`): how to use the page. With no published place it must not send the visitor to a globe with nothing on it. */
+const HINT_GLOBE_LEAD = "Pick a point on the globe, or start";
+const HINT_LIST_LEAD = "Start";
+const HINT_LIST_TAIL = " from a list.";
 const HINT_NO_PLACE = "No place is published yet: start from a list.";
 
 /** The family name with its hyphen set apart: at the hero's tight tracking the hyphen would fuse with the letters around it. */
@@ -79,14 +81,29 @@ export function LandingHero({ machine, away, empty }: LandingHeroProps) {
           </span>
         </Name>
         <div className="hero-lead">
-          <p className="hero-intro">{SITE_TAGLINE}</p>
-          <p className="hero-hint">{empty ? HINT_NO_PLACE : HINT_GLOBE}</p>
+          <p className="hero-intro">
+            {SITE_IDENTITY}
+            <span className="hero-intro-more">{` ${SITE_FOCUS}`}</span>
+          </p>
+          <p className="hero-hint">
+            {empty ? (
+              HINT_NO_PLACE
+            ) : (
+              <>
+                {/* The globe is a script: without scripts (`data-needs-script`, app.css) the line only sends the visitor to the lists. */}
+                <span data-needs-script="">{HINT_GLOBE_LEAD}</span>
+                <noscript>{HINT_LIST_LEAD}</noscript>
+                {HINT_LIST_TAIL}
+              </>
+            )}
+          </p>
           <button
             type="button"
             onClick={openSearch}
             aria-haspopup="dialog"
             aria-keyshortcuts="Control+K Meta+K"
             data-slot="hero-search"
+            data-needs-script=""
             className="hero-search"
           >
             <Icon name="search" size="control" />

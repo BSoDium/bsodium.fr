@@ -28,6 +28,11 @@ Where the project stands and what is left. Details live in the linked docs; this
 
 The header's first item is "Globe" (the owner's name is the hero's headline). Off the home page the header is unchanged; on the home page it is absent while the hero is at rest and comes back whenever the hero has stepped back (after a gesture, zoomed in).
 
+## Release review fixes (branch `fix/release-web`, 2026-10-13)
+
+Done: the landing hero's whole block inside the window from 320 x 480 and 568 x 320 up (height tiers, `docs/landing.md`); print in the dark scheme prints ink on white (the paper tokens are rebound); the hero's idle clock is held while the focus is in the header or a dialog; an artwork's cover keeps its proportions (80 dvh at most; the banner kinds stay 1.91:1); forced colours get a solid Canvas under the header and the hero; the entry title's measure follows the role's size; the palette's Escape no longer closes the panel under it; and the nits: "UX" in the share image's alt, no dead search control without scripts and no line about picking a point on the globe, 44 px "All" filter and "Globe" link, tag separators that never start a line, an honest result count ("Showing 24 of N") and no key legend on touch, "on my side" on the 500 page, the dead `ArchiveEmpty`, `.type-heavy`, `.type-measure`, `.ds-row` removed, the og.svg comment, `--signal-text` on small text in `/dev/design`, and the filter row's 8 px page overflow at 320 px.
+Not done (decided): latin-ext font subsets, the manifest's theme colours, the 1 px border; windows under 320 x 480 (a hero of 320 x 320 overflows by up to 25 px).
+
 ## Where the details are
 
 | Topic | Doc |

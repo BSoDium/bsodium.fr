@@ -75,6 +75,15 @@ describe("Navbar", () => {
     expect(html.slice(compact, html.indexOf("</button>", compact))).toContain("@md:hidden");
   });
 
+  it("marks the search triggers as needing a script (not drawn without one: a dead control), keeps the links, and gives every item a 44 px target", async () => {
+    const html = await render("/articles", { shell: false });
+    expect(html.match(/data-needs-script=""/g)).toHaveLength(2);
+    expect(html).toMatch(/data-slot="search-trigger-compact"[^>]*data-needs-script=""/);
+    expect(html).toMatch(/data-slot="search-trigger"[^>]*data-needs-script=""/);
+    // the shortest word ("Globe") is as wide as it is tall at the smallest phone
+    expect(html.match(/class="nav-link[^"]*min-h-11 min-w-11[^"]*"/g)?.length).toBeGreaterThanOrEqual(5);
+  });
+
   it("marks the current page with aria-current on the name (when it is shown) or the section", async () => {
     expect(await render("/", { heroResting: false })).toMatch(/<a [^>]*aria-current="page"[^>]*href="\/"|<a [^>]*href="\/"[^>]*aria-current="page"/);
     const articles = await render("/articles", { shell: false });
@@ -139,5 +148,7 @@ describe(".nav-fade (app.css)", () => {
   it("has its own states for reduced transparency and forced colours", () => {
     expect(css).toMatch(/prefers-reduced-transparency: reduce\)[\s\S]*\.nav-fade \{/);
     expect(css).toMatch(/forced-colors: active\)[\s\S]*\.nav-fade \{[^}]*Canvas/);
+    // a solid band (forced colours drop gradients and the mask would hide it), as tall as the row
+    expect(css).toMatch(/forced-colors: active\)\s*\{[^@]*\.nav-fade \{[^}]*height: var\(--navbar-height\);[^}]*background: Canvas;[^}]*background-image: none;[^}]*mask-image: none;/);
   });
 });

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Frame, Icon, KeyHint, KindTag } from "~/components/ui";
-import { groupResults, searchItems, SEARCH_LABELS, type SearchItem } from "~/lib/search";
+import { groupResults, rankItems, resultsStatus, SEARCH_LABELS, type SearchItem } from "~/lib/search";
 import { cn } from "~/lib/utils";
+
+/** The palette lists this many at most; its count still says how many matched (`resultsStatus`). */
+const MAX_RESULTS = 24;
 
 type Load = { state: "idle" } | { state: "loading" } | { state: "error" } | { state: "ready"; items: SearchItem[] };
 
@@ -41,6 +44,7 @@ export function SearchTriggers() {
         aria-keyshortcuts="Control+K Meta+K"
         aria-haspopup="dialog"
         data-slot="search-trigger-compact"
+        data-needs-script=""
         className="nav-link pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center text-muted-foreground @md:hidden"
       >
         Search
@@ -52,6 +56,7 @@ export function SearchTriggers() {
         aria-keyshortcuts="Control+K Meta+K"
         aria-haspopup="dialog"
         data-slot="search-trigger"
+        data-needs-script=""
         className="pointer-events-auto hidden min-h-11 min-w-11 items-center justify-center gap-2.5 px-2 text-muted-foreground transition-colors duration-(--duration-fast) hover:text-foreground @md:inline-flex"
       >
         <Icon name="search" size="control" />
@@ -122,7 +127,8 @@ export function SearchPalette() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const results = useMemo(() => (load.state === "ready" ? searchItems(load.items, query, 24) : []), [load, query]);
+  const matches = useMemo(() => (load.state === "ready" ? rankItems(load.items, query) : []), [load, query]);
+  const results = useMemo(() => matches.slice(0, MAX_RESULTS), [matches]);
   const { groups, flat } = useMemo(() => groupResults(results), [results]);
   const current = flat[Math.min(active, flat.length - 1)];
 
@@ -164,9 +170,7 @@ export function SearchPalette() {
         ? "The search could not be loaded"
         : !hasQuery
           ? ""
-          : results.length === 0
-            ? "No results"
-            : `${results.length} ${results.length === 1 ? "result" : "results"}`;
+          : resultsStatus(results.length, matches.length);
 
   return (
     <>
@@ -260,7 +264,9 @@ export function SearchPalette() {
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-2 text-sm text-muted-foreground">
               <span>
-                <span aria-hidden="true" className="flex items-center gap-4">
+                {/* The keys are for a keyboard: a touch screen (a coarse pointer) has none of them, and the close icon is its way out. The
+                    screen-reader line below stays (a keyboard can be attached to anything). */}
+                <span aria-hidden="true" className="flex items-center gap-4 [@media(pointer:coarse)]:hidden">
                   <span className="inline-flex items-center gap-1.5">
                     <span className="inline-flex">
                       <Icon name="arrow-up" size="inline" />

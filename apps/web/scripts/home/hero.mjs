@@ -1,13 +1,14 @@
 // The landing hero in a browser (docs/landing.md): at rest over the globe with real text (the owner's name on one line at desktop width,
 // stacked on a phone), the globe still draggable beneath it, the collapse on the first gesture, the way back after the idle delay (and
 // only at the world view), NO header at all while the hero's rows are the sections and its search line is the search (the header comes
-// back, with an unboxed key hint, when the rows are hidden), the icons at their scale, reduced motion, the credits line never covered, the four viewports, the keyboard path and
-// the search palette, no console error and no hydration warning.
+// back, with an unboxed key hint, when the rows are hidden), the icons at their scale, reduced motion, the credits line never covered, the whole block
+// inside the window at fifteen shapes from 320 x 480 and 568 x 320 up (light and dark), the keyboard path and the search palette, the focus held in
+// the header or the palette so the way back never takes it away, the page without scripts, no console error and no hydration warning.
 // Works against `pnpm dev` (the owner's preview data) and `pnpm dev:demo`; it asserts nothing about which places there are.
 //
 //   CHROME_PATH=/path/to/chrome BASE_URL=http://localhost:5451 OUT_DIR=/tmp/hero node scripts/home/hero.mjs
 //
-// Exit code 1 on any failed assertion. Screenshots (rest and collapsed, both schemes, the four viewports) go to OUT_DIR.
+// Exit code 1 on any failed assertion. Screenshots (rest and collapsed, both schemes, every viewport) go to OUT_DIR.
 // The shortened idle (`?hero-idle=MS`) is honoured in debug mode (`?globe-debug`) only; the check of the real 8 s delay runs without it.
 import { mkdirSync } from "node:fs";
 import { BASE_URL, OUT_DIR, DESKTOP, MOBILE, launch } from "../globe/_lib.mjs";
@@ -21,12 +22,36 @@ const ok = (cond, message) => {
 
 const browser = await launch();
 const LANDSCAPE = { ...MOBILE, viewport: { width: 844, height: 390 } };
-const VIEWPORTS = [
-  ["1440x900", DESKTOP],
-  ["1024x700", { viewport: { width: 1024, height: 700 }, deviceScaleFactor: 2 }],
-  ["390x844", MOBILE],
-  ["844x390", LANDSCAPE],
+/**
+ * Every shape the hero must fit (the whole block inside the window: name, introduction, search and the four rows), from the smallest
+ * supported phone up: the upright phones, the same on their side, a 1440 x 900 window at 200 % zoom (720 x 450), a tablet, laptops.
+ * A phone or a short window gets a touch context (`hover: none`: no key hint in the search line).
+ */
+const FIT_SIZES = [
+  [320, 480],
+  [320, 568],
+  [360, 640],
+  [375, 667],
+  [390, 844],
+  [568, 320],
+  [640, 360],
+  [667, 375],
+  [720, 450],
+  [736, 414],
+  [768, 1024],
+  [844, 390],
+  [1024, 768],
+  [1440, 900],
+  [1920, 1080],
 ];
+const VIEWPORTS = FIT_SIZES.map(([width, height]) => {
+  if (width === 1440 && height === 900) return ["1440x900", DESKTOP];
+  if (width === 390 && height === 844) return ["390x844", MOBILE];
+  const touch = width < 768 || height < 500;
+  return [`${width}x${height}`, { viewport: { width, height }, deviceScaleFactor: 2, ...(touch ? { isMobile: true, hasTouch: true, userAgent: MOBILE.userAgent } : {}) }];
+});
+/** The name is stacked (the family name under the given name) under 48 rem, except on a phone on its side (480 px and up, 34 rem tall at most). */
+const isStacked = (width, height) => width < 768 && !(width >= 480 && height <= 544);
 const IDLE_QUERY = "?globe-debug&hero-idle=1500";
 const PATHS = ["/projects", "/articles", "/artworks", "/poetry"];
 /** The rows' names: the poems' section is "Poetry". */
@@ -114,7 +139,10 @@ async function layoutChecks(page, label) {
   ok(g.credits !== null, `${label}: the credits line is there`);
   if (g.credits) ok(!g.inks.some((i) => hit(i, g.credits)), `${label}: nothing of the hero covers the credits line`);
   if (g.badge) ok(!g.inks.some((i) => hit(i, g.badge)), `${label}: nothing of the hero covers the dev badge`);
-  ok(g.inks.every((i) => i.l >= -0.5 && i.r <= g.vw + 0.5 && i.b <= g.vh + 0.5), `${label}: everything is inside the viewport`);
+  ok(
+    g.inks.every((i) => i.l >= -0.5 && i.r <= g.vw + 0.5 && i.t >= -0.5 && i.b <= g.vh + 0.5),
+    `${label}: everything is inside the viewport (top ${Math.round(Math.min(...g.inks.map((i) => i.t)))} px, bottom ${Math.round(Math.max(...g.inks.map((i) => i.b)))} of ${g.vh})`,
+  );
   ok(g.header === null === (g.state === "rest"), `${label}: ${g.state === "rest" ? "no header at rest" : "the header is back"}`);
   if (g.header) ok(g.inks.every((i) => i.t >= g.header.b - 0.5), `${label}: nothing is under the header row (${Math.round(Math.min(...g.inks.map((i) => i.t)))} px from the top, header ends at ${Math.round(g.header.b)})`);
   ok(g.overflowX <= 0, `${label}: no horizontal overflow (${g.overflowX})`);
@@ -127,7 +155,10 @@ async function layoutChecks(page, label) {
   const html = await (await fetch(`${BASE_URL}/`)).text();
   ok(/data-slot="landing-hero"[^>]*data-hero="rest"|data-hero="rest"[^>]*data-slot="landing-hero"/.test(html), "SSR: the hero is in the page at rest");
   ok(/<h1[^>]*class="hero-name[^"]*"[^>]*><span class="hero-given">Elliot<\/span> <span class="hero-family type-thin">/.test(html), "SSR: the name is the page's h1, Elliot (heavy) and Négrel-Jerzy (thin)");
-  ok(/Front-end and UX software engineer based in Paris\. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\./.test(html), "SSR: who the owner is is real text");
+  ok(
+    /Front-end and UX software engineer based in Paris\.<span class="hero-intro-more"> Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\.<\/span><\/p>/.test(html),
+    "SSR: who the owner is is real text (the second sentence is its own span: a very short window drops it)",
+  );
   ok(!/catalyst/i.test(html.replace(/CATALYST_[A-Z_]+/g, "")), "SSR: the code name is nowhere in the home page");
   ok(!/<header/.test(html) && !/data-slot="search-trigger/.test(html), "SSR: there is no header at rest on the home page");
   ok((html.match(/<nav aria-label="Primary"/g) ?? []).length === 1 && /<nav aria-label="Primary" class="hero-list">/.test(html), "SSR: the hero's list is the page's one Primary navigation (the places list is the other landmark)");
@@ -279,7 +310,7 @@ async function layoutChecks(page, label) {
   await ctx.close();
 }
 
-// --- 3. The four viewports, both schemes: layout and the credits line --------------------------------------------------------------------
+// --- 3. Every shape (FIT_SIZES), both schemes: the whole block inside the window, the name's shape, the credits line, the first gesture --------------------------------------------------------------------
 for (const [name, options] of VIEWPORTS) {
   for (const scheme of ["dark", "light"]) {
     const { ctx, page, logs } = await newPage(options, { colorScheme: scheme });
@@ -290,12 +321,14 @@ for (const [name, options] of VIEWPORTS) {
     const label = `${name} ${scheme}`;
     await layoutChecks(page, `${label} rest`);
     {
-      // the name: stacked on a phone (given over family, the family name filling the width), one line from 48 rem taking about 72 % of the width
+      // the name: stacked on a phone (given over family, the family name filling the width), one line from 48 rem and on a phone on its side
+      // taking about 72 % of the width
       const n = await page.evaluate(() => {
         const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom }; };
-        return { given: r(".hero-given"), family: r(".hero-family"), vw: innerWidth, gutter: parseFloat(getComputedStyle(document.querySelector(".landing-hero")).paddingLeft) };
+        return { given: r(".hero-given"), family: r(".hero-family"), block: r(".hero-block"), vw: innerWidth, vh: innerHeight, gutter: parseFloat(getComputedStyle(document.querySelector(".landing-hero")).paddingLeft) };
       });
-      const stacked = options.viewport.width < 768;
+      ok(n.block.t >= 0 && n.block.b <= n.vh && n.block.l >= 0 && n.block.r <= n.vw + 0.5, `${label}: the hero block's box is inside the window (top ${Math.round(n.block.t)}, bottom ${Math.round(n.block.b)} of ${n.vh})`);
+      const stacked = isStacked(options.viewport.width, options.viewport.height);
       ok(stacked ? n.family.t > n.given.b - 0.2 * (n.given.b - n.given.t) : Math.abs(n.family.t - n.given.t) < 2, `${label}: the name is ${stacked ? "stacked" : "on one line"}`);
       ok(n.family.r <= n.vw - n.gutter + 0.5 && n.given.l >= 0, `${label}: the name is inside the gutters (right edge ${Math.round(n.family.r)} of ${n.vw})`);
       if (stacked) ok(n.family.r >= n.vw - n.gutter - 0.1 * n.vw, `${label}: the stacked family name fills the width (${Math.round(n.family.r)} of ${n.vw})`);
@@ -307,7 +340,12 @@ for (const [name, options] of VIEWPORTS) {
     if (!(name === "1440x900" && scheme === "dark")) await page.screenshot({ path: `${OUT_DIR}/hero-rest-${name}-${scheme}.png` });
     // the first gesture: a touch tap or a drag on the globe's stage where neither the hero's text nor a place marker is (the upper right:
     // a tap on a marker would open its place, which is a different state)
-    const gx = options.viewport.width * 0.92, gy = options.viewport.height * 0.25;
+    const blockTop = await page.evaluate(() => document.querySelector(".hero-block").getBoundingClientRect().top);
+    const gx = options.viewport.width * 0.92, gy = Math.max(8, Math.min(options.viewport.height * 0.25, blockTop - 8));
+    ok(
+      await page.evaluate(([x, y]) => !document.elementFromPoint(x, y)?.closest(".landing-hero a, .landing-hero button"), [gx, gy]),
+      `${label}: the globe is reachable above the block (no hero control at ${Math.round(gx)}, ${Math.round(gy)})`,
+    );
     if (options.hasTouch) await page.touchscreen.tap(gx, gy);
     else {
       await page.mouse.move(gx, gy);
@@ -490,6 +528,75 @@ for (const width of [320, 360, 390, 430]) {
     await page.keyboard.press("Escape");
   }
   ok(logs.length === 0, `place open: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// --- 8. The focus is never lost to the hero's way back: held while it is in the header or in a dialog ----------------------------------
+{
+  const { ctx, page, logs } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/${IDLE_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(800);
+  const collapse = async () => {
+    await page.mouse.move(700, 300);
+    await page.mouse.wheel(0, 120);
+    await waitState(page, "collapsed", 1500);
+    await sleep(350);
+  };
+  await collapse();
+  // a header link has the focus: the idle delay (1.5 s here) passes twice and the hero stays collapsed, the header and the focus stay
+  await page.locator("header a[href='/projects']").focus();
+  await sleep(3200);
+  ok((await heroState(page)) === "collapsed", "focus hold: with the focus on a header link the hero does not come back after the idle delay");
+  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/projects" && !!document.activeElement.closest("header")), "focus hold: the focus is still on the header link (the header was not unmounted under it)");
+  // leaving the header releases the hold: a whole idle period later, the hero is back
+  await page.evaluate(() => document.activeElement?.blur());
+  await sleep(500);
+  ok((await heroState(page)) === "collapsed", "focus hold: released, the hero still waits a whole idle period (it does not jump back)");
+  await waitState(page, "rest", 4000);
+  ok((await page.locator("header").count()) === 0, "focus hold: after the release the hero comes back at the delay, and the header goes with nothing focused in it");
+
+  // the palette is open (opened from the header's trigger): the same
+  await collapse();
+  await page.locator("[data-slot=search-trigger]").click();
+  await page.waitForSelector("[data-slot=search-palette]", { state: "visible", timeout: 3000 });
+  await sleep(3200);
+  ok((await heroState(page)) === "collapsed" && (await page.locator("header").count()) === 1, "focus hold: with the palette open the hero stays collapsed and the header (its opener) stays");
+  await page.keyboard.press("Escape");
+  await sleep(300);
+  ok(await page.evaluate(() => document.activeElement?.getAttribute("data-slot") === "search-trigger"), "focus hold: Escape closes the palette and gives the focus back to the header's trigger (still there)");
+  ok((await heroState(page)) === "collapsed", "focus hold: and the hero is still collapsed, with the focus on the trigger");
+  await page.evaluate(() => document.activeElement?.blur());
+  await waitState(page, "rest", 4500);
+  ok(true, "focus hold: with the focus gone the hero comes back");
+  ok(logs.length === 0, `focus hold: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// --- 9. Without scripts: the server's page, no dead control, no line about the globe ----------------------------------------------------
+{
+  const ctx = await browser.newContext({ ...DESKTOP, javaScriptEnabled: false });
+  const page = await ctx.newPage();
+  await page.goto(`${BASE_URL}/`);
+  await sleep(500);
+  const state = await page.evaluate(() => {
+    const vis = (e) => !!e && getComputedStyle(e).display !== "none" && e.getClientRects().length > 0;
+    return {
+      hint: document.querySelector(".hero-hint")?.innerText,
+      search: vis(document.querySelector(".hero-search")),
+      rows: [...document.querySelectorAll(".hero-row")].filter(vis).length,
+      text: document.body.innerText,
+    };
+  });
+  ok(state.hint === "Start from a list.", `no scripts: the how-to line only says to start from a list (${JSON.stringify(state.hint)})`);
+  ok(!/Pick a point/.test(state.text), "no scripts: nothing on the page tells the visitor to pick a point on the globe");
+  ok(!state.search, "no scripts: the search line (a script) is not drawn");
+  ok(state.rows === 4, `no scripts: the four lists are links that work (${state.rows})`);
+  await page.screenshot({ path: `${OUT_DIR}/hero-no-script-1440.png` });
+  await page.goto(`${BASE_URL}/articles`);
+  const triggers = await page.evaluate(() => ["search-trigger", "search-trigger-compact"].map((s) => { const e = document.querySelector(`[data-slot=${s}]`); return !!e && getComputedStyle(e).display !== "none"; }));
+  ok(triggers.every((v) => v === false), "no scripts: the header's search triggers are not drawn either");
   await ctx.close();
 }
 

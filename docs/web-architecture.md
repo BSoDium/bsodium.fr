@@ -99,8 +99,9 @@ app/
   with a year heading in thin display numerals (h2, the rows then h3) only when the years hold two entries or more on average (`shouldGroupByYear`):
   a heading over every single row would be a timeline, so a sparse list stays one list, newest first. The loaders do not change (the query is read in the
   component) and `root.tsx` has `shouldRevalidate() => false`, so a filter link or `?view` toggle fetches nothing.
-- **Empty states.** The home page with no published place keeps the globe (sky, rotation) and the landing hero; the hero's hint reads "No
-  place is published yet: start from a list." (docs/landing.md). Nothing else is drawn for it.
+- **The empty home.** With no published place the shell still draws the globe (sky, rotation) and the landing hero (`docs/landing.md`) is the
+  empty home: its how-to line says "No place is published yet: start from a list." and its four rows open the lists. (The earlier `ArchiveEmpty`
+  plate was removed: nothing rendered it.)
 - **The place panel.** The name (h1) and one quiet line: region and country (the country's English name derived from `countryCode`, each word
   once), the coordinates at the precision they are stored with (`48.85° N, 2.35° E`, never padded: `formatPlaceCoordinates`) and the dates. The
   entries follow grouped by kind under their own headings (h2 "Articles" with a count, the cards h3, no kind on a card); a place without entries
@@ -273,7 +274,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   effect is keyed on `routeKey` (the pathname), so toggling the container (a query change) never moves focus: it stays on the toggle.
 - Close (button, Escape, or history): for a place, focus returns to its link in the places list (which reveals the overlay
   when the user is on the keyboard); for an entry, to the page's `main`. Skipped if the user already moved focus elsewhere.
-- Escape closes (document listener while open), in both containers. Close navigates to `/` (history-correct; back reopens).
+- Escape closes (document listener while open), in both containers, unless the key belongs to a dialog: with the search palette (a modal `dialog`) open, its Escape closes the palette and the panel stays (`lib/panel-escape.ts`, tested). Close navigates to `/` (history-correct; back reopens).
 
 ### Entries in the shell: routes, containers, URL scheme
 

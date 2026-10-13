@@ -4,7 +4,7 @@ import { StaticRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 import { loadDemoProjection } from "@catalyst/published";
 import { getEntryDetail } from "~/lib/entries";
-import { EntryView } from "./entry-view";
+import { coverFit, EntryView } from "./entry-view";
 
 const demo = loadDemoProjection();
 const render = (kind: "article" | "poem" | "project" | "artwork", slug: string, layout: "panel" | "full", backTo?: { slug: string; name: string; href: string }) =>
@@ -31,6 +31,24 @@ describe("EntryView", () => {
     const html = render("article", "demo-article", "panel");
     expect(html).toContain('src="/media/demo/cover-night-trains.svg"');
     expect(html).toContain('width="1200"');
+  });
+  it("crops a banner cover to 1.91:1, and keeps an artwork's picture whole: its own proportions, never taller than 80 % of the window", () => {
+    const banner = render("article", "demo-article", "panel");
+    const bannerCover = banner.slice(banner.indexOf('data-slot="entry-cover"'), banner.indexOf('data-slot="entry-body"'));
+    expect(bannerCover).toContain("aspect-[1.91/1]");
+    expect(bannerCover).toContain("object-cover");
+    const portrait = { ...getEntryDetail(demo, "artwork", "demo-artwork")!, cover: { src: "/media/demo/portrait.svg", alt: "A tall work", width: 800, height: 1200 } };
+    const html = renderToStaticMarkup(createElement(StaticRouter, { location: "/" }, createElement(EntryView, { entry: portrait, layout: "panel" })));
+    const cover = html.slice(html.indexOf('data-slot="entry-cover"'), html.indexOf('data-slot="entry-body"'));
+    expect(cover).toContain('width="800"');
+    expect(cover).toContain('height="1200"');
+    expect(cover).toContain("object-contain");
+    expect(cover).toContain("max-h-[80dvh]");
+    expect(cover).toContain("h-auto");
+    expect(cover).not.toContain("aspect-[1.91/1]");
+    expect(cover).not.toContain("object-cover");
+    expect(coverFit("poem")).toBe(coverFit("article"));
+    expect(coverFit("artwork")).not.toBe(coverFit("project"));
   });
   it("draws generative cover art, seeded by the slug, for an artwork without an image (the image is its page), and for nothing else", () => {
     const artwork = { ...getEntryDetail(demo, "artwork", "demo-artwork")!, cover: undefined };

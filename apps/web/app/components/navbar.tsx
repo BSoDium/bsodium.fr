@@ -18,10 +18,10 @@ interface NavbarProps {
 
 /**
  * One row of mono capitals (`.nav-link`, app.css: size, tracking and the gap between items follow the room the row has, because the header
- * is a size container: with the place panel open the row has half of the viewport). 44 px tall targets. The current one is in the
+ * is a size container: with the place panel open the row has half of the viewport). 44 px by 44 px targets, also for the shortest word ("Globe" at 320 px). The current one is in the
  * foreground and underlined, the others muted, and the pointer or the keyboard turns an item to the accent.
  */
-const linkClass = "nav-link pointer-events-auto inline-flex min-h-11 items-center";
+const linkClass = "nav-link pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center";
 
 /**
  * The navigation, centred at the top of the viewport; no logo. Its parts, in reading and focus order: "Globe" (the way home: the globe is
@@ -64,6 +64,7 @@ export function Navbar({ heroResting: forced }: NavbarProps) {
     <>
       {bar && (
         <header
+          data-slot="site-header"
           className={cn(
             "@container pointer-events-none fixed top-0 right-0 left-0 z-40",
             "md:transition-[right] md:duration-(--duration-slow) md:ease-(--ease-standard)",

@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <!-- Default share image (1200x630). Hand-written; `node scripts/brand/build.mjs` renders it to public/og-default.png.
        Language of docs/design-system.md: near-black page, 16 px grid, hairlines, big type at 200 against 800 (Bricolage Grotesque, embedded
-       by build.mjs), one orange accent. The words are the site's identity (app/lib/site.ts, SITE): lib/identity.test.ts keeps them equal. -->
+       by build.mjs), one blue accent (the signal's dark-scheme tone, #0a93ff). The words are the site's identity (app/lib/site.ts, SITE): lib/identity.test.ts keeps them equal. -->
   <defs>
     <pattern id="grid" width="16" height="16" patternUnits="userSpaceOnUse">
       <path d="M16 0H0V16" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>

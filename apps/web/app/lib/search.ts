@@ -84,10 +84,11 @@ function wordScore(word: string, f: Folded): number {
 }
 
 /**
- * The items matching a query, best first (ties: the group order, then the title). Every word of the query must match somewhere; an
- * empty or blank query gives nothing (the palette shows its hint instead). `limit` caps the list.
+ * Every item matching a query, best first (ties: the group order, then the title). Every word of the query must match somewhere; an
+ * empty or blank query gives nothing (the palette shows its hint instead). Not capped: `searchItems` caps it for display, and the
+ * palette reads the whole length for its count.
  */
-export function searchItems(items: readonly SearchItem[], query: string, limit = 20): SearchItem[] {
+export function rankItems(items: readonly SearchItem[], query: string): SearchItem[] {
   const words = foldText(query).split(" ").filter(Boolean);
   if (words.length === 0) return [];
   const scored: { item: SearchItem; score: number; order: number }[] = [];
@@ -106,7 +107,22 @@ export function searchItems(items: readonly SearchItem[], query: string, limit =
     scored.push({ item, score, order });
   });
   scored.sort((a, b) => b.score - a.score || SEARCH_TYPES.indexOf(a.item.type) - SEARCH_TYPES.indexOf(b.item.type) || a.order - b.order);
-  return scored.slice(0, Math.max(0, limit)).map((s) => s.item);
+  return scored.map((s) => s.item);
+}
+
+/** The best `limit` matches of a query (see `rankItems`). */
+export function searchItems(items: readonly SearchItem[], query: string, limit = 20): SearchItem[] {
+  return rankItems(items, query).slice(0, Math.max(0, limit));
+}
+
+/**
+ * What the palette says about its list: the real count, and when the list is capped, how much of it is shown ("Showing 24 of 31"):
+ * a count that stopped at the cap would pass 24 off as everything there is.
+ */
+export function resultsStatus(shown: number, total: number): string {
+  if (total === 0) return "No results";
+  if (shown < total) return `Showing ${shown} of ${total}`;
+  return `${total} ${total === 1 ? "result" : "results"}`;
 }
 
 /** The results grouped for display (group order, best first inside), the flat order kept in `flat` (what the arrow keys walk). */

@@ -292,10 +292,21 @@ function PoemMargin({
 }
 
 /**
- * The lead image: the authored cover, framed at 1.91:1 (the share-image ratio). A generated cover stands in only where the image IS the
- * page (an artwork): in an article, a project or a poem the type is the page and a placeholder would only be decoration. Not lazy: it is
- * the first image under the title. A rule of the ink above it, like every figure. In a sensitive entry it is blurred, with the control
- * that shows the entry's images (the generated art is not a picture of anything: it is never blurred).
+ * How an authored cover fills its column, by kind: an artwork's picture is the work, kept whole in its own proportions (at most 80 % of
+ * the window tall, centred); the others are banners cropped to the share image's 1.91:1.
+ */
+export function coverFit(kind: EntryDetail["kind"]): string {
+  return kind === "artwork" ? "h-auto max-h-[80dvh] object-contain" : "aspect-[1.91/1] object-cover";
+}
+
+/**
+ * The lead image: the authored cover. In an article, a project or a poem it is a banner, framed at 1.91:1 (the share-image ratio) and
+ * cropped to it. In an artwork the picture IS the work and is never cropped: it keeps its own proportions (the `width` and `height` it
+ * is published with), as wide as the column and never taller than 80 % of the window (a portrait work is shown whole, centred). A
+ * generated cover stands in only where the image IS the page (an artwork): in an article, a project or a poem the type is the page and
+ * a placeholder would only be decoration. Not lazy: it is the first image under the title. A rule of the ink above it, like every
+ * figure. In a sensitive entry it is blurred, with the control that shows the entry's images (the generated art is not a picture of
+ * anything: it is never blurred); the blurred frame is the image's own box, so it follows the proportions above.
  */
 function Cover({ entry }: { entry: EntryDetail }) {
   const src = entry.cover ? safeMediaSrc(entry.cover.src) : null;
@@ -305,7 +316,7 @@ function Cover({ entry }: { entry: EntryDetail }) {
       <div className="overflow-hidden">
         {entry.cover && src ? (
           <SensitiveImage>
-            <img src={src} alt={entry.cover.alt} width={entry.cover.width} height={entry.cover.height} decoding="async" className="block aspect-[1.91/1] w-full object-cover" />
+            <img src={src} alt={entry.cover.alt} width={entry.cover.width} height={entry.cover.height} decoding="async" className={cn("mx-auto block w-full", coverFit(entry.kind))} />
           </SensitiveImage>
         ) : (
           <CoverArt seed={entry.slug} kind={entry.kind} cols={96} rows={50} />

@@ -22,8 +22,12 @@ export const SITE = {
   speciality: "Data visualisation, geospatial and cartography interfaces, design systems, computer graphics",
 } as const;
 
+/** Who the owner is, as a sentence: the first half of the line under the name on the home page (all that stays of it in a very short window). */
+export const SITE_IDENTITY = `${SITE.role} based in ${SITE.location}.`;
+/** What the owner works on, as a sentence: the second half. */
+export const SITE_FOCUS = `${SITE.speciality}.`;
 /** The sentence under the name on the home page: the same facts as the description, in the owner's words. */
-export const SITE_TAGLINE = `${SITE.role} based in ${SITE.location}. ${SITE.speciality}.`;
+export const SITE_TAGLINE = `${SITE_IDENTITY} ${SITE_FOCUS}`;
 
 export const SITE_NAME = SITE.name;
 export const SITE_DESCRIPTION = `${SITE.role} in ${SITE.location}. ${SITE.speciality}.`;
@@ -34,13 +38,16 @@ export const SITE_TITLE = `${SITE_NAME} · ${SITE.role}`;
 /** The temporary main domain of the new site; `CATALYST_SITE_URL` overrides it (the owner's move to the final domain is that one variable). */
 export const DEFAULT_SITE_URL = "https://v2.bsodium.fr";
 
+/** The role inside a sentence, as the share image's alt text says it: lower-cased where it starts a clause, but "UX" stays "UX" (never `role.toLowerCase()`). */
+export const ROLE_IN_SENTENCE = "front-end and UX software engineer";
+
 /** The share image of every page that has no entry cover of its own (`public/og-default.png`, drawn by `scripts/brand/build.mjs`). */
 export const DEFAULT_SHARE_IMAGE = {
   path: "/og-default.png",
   width: 1200,
   height: 630,
   type: "image/png",
-  alt: `${SITE.name}, ${SITE.role.toLowerCase()} in ${SITE.location}: a wireframe globe with two places joined by a route.`,
+  alt: `${SITE.name}, ${ROLE_IN_SENTENCE} in ${SITE.location}: a wireframe globe with two places joined by a route.`,
 } as const;
 
 /** The page colours of the two schemes (`--background` in app.css; a test keeps them equal): the browser UI's `theme-color`. */

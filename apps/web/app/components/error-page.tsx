@@ -23,7 +23,7 @@ export function ErrorPage({ error, showDetail = import.meta.env.DEV }: { error: 
         title={serverSide ? "Something went wrong" : "That request was not accepted"}
         description={
           <>
-            {serverSide ? "The page could not be built. This is on our side: try again in a moment, or go back to the globe." : "The address or the request is not one this site can answer. Go back to the globe."}
+            {serverSide ? "The page could not be built, and that is on my side. Try again in a moment, or go back to the globe." : "The address or the request is not one this site can answer. Go back to the globe."}
             {detail && <code className="mt-3 block break-words text-xs">{detail}</code>}
           </>
         }

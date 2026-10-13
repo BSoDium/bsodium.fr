@@ -11,6 +11,10 @@
  *
  * The machine owns one timer at most, armed only by an interaction or by the world view coming back: a page at rest (nobody touching the
  * globe) owns none and a collapsed hero away from the world view owns none. It never polls and never reads the clock.
+ *
+ * The clock is also held while the visitor is working in the header or in a dialog (`hold`, fed by the keyboard focus): the way back
+ * takes the header away (the hero's rows are the sections then), so a hero that came back under a focused header link, or under the open
+ * search palette, would leave the focus on nothing. Releasing the hold starts a whole idle period, like any other input.
  */
 import type { GlobeViewState } from "~/globe";
 
@@ -51,6 +55,8 @@ export interface HeroMachine {
   interact(): void;
   /** Whether the view is the world view with nothing open. Leaving it collapses the hero and stops the clock; coming back restarts it. */
   setWorld(world: boolean): void;
+  /** The visitor's focus is in the header or in a dialog: the hero stays as it is (no way back) until it is released, then the idle period starts anew. */
+  hold(held: boolean): void;
   /** Cancel the timer (the host is going away). The machine stays usable. */
   stop(): void;
 }
@@ -63,6 +69,7 @@ const browserTimers: HeroTimers = {
 export function createHeroMachine({ idleMs = HERO_IDLE_MS, timers = browserTimers }: { idleMs?: number; timers?: HeroTimers } = {}): HeroMachine {
   let snapshot: HeroSnapshot = { state: "rest", world: true };
   let timer: unknown = null;
+  let held = false;
   const listeners = new Set<() => void>();
 
   const set = (next: Partial<HeroSnapshot>) => {
@@ -75,10 +82,10 @@ export function createHeroMachine({ idleMs = HERO_IDLE_MS, timers = browserTimer
     if (timer !== null) timers.clearTimeout(timer);
     timer = null;
   };
-  /** (Re)start the idle clock; it only runs for a collapsed hero at the world view. */
+  /** (Re)start the idle clock; it only runs for a collapsed hero at the world view, and not while the focus is held in the header or a dialog. */
   const arm = () => {
     clear();
-    if (snapshot.state !== "collapsed" || !snapshot.world) return;
+    if (held || snapshot.state !== "collapsed" || !snapshot.world) return;
     timer = timers.setTimeout(() => {
       timer = null;
       if (snapshot.state === "collapsed" && snapshot.world) set({ state: "rest" });
@@ -99,6 +106,11 @@ export function createHeroMachine({ idleMs = HERO_IDLE_MS, timers = browserTimer
       if (world === snapshot.world) return;
       // Leaving the world view (zooming in, a place opening) is leaving the landing: the hero does not wait for a gesture to step back.
       set(world ? { world } : { world, state: "collapsed" });
+      arm();
+    },
+    hold(next) {
+      if (next === held) return;
+      held = next;
       arm();
     },
     stop: clear,

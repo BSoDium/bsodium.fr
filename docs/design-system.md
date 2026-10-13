@@ -57,7 +57,7 @@ The direction (2026-10-12): the pixel globe is the only illustrative element; ev
 | `meta` (`.type-meta`) | JetBrains Mono 500, 12 px, uppercase, 0.1em | page metadata: a date, a place, a count, a reading time. Never the map's text |
 | interface (existing) | system sans and mono as in the table below | buttons, filters, tags, controls, code blocks, the map and its credits |
 
-The accent as text: `--signal` (large display text and marks) or `--signal-text` (under 24 px); see `design-tokens.md`, "Accent". Colour is never part of a role, and a role never sets a width: the reading column is `.type-measure`.
+The accent as text: `--signal` (large display text and marks) or `--signal-text` (under 24 px); see `design-tokens.md`, "Accent". Colour is never part of a role, and a role never sets a width: the reading column is `--measure-reading`.
 
 What is still the system sans until a component takes a role (the previous table, kept as the interface's scale):
 
@@ -146,7 +146,7 @@ Same content, two layouts; `layout` only changes the grid (CSS), never the data,
   summary                                                          // standfirst: Newsreader italic 300
   2026.03.14   Ljubljana ↗ open on the globe              Copy link // dateline (mono), under an ink rule
   Marginalia: Where, Written, Linked, the authored facts, tags, "Open host", Contents
-  Lead image (authored; a generated cover only for an artwork)
+  Lead image (authored; a generated cover only for an artwork). An article, project or poem cover is a 1.91:1 banner, cropped; an artwork's picture is shown whole in its own proportions (`width` and `height` as published), as wide as the column, at most 80 dvh tall, centred
   Text: BlockRenderer (drop cap, headings, pull quotes, lists, verse, code, link cards)
   Figures (article, project): the images set apart from the text, numbered "Fig. N"
   Related (three EntryCards)    Previous / Next of the kind
@@ -231,8 +231,8 @@ the cards h3). A place without entries shows nothing for them (no section, no em
 - **Empty states.** The home page with no published place keeps the globe, and the hero's hint reads "No place is published yet: start from a list." (no plate, no
   count); a list with no entries is one muted line ("Nothing here yet."); a place with none shows no entries section.
 - **Search.** A modal dialog on the surface Frame: a combobox input with the search icon and a plain close icon (no box), group headings in mono, rows of kind
-  icon (control size, one size for every kind) + title (display face, 700) + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of one quiet line of key hints in plain muted text, with no box (icons for the arrows and Enter, the word "Esc" for the key, each followed by its verb: "Esc close") and the result count. The trigger is a 44 px button with the search icon and, from `xl` of header width, the `KeyHint` (command icon + K, or Ctrl K).
-- **Print.** Ink on white, no globe, navigation, controls, contents, related cards or neighbours; external link addresses are written out.
+  icon (control size, one size for every kind) + title (display face, 700) + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of one quiet line of key hints in plain muted text, with no box (icons for the arrows and Enter, the word "Esc" for the key, each followed by its verb: "Esc close"; not drawn on a coarse pointer, a touch screen has no such keys, and the screen-reader sentence stays) and the result count ("7 results"; when the list is capped at 24, "Showing 24 of 35": the count is the real one). Escape closes the palette only: an open panel under it stays (`lib/panel-escape.ts`: the panel's own Escape ignores a key that belongs to a dialog). The trigger is a 44 px button with the search icon and, from `xl` of header width, the `KeyHint` (command icon + K, or Ctrl K).
+- **Print.** Ink on white, no globe, navigation, controls, contents, related cards or neighbours; external link addresses are written out. The print rule rebinds the page tokens AND the `--paper*` ones to ink on white: the lists' root rule (`:root:has(main[data-surface="reading"])`) is more specific than the page tokens and would otherwise print the dark scheme's night and ivory (`design-system.test.ts`; `entries/check.mjs` emulates print and dark on a list and an entry).
 
 ## Icons
 
@@ -298,7 +298,9 @@ as the row (design-tokens.md, "Nav fade"). Details and measurements: [web-archit
 
 - Contrast: all text AA (4.5:1) in both schemes on the page, the surface and, for muted text, the hover grey; body text 7:1 or more; control outlines 2.8:1 or more; the hairlines are deliberately quiet (decorative). `--subtle-foreground` only on the page and the surface. Enforced by `design-system.test.ts`.
 - Hue never carries meaning: kind = glyph + word, status = the word, error = the word and an inverted tag, selected = inverted fill and `aria-pressed` (a ghost toggle: the hover grey and its swapped glyph).
-- Touch targets 44 px below `md` (`--control-h`, link tags' and heading anchors' `::before`, filter links and place rows `min-h-11`).
+- Touch targets 44 px below `md` (`--control-h`, link tags' and heading anchors' `::before`, filter links (44 x 44 at least, also "All") and place rows `min-h-11`; the header's items are 44 x 44 at least, also "Globe" at 320 px).
+- Forced colours: the header's fade and the hero's plate are solid `Canvas` (forced colours drop gradients and masks, and the WebGL canvas stays as drawn).
+- Without scripts (`@media (scripting: none)`): what only works with a script (`data-needs-script`: the search lines and triggers) is not drawn, and the how-to line stops pointing at the globe.
 - Keyboard: DOM order is reading order (header controls, title, sections, footer); one tab stop per card; toggles are real buttons with `aria-pressed`; Escape behaviour stays the panel's.
 - Focus is always visible (global ring); no component removes the outline except the card link, whose card shows the focus instead (`:has(:focus-visible)` ring around the card).
 - No text in images: covers are generated art with no glyphs and are `aria-hidden`; authored images need `alt`.

@@ -103,7 +103,7 @@ function TagFilter({ tags, selected, search, label }: { tags: TagCount[]; select
   );
   return (
     <nav aria-label={label} data-slot="tag-filter" className="mt-9 border-t border-foreground pt-3">
-      <ul className="ds-filter-row flex list-none gap-4">
+      <ul className="ds-filter-row flex list-none gap-0">
         {link(null, "All", selected === null, "all")}
         {visible.map((t) => link(t.tag, t.tag, selected === t.tag, t.tag))}
         {(hidden > 0 || (open && tags.length > TAGS_SHOWN + 2)) && (
