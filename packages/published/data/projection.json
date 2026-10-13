@@ -70,11 +70,11 @@
         },
         {
           "kind": "project",
-          "slug": "catalyst"
+          "slug": "hypergon"
         },
         {
           "kind": "project",
-          "slug": "hypergon"
+          "slug": "portfolio-website"
         }
       ]
     },
@@ -500,50 +500,6 @@
       ],
       "placeSlugs": [
         "paris"
-      ]
-    },
-    {
-      "slug": "catalyst",
-      "title": "Catalyst",
-      "summary": "Catalyst is the code name of this website: a personal archive organised around places, with an interactive pixel-art globe that hands over to a street map.",
-      "date": "2022-09",
-      "tags": [
-        "maps",
-        "typescript",
-        "this-site"
-      ],
-      "meta": [
-        {
-          "label": "Stack",
-          "value": "React Router, TypeScript, Three.js, MapLibre, Hono"
-        },
-        {
-          "label": "Repository",
-          "value": "github.com/BSoDium/Catalyst"
-        }
-      ],
-      "body": [
-        {
-          "type": "paragraph",
-          "text": "Catalyst is the project name of this website. It is a personal archive organised around places: an interactive globe is the main way to discover curated places and the stories, projects, articles and artworks attached to them, and it hands over to a street map when you zoom in."
-        },
-        {
-          "type": "paragraph",
-          "text": "The site is a monorepo with a server-rendered web app, a read-only public API and a published content projection. The content itself lives in a separate private repository and reaches the public one only as a reviewed pull request. The first version, from 2022, was an e-portfolio built with React, React Spring and MUI Joy."
-        },
-        {
-          "type": "link",
-          "title": "Source",
-          "url": "https://github.com/BSoDium/Catalyst"
-        },
-        {
-          "type": "link",
-          "title": "First version of its API",
-          "url": "https://github.com/BSoDium/Catalyst-API"
-        }
-      ],
-      "placeSlugs": [
-        "klagenfurt"
       ]
     },
     {
@@ -1112,6 +1068,50 @@
       ],
       "placeSlugs": [
         "toulouse"
+      ]
+    },
+    {
+      "slug": "portfolio-website",
+      "title": "Catalyst",
+      "summary": "Catalyst is the code name of this website: a personal archive organised around places, with an interactive pixel-art globe that hands over to a street map.",
+      "date": "2022-09",
+      "tags": [
+        "maps",
+        "typescript",
+        "this-site"
+      ],
+      "meta": [
+        {
+          "label": "Stack",
+          "value": "React Router, TypeScript, Three.js, MapLibre, Hono"
+        },
+        {
+          "label": "Repository",
+          "value": "github.com/BSoDium/Catalyst"
+        }
+      ],
+      "body": [
+        {
+          "type": "paragraph",
+          "text": "Catalyst is the project name of this website. It is a personal archive organised around places: an interactive globe is the main way to discover curated places and the stories, projects, articles and artworks attached to them, and it hands over to a street map when you zoom in."
+        },
+        {
+          "type": "paragraph",
+          "text": "The site is a monorepo with a server-rendered web app, a read-only public API and a published content projection. The content itself lives in a separate private repository and reaches the public one only as a reviewed pull request. The first version, from 2022, was an e-portfolio built with React, React Spring and MUI Joy."
+        },
+        {
+          "type": "link",
+          "title": "Source",
+          "url": "https://github.com/BSoDium/Catalyst"
+        },
+        {
+          "type": "link",
+          "title": "First version of its API",
+          "url": "https://github.com/BSoDium/Catalyst-API"
+        }
+      ],
+      "placeSlugs": [
+        "klagenfurt"
       ]
     },
     {
