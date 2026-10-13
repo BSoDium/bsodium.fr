@@ -26,11 +26,11 @@ describe("LandingHero", () => {
     machine.stop();
   });
 
-  it("is the page's h1: the owner's name, the given name at the thin end of the weight axis and the family name at the heavy end", async () => {
+  it("is the page's h1: the owner's name, the given name at the heavy end of the weight axis (800) and the family name at the thin end (200)", async () => {
     const html = await render();
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toMatch(
-      /<h1 class="hero-name type-display-xl"><span class="hero-given type-thin">Elliot<\/span> <span class="hero-family"><span>Négrel<\/span><span><span class="hero-hyphen">-<\/span>Jerzy<\/span><\/span><\/h1>/,
+      /<h1 class="hero-name type-display-xl"><span class="hero-given">Elliot<\/span> <span class="hero-family type-thin"><span>Négrel<\/span><span><span class="hero-hyphen">-<\/span>Jerzy<\/span><\/span><\/h1>/,
     );
     const heading = /<h1[^>]*>(.*?)<\/h1>/.exec(html)?.[1]?.replace(/<[^>]+>/g, "");
     expect(heading).toBe(SITE_NAME);
@@ -101,6 +101,8 @@ describe("LandingHero", () => {
     const html = await render();
     const mini = html.slice(html.indexOf('<p aria-hidden="true" class="hero-mini">'));
     expect(mini).toContain("Drag to explore. Back to start after a moment.");
+    // the same weights as the name: the given name heavy (the line's own 800), the family name at the thin end
+    expect(mini).toMatch(/<span class="hero-mini-name">Elliot <span class="type-thin"><span>Négrel<\/span>/);
     expect(html.match(/<h[1-6][ >]/g)).toHaveLength(1);
   });
 });
@@ -145,6 +147,15 @@ describe("the hero's CSS (app.css, 'Landing hero')", () => {
     expect(rule(".hero-intro")).toContain("font-family: var(--font-reading)");
     expect(rule(".hero-row")).toContain("font-family: var(--font-display)");
     expect(rule(".hero-search")).toContain("font-family: var(--font-meta)");
+  });
+
+  it("sets the name's heavy half on the given name and does not span the width: a share of it (--hero-span), the phone's family name fills it", () => {
+    expect(rule(".hero-name")).not.toContain("type-thin");
+    expect(css).toMatch(/--hero-span: 0\.7[0-5];/);
+    expect(css).toMatch(/--hero-size: min\(calc\(100vw \* var\(--hero-span\) \/ var\(--hero-fit\)\), 33vh, 30rem\);/);
+    // the phone's rule is the gutter-to-gutter fill
+    expect(css).toMatch(/max-width: 47\.99rem\) \{\s*\.landing-hero \{[^}]*--hero-size: min\(calc\(\(100vw - 2 \* var\(--hero-gutter\)\) \/ var\(--hero-fit\)\), 24vh\);/);
+    expect(rule(".hero-mini-name")).toContain("font-weight: var(--weight-heavy)");
   });
 
   it("keeps the header's accent state at the text-safe token (these are under 24 px)", () => {

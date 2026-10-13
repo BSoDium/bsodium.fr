@@ -45,11 +45,11 @@ Each kind has an **icon** from the icon set (article: a page of text; project: a
 
 ### Type
 
-The direction (2026-10-12): the pixel globe is the only illustrative element; everything else is type. A very heavy display weight against a very thin one (the owner's name: "Elliot" 200, "Négrel-Jerzy" 800), a reading serif for long text, mono for metadata, hairline rules, one accent. Three self-hosted families (`design-tokens.md`, "Typography": files, fallbacks, weights, the scale with its numbers) over the unchanged system stacks. Each role is a class in `app.css` (`.type-*`); a component composes them and names no family itself.
+The direction (2026-10-12): the pixel globe is the only illustrative element; everything else is type. A very heavy display weight against a very thin one (the owner's name: "Elliot" 800, "Négrel-Jerzy" 200), a reading serif for long text, mono for metadata, hairline rules, one accent. Three self-hosted families (`design-tokens.md`, "Typography": files, fallbacks, weights, the scale with its numbers) over the unchanged system stacks. Each role is a class in `app.css` (`.type-*`); a component composes them and names no family itself.
 
 | Role | Face | Where |
 | --- | --- | --- |
-| `display-xl` (`.type-display-xl`) | Bricolage Grotesque 800, the given name at 200 (`.type-thin`), tight (0.88 leading, -0.045em), 56 to 158 px | the name on the home page (the hero sets its own size: one line across the width, stacked on a phone) |
+| `display-xl` (`.type-display-xl`) | Bricolage Grotesque 800, the family name at 200 (`.type-thin`; the given name is the heavy half), tight (0.88 leading, -0.045em), 56 to 158 px | the name on the home page (the hero sets its own size: one line taking about 72 % of the width, stacked on a phone) |
 | `display-lg` | Bricolage 800, 36 to 72 px, 0.98 leading | a list's year numerals (`.type-thin`), specimens; an entry's headline is `.entry-title` (Newsreader 700, see "Entry pages") |
 | `display-md` | Bricolage 700, 26 to 36 px | a card's title, a section of a list |
 | `standfirst` | Newsreader italic 300, 24 to 30 px, balanced | the line under a headline |
@@ -120,7 +120,7 @@ All in `app/components/ui/`, importable from `~/components/ui` (barrel) or by fi
 | `EntryCard` | cover (authored image or generated, 16:9, one hairline) + optional kind (`showKind`, mixed lists only) + title + three-line summary + status + date and places as two plain lines + the first three tags as muted text | one link (the title), stretched over the card with `::after`; hover underlines the title, focus-within draws a ring; `orientation="horizontal"` puts the cover beside the text inside an `@container` of 28 rem or more (the place panel), `priority` loads the image at once (the first cards of a list) |
 | `CopyButton` | ghost button that copies a string (or a function of the window) and confirms in place: its word turns to `Copied` (or `Not copied`) for 2 s, a polite status says it; no toast | drawn only once hydrated; clipboard API with an `execCommand` fallback; `glyph`, `label` (the accessible name), `announcement` |
 | `Icon` | one icon of the set by name (5 kinds, close, expand, collapse, arrows, enter, command, copy, link, check, search, hash), from lucide-react | `size` inline (1.1 em), control (1.25 rem, default), large (1.5 rem); decorative (`aria-hidden`); "Icons" below |
-| `KeyHint` | the shortcut's hint in a `kbd`: the command icon (Mac) or "Ctrl", then K, mono 13 px; empty box of its final width until hydrated | `boxed` (hairline key cap: the header trigger) or plain (the hero's search line) |
+| `KeyHint` | the shortcut's hint in a `kbd`: the command icon (Mac) or "Ctrl", then K, mono 13 px, muted, **plain text: no border, background or outline anywhere**; empty space of its final width until hydrated | none: the same in the header and on the hero's search line |
 
 ### Generative cover art
 
@@ -199,9 +199,8 @@ the cards h3). A place without entries shows nothing for them (no section, no em
 - **Empty states.** Home with no place: the globe stays and `ArchiveEmpty` (a small plate under one ink rule, "Nothing on the globe yet" in the display face, one
   line in the reading face and the four lists with their counts in mono) sits bottom left; a list with no entries is one muted line ("Nothing here yet."); a place
   with none shows no entries section.
-- **Search.** A modal dialog on the surface Frame: a combobox input with the search icon, an `Esc` key cap, group headings in mono, rows of kind
-  icon (control size, one size for every kind) + title (display face, 700) + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of key hints
-  (icons for the arrows and Enter) and the result count. The trigger is a 44 px button with the search icon and, from `xl` of header width, the `KeyHint` (command icon + K, or Ctrl K).
+- **Search.** A modal dialog on the surface Frame: a combobox input with the search icon and a plain close icon (no box), group headings in mono, rows of kind
+  icon (control size, one size for every kind) + title (display face, 700) + date or region, the highlighted one on the hover grey with a 2 px signal tick, a footer of one quiet line of key hints in plain muted text, with no box (icons for the arrows and Enter, the word "Esc" for the key, each followed by its verb: "Esc close") and the result count. The trigger is a 44 px button with the search icon and, from `xl` of header width, the `KeyHint` (command icon + K, or Ctrl K).
 - **Print.** Ink on white, no globe, navigation, controls, contents, related cards or neighbours; external link addresses are written out.
 
 ## Icons
@@ -230,8 +229,11 @@ hover and its scheme. An icon is decorative (`aria-hidden`); the control or the 
 `arrow-up-left`, `enter`, `command`, `check`, `copy`, `link`, `hash`, `search`. Shown live in `/dev/design`, section 14.
 
 **The shortcut hint** (`KeyHint`): the command key is the library's `Command` icon (inline size) followed by "K"; elsewhere the word "Ctrl"
-then "K", in mono 13 px, in a hairline key cap in the header and plain on the hero's search line. It is decoration (`aria-keyshortcuts`
-names the shortcut); its box has its final width on the server so that nothing moves when the platform is known.
+then "K", in mono 13 px, as plain muted text everywhere it appears (the header, the hero's search line; the palette's footer writes "Esc" the
+same way). **A key is never drawn as a box** (owner, 2026-10-13: an outlined "Esc" nested in an outlined row looked poorly nested): no border,
+no background, no outline, no padding on `.ds-kbd`; `icon.test.ts` fails on a border or a background on a key hint, and `scripts/home/hero.mjs`
+reads the computed style of the hero's, the header's and the palette's. It is decoration (`aria-keyshortcuts` names the shortcut); its space
+has its final width on the server so that nothing moves when the platform is known.
 
 ## Brand and header
 
@@ -252,9 +254,9 @@ mark to the project's first name); a disc with one squared corner (a leaf shape,
 
 **The header** (`components/navbar.tsx`): one centred row of text and no logo (owner: the icon in the corner went). In order: "Globe"
 (the way home, in mono capitals like the rest: the site's name is the home hero's headline, not the header's), Projects, Articles, Artworks, Poems (muted; the
-current one in the foreground and underlined, `aria-current="page"`), the search trigger. **On the home page, while the landing hero shows
-its four rows, the header is the search trigger alone** (the rows are the sections: docs/landing.md); the sections are back whenever the
-hero has stepped back, and on every other route. Centred over the viewport; while the place
+current one in the foreground and underlined, `aria-current="page"`), the search trigger. **On the home page, while the landing hero is at
+rest, there is no header at all** (its four rows are the sections and its search line is the search: docs/landing.md); the header is back,
+tabs and search, whenever the hero has stepped back, and on every other route. Centred over the viewport; while the place
 or entry panel is open beside the globe it is centred over the map (the left half), so it never meets the panel's Close and expand
 controls, and it glides with the panel. Its width decides what it shows (container query): the name and the four sections always,
 the search trigger from 28 rem, its key hint from 36 rem. 44 px targets. Over content that scrolls (lists, 404, errors) it has the

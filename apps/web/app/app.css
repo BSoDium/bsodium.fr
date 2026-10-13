@@ -938,8 +938,8 @@
     height: var(--icon-large);
   }
 
-  /* The shortcut hint (components/ui/key-hint.tsx): a modifier icon or word, then the key, in mono; the box holds its place before
-     hydration (the platform is only known in the browser). */
+  /* The shortcut hint (components/ui/key-hint.tsx): a modifier icon or word, then the key, in plain mono text (no border, no
+     background); its space is held before hydration (the platform is only known in the browser). */
   .ds-kbd {
     display: inline-flex;
     flex: none;
@@ -953,12 +953,6 @@
     letter-spacing: 0.04em;
     font-variant-numeric: tabular-nums;
     color: inherit;
-  }
-
-  .ds-kbd[data-boxed] {
-    min-height: 1.75rem;
-    padding: 0 0.5rem;
-    border: var(--hairline) solid var(--border-strong);
   }
 
   /* Kind tag: the kind's icon, drawn plain beside its word. */
@@ -2180,19 +2174,20 @@ h1[tabindex="-1"]:focus-visible {
    *   away       a place or an entry is open: nothing of it is shown or exposed.
    * Only opacity and transform change (compositor only); `visibility` follows the fade so hidden links are not tab stops.
    *
-   * Sizes. `--hero-size` is the name's font size. The name is the owner's: "Elliot" at 200 and "Négrel-Jerzy" at 800, -0.055em. On
-   * a wide screen it is one line that fills the width between the gutters (`--hero-fit` em wide at the 200/800 split: the size is the
-   * width over that), never more than a third of the viewport's height (a short window) nor 30 rem. Stacked (under 48 rem) the two
-   * halves are two lines and the longer one, the family name, fills the width. The block rises by the credits line's height (the
+   * Sizes. `--hero-size` is the name's font size. The name is the owner's: "Elliot" at 800 and "Négrel-Jerzy" at 200, -0.055em. On
+   * a wide screen it is one line that takes `--hero-span` of the viewport's width (72 %: deliberately NOT the full width between the
+   * gutters; the size is that share of the width over `--hero-fit`, the name's width in em), never more than a third of the viewport's
+   * height (a short window) nor 30 rem. Stacked (under 48 rem) the two halves are two lines and the longer one, the family name,
+   * fills the width between the gutters. The block rises by the credits line's height (the
    * line is bottom right and sits at 8 to 30 px from the bottom) plus what the "y" hangs below the line box, so no letter is ever over it.
    */
   .landing-hero {
     --hero-gutter: clamp(1rem, 3.9vw, 3.5rem);
-    /* The name's width in em at the 200 / 800 split, with a little slack (6.49 measured from 98 px up: the font's optical size stops
-       narrowing the letters there; scripts/home/hero.mjs checks that it fits); the viewport's width less two gutters over it is the size
-       that fills the row. */
+    /* The name's width in em at the 800 / 200 split (6.6 measured, the given name set at -0.02em; the font's optical size is the same
+       from 98 px up; scripts/home/hero.mjs checks the share it takes) and the share of the viewport's width it takes on a wide screen. */
     --hero-fit: 6.6;
-    --hero-size: min(calc((100vw - 2 * var(--hero-gutter)) / var(--hero-fit)), 33vh, 30rem);
+    --hero-span: 0.72;
+    --hero-size: min(calc(100vw * var(--hero-span) / var(--hero-fit)), 33vh, 30rem);
     /* The credits line's top edge (0.5 rem + its card) and a little air; a phone's dev badge sits higher (below). */
     --hero-clear: 2.25rem;
     --hero-fade: var(--duration-base) var(--ease-standard);
@@ -2208,7 +2203,8 @@ h1[tabindex="-1"]:focus-visible {
   /* Phones: the name stacks, the family name fills the width; the credits line takes the whole bottom edge and the dev-only content badge sits above it. */
   @media (max-width: 47.99rem) {
     .landing-hero {
-      --hero-fit: 5.3;
+      /* The family name (the longer line, 4.57 em at 390 px, 4.7 on the smallest) fills the width between the gutters. */
+      --hero-fit: 4.7;
       --hero-size: min(calc((100vw - 2 * var(--hero-gutter)) / var(--hero-fit)), 24vh);
     }
 
@@ -2301,6 +2297,12 @@ h1[tabindex="-1"]:focus-visible {
     white-space: nowrap;
     text-wrap: nowrap;
     transform-origin: left bottom;
+  }
+
+  /* The given name is the heavy half: at 800 and the name's -0.055em the three l, l, i of "Elliot" touch, so it is set looser (the thin
+     family name keeps the tight tracking: its strokes are light enough). */
+  .hero-given {
+    letter-spacing: -0.02em;
   }
 
   /* A family name with a hyphen never breaks there: it is one word. The hyphen gets air: at 800 and -0.055em it fuses with its neighbours. */
@@ -2446,7 +2448,7 @@ h1[tabindex="-1"]:focus-visible {
      globe is in plain view, and every line saved is room for it). */
   @media (min-width: 48rem) and (max-height: 34rem) {
     .landing-hero {
-      --hero-size: min(calc((100vw - 2 * var(--hero-gutter)) / var(--hero-fit)), 26vh, 30rem);
+      --hero-size: min(calc(100vw * var(--hero-span) / var(--hero-fit)), 26vh, 30rem);
     }
 
     .hero-block {

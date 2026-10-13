@@ -10,7 +10,7 @@
 export const SITE = {
   /** The owner's name: the site's name, the home hero's headline, the title template's suffix. */
   name: "Elliot Négrel-Jerzy",
-  /** The name's two halves: the hero sets the first at the thin end of the weight axis and the second at the heavy end. */
+  /** The name's two halves: the hero sets the first at the heavy end of the weight axis (800) and the second at the thin end (200). */
   givenName: "Elliot",
   familyName: "Négrel-Jerzy",
   /** For tight spots (the home-screen label under an icon, 12 characters or fewer). */

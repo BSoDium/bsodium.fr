@@ -17,7 +17,7 @@ const SERVER_SNAPSHOT: HeroSnapshot = { state: "rest", world: true };
 const HINT_GLOBE = "Pick a point on the globe, or start from a list.";
 const HINT_NO_PLACE = "No place is published yet: start from a list.";
 
-/** The family name with its hyphen set apart: at the display weight and the hero's tight tracking the hyphen would fuse with the letters around it. */
+/** The family name with its hyphen set apart: at the hero's tight tracking the hyphen would fuse with the letters around it. */
 function FamilyName() {
   const parts = SITE.familyName.split("-");
   return (
@@ -41,8 +41,8 @@ interface LandingHeroProps {
 }
 
 /**
- * The landing hero, over the globe on the home page (docs/landing.md). All type: the owner's name (the given name at the thin end of the
- * weight axis, the family name at the heavy end), who they are and what they do in the light reading serif, a search line that opens
+ * The landing hero, over the globe on the home page (docs/landing.md). All type: the owner's name (the given name at the heavy end of the
+ * weight axis, the family name at the thin end), who they are and what they do in the light reading serif, a search line that opens
  * the existing palette, and the four lists as hairline rows (which are the home page's section links: the header leaves its own out
  * while the hero is at rest, `lib/hero-rest.ts`). Its container ignores the pointer, so the globe stays draggable beneath it; only the search line and the rows take
  * it. At rest it is the page; after a gesture on the globe it steps back to one small line (and comes back after a moment at the world
@@ -74,7 +74,7 @@ export function LandingHero({ machine, away, empty }: LandingHeroProps) {
     >
       <div className="hero-block">
         <Name className="hero-name type-display-xl">
-          <span className="hero-given type-thin">{SITE.givenName}</span> <span className="hero-family">
+          <span className="hero-given">{SITE.givenName}</span> <span className="hero-family type-thin">
             <FamilyName />
           </span>
         </Name>
@@ -111,7 +111,10 @@ export function LandingHero({ machine, away, empty }: LandingHeroProps) {
       {/* What stays when the hero has stepped back: the name as one small line and, while the way back is real, the hint. Decoration (the h1 is above). */}
       <p aria-hidden="true" className="hero-mini">
         <span className="hero-mini-name">
-          <span className="type-thin">{SITE.givenName}</span> <FamilyName />
+          {SITE.givenName}{" "}
+          <span className="type-thin">
+            <FamilyName />
+          </span>
         </span>
         <span className="hero-mini-hint">Drag to explore. Back to start after a moment.</span>
       </p>

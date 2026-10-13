@@ -273,9 +273,8 @@ function Icons() {
           ))}
         </ul>
       </Spec>
-      <Spec caption="The shortcut hint (the command key on a Mac, Ctrl elsewhere), boxed and plain">
+      <Spec caption="The shortcut hint (the command key on a Mac, Ctrl elsewhere): plain muted text, never a box">
         <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
-          <KeyHint boxed />
           <KeyHint />
         </div>
       </Spec>

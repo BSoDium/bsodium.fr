@@ -1,7 +1,7 @@
 // The landing hero in a browser (docs/landing.md): at rest over the globe with real text (the owner's name on one line at desktop width,
 // stacked on a phone), the globe still draggable beneath it, the collapse on the first gesture, the way back after the idle delay (and
-// only at the world view), the header carrying no section links while the hero's rows are the sections (and taking them back when the
-// rows are hidden), the icons at their scale, reduced motion, the credits line never covered, the four viewports, the keyboard path and
+// only at the world view), NO header at all while the hero's rows are the sections and its search line is the search (the header comes
+// back, with an unboxed key hint, when the rows are hidden), the icons at their scale, reduced motion, the credits line never covered, the four viewports, the keyboard path and
 // the search palette, no console error and no hydration warning.
 // Works against `pnpm dev` (the owner's preview data) and `pnpm dev:demo`; it asserts nothing about which places there are.
 //
@@ -94,8 +94,9 @@ async function geometry(page) {
       state,
       inks,
       credits: credits && box(credits.getBoundingClientRect()),
-      header: box(el("header").getBoundingClientRect()),
-      nav: box(el("header nav").getBoundingClientRect()),
+      // (at rest on the home page there is no header: the hero's rows are the sections and its search line is the search)
+      header: el("header") ? box(el("header").getBoundingClientRect()) : null,
+      nav: el("header nav") ? box(el("header nav").getBoundingClientRect()) : null,
       badge: badge && box(badge.getBoundingClientRect()),
       vw: innerWidth,
       vh: innerHeight,
@@ -112,9 +113,10 @@ async function layoutChecks(page, label) {
   if (g.credits) ok(!g.inks.some((i) => hit(i, g.credits)), `${label}: nothing of the hero covers the credits line`);
   if (g.badge) ok(!g.inks.some((i) => hit(i, g.badge)), `${label}: nothing of the hero covers the dev badge`);
   ok(g.inks.every((i) => i.l >= -0.5 && i.r <= g.vw + 0.5 && i.b <= g.vh + 0.5), `${label}: everything is inside the viewport`);
-  ok(g.inks.every((i) => i.t >= g.header.b - 0.5), `${label}: nothing is under the header row (${Math.round(Math.min(...g.inks.map((i) => i.t)))} px from the top, header ends at ${Math.round(g.header.b)})`);
+  ok(g.header === null === (g.state === "rest"), `${label}: ${g.state === "rest" ? "no header at rest" : "the header is back"}`);
+  if (g.header) ok(g.inks.every((i) => i.t >= g.header.b - 0.5), `${label}: nothing is under the header row (${Math.round(Math.min(...g.inks.map((i) => i.t)))} px from the top, header ends at ${Math.round(g.header.b)})`);
   ok(g.overflowX <= 0, `${label}: no horizontal overflow (${g.overflowX})`);
-  ok(g.nav.l >= -0.5 && g.nav.r <= g.vw + 0.5, `${label}: the header row fits (${Math.round(g.nav.l)} to ${Math.round(g.nav.r)} of ${g.vw})`);
+  if (g.nav) ok(g.nav.l >= -0.5 && g.nav.r <= g.vw + 0.5, `${label}: the header row fits (${Math.round(g.nav.l)} to ${Math.round(g.nav.r)} of ${g.vw})`);
   return g;
 }
 
@@ -122,12 +124,11 @@ async function layoutChecks(page, label) {
 {
   const html = await (await fetch(`${BASE_URL}/`)).text();
   ok(/data-slot="landing-hero"[^>]*data-hero="rest"|data-hero="rest"[^>]*data-slot="landing-hero"/.test(html), "SSR: the hero is in the page at rest");
-  ok(/<h1[^>]*class="hero-name[^"]*"[^>]*><span class="hero-given type-thin">Elliot<\/span> <span class="hero-family">/.test(html), "SSR: the name is the page's h1, Elliot (thin) and Négrel-Jerzy");
+  ok(/<h1[^>]*class="hero-name[^"]*"[^>]*><span class="hero-given">Elliot<\/span> <span class="hero-family type-thin">/.test(html), "SSR: the name is the page's h1, Elliot (heavy) and Négrel-Jerzy (thin)");
   ok(/Front-end and UX software engineer based in Paris\. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\./.test(html), "SSR: who the owner is is real text");
   ok(!/catalyst/i.test(html.replace(/CATALYST_[A-Z_]+/g, "")), "SSR: the code name is nowhere in the home page");
-  const header = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
-  ok(!/<a /.test(header), "SSR: the header carries no section link while the hero shows its rows");
-  ok(/data-slot="search-trigger"/.test(header) && /<nav aria-label="Primary" class="hero-list">/.test(html), "SSR: the header keeps the search; the hero's list is the primary navigation");
+  ok(!/<header/.test(html) && !/data-slot="search-trigger/.test(html), "SSR: there is no header at rest on the home page");
+  ok((html.match(/<nav aria-label="Primary"/g) ?? []).length === 1 && /<nav aria-label="Primary" class="hero-list">/.test(html), "SSR: the hero's list is the page's one Primary navigation (the places list is the other landmark)");
   const hrefs = [...html.matchAll(/class="hero-row"[^>]*href="([^"]+)"|href="([^"]+)"[^>]*class="hero-row"/g)].map((m) => m[1] ?? m[2]);
   ok(JSON.stringify(hrefs) === JSON.stringify(PATHS), `SSR: the four lists, in order (${hrefs.join(" ")})`);
   ok((html.match(/<h1[ >]/g) ?? []).length === 1, "SSR: exactly one h1");
@@ -147,7 +148,7 @@ async function layoutChecks(page, label) {
   ok(/^Front-end and UX software engineer based in Paris\. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\.$/.test(intro), `desktop: the intro says who the owner is (${intro})`);
   const hintText = await page.locator(".hero-hint").innerText();
   ok(/^(Pick a point on the globe, or start from a list\.|No place is published yet: start from a list\.)$/.test(hintText), `desktop: then how to use the page (${hintText})`);
-  // the name: one line, within the gutters, the given name thin and the family name heavy
+  // the name: one line, a share of the width (not the full width), the given name heavy and the family name thin
   const nm = await page.evaluate(() => {
     const n = document.querySelector(".hero-name");
     const fs = parseFloat(getComputedStyle(n).fontSize);
@@ -157,18 +158,25 @@ async function layoutChecks(page, label) {
     return { fs, given: r(g), family: r(f), gutter, vw: innerWidth, weights: [getComputedStyle(g).fontWeight, getComputedStyle(f).fontWeight], h: n.getBoundingClientRect().height };
   });
   ok(Math.abs(nm.given.t - nm.family.t) < 2 && nm.family.l > nm.given.r, `desktop: the name is on one line (given ${Math.round(nm.given.l)}-${Math.round(nm.given.r)}, family from ${Math.round(nm.family.l)})`);
-  ok(nm.family.r <= nm.vw - nm.gutter + 0.5 && nm.family.r >= nm.vw - nm.gutter - 0.2 * nm.vw, `desktop: it fills the width up to the gutter (ends at ${Math.round(nm.family.r)} of ${nm.vw}, gutter ${Math.round(nm.gutter)})`);
-  ok(nm.weights.join() === "200,800", `desktop: 200 against 800 (${nm.weights.join(" / ")})`);
+  const share = (nm.family.r - nm.given.l) / nm.vw;
+  ok(share >= 0.68 && share <= 0.76, `desktop: the name takes about 72 % of the width, not all of it (${(share * 100).toFixed(1)} %, from ${Math.round(nm.given.l)} to ${Math.round(nm.family.r)} of ${nm.vw})`);
+  ok(nm.family.r <= nm.vw - nm.gutter - 0.15 * nm.vw, `desktop: it ends well short of the right gutter (${Math.round(nm.family.r)} of ${nm.vw})`);
+  ok(nm.weights.join() === "800,200", `desktop: the given name at 800, the family name at 200 (${nm.weights.join(" / ")})`);
   const icons = await page.evaluate(() => {
     const w = (s) => document.querySelector(s)?.getBoundingClientRect().width ?? 0;
-    return { arrow: w(".hero-arrow"), rowFont: parseFloat(getComputedStyle(document.querySelector(".hero-row")).fontSize), search: w(".hero-search svg"), headerSearch: w("[data-slot=search-trigger] svg") };
+    return { arrow: w(".hero-arrow"), rowFont: parseFloat(getComputedStyle(document.querySelector(".hero-row")).fontSize), search: w(".hero-search svg") };
   });
   ok(icons.arrow >= icons.rowFont && icons.arrow <= icons.rowFont * 1.25, `desktop: the row arrows are 1.1 em of the row's text (${icons.arrow.toFixed(1)} px for ${icons.rowFont} px text)`);
-  ok(Math.abs(icons.search - 20) < 0.5 && Math.abs(icons.headerSearch - 20) < 0.5, `desktop: the search icons are the control size, 20 px (hero ${icons.search}, header ${icons.headerSearch})`);
+  ok(Math.abs(icons.search - 20) < 0.5, `desktop: the hero's search icon is the control size, 20 px (${icons.search})`);
+  const plain = await page.evaluate(() => {
+    const cs = getComputedStyle(document.querySelector(".hero-kbd"));
+    return { border: cs.borderTopWidth, bg: cs.backgroundColor, outline: cs.outlineStyle, text: document.querySelector(".hero-kbd").textContent };
+  });
+  ok(plain.border === "0px" && plain.outline === "none" && /rgba\(0, 0, 0, 0\)|transparent/.test(plain.bg), `desktop: the hero's key hint is plain text, no border, background or outline (${JSON.stringify(plain)})`);
   ok((await page.locator(".hero-search > svg").count()) === 1 && (await page.locator(".hero-search [class*=bullet]").count()) === 0, "desktop: the search line starts with the search icon, not a square bullet");
-  // the header: the search alone while the rows are the sections
-  ok((await page.locator("header a").count()) === 0 && (await page.locator("header [data-slot=search-trigger]").count()) === 1, "desktop: the header has no section link at rest, only the search");
-  ok((await page.locator("nav[aria-label=Primary]:visible").count()) === 1 && (await page.locator("header nav").getAttribute("role")) === "none", "desktop: exactly one primary navigation, the hero's list; the header's row is no landmark");
+  // no header at all while the rows are the sections and the search line is the search
+  ok((await page.locator("header").count()) === 0, "desktop: no header element at rest");
+  ok((await page.locator("nav[aria-label=Primary]").count()) === 1 && (await page.locator("nav[aria-label=Primary]").getAttribute("class")) === "hero-list", "desktop: exactly one Primary navigation, the hero's list");
   ok((await page.locator("[data-slot=hero-search]").innerText()).includes("Search places and entries"), "desktop: the search line is labelled");
   ok((await page.locator(".hero-row").evaluateAll((as) => as.map((a) => a.getAttribute("href")))).join() === PATHS.join(), "desktop: the four rows link to the lists");
   const pe = await page.evaluate(() => ({
@@ -207,6 +215,13 @@ async function layoutChecks(page, label) {
   const collapsedLinks = await page.locator("header a").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
   ok(JSON.stringify(collapsedLinks) === JSON.stringify(["/", ...PATHS]), `desktop: collapsed, the header shows Globe and the four sections (${collapsedLinks.join(" ")})`);
   ok((await page.locator("nav[aria-label=Primary]:visible").count()) === 1, "desktop: collapsed, still exactly one primary navigation (the header's)");
+  const hdr = await page.evaluate(() => {
+    const k = document.querySelector("header [data-slot=search-trigger] kbd");
+    const cs = k && getComputedStyle(k);
+    return { icon: document.querySelector("header [data-slot=search-trigger] > svg")?.getBoundingClientRect().width, kbd: k ? { border: cs.borderTopWidth, bg: cs.backgroundColor, text: k.textContent.replace(/\s+/g, " ").trim() } : null };
+  });
+  ok(Math.abs(hdr.icon - 20) < 0.5, `desktop: collapsed, the header's search icon is 20 px (${hdr.icon})`);
+  ok(hdr.kbd && hdr.kbd.border === "0px" && /rgba\(0, 0, 0, 0\)|transparent/.test(hdr.kbd.bg) && /^(Ctrl K|K)$/.test(hdr.kbd.text), `desktop: collapsed, the header's key hint is plain text, unboxed (${JSON.stringify(hdr.kbd)})`);
   ok((await page.locator(".hero-row").first().evaluate((a) => getComputedStyle(a).visibility)) === "hidden", "desktop: the hidden rows are out of the tab order (visibility hidden)");
   ok((await page.locator("h1").count()) === 1 && (await page.locator("h1").evaluate((h) => getComputedStyle(h).visibility)) !== "hidden", "desktop: the h1 stays in the accessibility tree");
   const m = await layoutChecks(page, "desktop collapsed");
@@ -220,7 +235,7 @@ async function layoutChecks(page, label) {
   ok(true, "desktop: back at rest after the idle delay at the world view");
   await sleep(400);
   ok((await opacityOf(page, ".hero-intro")) === 1 && (await opacityOf(page, ".hero-mini")) === 0, "desktop: the text is back and the small line is gone");
-  ok((await page.locator("header a").count()) === 0, "desktop: back at rest, the header gives the sections up again");
+  ok((await page.locator("header").count()) === 0, "desktop: back at rest, the header is gone again");
 
   // zoomed in: it collapses and does not come back; zoomed out again: it does
   await page.mouse.move(720, 300);
@@ -271,7 +286,7 @@ for (const [name, options] of VIEWPORTS) {
     const label = `${name} ${scheme}`;
     await layoutChecks(page, `${label} rest`);
     {
-      // the name: stacked on a phone (given over family, the family name filling the width), one line from 48 rem; never wider than the gutters
+      // the name: stacked on a phone (given over family, the family name filling the width), one line from 48 rem taking about 72 % of the width
       const n = await page.evaluate(() => {
         const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom }; };
         return { given: r(".hero-given"), family: r(".hero-family"), vw: innerWidth, gutter: parseFloat(getComputedStyle(document.querySelector(".landing-hero")).paddingLeft) };
@@ -279,6 +294,11 @@ for (const [name, options] of VIEWPORTS) {
       const stacked = options.viewport.width < 768;
       ok(stacked ? n.family.t > n.given.b - 0.2 * (n.given.b - n.given.t) : Math.abs(n.family.t - n.given.t) < 2, `${label}: the name is ${stacked ? "stacked" : "on one line"}`);
       ok(n.family.r <= n.vw - n.gutter + 0.5 && n.given.l >= 0, `${label}: the name is inside the gutters (right edge ${Math.round(n.family.r)} of ${n.vw})`);
+      if (stacked) ok(n.family.r >= n.vw - n.gutter - 0.1 * n.vw, `${label}: the stacked family name fills the width (${Math.round(n.family.r)} of ${n.vw})`);
+      else {
+        const share = (n.family.r - n.given.l) / n.vw;
+        ok(share >= 0.66 && share <= 0.78, `${label}: the name takes about 72 % of the width (${(share * 100).toFixed(1)} %)`);
+      }
     }
     if (!(name === "1440x900" && scheme === "dark")) await page.screenshot({ path: `${OUT_DIR}/hero-rest-${name}-${scheme}.png` });
     // the first gesture: a touch tap or a drag on the globe's stage where neither the hero's text nor a place marker is (the upper right:
@@ -300,14 +320,30 @@ for (const [name, options] of VIEWPORTS) {
   }
 }
 
-// --- 4. A small phone: the header row still fits, and its one-word search works ----------------------------------------------------------
+// --- 4. A small phone: at rest there is no header; once the hero has stepped back the header row fits and its one-word search works ----
 for (const width of [320, 360, 390, 430]) {
   const { ctx, page, logs } = await newPage({ ...MOBILE, viewport: { width, height: 740 } });
   await page.goto(`${BASE_URL}/`);
   await waitGlobe(page);
+  await sleep(600);
+  const g0 = await geometry(page);
+  ok(g0.header === null, `${width} px: no header at rest`);
+  ok(g0.overflowX <= 0, `${width} px: no horizontal overflow`);
+  ok(g0.inks.every((i) => i.r <= g0.vw - 0.5 && i.l >= 0), `${width} px: the hero (name included) is inside the viewport`);
+  if (width === 390) {
+    await page.locator("[data-slot=hero-search]").tap();
+    await page.waitForSelector("[data-slot=search-palette]", { state: "visible", timeout: 3000 });
+    ok(await page.locator("[data-slot=search-palette] input").evaluate((i) => document.activeElement === i), "390 px: the hero's search line opens the palette with the input focused");
+    await page.keyboard.press("Escape");
+    await sleep(200);
+  }
+  // step the hero back with a tap on the globe's stage, where no text or marker is
+  await page.touchscreen.tap(width * 0.9, 740 * 0.12);
+  await waitState(page, "collapsed", 2000).catch(() => {});
+  await sleep(450);
   const g = await geometry(page);
-  ok(g.nav.l >= 0 && g.nav.r <= g.vw, `${width} px: the header row fits (${Math.round(g.nav.l)} to ${Math.round(g.nav.r)})`);
-  ok(g.overflowX <= 0, `${width} px: no horizontal overflow`);
+  ok(g.header !== null && g.nav.l >= 0 && g.nav.r <= g.vw, `${width} px: collapsed, the header row fits (${g.nav ? `${Math.round(g.nav.l)} to ${Math.round(g.nav.r)}` : "missing"})`);
+  ok(g.overflowX <= 0, `${width} px: collapsed, no horizontal overflow`);
   const compact = page.locator("[data-slot=search-trigger-compact]");
   ok(await compact.isVisible(), `${width} px: the header has a text search button`);
   const box = await compact.boundingBox();
@@ -316,11 +352,6 @@ for (const width of [320, 360, 390, 430]) {
     await compact.tap();
     await page.waitForSelector("[data-slot=search-palette]", { state: "visible", timeout: 3000 });
     ok(await page.locator("[data-slot=search-palette] input").evaluate((i) => document.activeElement === i), "390 px: the header search opens the palette with the input focused");
-    await page.keyboard.press("Escape");
-    // and the one in the hero, as a tap
-    await page.locator("[data-slot=hero-search]").tap();
-    await page.waitForSelector("[data-slot=search-palette]", { state: "visible", timeout: 3000 });
-    ok(true, "390 px: the hero's search line opens the same palette");
     await page.keyboard.press("Escape");
   }
   ok(logs.length === 0, `${width} px: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
@@ -344,7 +375,7 @@ for (const width of [320, 360, 390, 430]) {
   const at = stops.indexOf("button[hero-search]");
   ok(at > 0, `keyboard: Tab reaches the hero's search line (${stops.slice(0, 12).join(" > ")})`);
   ok(JSON.stringify(stops.slice(at + 1, at + 5)) === JSON.stringify(PATHS.map((p) => `a ${p}`)), `keyboard: then the four lists, in order (${stops.slice(at + 1, at + 5).join(", ")})`);
-  ok(stops.indexOf("button[search-trigger]") >= 0 && stops.indexOf("button[search-trigger]") < at, "keyboard: the header's own search comes first, the hero follows (never a trap: focus moves on)");
+  ok(!stops.includes("button[search-trigger]") && !stops.includes("button[search-trigger-compact]"), "keyboard: at rest there is no header search in the order: the hero's search line is the first control after the skip links");
   ok(stops.slice(at + 5).some((s) => s !== "none"), "keyboard: focus moves on past the hero");
 
   await page.evaluate(() => document.activeElement?.blur());
@@ -379,6 +410,15 @@ for (const width of [320, 360, 390, 430]) {
   });
   ok(Math.abs(pal.field - 20) < 0.5, `palette: the field's search icon is 20 px (${pal.field})`);
   ok(pal.kinds.length > 0 && pal.kinds.every((s) => Math.abs(s - 20) < 0.5), `palette: all ${pal.kinds.length} result icons are 20 px, one size`);
+  const boxes = await page.evaluate(() => {
+    const d = document.querySelector("[data-slot=search-palette]");
+    const close = d.querySelector("[aria-label='Close search']");
+    // the dialog's own frame and its two dividing hairlines are the only borders: no control, key or text inside has one
+    const bordered = [...d.querySelectorAll("button, kbd, span, input")].filter((e) => parseFloat(getComputedStyle(e).borderTopWidth) > 0 || parseFloat(getComputedStyle(e).borderBottomWidth) > 0);
+    return { closeIcon: !!close.querySelector("svg"), closeText: close.textContent.trim(), bordered: bordered.map((e) => e.tagName + "." + e.className).slice(0, 4), footer: d.textContent.includes("Esc") };
+  });
+  ok(boxes.closeIcon && boxes.closeText === "" && boxes.bordered.length === 0, `palette: no boxed key or button inside it, the way out is a plain icon (${JSON.stringify(boxes)})`);
+  ok(boxes.footer, "palette: the footer says the key as plain text (Esc close)");
   await page.screenshot({ path: `${OUT_DIR}/palette-1440-dark.png` });
   await page.keyboard.press("Escape");
   await sleep(250);

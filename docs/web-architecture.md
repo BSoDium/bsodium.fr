@@ -202,12 +202,13 @@ Not verified: how Vercel merges the `vercel.json` headers with the ones our serv
   not in the header for now). One row of text, centred at the top of the viewport, in reading and focus order: the site's name
   "Globe" (a plain text link home, accessible name "Globe, Elliot Négrel-Jerzy home"; the site's name is the home hero's headline and the
   title template's suffix, not the row's), Projects, Articles, Artworks, Poems (`aria-current="page"` on the active one, underlined, via
-  `NavLink`), the search trigger. **On the home page, while the landing hero is at rest, the row is the search trigger alone**: the hero's
-  four rows are the sections (docs/landing.md), the row's `nav` element stays (the palette inside it keeps its state) with
-  `role="none"` and no label, and the hero's list is the page's one "Primary" navigation. The hero publishes its state
-  (`lib/hero-rest.ts`, an external store: the header is a sibling of the shell, not a child) and the sections come back whenever the rows
-  are hidden (the hero collapsed after a gesture, a zoomed-in view), so the visitor is never left without a way to the lists. Every other
-  route has the row above, unchanged. The `<header>` is `pointer-events-none`; only the links take the pointer. 44 px targets (links 44 px tall, at least 52 px
+  `NavLink`), the search trigger. **On the home page, while the landing hero is at rest, there is no `<header>` at all**: the hero's
+  four rows are the sections and its search line is the search with its key hint (docs/landing.md), and the hero's list is the page's one
+  "Primary" navigation. `SearchPalette` (the dialog and Cmd/Ctrl-K) is mounted by `Navbar` next to the header, not in it, so the shortcut and
+  an open palette survive the header's absence. The hero publishes its state (`lib/hero-rest.ts`, an external store: the header is a
+  sibling of the shell, not a child) and the header comes back, tabs and search with a plain-text key hint, whenever the rows are hidden (the
+  hero collapsed after a gesture, a zoomed-in view), so the visitor is never left without a way to the lists. Every other route has the row
+  above, unchanged. The `<header>` is `pointer-events-none`; only the links take the pointer. 44 px targets (links 44 px tall, at least 52 px
   wide; the search trigger 44 x 44).
 - **Where the row is centred.** Over the whole viewport (home, lists, 404, the full-screen entry view); **over the map** while the place
   or entry panel is open beside the globe (desktop, `md` and up): the header's right edge goes to 50 % (`md:right-1/2`, decided in
