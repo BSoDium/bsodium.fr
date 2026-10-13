@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parsePublishedProjection, type PublishedProjection } from "@catalyst/schemas";
+import { parsePublishedProjection, type PublishedCareer, type PublishedProjection } from "@catalyst/schemas";
 import demo from "../fixtures/demo.json";
 import published from "../data/projection.json";
 
@@ -82,4 +82,13 @@ export function loadProjection(mode: ContentMode = "published"): PublishedProjec
   if (mode === "demo") return loadDemoProjection();
   if (mode === "preview") return loadPreviewProjection();
   return loadPublishedProjection();
+}
+
+/**
+ * The career document of a content mode, or `undefined` when there is none (the projection carries it only once the owner has
+ * published it; every projection that predates it has none). The web app reads it from the projection it already loads
+ * (`projection.career`); this is the same value for code that has no projection at hand.
+ */
+export function getCareer(mode: ContentMode = "published"): PublishedCareer | undefined {
+  return loadProjection(mode).career;
 }

@@ -48,6 +48,10 @@ The projection carries four collections of **entries**, content that can be link
 
 The API serves the complete projection (bodies included) at `/v1/projection`, **summaries** without bodies at `/v1/projects|articles|artworks|poems`, and one complete entry with its places resolved at `/v1/<kind>/:slug` ([api-contract.md](api-contract.md), "Entries", which also states the size budget: about 3.5 KB per entry with a 3 KB body, so a hundred entries add roughly 355 KB raw, 130 to 160 KB gzipped, to the projection that is bundled into the web app and the API function).
 
+## The career document
+
+One more optional piece of content rides in the projection: `career`, a curriculum vitae as data for the page recruiters read (roles, education, languages, skill groups, links; no email, phone number or street address, by schema). It is a **singleton**, not an entry kind: authored in the private vault as `content/career/index.md`, exported as an additive, optional top-level key (schema version 1 stays), absent while the document is a draft. It is served inside `GET /v1/projection` like everything else, with no new endpoint. Shape, limits and the order in which the contract and the first publication must go out: [api-contract.md](api-contract.md#the-career-document-career); mapping from the vault: [content-entry-model.md](content-entry-model.md), section 7.
+
 ## Deployables
 
 - `apps/web`: React Router framework mode (SSR), Tailwind 4, Motion, shadcn Button, Three.js globe in a lazy client chunk.

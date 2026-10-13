@@ -409,6 +409,163 @@ export const publishedContentItemSchema = z
   // Shared by four collections: the generated JSON Schema declares it once (`$defs`) instead of four times.
   .meta({ id: "PublishedContentItem" });
 
+// --- Career (a singleton document, additive in schema version 1) -----------------------------------------------------------
+
+/**
+ * The career document: a curriculum vitae as data, for the page recruiters read. It is ONE optional top-level object of the
+ * projection (`career`), not an entry kind: there is at most one, and it is absent while the owner has not published it.
+ *
+ * Privacy by construction: there is no field for an email address, a phone number or a street address, and every object is
+ * `.strict()`, so none of them can be served by accident. `location` of a role is a free-text city and country ("Paris, France"),
+ * the place of the work, never where the owner lives. Every text goes through the same plain-text rules as an entry's.
+ */
+
+/** Most roles, education items, languages, skill groups and links; they bound what the document adds to the projection. */
+export const CAREER_LIMITS = {
+  roles: 20,
+  highlights: 8,
+  roleSkills: 15,
+  education: 12,
+  languages: 10,
+  skillGroups: 10,
+  skillItems: 30,
+  links: 8,
+} as const;
+
+/** `YYYY` or `YYYY-MM`, years 1900 to 2099. No day: a career is dated by the month at best. */
+export const careerDateSchema = z.string().regex(/^(?:19|20)\d{2}(?:-(?:0[1-9]|1[0-2]))?$/, "YYYY or YYYY-MM");
+/** A date or `present`: where the role or the programme is still going on. A role may also have no end at all. */
+export const careerEndSchema = z.string().regex(/^(?:(?:19|20)\d{2}(?:-(?:0[1-9]|1[0-2]))?|present)$/, "YYYY, YYYY-MM or present");
+
+/** Months since year 0 of a career date: a year alone is its first month as a start and its last month as an end. */
+function careerMonth(date: string, bound: "start" | "end"): number {
+  const year = Number(date.slice(0, 4));
+  const month = date.length >= 7 ? Number(date.slice(5, 7)) : bound === "start" ? 1 : 12;
+  return year * 12 + month;
+}
+
+/** `end` is never before `start`; a missing end and `present` are always fine. */
+function endsAfterStart(o: { start: string; end?: string | undefined }): boolean {
+  return o.end === undefined || o.end === "present" || careerMonth(o.end, "end") >= careerMonth(o.start, "start");
+}
+const ENDS_AFTER_START = "end must not be before start";
+
+export const careerRoleSchema = z
+  .object({
+    /** Unique within the career; kebab-case, so the page can use it as an anchor. */
+    id: slugSchema,
+    title: line(120),
+    org: line(120),
+    orgUrl: httpsUrlSchema.optional(),
+    /** Free text, the place of the work ("Paris, France"). Never a street address. */
+    location: line(120),
+    /** Optional: a published place of this projection (validated to resolve). */
+    place: slugSchema.optional(),
+    /** Free text ("Permanent", "Contract", "Full-time", "Freelance", "Internship"). */
+    employment: line(40).optional(),
+    start: careerDateSchema,
+    /** Absent = the document says nothing about the end; `present` = ongoing. */
+    end: careerEndSchema.optional(),
+    highlights: z.array(line(300)).max(CAREER_LIMITS.highlights),
+    skills: z
+      .array(line(40))
+      .max(CAREER_LIMITS.roleSkills)
+      .refine((s) => new Set(s.map((x) => x.toLowerCase())).size === s.length, "skills must be unique"),
+  })
+  .strict()
+  .refine(endsAfterStart, ENDS_AFTER_START);
+
+export const careerEducationSchema = z
+  .object({
+    id: slugSchema,
+    institution: line(160),
+    programme: line(160),
+    /** "MEng", "MSc", "CPGE". */
+    level: line(40).optional(),
+    start: careerDateSchema,
+    end: careerEndSchema,
+    location: line(120).optional(),
+    place: slugSchema.optional(),
+    note: line(300).optional(),
+  })
+  .strict()
+  .refine(endsAfterStart, ENDS_AFTER_START);
+
+export const careerLanguageSchema = z
+  .object({
+    name: line(40),
+    /** "C2", "B1", "Native". */
+    level: line(20),
+    /** "Native", "Advanced", "Upper-intermediate". */
+    label: line(40).optional(),
+  })
+  .strict();
+
+export const careerSkillGroupSchema = z
+  .object({
+    group: line(40),
+    items: z
+      .array(line(60))
+      .min(1)
+      .max(CAREER_LIMITS.skillItems)
+      .refine((s) => new Set(s.map((x) => x.toLowerCase())).size === s.length, "skills must be unique within a group"),
+  })
+  .strict();
+
+export const careerLinkSchema = z.object({ label: line(40), url: httpsUrlSchema }).strict();
+
+/**
+ * A dated availability statement ("Open to opportunities", as of 2026-10). It always carries its month, so the page can show how
+ * old it is and it cannot silently go stale. Plain text; no contact detail belongs here (there is no email or phone field).
+ */
+export const careerAvailabilitySchema = z
+  .object({
+    text: line(120),
+    /** `YYYY-MM`: when the owner last confirmed the statement. Authored, never the clock. */
+    asOf: z.string().regex(/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])$/, "YYYY-MM"),
+  })
+  .strict();
+
+const uniqueBy = <T>(items: readonly T[], key: (t: T) => string) => new Set(items.map(key)).size === items.length;
+
+export const publishedCareerSchema = z
+  .object({
+    /** "Career". */
+    title: line(80),
+    /** The profile statement: one paragraph of plain text. */
+    summary: line(1000),
+    /** `YYYY-MM`: when the owner last reviewed the document. Authored, never the clock. */
+    updated: z.string().regex(/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])$/, "YYYY-MM"),
+    /** Optional: a dated "open to work" statement, shown with its date. Absent = the document says nothing. */
+    availability: careerAvailabilitySchema.optional(),
+    /** Most recent first (by `start`), at least one. */
+    roles: z.array(careerRoleSchema).min(1).max(CAREER_LIMITS.roles),
+    education: z.array(careerEducationSchema).max(CAREER_LIMITS.education),
+    languages: z.array(careerLanguageSchema).max(CAREER_LIMITS.languages),
+    skills: z.array(careerSkillGroupSchema).max(CAREER_LIMITS.skillGroups),
+    links: z.array(careerLinkSchema).max(CAREER_LIMITS.links),
+  })
+  .strict()
+  .superRefine((c, ctx) => {
+    const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message });
+    const seen = new Map<string, string>();
+    const claim = (kind: string, id: string, path: (string | number)[]) => {
+      if (seen.has(id)) issue(path, `duplicate id "${id}" (also a ${seen.get(id)})`);
+      else seen.set(id, kind);
+    };
+    c.roles.forEach((r, i) => claim("role", r.id, ["roles", i, "id"]));
+    c.education.forEach((e, i) => claim("education item", e.id, ["education", i, "id"]));
+    // Most recent first: starts never go up from one role to the next.
+    for (let i = 1; i < c.roles.length; i++) {
+      if (careerMonth(c.roles[i]!.start, "start") > careerMonth(c.roles[i - 1]!.start, "start")) {
+        issue(["roles", i, "start"], `roles are most recent first: "${c.roles[i]!.id}" starts after "${c.roles[i - 1]!.id}"`);
+      }
+    }
+    if (!uniqueBy(c.languages, (l) => l.name.toLowerCase())) issue(["languages"], "language names must be unique");
+    if (!uniqueBy(c.skills, (g) => g.group.toLowerCase())) issue(["skills"], "skill group names must be unique");
+    if (!uniqueBy(c.links, (l) => l.url)) issue(["links"], "link addresses must be unique");
+  });
+
 const projectionShape = z
   .object({
     schemaVersion: z.literal(SCHEMA_VERSION),
@@ -421,6 +578,8 @@ const projectionShape = z
     artworks: z.array(publishedContentItemSchema),
     /** Additive in schema version 1: absent means no poems. */
     poems: z.array(publishedContentItemSchema).default([]),
+    /** Additive in schema version 1: absent means the owner has not published a career document. */
+    career: publishedCareerSchema.optional(),
   })
   .strict();
 
@@ -510,6 +669,18 @@ export const publishedProjectionSchema = projectionShape.superRefine((p, ctx) =>
     });
   });
 
+  // The career's optional place references name published places of this projection.
+  p.career?.roles.forEach((role, i) => {
+    if (role.place !== undefined && !placeSlugs.has(role.place)) {
+      ctx.addIssue({ code: "custom", path: ["career", "roles", i, "place"], message: `unknown place "${role.place}"` });
+    }
+  });
+  p.career?.education.forEach((item, i) => {
+    if (item.place !== undefined && !placeSlugs.has(item.place)) {
+      ctx.addIssue({ code: "custom", path: ["career", "education", i, "place"], message: `unknown place "${item.place}"` });
+    }
+  });
+
   const routeIds = new Set<string>();
   p.routes.forEach((route, i) => {
     if (routeIds.has(route.id)) {
@@ -552,6 +723,13 @@ export type PublishedCover = z.infer<typeof publishedCoverSchema>;
 export type PublishedMetaEntry = z.infer<typeof publishedMetaEntrySchema>;
 export type PublishedBodyBlock = z.infer<typeof bodyBlockSchema>;
 export type PublishedBodyBlockType = PublishedBodyBlock["type"];
+export type PublishedCareer = z.infer<typeof publishedCareerSchema>;
+export type PublishedCareerRole = z.infer<typeof careerRoleSchema>;
+export type PublishedCareerEducation = z.infer<typeof careerEducationSchema>;
+export type PublishedCareerLanguage = z.infer<typeof careerLanguageSchema>;
+export type PublishedCareerSkillGroup = z.infer<typeof careerSkillGroupSchema>;
+export type PublishedCareerLink = z.infer<typeof careerLinkSchema>;
+export type PublishedCareerAvailability = z.infer<typeof careerAvailabilitySchema>;
 export type PublishedProjection = z.infer<typeof publishedProjectionSchema>;
 
 /** Light shape for lists and the globe. Derived, never stored. */
