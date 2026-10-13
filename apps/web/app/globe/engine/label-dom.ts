@@ -2,8 +2,8 @@
  * The labels of the boxes as HTML, in device pixels (the DOM half of engine/box-scene.ts; the only part of the labels that touches the DOM).
  *
  * One pooled element per drawn label, positioned by `transform: translate3d(x, y, 0)` ONLY (no layout, no paint: a moving label is a compositor
- * move), rounded to whole device pixels so the text stays sharp (the positions arrive on the map's art-pixel lattice, engine/label-track.ts, a
- * whole number of device pixels already). There is no CSS transition: the motion of a label (its stepped glide to a new slot) is computed per
+ * move). At rest the position is rounded to whole device pixels so the text stays sharp; while anything moves it is exact, so a label follows
+ * its box smoothly (`begin(settled)`). There is no CSS transition: the motion of a label (its eased glide to a new slot) is computed per
  * frame (engine/label-track.ts) and arrives here as a position:
  *  - `div.map-label`: the PLATE and its text, two lines (`span.map-label-name`, `span.map-label-sub`, sized by `LABEL_TYPE`, engine/label-text.ts).
  *    The plate is TRANSLUCENT, the page colour at `--label-plate-alpha` (app.css; the least that keeps the text AA over the loudest map tone,
@@ -74,13 +74,20 @@ export class LabelLayer {
   private live = new Map<number, Slot>();
   private pool: Slot[] = [];
   private dpr = 1;
+  /** Round positions to whole device pixels (the label is at rest: the text is sharp); false while things move, so that a label moves by fractions of a device pixel. */
+  private snap = true;
   /** Element writes since creation (checks and tests: a still frame writes none). */
   writes = 0;
 
   constructor(private root: HTMLElement) {}
 
-  /** Start a frame: every label not `put` before `end` is released. */
-  begin(): void {
+  /**
+   * Start a frame: every label not `put` before `end` is released. `settled` (default true): nothing is moving, so positions are rounded to whole
+   * device pixels and the text is sharp; false while the camera or a glide moves the labels: positions are exact, fractions of a device pixel
+   * (a moving label follows its box smoothly; a rounding to device pixels would be a step of 0.5 px at 2x on every few frames of a slow spin).
+   */
+  begin(settled = true): void {
+    this.snap = settled;
     this.dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
     for (const s of this.live.values()) s.used = false;
   }
@@ -141,10 +148,10 @@ export class LabelLayer {
       s.h = v.h;
       this.writes++;
     }
-    // whole device pixels: the text is rasterised once and moved by the compositor, and a half pixel would blur it
+    // at rest: whole device pixels, the text is rasterised once and moved by the compositor, and a half pixel would blur it; moving: exact
     const d = this.dpr;
-    const x = Math.round(v.x * d) / d;
-    const y = Math.round(v.y * d) / d;
+    const x = this.snap ? Math.round(v.x * d) / d : v.x;
+    const y = this.snap ? Math.round(v.y * d) / d : v.y;
     if (x !== s.x || y !== s.y) {
       s.el.style.transform = `translate3d(${x}px,${y}px,0)`;
       s.x = x;

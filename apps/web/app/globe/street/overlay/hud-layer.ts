@@ -180,6 +180,10 @@ export class HudLayer {
       screen.by0[i] = r.r0 * cell;
       screen.bx1[i] = r.c1 * cell;
       screen.by1[i] = r.r1 * cell;
+      screen.fx0[i] = lod.boxX0[i]!;
+      screen.fy0[i] = lod.boxY0[i]!;
+      screen.fx1[i] = lod.boxX1[i]!;
+      screen.fy1[i] = lod.boxY1[i]!;
       screen.x[i] = (screen.bx0[i]! + screen.bx1[i]!) / 2;
       screen.y[i] = (screen.by0[i]! + screen.by1[i]!) / 2;
       const drawn = (lod.isGroup[i] ? lod.members[i]! > 0 : !!lod.shown[i]) && r.c1 > 0 && r.r1 > 0 && r.c0 < cols && r.r0 < rows;

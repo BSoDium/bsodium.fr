@@ -17,8 +17,8 @@
  * position) when that one is free with `upgradeMargin` extra room (and not at all while the choice is a moment old: `PlanItem.hold`), so a
  * camera that moves a plate by a pixel cannot flip two labels back and forth. A choice that stops being free is replaced at once. (Between plans, when the plan runs at all, is engine/label-track.ts.)
  *
- * Units: the geometry is unit-free. The labels of the boxes plan in CSS px on the art-pixel lattice (`pxUnits(cell, left, top)`: every
- * distance a whole number of cells, positions snapped to the grid of the boxes; `PX_UNITS` is the same without a lattice); the pixel
+ * Units: the geometry is unit-free. The labels of the boxes plan in exact CSS px around the box's projected rectangle (`smoothUnits(cell)`: no
+ * lattice, so they move smoothly; `pxUnits(cell, left, top)` is the version on the art-pixel lattice of 2026-10-12, kept, unused); the pixel
  * text of the map keeps the whole-cell version (`CELL_UNITS`), used by the tests of the planner as well.
  */
 import { LABEL_TYPE } from "./label-text";
@@ -52,6 +52,22 @@ export const CELL_UNITS: PlanUnits = { clearance: 1, upgradeMargin: 2, shiftStep
  * `inset` (the outline's thickness plus `LABEL_TYPE.nestInset`, set per plan from the cell) inside.
  */
 export const PX_UNITS: PlanUnits = { clearance: 4, upgradeMargin: 10, shiftStep: 6, inset: 2.5 + LABEL_TYPE.nestInset, quant: 0.5, gap: LABEL_TYPE.boxGap, bleed: LABEL_TYPE.bleed };
+
+/**
+ * The units of the labels as they are DRAWN (2026-10-13: the lattice was reverted for the labels, see docs/web-architecture.md "Labels move
+ * smoothly"): no lattice, exact positions (`quant` 0), so a plate is at its slot's place around its box's PROJECTED rectangle and moves with it to
+ * the sub-pixel. The drawn box outline is snapped to cells and lies up to one cell outside that rectangle, so the clear room is
+ * `LABEL_TYPE.boxGap` PLUS one cell from the projected edge (3 to 3 + cell px from the drawn outline, never touching it); a nested plate is
+ * `cell + nestInset` inside the projected edge, which clears the outline's inner side.
+ */
+export const smoothUnits = (cell: number): PlanUnits => ({
+  ...PX_UNITS,
+  inset: cell + LABEL_TYPE.nestInset,
+  gap: LABEL_TYPE.boxGap + cell,
+  quant: 0,
+  shiftStep: PX_UNITS.shiftStep,
+  lattice: undefined,
+});
 
 /**
  * The units of a plan on a map whose art cell is `cell` CSS px (the box outline is one cell thick) and whose grid has its cell (0, 0) at

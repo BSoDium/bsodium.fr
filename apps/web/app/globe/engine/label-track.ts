@@ -1,5 +1,5 @@
 /**
- * Labels that move on the map's own pixel grid (pure, unit tested): WHICH slot a label has, WHEN the plan runs, and how a label gets from one
+ * Labels that follow their boxes smoothly (pure, unit tested): WHICH slot a label has, WHEN the plan runs, and how a label gets from one
  * slot to the next.
  *
  * `planLabels` (engine/label-plan.ts) puts every label where it collides with nothing. Run on every frame it makes labels flicker: a plate
@@ -15,14 +15,14 @@
  *     in a lump after it. At the edges of the screen the plate slides along its box (or stays at the screen's edge, over the box) instead of
  *     changing slot (`slide`).
  *  3. A slot change never moves the plate at once. The plate is drawn at `target + glide`: the target is the slot's place around the box NOW,
- *     the glide a remainder (in px, relative to the box) that runs to zero in `TRACK.glideMs` (about 180 ms) on an ease-out curve. The map
- *     around it moves in whole art pixels (the box, the coastlines, the dots), so the plate moves in whole art pixels too: its target is a
- *     point of the grid's lattice (`PlanUnits.lattice`: it moves with its box, cell for cell, and never drifts against it), and the glide is
- *     a STAIRCASE: the remainder is rounded to whole cells and changes at most once per `TRACK.stepMs`, so a long move is a handful of
- *     steps, each a whole number of cells, large at first and one cell at the end (a function of time only: the same path at any frame
- *     rate). A re-plan that changes a slot sets the glide to "where the plate was minus the new target", so the plate stays where it is and
- *     sets off for the new place from there. The glide is relative to the box: a moving box takes its plate along. Reduced motion
- *     (`instant`): no glide, and the plan runs only once the camera has stopped (a plan that moves a label would be a hop).
+ *     the glide a remainder (in px, relative to the box) that runs to zero in `TRACK.glideMs` (about 200 ms) on a continuous ease-out curve,
+ *     a function of time only (the same path at any frame rate). Plates and boxes move continuously: the host gives the PROJECTED rectangle
+ *     of a box (not the one snapped to art cells), so while a slot is kept the plate follows its box exactly, to the sub-pixel, and with the
+ *     earth spinning the labels glide instead of stepping by a cell (2026-10-13; on 2026-10-12 they moved in whole-cell steps and the owner
+ *     took that back). A re-plan that changes a slot sets the glide to "where the plate was minus the new target", so the plate stays where
+ *     it is and sets off for the new place from there. The glide is relative to the box: a moving box takes its plate along. A lattice and a
+ *     staircase are still available (`PlanUnits.lattice`, `TRACK.stepMs` > 0), unused. Reduced motion (`instant`): no glide, and the plan runs
+ *     only once the camera has stopped (a plan that moves a label would be a hop).
  *  4. A label that has no slot yet (its node just appeared) or whose slot became impossible (it would leave the screen, a nested label no longer
  *     fits its box) is placed at once, in the free places left by the labels that stay (`planLabels` with the others as `fixed` plates: their
  *     TARGETS): a drawn box always has its label, and a new label never displaces another. A new label has no glide (the node's fade shows it).
@@ -43,9 +43,9 @@ export const TRACK = {
   /** Least time between two plans while the rectangles change (ms); the plan owed after the last change runs this long after the previous one. */
   replanMs: 100,
   /** How long a glide takes, from the frame the slot changed (ms): the plate has arrived exactly `glideMs` later, on an ease-out curve. */
-  glideMs: 180,
-  /** The glide is a staircase that changes at most once per this many ms (about 28 steps a second, capped whatever the display rate): at 180 ms, five steps. */
-  stepMs: 36,
+  glideMs: 200,
+  /** 0: the glide is continuous. More: a staircase that changes at most once per this many ms (with a lattice, whole cells): the 2026-10-12 version had 36, taken back on 2026-10-13. */
+  stepMs: 0,
   /** While the camera moves, a slot is kept at least this long (ms) unless it stops being free: a better position is taken only after it, so a crowd that shifts as the camera moves cannot make labels swap places back and forth (it is longer than a glide). */
   dwellMs: 350,
   /** No rectangle changed for this long (ms): the camera has stopped and the dwell is over, the next plan puts every label at its best place. */
@@ -155,15 +155,16 @@ export interface StepInfo {
 type Move = "fresh" | "retarget" | "keep";
 
 /**
- * What is left of a glide that started `elapsedMs` ago with the offset `g0` (px, one axis): an ease-out curve over `TRACK.glideMs`, sampled
- * on a staircase in time (it changes at most once per `TRACK.stepMs`) and rounded to whole cells of `cell` px (0: not rounded). Exactly `g0`
- * at the start, exactly 0 from `glideMs` on, monotone in between and never past 0 (a function of time only: the same at any frame rate).
+ * What is left of a glide that started `elapsedMs` ago with the offset `g0` (px, one axis): an ease-in-out curve (smoothstep) over `TRACK.glideMs`, continuous
+ * (or, when `stepMs` > 0, sampled on a staircase in time) and, when `cell` > 0, rounded to whole cells of `cell` px. Exactly `g0` at the start,
+ * exactly 0 from `glideMs` on, monotone in between and never past 0 (a function of time only: the same at any frame rate).
  */
 export function glideRemainder(g0: number, elapsedMs: number, cell: number, o: { glideMs: number; stepMs: number } = TRACK): number {
   if (!(elapsedMs < o.glideMs)) return 0;
-  const sampled = Math.floor(Math.max(0, elapsedMs) / o.stepMs) * o.stepMs;
-  const left = 1 - sampled / o.glideMs;
-  const r = g0 * left * left; // ease-out quadratic: the share of the move that is left
+  const t = Math.max(0, elapsedMs);
+  const sampled = o.stepMs > 0 ? Math.floor(t / o.stepMs) * o.stepMs : t;
+  const u = sampled / o.glideMs;
+  const r = g0 * (1 - u * u * (3 - 2 * u)); // smoothstep: it sets off from rest and comes to rest, the share of the move that is left
   return cell > 0 ? Math.round(r / cell) * cell + 0 : r;
 }
 
@@ -216,7 +217,7 @@ export class LabelTracker {
   }
 
   /**
-   * Where a label is drawn: its slot's place `(x, y)` (container px, on the lattice) around the box `rect`, plus its glide as of time `t`.
+   * Where a label is drawn: its slot's place `(x, y)` (container px, on the lattice when the units carry one) around the box `rect`, plus its glide as of time `t`.
    * Writes the glide and where the plate is (relative to its box) into the memory.
    */
   private place(t: number, i: number, rect: CellRect, x: number, y: number, kind: Move): { x: number; y: number; gx: number; gy: number } {
@@ -253,7 +254,7 @@ export class LabelTracker {
   /**
    * One step at time `t` (ms): the labels of `items` for the rectangles they have NOW. `grid` is the room (CSS px); `result[n]` belongs to `items[n]`.
    * Items are the nodes the cut wants drawn. `units` is the nested label's distance from the box's edge (a number), or the distances of this
-   * frame (`pxUnits(cell, left, top)`: they depend on the art cell and carry the lattice). Call `follow` after it, in the same frame, for the
+   * frame (`smoothUnits(cell)`: they depend on the art cell; with a lattice, `pxUnits(cell, left, top)`, the plates move in whole cells). Call `follow` after it, in the same frame, for the
    * nodes that are fading out.
    */
   step(t: number, items: readonly TrackItem[], grid: GridSize, units_: number | Partial<PlanUnits>): Placed[] {

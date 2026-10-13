@@ -632,6 +632,11 @@ export class GlobeRenderer {
       screen.by0[i] = r.r0 * P + this.canvasTop;
       screen.bx1[i] = r.c1 * P + this.canvasLeft;
       screen.by1[i] = r.r1 * P + this.canvasTop;
+      // the box as projected, for the labels (they move smoothly; the drawn box steps by cells)
+      screen.fx0[i] = lod.boxX0[i]! + this.canvasLeft;
+      screen.fy0[i] = lod.boxY0[i]! + this.canvasTop;
+      screen.fx1[i] = lod.boxX1[i]! + this.canvasLeft;
+      screen.fy1[i] = lod.boxY1[i]! + this.canvasTop;
       screen.x[i] = (screen.bx0[i]! + screen.bx1[i]!) / 2;
       screen.y[i] = (screen.by0[i]! + screen.by1[i]!) / 2;
       // Drawn = the node's places passed the visibility rule and its rectangle touches the buffer.

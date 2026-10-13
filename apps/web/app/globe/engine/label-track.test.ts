@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { PX_UNITS, planLabels, pxUnits, type PlanItem, type Prev } from "./label-plan";
+import { PX_UNITS, planLabels, pxUnits, smoothUnits, type PlanItem, type Prev } from "./label-plan";
 import { LabelTracker, SlotMemory, TRACK, glideRemainder, slotPosition, type Placed, type TrackItem } from "./label-track";
 import { SPOT } from "./pixel-labels";
 
 const VIEW = { cols: 800, rows: 600 };
 const INSET = pxUnits(2.5).inset;
-/** The lattice the real app plans on: art cells of 2.5 px from the origin. */
+/** The art cell, and the units the labels are drawn with (engine/label-plan.ts `smoothUnits`: no lattice, exact positions around the projected box). */
 const CELL = 2.5;
-const LATTICE = pxUnits(CELL);
+const SMOOTH = smoothUnits(CELL);
 const onLattice = (v: number, cell = CELL) => Math.abs(v / cell - Math.round(v / cell)) < 1e-9;
 const GAP = PX_UNITS.gap;
 const BLEED = PX_UNITS.bleed;
@@ -140,44 +140,53 @@ describe("the plan runs continuously, at a bounded rate", () => {
 
 /* ------------------------------------------------------------------------------------------------ the glide */
 
-describe("the glide is a staircase of whole cells on an ease-out curve", () => {
-  it("starts at the whole offset, ends at exactly 0 after glideMs, is monotone, never crosses 0 and moves in whole cells", () => {
-    for (const g0 of [100, -100, 2.5, 37.5, -12.5]) {
+describe("the glide is continuous: an ease-in-out curve in time, no steps", () => {
+  it("starts at the whole offset, ends at exactly 0 after glideMs, is monotone and never crosses 0", () => {
+    for (const g0 of [100, -100, 2.5, 37.3, -12.7]) {
       let prev = g0;
-      expect(glideRemainder(g0, 0, CELL)).toBe(g0);
+      expect(glideRemainder(g0, 0, 0)).toBe(g0);
       for (let ms = 0; ms < TRACK.glideMs; ms += 4) {
-        const r = glideRemainder(g0, ms, CELL);
-        expect(onLattice(r)).toBe(true);
+        const r = glideRemainder(g0, ms, 0);
         expect(Math.abs(r)).toBeLessThanOrEqual(Math.abs(prev) + 1e-9);
         expect(r * g0).toBeGreaterThanOrEqual(0);
         prev = r;
       }
-      expect(glideRemainder(g0, TRACK.glideMs, CELL)).toBe(0);
-      expect(glideRemainder(g0, 5000, CELL)).toBe(0);
+      expect(glideRemainder(g0, TRACK.glideMs, 0)).toBe(0);
+      expect(glideRemainder(g0, 5000, 0)).toBe(0);
     }
   });
-  it("changes at most once per stepMs (a capped rate) and ease-out: big steps first, one cell at the end", () => {
-    const g0 = 100; // 40 cells
-    const seen: number[] = [];
-    for (let ms = 0; ms < TRACK.glideMs; ms += 1) {
-      const r = glideRemainder(g0, ms, CELL);
-      if (seen[seen.length - 1] !== r) seen.push(r);
+  it("it lasts 150 to 200 ms and is smooth: sampled every millisecond no value is a step of more than the fastest speed times a millisecond, and values are not on a grid", () => {
+    expect(TRACK.glideMs).toBeGreaterThanOrEqual(150);
+    expect(TRACK.glideMs).toBeLessThanOrEqual(200);
+    expect(TRACK.stepMs).toBe(0);
+    const g0 = 100;
+    let prev = glideRemainder(g0, 0, 0);
+    let distinct = new Set<number>();
+    let worst = 0;
+    for (let ms = 1; ms < TRACK.glideMs; ms++) {
+      const r = glideRemainder(g0, ms, 0);
+      worst = Math.max(worst, prev - r);
+      distinct.add(r);
+      prev = r;
     }
-    expect(seen.length).toBeLessThanOrEqual(Math.ceil(TRACK.glideMs / TRACK.stepMs));
-    expect(seen.length).toBeGreaterThanOrEqual(4);
-    const steps = seen.slice(1).map((r, k) => seen[k]! - r);
-    for (let k = 1; k < steps.length; k++) expect(steps[k]!).toBeLessThanOrEqual(steps[k - 1]! + 1e-9); // ease-out: each step no bigger than the one before
-    expect(steps[steps.length - 1]!).toBeGreaterThanOrEqual(CELL - 1e-9); // the least step is a cell
-    expect(steps[0]!).toBeGreaterThan(2 * steps[steps.length - 1]!);
+    expect(distinct.size).toBe(TRACK.glideMs - 1); // every millisecond another value: not a staircase
+    expect(worst).toBeLessThanOrEqual((1.5 * g0) / TRACK.glideMs + 1e-9); // smoothstep: fastest in the middle, 1.5 g0 / glideMs per ms
+    // it sets off from rest and comes to rest: the first and the last millisecond are the slowest, and the speed rises then falls (one peak)
+    const speed = (ms: number) => glideRemainder(g0, ms - 1, 0) - glideRemainder(g0, ms, 0);
+    expect(speed(1)).toBeLessThan(0.01 * g0);
+    expect(speed(TRACK.glideMs - 1)).toBeLessThan(0.01 * g0);
+    let turned = 0;
+    for (let ms = 2; ms < TRACK.glideMs; ms++) if (Math.sign(speed(ms) - speed(ms - 1)) !== Math.sign(speed(ms - 1) - speed(ms - 2)) && Math.abs(speed(ms) - speed(ms - 1)) > 1e-12) turned++;
+    expect(turned).toBeLessThanOrEqual(2);
+    // no leap: in the first 16.7 ms frame the plate has moved no more than 3 % of the move (an ease-out quadratic moved 18 %)
+    expect(g0 - glideRemainder(g0, 16.7, 0)).toBeLessThan(0.03 * g0);
   });
-  it("a one-cell move is one step of one cell, not a slide", () => {
+  it("the options still make a staircase or whole cells when asked (kept for hosts that want them), and a zero-length glide is instant", () => {
     const seen = new Set<number>();
     for (let ms = 0; ms < TRACK.glideMs; ms++) seen.add(glideRemainder(CELL, ms, CELL));
     expect([...seen].sort()).toEqual([0, CELL]);
-  });
-  it("without a lattice the remainder is not rounded; a zero-length glide is instant (the no-glide control of the sweep)", () => {
-    expect(glideRemainder(10, 40, 0)).not.toBe(Math.round(glideRemainder(10, 40, 0)));
-    expect(glideRemainder(10, 0, 0, { glideMs: 0, stepMs: 36 })).toBe(0);
+    expect(new Set(Array.from({ length: 180 }, (_, ms) => glideRemainder(100, ms, 0, { glideMs: 180, stepMs: 36 }))).size).toBeLessThanOrEqual(5);
+    expect(glideRemainder(10, 0, 0, { glideMs: 0, stepMs: 0 })).toBe(0);
   });
 });
 
@@ -186,13 +195,13 @@ function collide(fps = 60) {
   const t = tracker();
   const a = box(1, 100, 100);
   let b = box(2, 300, 100);
-  t.step(0, [a, b], VIEW, LATTICE);
+  t.step(0, [a, b], VIEW, SMOOTH);
   let now = 0;
   const trace: { t: number; ox: number; oy: number; gx: number; gy: number; cand: number; moved: boolean; x: number; y: number; bx: number }[] = [];
   const frame = (dx: number) => {
     now += 1000 / fps;
     b = move(b, dx, 0);
-    const out = t.step(now, [a, b], VIEW, LATTICE);
+    const out = t.step(now, [a, b], VIEW, SMOOTH);
     const p = out[1]!;
     trace.push({ t: now, ox: p.x - b.rect.c0, oy: p.y - b.rect.r0, gx: p.gx, gy: p.gy, cand: p.cand, moved: p.moved, x: p.x, y: p.y, bx: b.rect.c0 });
     return p;
@@ -200,8 +209,8 @@ function collide(fps = 60) {
   return { t, frame, trace, box: () => b };
 }
 
-describe("a slot change is a stepped glide of whole cells, never a jump", () => {
-  it("the plate's offset from its box goes monotonically from where it was to the new place in whole-cell steps, no overshoot, and arrives exactly", () => {
+describe("a slot change is a continuous glide, never a jump", () => {
+  it("the plate's offset from its box goes monotonically from where it was to the new place, no overshoot, and arrives exactly", () => {
     const { t, frame, trace } = collide();
     for (let f = 0; f < 40; f++) frame(-5);
     for (let f = 0; f < 60; f++) frame(0); // the box stops; the plate goes on
@@ -216,11 +225,6 @@ describe("a slot change is a stepped glide of whole cells, never a jump", () => 
     for (let k = k0; k < trace.length; k++) {
       const r = trace[k]!;
       const q = trace[k - 1]!;
-      // the plate is on the lattice, always, and its offset to the box only changes by whole cells
-      expect(onLattice(r.x)).toBe(true);
-      expect(onLattice(r.y)).toBe(true);
-      expect(onLattice(r.ox - q.ox)).toBe(true);
-      expect(onLattice(r.oy - q.oy)).toBe(true);
       if (sx) {
         expect((r.ox - q.ox) * sx).toBeGreaterThanOrEqual(-1e-9); // never turns back
         expect((r.ox - last.ox) * sx).toBeLessThanOrEqual(1e-9); // never past the end
@@ -241,17 +245,19 @@ describe("a slot change is a stepped glide of whole cells, never a jump", () => 
     // the first frame of the move is where the plate was: it sets off, it does not leap
     expect(Math.hypot(trace[k0]!.ox - start.ox, trace[k0]!.oy - start.oy)).toBeLessThan(1e-9);
   });
-  it("the glide is at most glideMs / stepMs + 1 distinct positions, the biggest steps first", () => {
+  it("the glide has a new position in (nearly) every frame, none of them on a grid of cells: eased, not stepped", () => {
     const { frame, trace } = collide();
     for (let f = 0; f < 40; f++) frame(-5);
     for (let f = 0; f < 60; f++) frame(0);
     const k0 = trace.findIndex((r) => r.moved);
     const glide = trace.slice(k0).filter((r) => r.gx !== 0 || r.gy !== 0);
     const offsets = [...new Set(glide.map((r) => `${r.ox},${r.oy}`))].map((k) => k.split(",").map(Number) as [number, number]);
-    expect(offsets.length).toBeGreaterThanOrEqual(3);
-    expect(offsets.length).toBeLessThanOrEqual(TRACK.glideMs / TRACK.stepMs + 1);
+    expect(glide.length).toBeGreaterThanOrEqual(8); // 200 ms at 60 Hz
+    expect(offsets.length).toBeGreaterThanOrEqual(glide.length - 1); // a new place in every frame
+    const sub = offsets.filter((o) => !onLattice(o[0]) || !onLattice(o[1]));
+    expect(sub.length).toBeGreaterThan(offsets.length / 2); // between cells, not on them
     const steps = offsets.slice(1).map((o, k) => Math.hypot(o[0] - offsets[k]![0], o[1] - offsets[k]![1]));
-    for (let k = 1; k < steps.length; k++) expect(steps[k]!).toBeLessThanOrEqual(steps[k - 1]! + 1e-9);
+    expect(steps[0]!).toBeLessThan(0.25 * Math.max(...steps)); // it sets off slowly
   });
   it("the frame loop is owed (gliding > 0) exactly while a label has not arrived", () => {
     const { t, frame, trace } = collide();
@@ -280,7 +286,6 @@ describe("a slot change is a stepped glide of whole cells, never a jump", () => 
       // the final place is the slot's place whatever the frame rate
       const last = trace[trace.length - 1]!;
       finals.push(last.oy); // (the box moves along x only, and the plate goes below it)
-      expect(onLattice(last.x)).toBe(true);
     }
     expect(finals[1]).toBeCloseTo(finals[0]!, 9);
     expect(finals[2]).toBeCloseTo(finals[0]!, 9);
@@ -307,39 +312,57 @@ describe("a slot change is a stepped glide of whole cells, never a jump", () => 
   });
 });
 
-describe("a plate and its box move in lockstep, whole cells at a time", () => {
-  it("while the camera moves and the slot is kept, the plate's offset to its box is constant and every position is a cell of the lattice", () => {
+describe("a plate follows its box smoothly: exactly as far as the box moved, to the sub-pixel", () => {
+  it("while the camera moves and the slot is kept, the plate's offset to its box is constant, with boxes at any fraction of a pixel", () => {
     const t = tracker();
-    let items = [box(1, 100, 100), box(2, 300, 100), box(3, 140, 300)];
-    t.step(0, items, VIEW, LATTICE);
-    const first = t.step(16, items, VIEW, LATTICE);
+    let items = [box(1, 100.3, 100.1), box(2, 300.7, 100.9), box(3, 140.2, 300.4)];
+    t.step(0, items, VIEW, SMOOTH);
+    const first = t.step(16, items, VIEW, SMOOTH);
     const off = first.map((p, n) => [p.x - items[n]!.rect.c0, p.y - items[n]!.rect.r0]);
-    for (let f = 2; f < 60; f++) {
-      items = items.map((it) => move(it, 2.5 * ((f % 3) + 1), 2.5 * (f % 2)));
-      const out = t.step(f * 16, items, VIEW, LATTICE);
+    let fractional = 0;
+    for (let f = 2; f < 90; f++) {
+      items = items.map((it) => move(it, 0.37 + 0.11 * (f % 3), 0.19 * (f % 2) + 0.05));
+      const out = t.step(f * 16, items, VIEW, SMOOTH);
       out.forEach((p, n) => {
-        expect(onLattice(p.x)).toBe(true);
-        expect(onLattice(p.y)).toBe(true);
         expect(p.x - items[n]!.rect.c0).toBeCloseTo(off[n]![0]!, 9);
         expect(p.y - items[n]!.rect.r0).toBeCloseTo(off[n]![1]!, 9);
+        if (!onLattice(p.x) || !onLattice(p.y)) fractional++;
       });
     }
+    expect(fractional).toBeGreaterThan(100); // the plates are not on a grid
   });
-  it("a box not on the lattice (a test rig) still gets a plate on it: the quantisation is the plan's, not the box's", () => {
+  it("a box that spins 0.2 px a frame moves its plate 0.2 px a frame: no step, whatever the cell", () => {
     const t = tracker();
-    const out = t.step(0, [box(1, 101.3, 100.7)], VIEW, LATTICE);
-    expect(onLattice(out[0]!.x)).toBe(true);
-    expect(onLattice(out[0]!.y)).toBe(true);
+    let it = box(1, 100, 100);
+    let prev = t.step(0, [it], VIEW, SMOOTH)[0]!;
+    for (let f = 1; f < 120; f++) {
+      it = move(it, 0.2, 0.05);
+      const p = t.step(f * 8.3, [it], VIEW, SMOOTH)[0]!;
+      expect(p.x - prev.x).toBeCloseTo(0.2, 9);
+      expect(p.y - prev.y).toBeCloseTo(0.05, 9);
+      prev = p;
+    }
   });
-  it("the clear room to the box is the plan's gap (one cell) or a little more (a plate above is rounded away from its box), never less", () => {
+  it("the clear room to the projected box is the plan's gap (boxGap plus one cell: the drawn outline lies up to a cell outside it), exactly, for any plate height", () => {
     const t = tracker();
+    expect(SMOOTH.gap).toBe(PX_UNITS.gap + CELL);
     for (const h of [16, 24, 38]) {
-      const it = box(1, 100, 100, { variants: [{ w: 90, h }] });
-      const p = t.step(0, [it], VIEW, LATTICE)[0]!;
-      const room = it.rect.r0 - (p.y + p.h);
-      expect(room).toBeGreaterThanOrEqual(LATTICE.gap - 1e-9);
-      expect(room).toBeLessThan(LATTICE.gap + CELL);
+      const it = box(1, 100.3, 100.7, { variants: [{ w: 90, h }] });
+      const p = t.step(0, [it], VIEW, SMOOTH)[0]!;
+      expect(it.rect.r0 - (p.y + p.h)).toBeCloseTo(SMOOTH.gap, 9);
+      expect(p.x).toBeCloseTo(it.rect.c0, 9);
       t.mem.set[1] = 0;
+    }
+  });
+  it("a box drawn on cells (snapped) lies at most one cell outside its projected rectangle: the plate, one gap from the projected edge, never touches the outline", () => {
+    const cell = CELL;
+    for (let k = 0; k < 200; k++) {
+      const y0 = 100 + k * 0.137; // projected top edge
+      const snapped = Math.floor(y0 / cell) * cell; // snapBox
+      const t = tracker();
+      const it = box(1, 100, y0);
+      const p = t.step(0, [it], VIEW, SMOOTH)[0]!;
+      expect(snapped - (p.y + p.h)).toBeGreaterThanOrEqual(PX_UNITS.gap - 1e-9); // at least boxGap (3 px) of clear room to the drawn outline
     }
   });
 });
@@ -373,7 +396,6 @@ describe("a re-plan during a glide retargets from where the plate is", () => {
     for (let k = 1; k < xs.length; k++) {
       expect(xs[k]! - xs[k - 1]!).toBeGreaterThanOrEqual(-1e-9);
       expect(xs[k]!).toBeLessThanOrEqual(160 + 1e-9);
-      expect(onLattice(xs[k]!)).toBe(true);
     }
     expect(xs[xs.length - 1]).toBe(160);
   });
@@ -546,11 +568,10 @@ describe("a node that is fading out", () => {
     const p = slotPosition(t.mem, 1, { c0: 200, r0: 220, c1: 250, r1: 260 }, FULL, VIEW, { ...PX_UNITS, inset: INSET });
     expect(p).toEqual({ x: 200 - BLEED, y: 220 - FULL.h - GAP });
     expect(slotPosition(t.mem, 9, { c0: 200, r0: 220, c1: 250, r1: 260 }, FULL, VIEW, { ...PX_UNITS, inset: INSET })).toEqual({ x: 200, y: 220 - FULL.h });
-    // on the lattice the slot's place is a cell of the grid, a little further from the box when it is above it, never nearer
-    const q = slotPosition(t.mem, 1, { c0: 200, r0: 220, c1: 250, r1: 260 }, FULL, VIEW, LATTICE);
-    expect(onLattice(q.x)).toBe(true);
-    expect(onLattice(q.y)).toBe(true);
-    expect(220 - (q.y + FULL.h)).toBeGreaterThanOrEqual(LATTICE.gap - 1e-9);
+    // with the smooth units the slot's place is exact: one gap above the projected edge
+    const q = slotPosition(t.mem, 1, { c0: 200.3, r0: 220.6, c1: 250.3, r1: 260.6 }, FULL, VIEW, SMOOTH);
+    expect(q.x).toBeCloseTo(200.3, 9);
+    expect(220.6 - (q.y + FULL.h)).toBeCloseTo(SMOOTH.gap, 9);
   });
 });
 
@@ -566,8 +587,9 @@ describe("a node that is fading out", () => {
  *  - a TELEPORT is a plate that moved in one frame (its nearer edge on each axis) by more than its box did (its fastest corner) plus 4 px plus
  *    the glide it had left before the frame (a stepped glide never moves a plate by more than what is left of it: a step is a share of the
  *    remainder, and the plate cannot pass its target). A label that changes slot at once, or hops, teleports; one that glides never does. This
- *    is what the eye sees as "snapping into place". Under the stepped glide a plate moves in whole-cell steps, so a step can be a large share
- *    of the move in one frame: it is never seen as a teleport because it is bounded by what is left.
+ *    is what the eye sees as "snapping into place".
+ *  - SMOOTHNESS (2026-10-13): the boxes are at fractions of a pixel (the projected rectangle, not snapped to cells), and a plate whose slot is
+ *    kept moves by exactly what its box did (`lockstepErrors`), with a position that is not on a grid (`fractional`).
  *  - a CHANGE is a different slot (candidate position, or way of writing it): informative now (a change is a glide), counted to see that the
  *    sticky plan does not swap places back and forth.
  * A label that appears or disappears is counted apart (`visibility`: the camera and the cut decide it, the same for any plan).
@@ -593,8 +615,8 @@ interface Sweep {
   atRestError: number;
   /** Frames from the camera stopping to the last plate arriving. */
   settleFrames: number;
-  /** Label-frames whose plate was not on the 2.5 px lattice; label-frames in lockstep with their box (same slot, no glide, clear of the edges) and those where the plate and its box moved by different amounts. */
-  offLattice: number;
+  /** Label-frames whose plate was not on a 2.5 px grid (smooth: most of them); label-frames in lockstep with their box (same slot, no glide, clear of the edges) and those where the plate and its box moved by different amounts. */
+  fractional: number;
   lockstepFrames: number;
   lockstepErrors: number;
 }
@@ -646,10 +668,9 @@ function sweep(strategy: "every-frame" | "no-glide" | "reduced" | "tracked"): Sw
   const everShown = new Set<number>();
   let finalOverlaps = 0;
   let atRestError = 0;
-  let offLattice = 0;
+  let fractional = 0;
   let lockstepErrors = 0;
   let lockstepFrames = 0;
-  const snap = (v: number) => Math.round(v / 2.5) * 2.5;
   for (let f = 0; f < FRAMES; f++) {
     // a hand on the map: a pan that swings both ways while the zoom breathes in and out, then rest
     const u = Math.min(1, f / MOVE);
@@ -658,10 +679,11 @@ function sweep(strategy: "every-frame" | "no-glide" | "reduced" | "tracked"): Sw
     const panY = 110 * Math.sin(2 * Math.PI * u * 1);
     const items: TrackItem[] = [];
     world.forEach((n, k) => {
-      const x0 = snap((n.cx - panX) * scale);
-      const y0 = snap((n.cy - panY) * scale + 40);
-      const w = snap(n.w * scale);
-      const h = snap(n.h * scale);
+      // the projected rectangle: any fraction of a pixel (the drawn box is snapped to cells, the labels do not follow that)
+      const x0 = (n.cx - panX) * scale;
+      const y0 = (n.cy - panY) * scale + 40;
+      const w = n.w * scale;
+      const h = n.h * scale;
       if (x0 + w < 0 || y0 + h < 0 || x0 > VIEW.cols || y0 > VIEW.rows) return; // not drawn
       items.push({ id: k, key: `n${k}`, rect: { c0: x0, r0: y0, c1: x0 + w, r1: y0 + h }, score: 50 + (k % 5), area: w * h, variants: variantsFor(n.name), vkey: k + 1 });
     });
@@ -677,10 +699,10 @@ function sweep(strategy: "every-frame" | "no-glide" | "reduced" | "tracked"): Sw
         plates.push({ x: p.x, y: p.y, w: p.w, h: p.h });
       });
     } else {
-      const out = tr.step(f * (1000 / 60), items, VIEW, LATTICE);
+      const out = tr.step(f * (1000 / 60), items, VIEW, SMOOTH);
       out.forEach((p, n) => {
         const it = items[n]!;
-        if (!onLattice(p.x) || !onLattice(p.y)) offLattice++;
+        if (!onLattice(p.x) || !onLattice(p.y)) fractional++;
         now.set(it.id, { cand: p.cand, variant: p.variant, px: p.x, py: p.y, px1: p.x + p.w, py1: p.y + p.h, gx: p.gx, gy: p.gy, r: it.rect });
         plates.push({ x: p.x, y: p.y, w: p.w, h: p.h });
         if (f === FRAMES - 1) atRestError = Math.max(atRestError, Math.abs(p.gx), Math.abs(p.gy));
@@ -702,7 +724,7 @@ function sweep(strategy: "every-frame" | "no-glide" | "reduced" | "tracked"): Sw
       }
       if (p.cand !== s.cand || p.variant !== s.variant) frameChanges++;
       // lockstep: the same slot, no glide before or after, and clear of the screen's edges (where a plate slides along its box, or follows the visible part of it): the plate moved exactly as the corner of
-      // its box it is aligned with (or the side it stands against) did, in whole cells. (The positions shifted along an edge follow neither corner: not counted.)
+      // its box it is aligned with (or the side it stands against) did, exactly. (The positions shifted along an edge follow neither corner: not counted.)
       if (strategy !== "every-frame" && p.cand === s.cand && p.variant === s.variant && p.gx === 0 && p.gy === 0 && s.gx === 0 && s.gy === 0 && p.cand >= 0 && !(p.cand >= SPOT.aboveShift && p.cand <= SPOT.aboveShift + 2) && !(p.cand >= SPOT.belowShift && p.cand <= SPOT.belowShift + 2)) {
         const clear = (q: Seen) => q.px >= CELL && q.py >= CELL && q.px1 <= VIEW.cols - CELL && q.py1 <= VIEW.rows - CELL && q.r.c0 >= 0 && q.r.r0 >= 0 && q.r.c1 <= VIEW.cols && q.r.r1 <= VIEW.rows; // plate and box wholly on the screen
         if (clear(p) && clear(s)) {
@@ -731,7 +753,7 @@ function sweep(strategy: "every-frame" | "no-glide" | "reduced" | "tracked"): Sw
       for (let a = 0; a < plates.length; a++) for (let b = a + 1; b < plates.length; b++) if (plates[a]!.x < plates[b]!.x + plates[b]!.w && plates[a]!.x + plates[a]!.w > plates[b]!.x && plates[a]!.y < plates[b]!.y + plates[b]!.h && plates[a]!.y + plates[a]!.h > plates[b]!.y) finalOverlaps++;
     }
   }
-  return { changes, visibility, shownFrames, teleports, glidingFrames, maxStep, labels: everShown.size, worstFrame, perLabel: changes / everShown.size, finalOverlaps, gliding: tr.gliding, atRestError, settleFrames, offLattice, lockstepErrors, lockstepFrames };
+  return { changes, visibility, shownFrames, teleports, glidingFrames, maxStep, labels: everShown.size, worstFrame, perLabel: changes / everShown.size, finalOverlaps, gliding: tr.gliding, atRestError, settleFrames, fractional, lockstepErrors, lockstepFrames };
 }
 
 describe("flicker metric over a camera sweep: labels move all the time and never teleport", () => {
@@ -740,7 +762,7 @@ describe("flicker metric over a camera sweep: labels move all the time and never
   const reduced = sweep("reduced");
   const now = sweep("tracked");
   it("reports the numbers (the plan on every frame, the tracked plan without its glide, reduced motion, the tracked plan with its glide)", () => {
-    const line = (n: string, r: Sweep) => `${n}: ${r.changes} slot changes (${r.perLabel.toFixed(2)} per label, worst frame ${r.worstFrame}), ${r.teleports} teleports, ${r.glidingFrames} label-frames gliding (largest step against the box ${r.maxStep.toFixed(1)} px), ${r.settleFrames} frames to settle, ${r.finalOverlaps} overlaps at rest, ${r.offLattice} off the lattice, ${r.lockstepErrors} of ${r.lockstepFrames} label-frames out of lockstep`;
+    const line = (n: string, r: Sweep) => `${n}: ${r.changes} slot changes (${r.perLabel.toFixed(2)} per label, worst frame ${r.worstFrame}), ${r.teleports} teleports, ${r.glidingFrames} label-frames gliding (largest step against the box ${r.maxStep.toFixed(1)} px), ${r.settleFrames} frames to settle, ${r.finalOverlaps} overlaps at rest, ${r.fractional} between cells, ${r.lockstepErrors} of ${r.lockstepFrames} label-frames out of lockstep`;
     console.info(`label motion over the sweep (${old.labels} labels, 240 frames, ${old.visibility} appearances and disappearances for all four):\n  ${line("every-frame plan", old)}\n  ${line("tracked, no glide (a slot change snaps)", snap)}\n  ${line("tracked, reduced motion", reduced)}\n  ${line("tracked, gliding", now)}`);
     expect(old.labels).toBeGreaterThan(40);
     expect(now.visibility).toBe(old.visibility);
@@ -759,11 +781,11 @@ describe("flicker metric over a camera sweep: labels move all the time and never
   it("with the glide NO plate teleports over the sweep, and the plates do move (they glide, they are not frozen)", () => {
     expect(now.teleports).toBe(0);
     expect(now.glidingFrames).toBeGreaterThan(50);
-    expect(now.maxStep).toBeLessThan(40); // the biggest step of a glide against its box, px: the first of the staircase, a third of a long move
+    expect(now.maxStep).toBeLessThan(40); // the biggest step of a glide against its box, px: the first frame of the ease-out, 2 / glideMs of the move per ms
   });
-  it("the plates are on the art-pixel lattice in every frame, and a plate whose slot is kept moves exactly as its box does (lockstep, no sub-cell drift)", () => {
+  it("the plates are NOT on a grid of cells (they follow the projected boxes to the sub-pixel), and a plate whose slot is kept moves exactly as its box does", () => {
     for (const r of [snap, reduced, now]) {
-      expect(r.offLattice).toBe(0);
+      expect(r.fractional).toBeGreaterThan(r.shownFrames / 2);
       expect(r.lockstepFrames).toBeGreaterThan(1000);
       expect(r.lockstepErrors).toBe(0);
     }

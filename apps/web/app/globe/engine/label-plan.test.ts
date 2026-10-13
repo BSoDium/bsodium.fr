@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pickNode } from "./hit-area";
-import { CLEARANCE, UPGRADE_MARGIN, boxesToAvoid, planLabels, pxUnits, type PlanItem, type PlanResult } from "./label-plan";
+import { CLEARANCE, PX_UNITS, UPGRADE_MARGIN, boxesToAvoid, planLabels, pxUnits, smoothUnits, type PlanItem, type PlanResult } from "./label-plan";
 import { LOD } from "./lod-tree";
 import { SPOT, chipText, labelVariants } from "./pixel-labels";
 
@@ -319,5 +319,37 @@ describe("the last resort: a label that has to be drawn over others keeps its se
     const [p] = planLabels([{ score: 1, area: 400, key: "a", rect, variants: [{ w: 90, h: 24, sub: "France" }, a, b], prev: null }], grid, pxUnits(1), [{ x0: 0, y0: 0, x1: 200, y1: 100 }]);
     expect(p!.overlap).toBe(true);
     expect(p!.variant).not.toBe(2); // not the way without its line: same overlap, so the one that keeps it
+  });
+});
+
+describe("smoothUnits: what the labels are drawn with (no lattice, exact positions around the projected box)", () => {
+  it("no lattice, exact shifts, a gap of boxGap plus one cell (the drawn outline is snapped to cells and lies up to a cell outside the projected box)", () => {
+    for (const cell of [2, 2.5, 2.667, 3.5]) {
+      const u = smoothUnits(cell);
+      expect(u.lattice).toBeUndefined();
+      expect(u.quant).toBe(0);
+      expect(u.gap).toBe(PX_UNITS.gap + cell);
+      expect(u.inset).toBeGreaterThan(cell); // the outline's cell and a margin
+    }
+  });
+  it("positions are exact: above the projected top-left corner by the gap, at any fraction", () => {
+    const u = smoothUnits(2.5);
+    const rect = { c0: 100.37, r0: 203.81, c1: 140.1, r1: 233.2 };
+    const [p] = planLabels([{ score: 1, area: 1000, key: "a", rect, variants: [{ w: 83.5, h: 38 }], prev: null }], GRID, u);
+    expect(p!.cand).toBe(SPOT.aboveLeft);
+    expect(p!.x).toBeCloseTo(100.37, 9);
+    expect(rect.r0 - (p!.y + p!.h)).toBeCloseTo(u.gap, 9);
+  });
+  it("the positions shifted along an edge follow the box continuously (no snap to half a pixel)", () => {
+    const u = smoothUnits(2.5);
+    const ys: number[] = [];
+    for (let k = 0; k < 6; k++) {
+      const x0 = 20.1 + k * 0.07;
+      const rect = { c0: x0, r0: 3, c1: x0 + 300, r1: 120 }; // no room above: only nested and shifted candidates
+      const [p] = planLabels([{ score: 1, area: 1000, key: "a", rect, variants: [{ w: 83.5, h: 38 }], prev: { variant: 0, cand: SPOT.aboveShift + 1, dx: 0, dy: 0 } }], GRID, u);
+      ys.push(p!.x);
+    }
+    // consecutive positions differ by about the box's own 0.07 px (a quarter-pixel snap would make some zero and some 0.5)
+    for (let k = 1; k < ys.length; k++) expect(ys[k]! - ys[k - 1]!).toBeLessThan(0.5);
   });
 });
