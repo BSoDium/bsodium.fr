@@ -14,7 +14,7 @@ export function NotFoundPage() {
         title="Page not found"
         description="There is nothing at this address. It may have been moved or never existed."
         action={
-          <Button asChild variant="secondary">
+          <Button asChild variant="primary">
             <Link to="/">
               <Icon name="arrow-left" size="inline" />
               Back to the globe
