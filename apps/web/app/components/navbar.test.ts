@@ -19,7 +19,7 @@ describe("Navbar", () => {
   it("has no logo: the first item is \"Globe\" as plain text, a link home; then the four sections, in order, then the search", async () => {
     const html = await render("/articles", { shell: false });
     // the only drawing in the header is the search icon, after the links: no mark, no icon in front of the name
-    expect(html.indexOf("<svg")).toBeGreaterThan(html.indexOf('href="/poems"'));
+    expect(html.indexOf("<svg")).toBeGreaterThan(html.indexOf('href="/poetry"'));
     expect(html.match(/<svg/g)).toHaveLength(1);
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
     expect(links).toEqual([
@@ -27,13 +27,13 @@ describe("Navbar", () => {
       ["/projects", "Projects"],
       ["/articles", "Articles"],
       ["/artworks", "Artworks"],
-      ["/poems", "Poems"],
+      ["/poetry", "Poetry"],
     ]);
     // the accessible name starts with the visible word and says what it is
     expect(html).toContain(`aria-label="Globe, ${SITE_NAME} home"`);
     expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
     // the search trigger follows the links in the DOM (so in the focus order)
-    expect(html.indexOf('data-slot="search-trigger"')).toBeGreaterThan(html.indexOf('href="/poems"'));
+    expect(html.indexOf('data-slot="search-trigger"')).toBeGreaterThan(html.indexOf('href="/poetry"'));
   });
 
   it("on the home page, while the hero is at rest, renders no header at all: its rows are the sections and its search line is the search", async () => {
@@ -50,7 +50,7 @@ describe("Navbar", () => {
   it("on the home page, once the hero has stepped back (its rows are hidden), brings the sections back", async () => {
     const html = await render("/", { heroResting: false });
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => m[1]);
-    expect(links).toEqual(["/", "/projects", "/articles", "/artworks", "/poems"]);
+    expect(links).toEqual(["/", "/projects", "/articles", "/artworks", "/poetry"]);
     expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
     // the key hint is plain muted text: the command key's name in a kbd with no box, no border, no background
     const kbd = html.slice(html.indexOf("<kbd"), html.indexOf("</kbd>"));
@@ -59,9 +59,9 @@ describe("Navbar", () => {
   });
 
   it("is unchanged on every other route, whatever the hero's state (it is not on the page there)", async () => {
-    for (const url of ["/articles", "/poems", "/locations/x", "/articles/x"]) {
+    for (const url of ["/articles", "/poetry", "/locations/x", "/articles/x"]) {
       const html = await render(url, { shell: url.startsWith("/locations") || url.startsWith("/articles/"), heroResting: true });
-      expect([...html.matchAll(/<a [^>]*href="([^"]*)"/g)].map((m) => m[1]), url).toEqual(["/", "/projects", "/articles", "/artworks", "/poems"]);
+      expect([...html.matchAll(/<a [^>]*href="([^"]*)"/g)].map((m) => m[1]), url).toEqual(["/", "/projects", "/articles", "/artworks", "/poetry"]);
       expect(html, url).toContain('aria-label="Primary"');
     }
   });
@@ -69,7 +69,7 @@ describe("Navbar", () => {
   it("offers the search as one word where the icon trigger is not shown (a phone), after the links, with no drawing", async () => {
     const html = await render("/articles", { shell: false });
     const compact = html.indexOf('data-slot="search-trigger-compact"');
-    expect(compact).toBeGreaterThan(html.indexOf('href="/poems"'));
+    expect(compact).toBeGreaterThan(html.indexOf('href="/poetry"'));
     expect(html.slice(compact, html.indexOf("</button>", compact))).toMatch(/>Search$/);
     expect(html.slice(compact, html.indexOf("</button>", compact))).not.toContain("<svg");
     expect(html.slice(compact, html.indexOf("</button>", compact))).toContain("@md:hidden");
@@ -83,11 +83,11 @@ describe("Navbar", () => {
   });
 
   it("is centred over the whole viewport, except beside the place and entry panels where it is centred over the map", async () => {
-    for (const url of ["/", "/articles", "/articles/x?view=full", "/poems/x?view=full&tag=y"]) {
+    for (const url of ["/", "/articles", "/articles/x?view=full", "/poetry/x?view=full&tag=y"]) {
       expect(await render(url), url).not.toContain("md:right-1/2");
     }
     // (a place has no full-screen view: `?view=full` on a place is still the side panel)
-    for (const url of ["/locations/x", "/locations/x?view=full", "/articles/x", "/projects/x?view=panel", "/poems/x?tag=y"]) {
+    for (const url of ["/locations/x", "/locations/x?view=full", "/articles/x", "/projects/x?view=panel", "/poetry/x?tag=y"]) {
       expect(await render(url), url).toContain("md:right-1/2");
     }
   });

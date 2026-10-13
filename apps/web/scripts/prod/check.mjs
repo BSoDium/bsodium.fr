@@ -146,8 +146,9 @@ ok(locs.every((l) => l.startsWith(SITE + "/")), `sitemap.xml: ${locs.length} URL
 ok(new Set(locs).size === locs.length, "sitemap.xml: no duplicate URL");
 ok(lastmods.every((d) => /^\d{4}(-\d{2}(-\d{2})?)?$/.test(d)), `sitemap.xml: ${lastmods.length} lastmod values are W3C dates`);
 const paths = locs.map((l) => l.slice(SITE.length));
-for (const p of ["/", "/projects", "/articles", "/artworks", "/poems"]) ok(paths.includes(p), `sitemap.xml lists ${p}`);
-const entryPaths = paths.filter((p) => /^\/(articles|projects|artworks|poems)\/./.test(p));
+for (const p of ["/", "/projects", "/articles", "/artworks", "/poetry"]) ok(paths.includes(p), `sitemap.xml lists ${p}`);
+ok(!paths.some((p) => /^\/poems(\/|$)/.test(p)), "sitemap.xml lists nothing under the old /poems (it redirects)");
+const entryPaths = paths.filter((p) => /^\/(articles|projects|artworks|poetry)\/./.test(p));
 const placePaths = paths.filter((p) => p.startsWith("/locations/"));
 ok(deployed || (entryPaths.length > 0 && placePaths.length > 0), `sitemap.xml lists ${entryPaths.length} entries and ${placePaths.length} places`);
 {
@@ -171,7 +172,7 @@ const placePath = placePaths[0];
 
 // ---- 2. documents ---------------------------------------------------------------------------------------------------------------
 section("documents: headers and head tags");
-const TYPES = { articles: "Article", projects: ["CreativeWork", "SoftwareSourceCode"], artworks: "CreativeWork", poems: "CreativeWork" };
+const TYPES = { articles: "Article", projects: ["CreativeWork", "SoftwareSourceCode"], artworks: "CreativeWork", poetry: "CreativeWork" };
 async function document(path, label, expect) {
   const { res, body } = await page(path, label);
   const tags = headTags(body);
@@ -213,11 +214,15 @@ async function document(path, label, expect) {
 }
 await document("/", "/", { home: true, ld: "WebSite" });
 await document("/articles", "/articles", {});
+{
+  const list = await document("/poetry", "/poetry", {});
+  ok(title(list.body) === `Poetry · ${NAME}`, `/poetry: the section is called "Poetry" (${title(list.body)})`);
+}
 if (articlePath) {
   const e = await document(articlePath, articlePath, { article: kindOf(articlePath) === "articles", ld: TYPES[kindOf(articlePath)] });
   ok(/article:published_time/.test(e.body) === (kindOf(articlePath) === "articles" && /datePublished/.test(e.body)), `${articlePath}: article:published_time follows the authored date`);
 }
-for (const k of ["projects", "artworks", "poems"]) {
+for (const k of ["projects", "artworks", "poetry"]) {
   const p = entryPaths.find((x) => kindOf(x) === k);
   if (p) await document(p, p, { ld: TYPES[k] });
 }
@@ -229,6 +234,34 @@ section("data responses (client navigations)");
   ok(res.status === 200, "/articles.data: 200");
   staticHeaders(res, "/articles.data");
   ok(/public/.test(res.headers.get("cache-control") ?? "") && cdnCache(res.headers.get("cache-control"), /s-maxage=60.*stale-while-revalidate|stale-while-revalidate.*s-maxage=60/), `/articles.data: cache-control (${res.headers.get("cache-control")})`);
+}
+
+// ---- 2b. the poems' section moved: /poems is a permanent redirect to /poetry (query kept, entries too) ---------------------------------
+section("redirects from /poems");
+{
+  const poemPath = entryPaths.find((p) => kindOf(p) === "poetry");
+  const cases = [
+    ["/poems", "/poetry"],
+    ["/poems/", "/poetry"],
+    ["/poems?tag=night", "/poetry?tag=night"],
+    ["/poems?tag=night&x=1", "/poetry?tag=night&x=1"],
+    ...(poemPath ? [[poemPath.replace("/poetry/", "/poems/"), poemPath], [poemPath.replace("/poetry/", "/poems/") + "?view=full", poemPath + "?view=full"]] : []),
+  ];
+  for (const [from, to] of cases) {
+    const r = await get(from);
+    await r.arrayBuffer();
+    ok(r.status === 301 || r.status === 308, `${from}: permanent redirect (${r.status})`);
+    const location = r.headers.get("location") ?? "";
+    ok(location === to || location === SITE + to || location === BASE + to, `${from}: Location ${location} is ${to}`);
+    if (!deployed) staticHeaders(r, from);
+    const followed = await get(to);
+    await followed.arrayBuffer();
+    ok(followed.status === 200, `${to}: the target answers 200 (${followed.status})`);
+  }
+  // an address that was never valid stays a 404 (not turned into a redirect to a 404)
+  const deep = await get("/poems/a/b");
+  await deep.arrayBuffer();
+  ok(deep.status === 404, `/poems/a/b: 404 (${deep.status})`);
 }
 
 // ---- 3. errors -------------------------------------------------------------------------------------------------------------------
@@ -507,10 +540,10 @@ if (!flag("no-browser")) {
       await new Promise((r) => setTimeout(r, 900));
       await route.continue();
     });
-    await t.pg.getByRole("link", { name: "Poems", exact: true }).first().click();
+    await t.pg.getByRole("link", { name: "Poetry", exact: true }).first().click();
     const shown = await t.pg.waitForSelector(".nav-progress[data-active]", { timeout: 3000 }).then(() => true, () => false);
     ok(shown, "pending navigation: the top progress line appears after a short delay");
-    await t.pg.waitForURL("**/poems");
+    await t.pg.waitForURL("**/poetry");
     await t.pg.waitForFunction(() => !document.querySelector(".nav-progress[data-active]"), null, { timeout: 5000 });
     ok(true, "pending navigation: the line is gone once the page has loaded");
     const anim = await t.pg.evaluate(() => getComputedStyle(document.querySelector(".nav-progress"), "::after").animationName);

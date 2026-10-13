@@ -5,7 +5,7 @@ import { metaBase } from "~/lib/meta";
 import { entryShouldRevalidate } from "~/lib/entry-revalidate";
 import { loadEntry } from "~/lib/entry-loader.server";
 
-// `/poems/:slug`: a poem in the shell's detail panel (or full screen with `?view=full`). No error boundary on purpose: an unknown
+// `/poetry/:slug`: a poem in the shell's detail panel (or full screen with `?view=full`). No error boundary on purpose: an unknown
 // slug is a real 404 that the root boundary draws with the site's not-found page.
 export async function loader({ params }: Route.LoaderArgs) {
   return loadEntry("poem", params.slug);
@@ -17,6 +17,6 @@ export function meta(args: Route.MetaArgs) {
   return entryMeta(args.loaderData, metaBase(args));
 }
 
-export default function PoemsEntryRoute({ loaderData }: Route.ComponentProps) {
+export default function PoemEntryRoute({ loaderData }: Route.ComponentProps) {
   return <EntryRoute data={loaderData} />;
 }

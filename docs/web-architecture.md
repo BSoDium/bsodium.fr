@@ -39,14 +39,15 @@ app/
   root.tsx            html shell (`lang`, theme-color per scheme, icons, manifest), SkipLinks, page nav scrim (lists), Navbar, NavProgress, MotionConfig, root ErrorBoundary (404 page, error page); loader returns `siteUrl`; dev-only content badge (the mode only when import.meta.env.DEV)
   entry.server.tsx    per-response CSP nonce, security headers, cache policy, X-Robots-Tag off the production host (lib/security-headers.ts); `handleDataRequest`, `handleError`
   entry.client.tsx    the stock hydration entry
-  routes.ts           pathless layout (shell) wrapping `/`, `/locations/:slug` and the entries `/{articles,projects,artworks,poems}/:slug`;
-                      the lists /projects /articles /artworks /poems (no globe); resource routes `/sitemap.xml` and `/robots.txt`
+  routes.ts           pathless layout (shell) wrapping `/`, `/locations/:slug` and the entries `/{articles,projects,artworks,poetry}/:slug`;
+                      the lists /projects /articles /artworks /poetry (no globe); resource routes `/sitemap.xml` and `/robots.txt`,
+                      and the permanent redirects `/poems` and `/poems/:slug` -> `/poetry` (routes/legacy-poems.ts)
   routes/shell.tsx    layout: full-bleed globe + PlacesNav + detail panel; owns focusedSlug, the saved GlobeViewState,
                       the panel inset passed to the globe and the container of an entry (`?view=full`)
   routes/home.tsx     `/` (renders nothing in the panel slot; meta only)
   routes/location.tsx `/locations/:slug` loader (404 via data()), meta, PlaceDetail, route ErrorBoundary
   routes/entry-{article,project,artwork,poem}.tsx   `/<kind>/:slug`: loader (lib/entry-loader.server.ts), meta, EntryRoute; no error boundary (404 -> root)
-  routes/{projects,articles,artworks,poems}.tsx     the lists: summaries -> EntryListPage
+  routes/{projects,articles,artworks,poetry}.tsx    the lists: summaries -> EntryListPage ("Poetry" is the poems' list)
   routes/{sitemap,robots}.ts   resource routes (no UI): the crawlers' files, built from the projection and `CATALYST_SITE_URL`
   routes/search-index.ts   `/search-index.json` (no UI): titles, kinds, tags and one-line summaries of places and entries, for the quick search
   routes/dev-design.tsx   DEV ONLY `/dev/design`: the UI system's styleguide (guarded like `/dev/street`; docs/design-system.md)
@@ -86,7 +87,7 @@ app/
   throws `data({ message }, { status: 404 })`. Its `ErrorBoundary` renders `PlaceNotFound` inside the panel
   (message, link to `/`, a plain inline list of all places); the shell and globe stay mounted. Status is a real 404.
 - Unmatched URLs fall to the root `ErrorBoundary` (404 page inside the navbar).
-- The list pages (`/projects`, `/articles`, `/artworks`, `/poems`) are plain pages outside the shell: a title with a plain count ("5 articles",
+- The list pages (`/projects`, `/articles`, `/artworks`, `/poetry`) are plain pages outside the shell: a title with a plain count ("5 articles",
   "2 of 5 articles" when filtered; no eyebrow, no index codes), then an `EntryCard` grid (1 / 2 / 3 columns; each card: cover, title, a three-line
   summary, the date and the places as two plain lines, the first three tags as muted text; no box, and no kind: the page already says it) whose cards
   keep `id={slug}` anchors (`/projects#slug`) and link to the entry route; an empty collection is one muted line ("Nothing here yet.", no card).
@@ -201,7 +202,7 @@ Not verified: how Vercel merges the `vercel.json` headers with the ones our serv
 - `Navbar` has no background, border or blur and **no logo** (owner, 2026-10-12: the icon in the top-left corner went; the mark is
   not in the header for now). One row of text, centred at the top of the viewport, in reading and focus order: the site's name
   "Globe" (a plain text link home, accessible name "Globe, Elliot Négrel-Jerzy home"; the site's name is the home hero's headline and the
-  title template's suffix, not the row's), Projects, Articles, Artworks, Poems (`aria-current="page"` on the active one, underlined, via
+  title template's suffix, not the row's), Projects, Articles, Artworks, Poetry (`aria-current="page"` on the active one, underlined, via
   `NavLink`), the search trigger. **On the home page, while the landing hero is at rest, there is no `<header>` at all**: the hero's
   four rows are the sections and its search line is the search with its key hint (docs/landing.md), and the hero's list is the page's one
   "Primary" navigation. `SearchPalette` (the dialog and Cmd/Ctrl-K) is mounted by `Navbar` next to the header, not in it, so the shortcut and
@@ -278,12 +279,24 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
 
 | URL | Shows |
 | --- | --- |
-| `/articles/:slug`, `/projects/:slug`, `/artworks/:slug`, `/poems/:slug` | the entry in the side panel over the globe (SSR; the globe stays interactive on the left half) |
+| `/articles/:slug`, `/projects/:slug`, `/artworks/:slug`, `/poetry/:slug` | the entry in the side panel over the globe (SSR; the globe stays interactive on the left half) |
 | the same with `?view=full` | the same entry in the full-screen container |
 | `/locations/:slug` | the place panel: its linked entries as cards grouped by kind |
-| `/articles`, ... `/poems` | the list pages (outside the shell, no globe) |
+| `/articles`, ... `/poetry` | the list pages (outside the shell, no globe) |
+| `/poems`, `/poems/:slug` (and the same with a query: `?tag=`, `?view=full`) | **301** to `/poetry`, `/poetry/:slug`, the query kept (see "The poems' section is Poetry" below) |
 | unknown slug, or a slug under the wrong kind (`/projects/demo-poem`) | a real 404 through the root boundary and the site's not-found page |
 
+- **The poems' section is "Poetry" (owner, 2026-10-13).** The section that lists poems is named Poetry, in its label (`KIND_PLURALS.poem`: header
+  and hero rows in mono capitals POETRY, the list's title and landmark, "More poetry" under an entry, the search palette's group, the place
+  panel's group, titles and descriptions) and in its address: the list is `/poetry` and an entry `/poetry/:slug` (`KIND_PATHS.poem`;
+  canonical URLs, sitemap, the panel's route table and JSON-LD `url` follow from it). The entry route used to be `/poems/:slug`, so entries
+  moved with the list and **every previously valid address redirects**: `routes/legacy-poems.ts`, mounted at `poems` and `poems/:slug` in
+  `routes.ts`, answers `301` with `Location: /poetry[/:slug]` and the query string untouched (`lib/legacy-paths.ts`, tested), before any
+  page is built, so it works on any host (not a `vercel.json` rule, which the local servers and the checks would not exercise). Anything
+  deeper (`/poems/a/b`) was a 404 and stays one. What stays "poem(s)": the singular noun (an entry's kicker "Poem", the kind chip, aria
+  labels of one entry, `genre: "Poem"` in JSON-LD), the `poem` kind in the schemas, the vault and the API (`/v1/poems`, `poems` in the
+  projection: the contract is not touched) and the **counts** ("4 poems", "1 poem", "2 of 4 poems", via `KIND_NOUNS`): "Poetry" names the
+  section, not a count noun ("4 poetry" would not be English). The search keywords of a poem include "poem", "poems" and "poetry".
 - **The container is the URL.** `?view=full` was chosen over a nested route: the route tree stays one route per kind, the URL is
   shareable and SSR-friendly (the server reads the query: a reload or a pasted link renders the full view at once), and the query
   is not part of the loader's identity: `entryShouldRevalidate` returns false when only the query changes, so toggling never
@@ -1050,7 +1063,7 @@ Measured behaviour (same build, same environment):
 | Panel, reduced motion | after two frames: inset 720 at once and the panel at x = 720 (no animation) |
 | Panel, idle | 0 rAF over 2.5 s with the panel open |
 | Panel, picking | a click at the marker's shifted position keeps the place selected (no navigation elsewhere) |
-| Keyboard flow | Tab order: Skip to content, Skip to places, Catalyst (home), Projects, Articles, Artworks, Poems, Search, then the places (list revealed, 288x528 px); Enter on Reykjavík opens it and focus moves to its heading (list hidden again); Escape closes and focus returns to its link (list revealed); tabbing out hides it |
+| Keyboard flow | Tab order: Skip to content, Skip to places, Catalyst (home), Projects, Articles, Artworks, Poetry, Search, then the places (list revealed, 288x528 px); Enter on Reykjavík opens it and focus moves to its heading (list hidden again); Escape closes and focus returns to its link (list revealed); tabbing out hides it |
 | Reduced transparency | with `prefers-reduced-transparency: reduce` (CDP) the blur layers are `display: none` and the gradient is the longer solid one |
 | Mobile (390x844) | panel is a modal dialog (`aria-modal`, body scroll locked, focus on the heading), globe unmounted |
 | Console | no errors or warnings in any scenario, no hydration warnings (production and dev server) |

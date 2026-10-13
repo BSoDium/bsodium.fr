@@ -30,7 +30,7 @@ export function shouldRevalidate() {
 
 /**
  * Pathless layout for `/`, `/locations/:slug` and the entries (`/articles/:slug`, `/projects/:slug`, `/artworks/:slug`,
- * `/poems/:slug`): one full-bleed globe instance, the keyboard path to the places (`PlacesNav`, visually hidden until
+ * `/poetry/:slug`): one full-bleed globe instance, the keyboard path to the places (`PlacesNav`, visually hidden until
  * focused), and the detail panel (whose content is the child route). An entry opens in the side panel or, with `?view=full`,
  * in the full-screen container: the panel widens over the SAME globe, which stays mounted and keeps its view.
  */
@@ -134,7 +134,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
             <p className="absolute inset-y-0 left-0 m-0 flex w-full items-center justify-center px-6 text-center text-sm text-muted-foreground md:w-1/2 [&_a]:underline">
               <span className="max-w-xs">
                 The globe needs JavaScript. The <a href="/articles">articles</a>, <a href="/projects">projects</a>, <a href="/artworks">artworks</a> and{" "}
-                <a href="/poems">poems</a> are readable without it.
+                <a href="/poetry">poetry</a> are readable without it.
               </span>
             </p>
           </noscript>

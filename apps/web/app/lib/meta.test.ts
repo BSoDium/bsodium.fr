@@ -71,8 +71,8 @@ describe("pageMeta", () => {
     expect(absoluteUrl("/media/x.svg", "not an origin")).toBe("/media/x.svg");
   });
   it("reads the origin from the root loader data and the path from the location", () => {
-    const base = metaBase({ location: { pathname: "/poems" }, matches: [undefined, { id: "root", loaderData: { siteUrl: ORIGIN } }, { id: "routes/poems" }] });
-    expect(base).toEqual({ origin: ORIGIN, path: "/poems" });
+    const base = metaBase({ location: { pathname: "/poetry" }, matches: [undefined, { id: "root", loaderData: { siteUrl: ORIGIN } }, { id: "routes/poetry" }] });
+    expect(base).toEqual({ origin: ORIGIN, path: "/poetry" });
     expect(metaBase({ location: { pathname: "/" }, matches: [{ id: "root", loaderData: undefined }] })).toEqual({ origin: undefined, path: "/" });
   });
 });
@@ -118,8 +118,8 @@ describe("entryMeta", () => {
 
 describe("listMeta", () => {
   it("names the collection and is canonical on its path", () => {
-    const tags = listMeta("poem", { origin: "https://x.test", path: "/poems" });
-    expect(tags[0]).toEqual({ title: "Poems · Elliot Négrel-Jerzy" });
-    expect(tags).toContainEqual({ tagName: "link", rel: "canonical", href: "https://x.test/poems" });
+    const tags = listMeta("poem", { origin: "https://x.test", path: "/poetry" });
+    expect(tags[0]).toEqual({ title: "Poetry · Elliot Négrel-Jerzy" });
+    expect(tags).toContainEqual({ tagName: "link", rel: "canonical", href: "https://x.test/poetry" });
   });
 });

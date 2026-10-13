@@ -74,7 +74,7 @@ describe("LandingHero", () => {
       ["/projects", "Projects"],
       ["/articles", "Articles"],
       ["/artworks", "Artworks"],
-      ["/poems", "Poems"],
+      ["/poetry", "Poetry"],
     ]);
     // reading order: name, intro, search, the lists
     expect(html.indexOf("hero-name")).toBeLessThan(html.indexOf("hero-intro"));

@@ -253,7 +253,7 @@ a bounding box cut out of it (bold, but a round silhouette like any button); a C
 mark to the project's first name); a disc with one squared corner (a leaf shape, generic).
 
 **The header** (`components/navbar.tsx`): one centred row of text and no logo (owner: the icon in the corner went). In order: "Globe"
-(the way home, in mono capitals like the rest: the site's name is the home hero's headline, not the header's), Projects, Articles, Artworks, Poems (muted; the
+(the way home, in mono capitals like the rest: the site's name is the home hero's headline, not the header's), Projects, Articles, Artworks, Poetry (muted; the
 current one in the foreground and underlined, `aria-current="page"`), the search trigger. **On the home page, while the landing hero is at
 rest, there is no header at all** (its four rows are the sections and its search line is the search: docs/landing.md); the header is back,
 tabs and search, whenever the hero has stepped back, and on every other route. Centred over the viewport; while the place

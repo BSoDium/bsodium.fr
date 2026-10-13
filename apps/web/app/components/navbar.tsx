@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useMatches } from "react-router";
 import { SearchPalette, SearchTriggers } from "~/components/search-palette";
-import { parsePanelPath, parseView } from "~/lib/entries";
+import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView } from "~/lib/entries";
 import { useHeroResting } from "~/lib/hero-rest";
 import { SITE_NAME } from "~/lib/site";
 import { cn } from "~/lib/utils";
@@ -8,12 +8,8 @@ import { cn } from "~/lib/utils";
 /** The first item names the globe (the home page): the site's own name is the landing hero's headline and the document title, not the row's. */
 const HOME_LABEL = "Globe";
 
-const LINKS = [
-  { to: "/projects", label: "Projects" },
-  { to: "/articles", label: "Articles" },
-  { to: "/artworks", label: "Artworks" },
-  { to: "/poems", label: "Poems" },
-] as const;
+/** The four sections, in the header's order (the hero's rows have the same): paths and names come from the kinds' tables (`Poetry` at `/poetry`). */
+const LINKS = (["project", "article", "artwork", "poem"] as const).map((kind) => ({ to: KIND_PATHS[kind], label: KIND_PLURALS[kind] }));
 
 interface NavbarProps {
   /** A fixed answer in place of the hero's published state (tests: the server snapshot is always "at rest"). */

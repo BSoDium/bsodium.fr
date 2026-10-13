@@ -27,7 +27,7 @@ export const SITE_TAGLINE = `${SITE.role} based in ${SITE.location}. ${SITE.spec
 
 export const SITE_NAME = SITE.name;
 export const SITE_DESCRIPTION = `${SITE.role} in ${SITE.location}. ${SITE.speciality}.`;
-/** Where an entry or a list has no summary of its own: "Poems from the archive of <name>." */
+/** Where an entry or a list has no summary of its own: "Poetry from the archive of <name>." */
 export const archiveLine = (what: string) => `${what} from the archive of ${SITE.name}.`;
 /** The home page's title: the template (`<Page> · <name>`) has no page to put first, so it says who the site belongs to and what they do. */
 export const SITE_TITLE = `${SITE_NAME} · ${SITE.role}`;

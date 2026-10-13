@@ -67,6 +67,8 @@ Document-level limits (the contract enforces them, so the private gate must too)
 
 ## 4. Poems
 
+On the site the section that lists poems is called **Poetry** (`/poetry`, entries at `/poetry/:slug`; `/poems` redirects). The kind, the vault `type`, the projection collection and the API (`/v1/poems`) stay `poem` / `poems`.
+
 A poem document is Markdown too, but its text is verse:
 
 - In a `type: poem` document, **consecutive paragraphs form one `verse` block**: each paragraph is a stanza, each line of the paragraph (the soft or hard line breaks) is a line of the stanza. Headings, quotes, images and the rest map as usual; a heading closes the current verse block and the next paragraphs start a new one.

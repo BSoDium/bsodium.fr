@@ -12,7 +12,7 @@ Where the project stands and what is left. Details live in the linked docs; this
 
 ## Entry views (branch `feat/entry-ui`, stacked on `feat/design-system`)
 
-The data display is implemented: articles, projects, artworks and poems open at `/<kind>/:slug` in the shell's side panel (globe
+The data display is implemented: articles, projects, artworks and poems open at `/<kind>/:slug` (`/articles/:slug`, ..., poems at `/poetry/:slug`: the poems' section is named "Poetry"; `/poems` and `/poems/:slug` redirect with a 301, query kept) in the shell's side panel (globe
 interactive) or full screen (`?view=full`, same component, same URL scheme, SSR, reload keeps it); the place panel lists its entries as
 cards; the four list pages use the card grid and an intentional empty state; the body renderer covers every block type of the contract.
 Details: [web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme), [design-system.md](design-system.md#entry-view-the-panel-and-the-full-screen-view). Check: `apps/web/scripts/entries/check.mjs` on `pnpm dev:demo`.

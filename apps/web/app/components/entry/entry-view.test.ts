@@ -73,10 +73,10 @@ describe("EntryView", () => {
   });
   it("links the neighbours of the kind: the first has a next one only, the last a previous one only, the middle both", () => {
     const first = render("poem", "demo-poem", "panel");
-    expect(first).toContain("More poems");
+    expect(first).toContain("More poetry");
     expect(first).toContain('rel="next"');
     expect(first).not.toContain('rel="prev"');
-    expect(first).toContain("/poems/citadel-rain");
+    expect(first).toContain("/poetry/citadel-rain");
     const last = render("poem", "quai-de-nuit", "panel");
     expect(last).toContain('rel="prev"');
     expect(last).not.toContain('rel="next"');

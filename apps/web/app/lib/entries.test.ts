@@ -9,7 +9,11 @@ import {
   entryPath,
   getEntryDetail,
   isContentKind,
+  KIND_LABELS,
+  KIND_NOUNS,
   KIND_PATHS,
+  KIND_PLURALS,
+  kindCount,
   listEntries,
   parsePanelPath,
   parseView,
@@ -30,10 +34,16 @@ const world = (over: Partial<PublishedProjection>): PublishedProjection => ({ ..
 describe("kinds", () => {
   it("has a path, in the same order, for each of the four kinds, poems included", () => {
     expect(CONTENT_KINDS).toEqual(["article", "project", "artwork", "poem"]);
-    expect(KIND_PATHS.poem).toBe("/poems");
-    expect(entryPath("poem", "demo-poem")).toBe("/poems/demo-poem");
+    expect(KIND_PATHS.poem).toBe("/poetry");
+    expect(entryPath("poem", "demo-poem")).toBe("/poetry/demo-poem");
     expect(isContentKind("poem")).toBe(true);
     expect(isContentKind("place")).toBe(false);
+  });
+  it("names the poems' section \"Poetry\" and counts them as poems; the singular stays \"Poem\"", () => {
+    expect(KIND_PLURALS).toEqual({ project: "Projects", article: "Articles", artwork: "Artworks", poem: "Poetry" });
+    expect(KIND_LABELS.poem).toBe("Poem");
+    expect(KIND_NOUNS.poem).toEqual({ one: "poem", many: "poems" });
+    expect([kindCount("poem", 0), kindCount("poem", 1), kindCount("poem", 4), kindCount("article", 1)]).toEqual(["0 poems", "1 poem", "4 poems", "1 article"]);
   });
 });
 
@@ -169,7 +179,7 @@ describe("entriesOfPlace", () => {
     expect(groups.map((g) => [g.kind, g.label, g.entries.map((e) => e.slug)])).toEqual([
       ["article", "Articles", ["a", "c"]],
       ["project", "Projects", ["pr"]],
-      ["poem", "Poems", ["v"]],
+      ["poem", "Poetry", ["v"]],
     ]);
   });
   it("skips references to entries that do not exist, and answers nothing for a place that does not exist", () => {
@@ -217,10 +227,12 @@ describe("parsePanelPath", () => {
     expect(parsePanelPath("/articles/x")).toEqual({ type: "entry", kind: "article", slug: "x" });
     expect(parsePanelPath("/projects/x")).toEqual({ type: "entry", kind: "project", slug: "x" });
     expect(parsePanelPath("/artworks/x")).toEqual({ type: "entry", kind: "artwork", slug: "x" });
-    expect(parsePanelPath("/poems/demo-poem/")).toEqual({ type: "entry", kind: "poem", slug: "demo-poem" });
+    expect(parsePanelPath("/poetry/demo-poem/")).toEqual({ type: "entry", kind: "poem", slug: "demo-poem" });
+    // the old address is a redirect (lib/legacy-paths.ts), never a panel route
+    expect(parsePanelPath("/poems/demo-poem")).toBeNull();
   });
   it("is null for the globe, the lists, other pages and malformed paths", () => {
-    for (const path of ["/", "", "/articles", "/poems/", "/dev/design", "/foo/bar", "/articles/a/b", "/articles/%E0%A4%A", "articles/x"]) {
+    for (const path of ["/", "", "/articles", "/poetry/", "/dev/design", "/foo/bar", "/articles/a/b", "/articles/%E0%A4%A", "articles/x"]) {
       expect(parsePanelPath(path), path).toBeNull();
     }
   });

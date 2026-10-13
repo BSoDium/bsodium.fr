@@ -3,14 +3,14 @@ import { Link, useLocation } from "react-router";
 import type { ContentKind } from "@catalyst/schemas";
 import { EntryRow } from "~/components/entry/entry-list-card";
 import { Button, StatePanel } from "~/components/ui";
-import { KIND_LABELS, KIND_PLURALS, type EntrySummary } from "~/lib/entries";
+import { KIND_NOUNS, KIND_PLURALS, type EntrySummary } from "~/lib/entries";
 import { collectTags, filterByTag, groupByYear, parseTagFilter, shouldGroupByYear, tagSearch, type TagCount } from "~/lib/entry-list";
 
 /** Tags shown before "more": the rest sit one press away (the selected tag is always shown). */
 const TAGS_SHOWN = 10;
 
 /**
- * `/projects`, `/articles`, `/artworks`, `/poems`: the section's front page, set as type (docs/design-system.md, "Entry pages"): the double
+ * `/projects`, `/articles`, `/artworks`, `/poetry`: the section's front page, set as type (docs/design-system.md, "Entry pages"): the double
  * rule, a mono line with the plain count, the section name at the headline scale, then a rule and the tag filter, then the entries as hairline rows
  * (`EntryRow`: date and places in mono, the title heavy over a thin summary, the image where there is one), grouped by year (newest first)
  * when a year holds more than one. The filter is the URL (`?tag=rail`: a link, a reload, the back button; works without scripts) and each
@@ -26,7 +26,9 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
   const grouped = shouldGroupByYear(byYear);
   const groups = grouped ? byYear : [{ key: "all", year: null, items: byYear.flatMap((g) => g.items) }];
   const cardLevel = grouped ? 3 : 2;
-  const plural = KIND_PLURALS[kind].toLowerCase();
+  // The section's name for labels ("Filter poetry by tag"), the count noun for counts ("4 poems").
+  const section = KIND_PLURALS[kind].toLowerCase();
+  const nouns = KIND_NOUNS[kind];
   let seen = 0;
 
   return (
@@ -40,14 +42,14 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
       <header className="flex flex-col">
         <div aria-hidden="true" className="entry-rule" />
         <p data-slot="list-count" className="type-meta m-0 mt-[1.375rem] text-muted-foreground">
-          {tag ? `${shown.length} of ${items.length}` : items.length} {items.length === 1 ? KIND_LABELS[kind].toLowerCase() : plural}
+          {tag ? `${shown.length} of ${items.length}` : items.length} {items.length === 1 ? nouns.one : nouns.many}
         </p>
         <h1 className="entry-title mt-[1.625rem]">{KIND_PLURALS[kind]}</h1>
       </header>
 
-      {tags.length > 0 && items.length > 1 && <TagFilter tags={tags} selected={tag} search={search} label={`Filter ${plural} by tag`} />}
+      {tags.length > 0 && items.length > 1 && <TagFilter tags={tags} selected={tag} search={search} label={`Filter ${section} by tag`} />}
       <p role="status" className="sr-only">
-        {tag ? `Showing ${shown.length} of ${items.length} ${plural} tagged ${tag}` : ""}
+        {tag ? `Showing ${shown.length} of ${items.length} ${nouns.many} tagged ${tag}` : ""}
       </p>
 
       <div className="mt-10 flex flex-col gap-14">

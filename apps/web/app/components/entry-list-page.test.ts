@@ -43,6 +43,26 @@ describe("EntryListPage", () => {
     expect((html.match(/aria-current="true"/g) ?? []).length).toBe(1);
     expect(html).toContain("Showing 2 of 3 articles tagged rail");
   });
+  it("calls the poems' section \"Poetry\" (title, list, filter) and counts its entries as poems", () => {
+    const poems = listEntries(demo, "poem");
+    const at = (items: EntrySummary[], search = "") =>
+      renderToStaticMarkup(createElement(StaticRouter, { location: `/poetry${search}` }, createElement(EntryListPage, { kind: "poem", items })));
+    const html = at(poems);
+    expect(html).toMatch(/<h1[^>]*>Poetry<\/h1>/);
+    expect(html).toContain(`>${poems.length} poems<`);
+    expect(html).toContain('aria-label="Filter poetry by tag"');
+    expect(html).toContain('role="list" aria-label="Poetry"');
+    expect(html).not.toMatch(/<h1[^>]*>Poems<\/h1>/);
+    // one poem is "1 poem", never "1 poetry"
+    expect(at(poems.slice(0, 1))).toContain(">1 poem<");
+    expect(at(poems.slice(0, 1))).not.toMatch(/\bPoems\b|1 poetry/);
+    // the filter says how many of how many, in poems
+    const tag = poems.find((p) => p.tags.length > 0)?.tags[0];
+    expect(tag).toBeTruthy();
+    expect(at(poems, `?tag=${encodeURIComponent(tag!)}`)).toMatch(new RegExp(`Showing \\d+ of ${poems.length} poems tagged`));
+    // the entry's own kicker (singular) is not the list's business
+    expect(html).not.toContain("Poetry /");
+  });
   it("ignores an unknown tag", () => {
     expect((render(articles, "?tag=nope").match(/<article/g) ?? []).length).toBe(articles.length);
   });

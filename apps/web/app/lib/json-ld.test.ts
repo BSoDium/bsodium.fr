@@ -47,7 +47,7 @@ describe("entryJsonLd", () => {
     expect(entryJsonLd(entry({ kind: "project", href: "/projects/a" }), ORIGIN)["@type"]).toBe("CreativeWork");
   });
   it("types a poem as a CreativeWork of genre Poem and an artwork as a CreativeWork", () => {
-    expect(entryJsonLd(entry({ kind: "poem", href: "/poems/a" }), ORIGIN)).toMatchObject({ "@type": "CreativeWork", genre: "Poem" });
+    expect(entryJsonLd(entry({ kind: "poem", href: "/poetry/a" }), ORIGIN)).toMatchObject({ "@type": "CreativeWork", genre: "Poem" });
     const art = entryJsonLd(entry({ kind: "artwork", href: "/artworks/a" }), ORIGIN);
     expect(art["@type"]).toBe("CreativeWork");
     expect(art).not.toHaveProperty("genre");

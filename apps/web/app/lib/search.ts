@@ -4,7 +4,7 @@
  * folded, every word of the query must match, a word that starts a word of the title counts most.
  */
 import type { ContentKind, PublishedProjection } from "@catalyst/schemas";
-import { COLLECTIONS, CONTENT_KINDS, entryPath, KIND_LABELS, KIND_PLURALS, placePath } from "./entries";
+import { COLLECTIONS, CONTENT_KINDS, entryPath, KIND_LABELS, KIND_NOUNS, KIND_PLURALS, placePath } from "./entries";
 import { formatEntryDate } from "./dates";
 
 export type SearchType = "place" | ContentKind;
@@ -44,8 +44,8 @@ export function buildSearchIndex(projection: PublishedProjection): SearchItem[] 
   const entries = CONTENT_KINDS.flatMap((kind) =>
     projection[COLLECTIONS[kind]].map((item): SearchItem => {
       const date = formatEntryDate(item.date);
-      // the kind's word stays findable ("poem" lists the poems) though the row no longer spells it out
-      const keywords = [KIND_LABELS[kind], ...(item.tags ?? []), item.summary ?? ""].join(" ").trim();
+      // the kind's words stay findable ("poem", "poems" and the section's name "poetry" list the poems) though the row no longer spells them out
+      const keywords = [KIND_LABELS[kind], KIND_NOUNS[kind].many, KIND_PLURALS[kind], ...(item.tags ?? []), item.summary ?? ""].join(" ").trim();
       return {
         type: kind,
         title: item.title,

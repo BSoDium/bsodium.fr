@@ -28,7 +28,9 @@ const VIEWPORTS = [
   ["844x390", LANDSCAPE],
 ];
 const IDLE_QUERY = "?globe-debug&hero-idle=1500";
-const PATHS = ["/projects", "/articles", "/artworks", "/poems"];
+const PATHS = ["/projects", "/articles", "/artworks", "/poetry"];
+/** The rows' names: the poems' section is "Poetry". */
+const LABELS = ["Projects", "Articles", "Artworks", "Poetry"];
 
 async function newPage(contextOptions, { colorScheme = "dark", reducedMotion = "no-preference" } = {}) {
   const ctx = await browser.newContext({ ...contextOptions, colorScheme, reducedMotion });
@@ -131,6 +133,8 @@ async function layoutChecks(page, label) {
   ok((html.match(/<nav aria-label="Primary"/g) ?? []).length === 1 && /<nav aria-label="Primary" class="hero-list">/.test(html), "SSR: the hero's list is the page's one Primary navigation (the places list is the other landmark)");
   const hrefs = [...html.matchAll(/class="hero-row"[^>]*href="([^"]+)"|href="([^"]+)"[^>]*class="hero-row"/g)].map((m) => m[1] ?? m[2]);
   ok(JSON.stringify(hrefs) === JSON.stringify(PATHS), `SSR: the four lists, in order (${hrefs.join(" ")})`);
+  const labels = [...html.matchAll(/class="hero-row"[^>]*href="[^"]+"[^>]*><span>([^<]+)<|href="[^"]+"[^>]*class="hero-row"[^>]*><span>([^<]+)</g)].map((m) => m[1] ?? m[2]);
+  ok(JSON.stringify(labels) === JSON.stringify(LABELS), `SSR: the four rows are named ${LABELS.join(", ")} (${labels.join(", ")})`);
   ok((html.match(/<h1[ >]/g) ?? []).length === 1, "SSR: exactly one h1");
 }
 
