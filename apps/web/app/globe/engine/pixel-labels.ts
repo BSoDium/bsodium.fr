@@ -311,7 +311,7 @@ export const SPOT_COUNT = 18;
 export interface SpotUnits {
   /** How far a nested plate sits inside the outline (the outline's thickness). Default 1. */
   inset?: number;
-  /** Positions along the edges are multiples of this from the visible left edge. Default 1. */
+  /** Positions along the edges are multiples of this from the visible left edge. Default 1; 0: exact (a label that follows its box smoothly). */
   quant?: number;
   /** Clear room between a plate outside the box and the box's outline (above, below, left, right). Default 0 (the pixel text is flush). */
   gap?: number;
@@ -364,7 +364,7 @@ export function coversBox(x: number, y: number, w: number, h: number, rect: Cell
  */
 export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: GridSize, units: SpotUnits, out: { x: number; y: number; inside: boolean }): boolean {
   const inset = units.inset ?? 1;
-  const quant = units.quant ?? 1;
+  const quant = units.quant ?? 1; // (0 is exact, not the default)
   const gap = units.gap ?? 0;
   const bleed = units.bleed ?? 0;
   const lat = units.lattice;
@@ -432,7 +432,7 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
       if (k < 0 || k > 2) return false;
       const span = xr - w - xl;
       if (!(span > 2 * inset)) return false;
-      x = xl + Math.round((span * (k + 1)) / 4 / quant) * quant;
+      x = xl + (quant > 0 ? Math.round((span * (k + 1)) / 4 / quant) * quant : (span * (k + 1)) / 4);
       y = id >= SPOT.belowShift ? rect.r1 + gap : rect.r0 - h - gap;
       downY = id < SPOT.belowShift;
     }

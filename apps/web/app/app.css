@@ -1047,8 +1047,8 @@ h1[tabindex="-1"]:focus-visible {
  * change (the box's own colour logic does), only the stacking order so that the label is not covered by a neighbour. Selected: INVERTED, the
  * foreground as the plate and the page colour as the text, OPAQUE with no feather (high contrast already; the second line is the page colour mixed 28 %
  * toward the foreground, still AA on it). A label drawn over other labels (the last resort of the plan) is opaque too: a translucent plate would
- * show the text under it. A label has no CSS transition: it moves by `transform` only, to whole art pixels, and the motion (the stepped glide to
- * a new slot) is computed per frame in engine/label-track.ts, so a label is always on its way to its place and never snaps; reduced motion
+ * show the text under it. A label has no CSS transition: it moves by `transform` only, smoothly (to the sub-pixel while it moves, a whole device pixel at rest), and the
+ * motion (the eased glide to a new slot) is computed per frame in engine/label-track.ts, so a label is always on its way to its place and never snaps; reduced motion
  * (the host's own flag) makes it instant. Reduced transparency: the plate is opaque.
  */
 .map-label {

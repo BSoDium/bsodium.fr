@@ -1,6 +1,6 @@
 // Checks for the detection boxes (every place and group is a rectangle; the hierarchy is cut in screen space), Playwright + headless Chrome with the GPU.
 //
-//   CHROME_PATH=... BASE_URL=http://localhost:5174 [SHOTS=1] node apps/web/scripts/globe/groups.mjs [lod|cases|pixels|empty|timed|at-rest|reduced|pick|targets|flicker|open|cost|idle|handover|shots]
+//   CHROME_PATH=... BASE_URL=http://localhost:5174 [SHOTS=1] node apps/web/scripts/globe/groups.mjs [lod|cases|pixels|empty|timed|at-rest|reduced|pick|targets|flicker|spin|open|cost|idle|handover|shots]
 //
 // Serve the app with demo content (`pnpm dev:demo`, or a production build with CATALYST_CONTENT=demo): the demo projection has
 // a hierarchy (3 continents, a region, a subregion, 3 countries, an area; 18 places). `handover` also needs the local tile server
@@ -27,8 +27,10 @@
 //           shows the pointer and the node's hover state; the label is a real DOM element (text, opacity, place) for every drawn box; at rest every label is exactly at its target (no glide left)
 // flicker   a scripted pan and zoom of 3 s over a crowded view: the labels move all the time and never teleport (a plate that moves by more
 //           than its box plus the glide it had left in one frame: 0), a slot change is a stepped glide of whole art cells (slot changes per label, the
-//           worst frame), every plate is on the art-pixel lattice and moves exactly as its box does while its slot is kept, the plan runs at
+//           worst frame), every plate moves exactly as its PROJECTED box does while its slot is kept (smooth, to the sub-pixel: no lattice), the plan runs at
 //           a bounded rate, the loop is quiet after the labels arrived (none gliding, none owed), and hovering label after label re-plans nothing
+// spin      (the owner's preview, or any content) the idle rotation turns the world: per frame a label with a kept slot moves exactly as its PROJECTED
+//           box does (within 0.1 px, in practice 1e-6), by fractions of a pixel and not by cells, and its element is where it says
 // open      (the owner's preview, or any content with a group of several places) a group OPENS EARLY into its most important places and cross-fades with
 //           them (docs/web-architecture.md, "Opening a group into its most important children"). At Western Europe, the Balkans, Iberia, Central Europe
 //           and Italy: a slow zoom sweep at rest, at every frame NO drawn node has a drawn ancestor, every box is fully drawn with its label element opaque
@@ -524,8 +526,8 @@ try {
     });
     const lab = tab?.label;
     expect(
-      `the label reads "${tab?.text}" over "${tab?.subWhole}", HTML text above the box's top-left corner (one art cell of clear room, the plate's left edge on the box's left edge), the whole label at its first position`,
-      !!tab && !!lab && tab.text === "Crowd" && tab.subWhole === "10 places" && lab.text === "Crowd" && lab.sub === "10 places" && Math.abs(lab.x - tab.box.x0) < 0.01 && Math.abs(lab.y + lab.h + (tab.box.x1 - tab.box.x0) / (tab.rect.c1 - tab.rect.c0) - tab.box.y0) < 0.01 && !lab.inside && lab.variant === 0 && lab.cand === 0,
+      `the label reads "${tab?.text}" over "${tab?.subWhole}", HTML text above the box's top-left corner (boxGap plus one cell of clear room from the projected box, the plate's left edge on its left edge), the whole label at its first position`,
+      !!tab && !!lab && tab.text === "Crowd" && tab.subWhole === "10 places" && lab.text === "Crowd" && lab.sub === "10 places" && Math.abs(lab.x - tab.boxExact.x0) < 0.01 && Math.abs(lab.y + lab.h + 3 + (tab.box.x1 - tab.box.x0) / (tab.rect.c1 - tab.rect.c0) - tab.boxExact.y0) < 0.01 && !lab.inside && lab.variant === 0 && lab.cand === 0,
       tab,
     );
     const dom = (await page.evaluate(() => window.__globeDebug.labelsDom())).find((l) => l.slug === "case-crowd");
@@ -601,22 +603,20 @@ try {
         // the element is really in the DOM: the same text, fully opaque, at rest, where the plan put it
         const el = domOf.get(c.slug);
         const wrong = !el ? "no element" : el.text !== l.text || (el.sub ?? null) !== (l.sub ?? null) ? "text" : el.opacity !== 1 ? "half opacity" : el.mode !== "rest" ? "state" : l.glide !== 0 || l.tx !== l.x || l.ty !== l.y ? `not at its target (${l.glide} px away)` : (() => {
-                // settled: every label is exactly at its target, and the element is where the label says (within a device pixel)
+                // settled: every label is exactly at its target, and the element is where the label says (within a device pixel: rounded when at rest)
                 const m = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(el.transform);
                 return !m || Math.abs(Number(m[1]) - l.x) > 0.3 || Math.abs(Number(m[2]) - l.y) > 0.3 ? "position" : null;
               })();
         if (wrong) domBad.push({ slug: c.slug, wrong, el, l });
         else {
-          // the plate's edge is the box's outer edge (above its top-left corner), one art cell of clear room above the box (the plate is a whole
-          // number of cells high), on the art-pixel lattice of the box, the text starts after the padding, two lines when there is a second line,
-          // and the feather is the plate's own small shadow
+          // the plate's edge is the PROJECTED box's left edge (above its top-left corner), boxGap (3 px) plus one art cell above that edge, so 3 px to
+          // 3 px + a cell from the drawn outline (which is snapped to cells and lies up to a cell outside it) and never touching it; the text starts
+          // after the padding, two lines when there is a second line, and the feather is the plate's own small shadow. At rest the plate is on a
+          // whole device pixel (sharp text), within half a device pixel of its exact place.
           const cell = (c.box.x1 - c.box.x0) / (c.rect.c1 - c.rect.c0);
-          const left = c.box.x0 - c.rect.c0 * cell;
-          const top = c.box.y0 - c.rect.r0 * cell;
-          const onCell = (v, o) => Math.abs((v - o) / cell - Math.round((v - o) / cell)) < 1e-6;
-          const lattice = !l.overlap && (!onCell(l.x, left) || !onCell(l.y, top)) ? `plate (${l.x}, ${l.y}) not on the ${cell} px lattice` : null;
-          const alignedLeft = l.cand === 0 && !l.overlap && Math.abs(l.x - c.box.x0) > 0.01 ? "plate not on the box's left edge" : null;
-          const gap = l.cand === 0 && !l.overlap && Math.abs(l.y + l.h + cell - c.box.y0) > 0.01 ? `gap above the box is not one cell (${cell} px)` : null;
+          const alignedLeft = l.cand === 0 && !l.overlap && Math.abs(l.x - c.boxExact.x0) > 0.01 ? "plate not on the box's left edge" : null;
+          const gap = l.cand === 0 && !l.overlap && Math.abs(l.y + l.h + 3 + cell - c.boxExact.y0) > 0.01 ? `gap above the projected box is not 3 px + one cell (${cell} px)` : null;
+          const lattice = l.cand === 0 && !l.overlap && (c.box.y0 - (l.y + l.h) < 3 - 0.01 || c.box.y0 - (l.y + l.h) > 3 + cell + 0.01) ? `clear room to the drawn outline is ${c.box.y0 - (l.y + l.h)}` : null;
           const pad = Math.abs(el.nameRect.x0 - el.rect.x0 - 6) > 0.6 ? "text not 6 px inside the plate" : null;
           const lines = l.sub ? (el.subRect.y1 - el.subRect.y0 > 0 && el.subRect.y0 >= el.nameRect.y1 - 0.5 ? null : "second line not under the name") : el.subRect.y1 - el.subRect.y0 > 0.5 ? "second line shown without text" : null;
           // (a label drawn over others, the last resort, has an opaque plate and no feather)
@@ -638,7 +638,7 @@ try {
     }
     expect(`at rest, over ${views.length} views (world, continents, Europe, the Balkans, a city cluster, a lon/lat/zoom sweep) and ${seen} drawn boxes: 100 % have their label (${unlabelled.length} without), none half-faded or dimmed (${shortened} labels shortened, ${overlapped} drawn over another as the last resort, ${nested} nested inside their box)`, seen > 20 && unlabelled.length === 0 && halfState.length === 0, { unlabelled: unlabelled.slice(0, 5), halfState: halfState.slice(0, 5) });
     expect("at rest, no two label plates overlap unless one of them is the last resort", collisions.length === 0, collisions.slice(0, 5));
-    expect(`every label's layout in the real DOM: plate on the art-pixel lattice and on the box's left edge, one cell above it, text 6 px inside the plate, second line under the name, the planner's size equal to the element's, the feather the plate's own small shadow (${layoutBad.length} wrong)`, layoutBad.length === 0, layoutBad.slice(0, 5));
+    expect(`every label's layout in the real DOM: plate on the projected box's left edge, 3 px + one cell above it (3 to 3 + a cell from the drawn outline), text 6 px inside the plate, second line under the name, the planner's size equal to the element's, the feather the plate's own small shadow (${layoutBad.length} wrong)`, layoutBad.length === 0, layoutBad.slice(0, 5));
     // The plate is TRANSLUCENT: the computed background of a label at rest is the page colour at the stylesheet's --label-plate-alpha (the least
     // that keeps the 11 px second line AA over the loudest map tone, engine/label-plate.ts), opaque when selected or drawn over others.
     const plate = await page.evaluate(() => {
@@ -1057,7 +1057,7 @@ try {
           const t0 = performance.now();
           let lastT = t0;
           const prevChange = new Map();
-          const out = { changes: 0, reversals: 0, teleports: 0, gliding: 0, maxStep: 0, visibility: 0, shown: 0, worstFrame: 0, labels: new Set(), mid: 0, domWrites: 0, frames: 0, slow: 0, offLattice: 0, lockstep: 0, lockstepErrors: 0, cell: 0, glideSteps: 0, glideStepsOffCell: 0 };
+          const out = { changes: 0, reversals: 0, teleports: 0, gliding: 0, maxStep: 0, visibility: 0, shown: 0, worstFrame: 0, labels: new Set(), mid: 0, domWrites: 0, frames: 0, slow: 0, fractional: 0, lockstep: 0, lockstepErrors: 0, cell: 0, worstKept: 0, boxStepsOnCells: 0, boxSteps: 0 };
           const w0 = d.labelStats().labelWrites;
           for (let f = 0; ; f++) {
             await new Promise((r) => requestAnimationFrame(r));
@@ -1068,19 +1068,19 @@ try {
             d.renderNow();
             const now = new Map();
             for (const c of d.labelCells()) {
-              // the art cell (CSS px) and the origin of the lattice, from the box in cells and in px
+              // the art cell (CSS px); `box` is the box as DRAWN (snapped to cells), `exact` as projected: what the label follows
               const cell = (c.box.x1 - c.box.x0) / (c.rect.c1 - c.rect.c0);
               out.cell = cell;
-              now.set(c.slug, { cand: c.label.cand, variant: c.label.variant, text: c.label.text, x: c.label.x, y: c.label.y, x1: c.label.x + c.label.w, y1: c.label.y + c.label.h, g: c.label.glide, box: c.box, mode: c.label.mode, cell, left: c.box.x0 - c.rect.c0 * cell, top: c.box.y0 - c.rect.r0 * cell, overlap: c.label.overlap });
+              now.set(c.slug, { cand: c.label.cand, variant: c.label.variant, text: c.label.text, x: c.label.x, y: c.label.y, x1: c.label.x + c.label.w, y1: c.label.y + c.label.h, g: c.label.glide, box: c.box, exact: c.boxExact, mode: c.label.mode, cell, left: c.box.x0 - c.rect.c0 * cell, top: c.box.y0 - c.rect.r0 * cell, overlap: c.label.overlap });
             }
             let frameChanges = 0;
             for (const [k, s] of now) {
               out.labels.add(k);
               out.shown++;
               if (s.g > 0) out.gliding++;
-              // every plate (but the last resort's, which sits where it overlaps least) is on the art-pixel lattice of the grid its box is on
+              // plates are NOT on the cell grid of the boxes: they follow the projected box (counted: a plate between cells)
               const on = (v, o) => Math.abs((v - o) / s.cell - Math.round((v - o) / s.cell)) < 1e-6;
-              if (!s.overlap && (!on(s.x, s.left) || !on(s.y, s.top))) out.offLattice++;
+              if (!s.overlap && (!on(s.x, s.left) || !on(s.y, s.top))) out.fractional++;
               const p = last.get(k);
               if (!p) {
                 if (f > 0) out.visibility++;
@@ -1094,22 +1094,30 @@ try {
                 if (was && was.from === to && now0 - was.t < 350) out.reversals++;
                 prevChange.set(k, { t: now0, from: `${p.variant}/${p.cand}` });
               }
-              const boxMove = Math.max(Math.abs(p.box.x0 - s.box.x0), Math.abs(p.box.y0 - s.box.y0), Math.abs(p.box.x1 - s.box.x1), Math.abs(p.box.y1 - s.box.y1));
+              const boxMove = Math.max(Math.abs(p.exact.x0 - s.exact.x0), Math.abs(p.exact.y0 - s.exact.y0), Math.abs(p.exact.x1 - s.exact.x1), Math.abs(p.exact.y1 - s.exact.y1));
               // the plate's nearer edge on each axis: a text that gets shorter (a plate anchored on one edge of its box) keeps the other edge where it was
               const step = Math.max(Math.min(Math.abs(p.x - s.x), Math.abs(p.x1 - s.x1)), Math.min(Math.abs(p.y - s.y), Math.abs(p.y1 - s.y1)));
               out.maxStep = Math.max(out.maxStep, step - boxMove);
               if (step > boxMove + SNAP_PX + Math.max(p.g, s.g)) out.teleports++;
-              // LOCKSTEP: the same slot and no glide before or after, plate and box wholly on the screen: the plate moved exactly as a corner of its box did
-              // (the corner it is aligned with: left or right edge, top or bottom), and whole cells at a time
+              // LOCKSTEP: the same slot and no glide before or after, plate and box wholly on the screen: the plate moved exactly as a corner of its
+              // PROJECTED box did (the corner it is aligned with: left or right edge, top or bottom), to a millionth of a px: smooth, no steps
               if (p.cand === s.cand && p.variant === s.variant && p.g === 0 && s.g === 0 && s.cand >= 0 && !s.overlap && !(s.cand >= 5 && s.cand <= 7) && !(s.cand >= 13 && s.cand <= 15)) {
-                const clear = (q) => q.x > s.cell && q.y > s.cell && q.x1 < 1440 - s.cell && q.y1 < 900 - s.cell && q.box.x0 > 0 && q.box.y0 > 0 && q.box.x1 < 1440 && q.box.y1 < 900;
+                const clear = (q) => q.x > s.cell && q.y > s.cell && q.x1 < 1440 - s.cell && q.y1 < 900 - s.cell && q.exact.x0 > 0 && q.exact.y0 > 0 && q.exact.x1 < 1440 && q.exact.y1 < 900;
                 if (clear(p) && clear(s)) {
                   out.lockstep++;
                   const dx = s.x - p.x;
                   const dy = s.y - p.y;
-                  const xs = [s.box.x0 - p.box.x0, s.box.x1 - p.box.x1];
-                  const ys = [s.box.y0 - p.box.y0, s.box.y1 - p.box.y1];
-                  if (!xs.some((d1) => Math.abs(d1 - dx) < 1e-6) || !ys.some((d1) => Math.abs(d1 - dy) < 1e-6) || Math.abs(dx / s.cell - Math.round(dx / s.cell)) > 1e-6 || Math.abs(dy / s.cell - Math.round(dy / s.cell)) > 1e-6) out.lockstepErrors++;
+                  const xs = [s.exact.x0 - p.exact.x0, s.exact.x1 - p.exact.x1];
+                  const ys = [s.exact.y0 - p.exact.y0, s.exact.y1 - p.exact.y1];
+                  const e = Math.min(...xs.map((d1) => Math.abs(d1 - dx))) + Math.min(...ys.map((d1) => Math.abs(d1 - dy)));
+                  out.worstKept = Math.max(out.worstKept, e);
+                  if (e > 1e-6) out.lockstepErrors++;
+                  // for comparison: the DRAWN box steps by whole cells (a step is a multiple of the cell, a jump of 2 to 2.5 px)
+                  const bx = s.box.x0 - p.box.x0;
+                  if (bx !== 0) {
+                    out.boxSteps++;
+                    if (Math.abs(bx / s.cell - Math.round(bx / s.cell)) < 1e-6) out.boxStepsOnCells++;
+                  }
                 }
               }
             }
@@ -1160,7 +1168,7 @@ try {
       // frame changes more than max(16, 55 percent of the labels) as before. A plate that jumps is `teleports`, below.
       expect(`${name}: over a scripted pan and zoom of 3 s a label changes its slot less than four times on average (${(r.changes / Math.max(1, r.labels)).toFixed(2)}; each change is a glide), at most 25 percent of the changes go back to the slot just left (${r.reversals} of ${r.changes}) and no frame changes more than max(16, 55 percent of the labels)`, r.labels > 5 && r.changes / r.labels < 4 && r.reversals <= 0.25 * r.changes && r.worstFrame <= Math.max(16, Math.ceil(r.labels * 0.55)), r);
       expect(`${name}: no plate teleports against its box (${r.teleports}), the labels move (${r.gliding} label-frames gliding)`, r.teleports === 0, r);
-      expect(`${name}: every plate is on the art-pixel lattice (${r.offLattice} off it of ${r.shown} label-frames, cell ${r.cell} px) and a plate whose slot is kept moves exactly as its box does, in whole cells (${r.lockstepErrors} of ${r.lockstep} label-frames out of step)`, r.shown > 100 && r.offLattice === 0 && r.lockstep > 50 && r.lockstepErrors === 0, r);
+      expect(`${name}: a plate whose slot is kept moves exactly as its PROJECTED box does, smooth to the sub-pixel (${r.lockstepErrors} of ${r.lockstep} label-frames out of step, worst ${r.worstKept.toExponential(1)} px; ${r.fractional} of ${r.shown} plate-frames are between cells of ${r.cell} px, the drawn box steps ${r.boxStepsOnCells} of ${r.boxSteps} times by whole cells)`, r.shown > 100 && r.fractional > r.shown / 2 && r.lockstep > 50 && r.lockstepErrors === 0, r);
       expect(`${name}: re-planned at a bounded rate (${after.replans - before.replans} plans in ${seconds.toFixed(1)} s: at most one per 100 ms) and the loop is quiet ${quietAfter} ms after the camera stopped`, after.replans - before.replans >= 1 && (after.replans - before.replans) <= seconds * 10 + 8 && quietAfter >= 0 && quietAfter < 2500 && !(await page.evaluate(() => window.__globeDebug.isAnimating())), { before, after, seconds, quietAfter });
       expect(`${name}: at rest no label is gliding and none is owed a plan`, after.gliding === 0 && !after.owed, after);
       // at rest, after the last plan and the glides: every box has its label in the DOM, none left half way, and no two plates overlap unless one is the last resort
@@ -1214,6 +1222,84 @@ try {
       const s1 = await stat();
       expect(`hover never re-plans: ${probes} hovers, ${moved} other labels moved or changed their text, ${s1.replans - s0.replans} re-plans, ${s1.partials - s0.partials} labels placed (${expanded} hovered labels were written differently from their rest state)`, probes > 5 && moved === 0 && expanded === 0 && s1.replans === s0.replans && s1.partials === s0.partials, { moved, s0, s1 });
     }
+    expect("no console errors", logs.filter((l) => !/404/.test(l)).length === 0, logs);
+    await page.context().close();
+  }
+
+  /* ---------------------------------------------------------------------------------------------- spin */
+  if (run("spin")) {
+    // The idle rotation turning the world (`?rotate&spin-idle`): per animation frame, how far each label moved against how far its box moved.
+    // The drawn box steps by whole art cells (2 to 2.5 px at a time); the label follows the PROJECTED box, so it moves by fractions of a pixel,
+    // in step with it: per frame |label step - projected box step| is zero (the same slot) and the label's own steps are not multiples of a cell.
+    const { page, logs } = await open(browser, { ...DESKTOP, colorScheme: "light", reducedMotion: "no-preference" }, "/?globe-debug&no-street&rotate&spin-idle=400", { noGroups: false });
+    await waitGlobe(page);
+    await page.waitForFunction(() => window.__globeDebug.spin().spinning, null, { timeout: 15000 });
+    await sleep(1500); // past the ease-in
+    const r = await page.evaluate(async () => {
+      const d = window.__globeDebug;
+      const T = 4000;
+      const t0 = performance.now();
+      let last = null;
+      let frames = 0;
+      const out = { frames: 0, labelFrames: 0, kept: 0, worstVsBox: 0, domVsLabel: 0, labelSteps: [], boxSteps: [], labelOnCell: 0, labelMoved: 0, boxMoved: 0, boxOnCell: 0, cell: 0, maxLabel: 0, spinning: true, fps: 0 };
+      while (performance.now() - t0 < T) {
+        await new Promise((res) => requestAnimationFrame(res));
+        const dom = new Map(d.labelsDom().map((e) => [e.slug, e]));
+        const now = new Map();
+        for (const c of d.labelCells()) {
+          const cell = (c.box.x1 - c.box.x0) / (c.rect.c1 - c.rect.c0);
+          out.cell = cell;
+          const m = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(dom.get(c.slug)?.transform ?? "");
+          now.set(c.slug, { cand: c.label.cand, variant: c.label.variant, g: c.label.glide, x: c.label.x, y: c.label.y, ex: c.boxExact, box: c.box, cell, dx: m ? Number(m[1]) : NaN, dy: m ? Number(m[2]) : NaN, overlap: c.label.overlap });
+        }
+        out.frames++;
+        if (last) {
+          for (const [k, s] of now) {
+            const p = last.get(k);
+            out.labelFrames++;
+            if (!p || p.cand !== s.cand || p.variant !== s.variant || p.g !== 0 || s.g !== 0 || s.overlap || s.cand < 0 || (s.cand >= 5 && s.cand <= 7) || (s.cand >= 13 && s.cand <= 15)) continue;
+            // wholly on the screen
+            if (s.ex.x0 < 5 || s.ex.x1 > 1435 || s.x < 5 || s.x > 1300 || p.x < 5) continue;
+            out.kept++;
+            const dxL = s.x - p.x;
+            const dyL = s.y - p.y;
+            // the box corner the plate is aligned with (left or right edge)
+            const cands = [s.ex.x0 - p.ex.x0, s.ex.x1 - p.ex.x1];
+            out.worstVsBox = Math.max(out.worstVsBox, Math.min(...cands.map((v) => Math.abs(v - dxL))));
+            const stepL = Math.hypot(dxL, dyL);
+            const bdx = s.box.x0 - p.box.x0;
+            if (stepL > 1e-9) {
+              out.labelMoved++;
+              out.maxLabel = Math.max(out.maxLabel, stepL);
+              out.labelSteps.push(stepL);
+              if (Math.abs(dxL / s.cell - Math.round(dxL / s.cell)) < 1e-6 && Math.abs(dyL / s.cell - Math.round(dyL / s.cell)) < 1e-6) out.labelOnCell++;
+            }
+            if (Math.abs(bdx) > 1e-9) {
+              out.boxMoved++;
+              out.boxSteps.push(Math.abs(bdx));
+              if (Math.abs(bdx / s.cell - Math.round(bdx / s.cell)) < 1e-6) out.boxOnCell++;
+            }
+            // the DOM transform is the plate's place (exact while moving, within half a device pixel at worst)
+            if (Number.isFinite(s.dx)) out.domVsLabel = Math.max(out.domVsLabel, Math.abs(s.dx - s.x), Math.abs(s.dy - s.y));
+          }
+        }
+        last = now;
+      }
+      out.fps = out.frames / (T / 1000);
+      out.spinning = d.spin().spinning;
+      const med = (a) => (a.length ? [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)] : 0);
+      out.medLabel = med(out.labelSteps);
+      out.medBox = med(out.boxSteps);
+      out.maxBox = Math.max(0, ...out.boxSteps);
+      delete out.labelSteps;
+      delete out.boxSteps;
+      return out;
+    });
+    console.log(`     spin: ${r.frames} frames in 4 s (${r.fps.toFixed(0)} fps), ${r.kept} kept-slot label-frames; label step per frame: median ${r.medLabel.toFixed(3)} px, max ${r.maxLabel.toFixed(3)} px, ${r.labelOnCell} of ${r.labelMoved} on whole cells; the drawn box: median ${r.medBox.toFixed(2)} px, max ${r.maxBox.toFixed(2)} px per move, ${r.boxOnCell} of ${r.boxMoved} on whole cells (cell ${r.cell} px); worst |label step - projected box step| ${r.worstVsBox.toExponential(1)} px; DOM transform vs label place at most ${r.domVsLabel.toFixed(3)} px`);
+    expect("the globe was turning during the measurement", r.spinning && r.frames > 60, r);
+    expect(`while the earth spins a label moves by exactly what its projected box does, every frame (worst ${r.worstVsBox.toExponential(1)} px over ${r.kept} kept-slot label-frames: within 0.1 px)`, r.kept > 100 && r.worstVsBox < 0.1, r);
+    expect(`... in sub-pixel steps, not cells: ${r.labelOnCell} of ${r.labelMoved} label moves are whole cells (the drawn box: ${r.boxOnCell} of ${r.boxMoved})`, r.labelMoved > 100 && r.labelOnCell < 0.1 * r.labelMoved, r);
+    expect(`the label's element is where the label is (at most ${r.domVsLabel.toFixed(3)} px away: exact while moving)`, r.domVsLabel < 0.01, r);
     expect("no console errors", logs.filter((l) => !/404/.test(l)).length === 0, logs);
     await page.context().close();
   }

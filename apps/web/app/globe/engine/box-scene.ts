@@ -8,9 +8,10 @@
  *    its STATE (the `peak` level at rest, the ink hovered or focused) and the selected one a solid line in the ink; its interior masked in the
  *    page colour while it is clamped to the minimum size, hollow once it is bigger. They are part of the map.
  *  - the LABELS are HTML text in device pixels (engine/label-dom.ts): the UI font on a translucent plate of the page colour with a 1 to 2 px
- *    feather (app.css `.map-label`, `--label-plate-alpha`, engine/label-plate.ts). The text is not part of the map's pixels, but where it
- *    sits is: plates are a whole number of art cells in size and on the box's own lattice, and move in whole cells. The pixel text pipeline
- *    stays for text that is part of the map (route labels, later).
+ *    feather (app.css `.map-label`, `--label-plate-alpha`, engine/label-plate.ts). They are not part of the map's pixels and do not move
+ *    like them: a label follows the PROJECTED rectangle of its box (`NodeScreen.fx0..fy1`), not the one snapped to art cells that is drawn, so
+ *    with the earth spinning labels glide smoothly instead of stepping by a cell (2026-10-13; the lattice of 2026-10-12 was taken back for
+ *    the labels). The pixel text pipeline stays for text that is part of the map (route labels, later).
  *
  * From the cut of the hierarchy (engine/lod-tree.ts) and the rectangle every drawn node was given (`NodeScreen`, whole cells), per frame,
  * O(drawn nodes):
@@ -41,7 +42,7 @@ import type { Rgb } from "./colors";
 import { isBigBox, pickAlpha, pickNode, type PointerKind, type Target } from "./hit-area";
 import { FrameDriver } from "./frame-driver";
 import { LabelLayer, type LabelMode } from "./label-dom";
-import { PX_UNITS, boxesToAvoid, pxUnits } from "./label-plan";
+import { PX_UNITS, boxesToAvoid, smoothUnits } from "./label-plan";
 import { LabelTracker, SlotMemory, type Placed, type TrackItem } from "./label-track";
 import { subText } from "./label-sub";
 import { labelVariants, type LabelText } from "./label-text";
@@ -81,9 +82,10 @@ interface Place {
 
 interface Item {
   i: number;
-  /** The box in whole cells of the pixel grid (for drawing) and in container CSS px (for planning and picking). */
+  /** The box in whole cells of the pixel grid (for drawing) and in container CSS px (for picking and for the plates to keep clear of), and as projected (not snapped; what the label follows). */
   rect: CellRect;
   px: CellRect;
+  cont: CellRect;
   wanted: boolean;
   variants: readonly LabelText[];
   place: Place;
@@ -97,9 +99,6 @@ function memoryFor(lod: LodTree): SlotMemory {
   if (!m) memories.set(lod, (m = new SlotMemory(lod.size)));
   return m;
 }
-
-/** `px` rounded UP to a whole number of cells (a plate is never smaller than its text). */
-const wholeCells = (px: number, cell: number): number => (cell > 0 ? Math.ceil(px / cell - 1e-6) * cell : px);
 
 const strHash = (s: string): number => {
   let h = 2166136261;
@@ -128,11 +127,13 @@ export class BoxScene {
   private evalStamp = -1;
   private parked = false;
   private disposed = false;
+  /** Something moved in the last frame (a box's projected rectangle, or a glide): labels are drawn at exact positions; else rounded to device pixels. */
+  private moving = false;
+  private prevCont: Float64Array;
+  private settleTimer = 0;
   // per node, computed on first use
   private variantsOf: (readonly LabelText[] | undefined)[];
   private vkeyOf: Int32Array;
-  /** The art cell the cached variants are sized for (their plates are whole cells): a change drops the cache. */
-  private variantsCell = 0;
 
   constructor(
     root: HTMLElement,
@@ -145,6 +146,7 @@ export class BoxScene {
     this.tracker = new LabelTracker(this.mem, PX_UNITS);
     this.variantsOf = new Array(lod.size);
     this.vkeyOf = new Int32Array(lod.size);
+    this.prevCont = new Float64Array(lod.size * 4).fill(NaN);
     if (typeof ResizeObserver !== "undefined") {
       this.ro = new ResizeObserver((entries) => {
         const r = entries[entries.length - 1]?.contentRect;
@@ -249,6 +251,8 @@ export class BoxScene {
         rect: t.rect,
         /** The box in container CSS px. */
         box: { x0: t.px.c0, y0: t.px.r0, x1: t.px.c1, y1: t.px.r1 },
+        /** The same box as projected (not snapped to cells): what the label follows. */
+        boxExact: { x0: t.cont.c0, y0: t.cont.r0, x1: t.cont.c1, y1: t.cont.r1 },
         /** The label's plate in container CSS px (top-left corner and size), the name and the second line as written, and where it is. */
         label: {
           /** The plate as DRAWN (and picked) now; `tx`, `ty` is where its slot puts it (the same at rest), `glide` the distance between the two. */
@@ -309,17 +313,9 @@ export class BoxScene {
     return i < 0 ? null : this.lod.slug[i]!;
   }
 
-  /**
-   * The ways node `i`'s label can be written at rest (cached per art cell): the plate is a WHOLE number of art cells wide and high (the text
-   * keeps its measure; the plate is at most one cell larger than it needs), so its edges, like its position, are on the map's own grid and the
-   * clear room to its box is the same for every label.
-   */
-  private variants(i: number, cell: number): readonly LabelText[] {
-    if (cell !== this.variantsCell) {
-      this.variantsOf.fill(undefined);
-      this.variantsCell = cell;
-    }
-    return (this.variantsOf[i] ??= labelVariants(this.lod.text[i]!, this.lod.sub[i]!).map((v) => ({ ...v, w: wholeCells(v.w, cell), h: wholeCells(v.h, cell) })));
+  /** The ways node `i`'s label can be written at rest (cached). */
+  private variants(i: number): readonly LabelText[] {
+    return (this.variantsOf[i] ??= labelVariants(this.lod.text[i]!, this.lod.sub[i]!));
   }
 
   private vkey(i: number): number {
@@ -359,6 +355,7 @@ export class BoxScene {
     this.parked = true;
     this.driver.stop();
     window.clearTimeout(this.timer);
+    window.clearTimeout(this.settleTimer);
     this.timer = 0;
     this.tracker.reset();
   }
@@ -383,7 +380,7 @@ export class BoxScene {
     const cell = grid.cell;
     this.overlay.layout(grid.cols, grid.rows, cell, grid.left, grid.top);
     const view = this.view();
-    const units = pxUnits(cell, grid.left, grid.top);
+    const units = smoothUnits(cell);
     const items: Item[] = [];
     for (let k = 0; k < lod.count; k++) {
       const i = lod.visible[k]!;
@@ -394,12 +391,16 @@ export class BoxScene {
         c1: Math.round((screen.bx1[i]! - grid.left) / cell),
         r1: Math.round((screen.by1[i]! - grid.top) / cell),
       };
+      const px: CellRect = { c0: screen.bx0[i]!, r0: screen.by0[i]!, c1: screen.bx1[i]!, r1: screen.by1[i]! };
+      // the projected rectangle when the renderer gave it (NaN: it did not, the snapped box stands in)
+      const cont: CellRect = Number.isFinite(screen.fx0[i]!) && Number.isFinite(screen.fy1[i]!) ? { c0: screen.fx0[i]!, r0: screen.fy0[i]!, c1: screen.fx1[i]!, r1: screen.fy1[i]! } : px;
       items.push({
         i,
         rect,
-        px: { c0: screen.bx0[i]!, r0: screen.by0[i]!, c1: screen.bx1[i]!, r1: screen.by1[i]! },
+        px,
+        cont,
         wanted: lod.life.target[i] === 1,
-        variants: this.variants(i, cell),
+        variants: this.variants(i),
         place: { x: 0, y: 0, gx: 0, gy: 0, variant: 0, cand: 0, inside: false, overlap: false, moved: false, fresh: false },
         score: (i === this.selected ? 1000 : 0) + lod.priority[i]! + (lod.isGroup[i] ? 0 : LOD.placePriorityBonus),
       });
@@ -412,9 +413,9 @@ export class BoxScene {
     const track: TrackItem[] = planned.map((t, n) => ({
       id: t.i,
       key: lod.slug[t.i]!,
-      rect: t.px,
+      rect: t.cont,
       score: t.score,
-      area: (t.px.c1 - t.px.c0) * (t.px.r1 - t.px.r0),
+      area: (t.cont.c1 - t.cont.c0) * (t.cont.r1 - t.cont.r0),
       variants: t.variants,
       vkey: this.vkey(t.i),
       avoid: () => boxesToAvoid(boxPlates, n, t.variants[0]!.w + t.variants[0]!.h + 2 * AVOID_PAD),
@@ -433,7 +434,7 @@ export class BoxScene {
       now,
       fading.map((t) => {
         const v = mem.set[t.i] ? Math.min(mem.variant[t.i]!, t.variants.length - 1) : 0;
-        return { id: t.i, rect: t.px, size: t.variants[v]! };
+        return { id: t.i, rect: t.cont, size: t.variants[v]! };
       }),
       view,
       units,
@@ -444,7 +445,23 @@ export class BoxScene {
       t.place = { x: p.x, y: p.y, gx: p.gx, gy: p.gy, variant: v, cand: mem.set[t.i] ? mem.cand[t.i]! : 0, inside: false, overlap: false, moved: false, fresh: false };
     });
     this.last = items;
+    // moving: a rectangle moved by more than a hundredth of a px since the last frame, or a plate is still gliding. A frame that moved nothing
+    // (and no glide) is the label layer's resting picture: positions rounded to device pixels. The camera may stop without another frame
+    // after the last moving one, so a timer asks for the resting picture.
+    let moved = this.tracker.gliding > 0;
+    const pc = this.prevCont;
+    for (const t of items) {
+      const o = t.i * 4;
+      const c = t.cont;
+      if (!(Math.abs(c.c0 - pc[o]!) < 0.01 && Math.abs(c.r0 - pc[o + 1]!) < 0.01 && Math.abs(c.c1 - pc[o + 2]!) < 0.01 && Math.abs(c.r1 - pc[o + 3]!) < 0.01)) moved = true;
+      pc[o] = c.c0;
+      pc[o + 1] = c.r0;
+      pc[o + 2] = c.c1;
+      pc[o + 3] = c.r1;
+    }
+    this.moving = moved;
     this.present();
+    if (moved) this.armSettle();
     this.arm();
     this.driver.ride();
   }
@@ -465,7 +482,7 @@ export class BoxScene {
     const targets: Target[] = [];
     const mapMinSide = Math.min(grid.cols, grid.rows) * cell;
     let h = HASH_SEED;
-    this.layer.begin();
+    this.layer.begin(!this.moving);
     for (const t of items) {
       const mode = this.modeOf(t.i, t.wanted);
       const forced = mode !== "rest";
@@ -502,6 +519,18 @@ export class BoxScene {
     this.targets = targets;
   }
 
+  /** Ask for the resting picture (labels rounded to whole device pixels) once nothing has moved for a moment. */
+  private armSettle() {
+    window.clearTimeout(this.settleTimer);
+    this.settleTimer = window.setTimeout(() => {
+      this.settleTimer = 0;
+      if (this.parked || this.disposed || !this.moving) return;
+      if (this.tracker.gliding > 0) return this.armSettle();
+      this.moving = false;
+      this.represent();
+    }, 150);
+  }
+
   /** Arm the timer of the re-plan that is owed (the last one after the camera stopped, or a young slot waiting out its dwell): an idle map draws no frames, so nothing else would run it. */
   private arm() {
     if (this.timer || this.parked || this.disposed) return;
@@ -533,6 +562,7 @@ export class BoxScene {
     this.disposed = true;
     this.driver.stop();
     window.clearTimeout(this.timer);
+    window.clearTimeout(this.settleTimer);
     this.ro?.disconnect();
     this.layer.dispose();
     this.overlay.dispose();

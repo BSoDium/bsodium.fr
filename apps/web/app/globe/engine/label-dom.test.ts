@@ -86,12 +86,22 @@ describe("the label layer: real text in pooled elements, positioned by transform
     frame(() => layer.put(1, "a", view({ x: 10.3, y: 20.8 })));
     expect(el().style.transform).toBe("translate3d(10.5px,21px,0)");
   });
-  it("the art-pixel lattice is already whole device pixels: a cell of 2.5 px at 2x lands on 5 device px, so a label that moves a cell moves 5 device px", () => {
-    frame(() => layer.put(1, "a", view({ x: 100, y: 50 })));
-    const a = el().style.transform;
-    frame(() => layer.put(1, "a", view({ x: 102.5, y: 52.5 })));
-    expect(a).toBe("translate3d(100px,50px,0)");
-    expect(el().style.transform).toBe("translate3d(102.5px,52.5px,0)");
+  it("while something moves the position is EXACT, a fraction of a device pixel: a label follows its box smoothly (begin(false))", () => {
+    layer.begin(false);
+    layer.put(1, "a", view({ x: 10.3, y: 20.8 }));
+    layer.end();
+    expect(el().style.transform).toBe("translate3d(10.3px,20.8px,0)");
+    layer.begin(false);
+    layer.put(1, "a", view({ x: 10.31, y: 20.8 }));
+    layer.end();
+    expect(el().style.transform).toBe("translate3d(10.31px,20.8px,0)"); // a hundredth of a pixel is a write: no 0.5 px steps
+  });
+  it("at rest (the default, begin(true)) it is rounded to whole device pixels again, so the text is sharp", () => {
+    layer.begin(false);
+    layer.put(1, "a", view({ x: 10.3, y: 20.8 }));
+    layer.end();
+    frame(() => layer.put(1, "a", view({ x: 10.3, y: 20.8 })));
+    expect(el().style.transform).toBe("translate3d(10.5px,21px,0)");
   });
   it("the second line is its own line, and absent when there is none", () => {
     frame(() => layer.put(1, "eu", view({ name: "Europe", sub: "12 places" })));
