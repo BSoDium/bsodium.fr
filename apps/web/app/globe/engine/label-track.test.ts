@@ -447,6 +447,52 @@ describe("a slot is kept for a while: a better position is not taken at once", (
   });
 });
 
+describe("a globe that turns on its own: boxes change by one cell once a second (setDrifting)", () => {
+  /**
+   * Two neighbours whose relative offset jitters by a few px once a second (one box snapped to its next art cell, then the other's), the camera
+   * otherwise still: `restMs` passes between two steps, so without the hint every step is followed by a plan at rest (no upgrade margin, no dwell)
+   * and the label that gave its place up takes it back, and again at the next step. Counted: slot changes of the lower-priority label.
+   */
+  const run = (drifting: boolean, seconds = 24) => {
+    const t = tracker();
+    t.setDrifting(drifting);
+    const a = box(1, 100, 100, { score: 120 });
+    let last: string | null = null;
+    let changes = 0;
+    let now = 0;
+    for (let s = 0; s < seconds; s++) {
+      const b = box(2, s % 2 ? 200 : 190, 100); // 190: its first slot is under a's plate (blocked); 200: free, but with 6 px of room, under the 10 px upgrade margin
+      for (let f = 0; f < 62; f++) {
+        const out = t.step(now, [a, b], VIEW, INSET);
+        const k = `${out[1]!.variant}/${out[1]!.cand}`;
+        if (last !== null && k !== last) changes++;
+        last = k;
+        now += 16;
+      }
+    }
+    return changes;
+  };
+  it("labels do not swap places for as long as it turns: the slot a label was pushed to is kept until it is blocked", () => {
+    expect(run(false)).toBeGreaterThanOrEqual(10); // the plan at rest in every pause takes the best place back, and the next step takes it away
+    expect(run(true)).toBeLessThanOrEqual(1);
+  });
+  it("when it stops turning a plan at rest is owed: every label settles on its best place", () => {
+    const t = tracker();
+    t.setDrifting(true);
+    const a = box(1, 100, 100, { score: 120 });
+    const items = (x: number) => [a, box(2, x, 100)];
+    let now = 0;
+    t.step(now, items(190), VIEW, INSET);
+    for (const x of [190, 200, 200]) for (let f = 0; f < 62; f++) t.step((now += 16), items(x), VIEW, INSET);
+    const moved = t.step((now += 16), items(200), VIEW, INSET)[1]!.cand;
+    expect(moved).not.toBe(SPOT.aboveLeft);
+    t.setDrifting(false);
+    expect(t.dueAt).not.toBeNull();
+    t.settleNow();
+    expect(t.step((now += 16), items(200), VIEW, INSET)[1]!.cand).toBe(SPOT.aboveLeft);
+  });
+});
+
 describe("a node that is fading out keeps gliding", () => {
   it("follows its box with the glide it had, and a slot that is not possible any more is a glide to the fallback place, not a jump", () => {
     const t = tracker();
@@ -622,7 +668,7 @@ interface Sweep {
 }
 
 /** The every-frame plan with the distances the pixel version had: 1 cell of clearance, 2 cells of margin before a better slot is taken, on 2.5 px cells. */
-const OLD_UNITS = { clearance: 2.5, upgradeMargin: 5, shiftStep: 5, inset: 2.5, quant: 2.5, gap: 0, bleed: 0 };
+const OLD_UNITS = { clearance: 2.5, upgradeMargin: 5, shiftStep: 5, inset: 2.5, quant: 2.5, gap: 0, bleed: 0, keepSlack: 0 };
 
 interface Seen {
   cand: number;

@@ -212,6 +212,54 @@ describe("a label keeps clear of the other nodes' boxes (PlanItem.avoid, boxesTo
     expect(out[1]!.cand).not.toBe(SPOT.right);
     expect(out[1]!.overlap).toBe(false);
   });
+  describe("a kept position survives one cell of jitter in a neighbour (PlanUnits.keepSlack: the idle rotation moves boxes one cell at a time)", () => {
+    const units = smoothUnits(2.5);
+    const home = planLabels([{ score: 1, area: 1, key: "p", rect, variants, prev: null }], PX, units)[0]!;
+    const prev = { variant: 0, cand: home.cand, dx: home.x - rect.c0, dy: home.y - rect.r0 };
+    /** A neighbour's box that reaches `into` px into the plate's position, from the right. */
+    const boxInto = (into: number) => [{ x0: home.x + home.w - into, y0: home.y - 2, x1: home.x + home.w + 60, y1: home.y + home.h + 2 }];
+    const plan = (into: number, u = units, withPrev = true) => planLabels([{ score: 1, area: 1, key: "p", rect, variants, prev: withPrev ? prev : null, avoid: boxInto(into) }], PX, u)[0]!;
+
+    it("a box one cell closer does not take the kept slot away, but a label with no slot yet does not take it", () => {
+      expect(plan(2).cand).toBe(home.cand);
+      expect(plan(2, units, false).cand).not.toBe(home.cand);
+    });
+    it("more than the slack (a real collision) still gives the slot up", () => {
+      expect(plan(units.keepSlack + 3).cand).not.toBe(home.cand);
+    });
+    it("a plan at rest (no upgrade margin) uses the full room: every label settles on its best place", () => {
+      expect(plan(2, { ...units, upgradeMargin: 0 }).cand).not.toBe(home.cand);
+    });
+    it("the slack is for plates too: a plate of a better node within the clearance by less than a cell leaves the kept slot where it is", () => {
+      // a neighbour (placed first: higher score) whose own plate lands 2 px to the right of the kept one: inside the 4 px clearance, outside it by less than the slack
+      const alone = planLabels([{ score: 500, area: 1, key: "n", rect: { c0: 800, r0: 500, c1: 823, r1: 523 }, variants, prev: null }], PX, units)[0]!;
+      const dx = home.x + home.w + 2 - alone.x;
+      const dy = home.y - alone.y;
+      const neighbour: PlanItem = { score: 500, area: 1, key: "n", rect: { c0: 800 + dx, r0: 500 + dy, c1: 823 + dx, r1: 523 + dy }, variants, prev: null };
+      const me: PlanItem = { score: 1, area: 1, key: "p", rect, variants, prev };
+      expect(planLabels([neighbour, me], PX, units)[1]!.cand).toBe(home.cand);
+      expect(planLabels([neighbour, { ...me, prev: null }], PX, units)[1]!.cand).not.toBe(home.cand);
+      expect(planLabels([neighbour, me], PX, { ...units, keepSlack: 0 })[1]!.cand).not.toBe(home.cand);
+    });
+  });
+  it("a nested position needs room to spare to be taken as an upgrade (a box whose width snaps between two cells around the plate's cannot make the label flip in and out), and is left as soon as it does not fit", () => {
+    const units = pxUnits(2.5);
+    const vs = labelVariants("Mine", null).map((v) => v.layout);
+    const w0 = vs[0]!.w;
+    const h0 = vs[0]!.h;
+    const rectOf = (extra: number) => ({ c0: 600, r0: 400, c1: 600 + w0 + 2 * units.inset + extra, r1: 400 + h0 + 2 * units.inset + 60 });
+    // a stronger neighbour's wide plate lies over every position above the box (it ends 9 px above the box's top edge, so the nested corner, 5 px
+    // below the edge, keeps its room to spare from it): the nested corner is the best free position
+    const wide = labelVariants("A rather long name for a blocking label, wider than the box", null).map((v) => v.layout);
+    const blocker: PlanItem = { score: 500, area: 1, key: "b", rect: { c0: 600, r0: 394, c1: 640, r1: 434 }, variants: wide, prev: null };
+    const plan = (extra: number, prev: PlanItem["prev"]) => planLabels([blocker, { score: 1, area: 1, key: "p", rect: rectOf(extra), variants: vs, prev }], { cols: 1440, rows: 900 }, units)[1]!;
+    const wasBelow = { variant: 0, cand: SPOT.belowLeft, dx: 0, dy: 0 };
+    expect(plan(30, null).cand).toBe(SPOT.insideTopLeft); // with room, the nested corner is the best free position
+    expect(plan(4, null).cand).toBe(SPOT.insideTopLeft); // it fits by a hair: a new label takes it...
+    expect(plan(4, wasBelow).cand).toBe(SPOT.belowLeft); // ...a label already below does not go back for it
+    expect(plan(30, wasBelow).cand).toBe(SPOT.insideTopLeft); // with room to spare it does
+    expect(plan(-3, null).cand).not.toBe(SPOT.insideTopLeft); // and it does not fit at all
+  });
   it("boxesToAvoid: the other boxes within reach of a node's own box, never its own", () => {
     const boxes = [
       { x0: 100, y0: 100, x1: 130, y1: 130 },

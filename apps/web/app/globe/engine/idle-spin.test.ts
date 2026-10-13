@@ -131,7 +131,7 @@ describe("idle rotation: velocity profile", () => {
     const n = Math.ceil(SPIN.easeInMs / 16);
     for (let i = 1; i < n; i++) expect(r.speeds[i]!).toBeGreaterThanOrEqual(r.speeds[i - 1]!);
     expect(r.speeds[0]!).toBeLessThan(0.01 * SPIN.degPerSec); // starts from rest, not with a jump
-    expect(r.speeds[Math.round(n / 2) - 1]!).toBeCloseTo(SPIN.degPerSec / 2, 1); // smoothstep(0.5) = 0.5
+    expect(r.speeds[Math.round(n / 2) - 1]!).toBeCloseTo(SPIN.degPerSec / 2, 3); // smoothstep(0.5) = 0.5
     expect(r.speeds[n]!).toBe(SPIN.degPerSec);
     expect(r.speeds.at(-1)).toBe(SPIN.degPerSec);
     expect(s.phase).toBe("cruise");
@@ -158,7 +158,7 @@ describe("idle rotation: velocity profile", () => {
       s.step(SPIN.idleMs, rest);
       return run(s, SPIN.idleMs, SPIN.idleMs + 6000, dt).total;
     });
-    for (const t of totals) expect(t).toBeCloseTo(totals[1]!, 0);
+    for (const t of totals) expect(t).toBeCloseTo(totals[1]!, 2);
     // a jittery clock (frame periods from 4 to 30 ms) reaches the same angle at the same time
     const j = new IdleSpin(0);
     j.step(SPIN.idleMs, rest);
@@ -191,7 +191,7 @@ describe("idle rotation: velocity profile", () => {
       expect(stopped * 16).toBeLessThanOrEqual(SPIN.stopMs + 16);
       for (let i = 1; i < r.speeds.length; i++) expect(r.speeds[i]!).toBeLessThanOrEqual(r.speeds[i - 1]!); // never speeds up again
       expect(r.speeds[0]!).toBeLessThan(v0); // decelerates from the first frame
-      expect(r.total).toBeCloseTo(stopAngle(v0, SPIN.stopMs), 1);
+      expect(r.total).toBeCloseTo(stopAngle(v0, SPIN.stopMs), 3);
       expect(sum(r.angles.slice(stopped + 1))).toBeCloseTo(0, 9);
     }
   });
@@ -202,7 +202,7 @@ describe("idle rotation: velocity profile", () => {
       run(s, SPIN.idleMs, SPIN.idleMs + 8000, 10);
       return run(s, SPIN.idleMs + 8000, SPIN.idleMs + 8000 + SPIN.stopMs + 100, dt, with_({ inset: 720 })).total;
     });
-    for (const t of totals) expect(t).toBeCloseTo(stopAngle(SPIN.degPerSec, SPIN.stopMs), 1);
+    for (const t of totals) expect(t).toBeCloseTo(stopAngle(SPIN.degPerSec, SPIN.stopMs), 3);
   });
   it("settle (camera motion, a condition change that is not an input) makes a turning globe coast and restarts the idle clock; it does nothing at rest", () => {
     const s = new IdleSpin(0);
@@ -233,26 +233,29 @@ describe("idle rotation: velocity profile", () => {
 });
 
 describe("idle rotation: speed and redraw rate", () => {
-  it("is slight: one turn in 90 to 150 s, eased in over a few seconds, coasting to rest in about a second", () => {
-    expect(360 / SPIN_DEFAULTS.degPerSec).toBeGreaterThanOrEqual(90);
-    expect(360 / SPIN_DEFAULTS.degPerSec).toBeLessThanOrEqual(150);
+  it("is slow: one turn in 20 to 60 minutes (the labels were measured to flicker above 0.3 deg/s), eased in over a few seconds, coasting to rest in about a second", () => {
+    expect(360 / SPIN_DEFAULTS.degPerSec / 60).toBeGreaterThanOrEqual(20);
+    expect(360 / SPIN_DEFAULTS.degPerSec / 60).toBeLessThanOrEqual(60);
     expect(SPIN_DEFAULTS.easeInMs).toBeGreaterThanOrEqual(2500);
     expect(SPIN_DEFAULTS.easeInMs).toBeLessThanOrEqual(4000);
     expect(SPIN_DEFAULTS.stopMs).toBeGreaterThanOrEqual(800);
     expect(SPIN_DEFAULTS.stopMs).toBeLessThanOrEqual(1200);
   });
-  it("moves the disc's centre at least one art pixel per 70 ms at 1440x900 (2.5 css px art pixel), against 227 ms at the old 1.2 deg/s", () => {
+  it("still reads as moving at 1440x900 (2.5 css px art pixel): the disc's centre crosses an art pixel every 0.8 to 2 s, and a frame at 60 Hz moves it by less than a fortieth of one", () => {
     const r = zoomToRadiusPx(2.7);
     const msPerArtPx = (1000 * 2.5) / (SPIN.degPerSec * (Math.PI / 180) * r);
-    expect(msPerArtPx).toBeLessThanOrEqual(70);
-    expect((1000 * 2.5) / (1.2 * (Math.PI / 180) * r)).toBeGreaterThan(200);
+    expect(msPerArtPx).toBeGreaterThanOrEqual(800);
+    expect(msPerArtPx).toBeLessThanOrEqual(2000);
+    expect(16.7 / msPerArtPx).toBeLessThan(1 / 40);
   });
-  it("redraws on every display refresh up to a ceiling of about 70 a second", () => {
-    expect(spinFrameDue(16.7, 0)).toBe(true); // 60 Hz: every frame
-    expect(spinFrameDue(8.3, 0)).toBe(false); // 120 Hz: every other frame
-    expect(spinFrameDue(25, 8.3)).toBe(true); // ... the one after that
-    expect(1000 / SPIN.minFrameMs).toBeGreaterThanOrEqual(60);
-    expect(1000 / SPIN.minFrameMs).toBeLessThanOrEqual(75);
+  it("redraws on every display refresh: no ceiling (a frame is 0.3 ms of GPU; any floor made 75 and 90 Hz screens draw at half their rate)", () => {
+    expect(SPIN.minFrameMs).toBe(0);
+    for (const hz of [60, 75, 90, 120, 144, 240]) expect(spinFrameDue(1000 / hz, 0), `${hz} Hz`).toBe(true);
+    // a floor, when one is set, skips the frames that come sooner than it
+    const capped = { ...SPIN_DEFAULTS, minFrameMs: 14 };
+    expect(spinFrameDue(16.7, 0, capped)).toBe(true);
+    expect(spinFrameDue(8.3, 0, capped)).toBe(false);
+    expect(spinFrameDue(25, 8.3, capped)).toBe(true);
   });
 });
 
@@ -294,6 +297,24 @@ describe("idle rotation: page flags", () => {
     stub("", { "globe-debug": "1", rotate: "1" });
     applySpinFlags();
     expect(SPIN.enabled).toBe(true);
+  });
+  it("the cruise speed can only be changed in debug mode (?spin-speed, 0.01 to 20 deg/s, which also turns it on there)", () => {
+    stub("?spin-speed=0.5");
+    applySpinFlags();
+    expect(SPIN.degPerSec).toBe(SPIN_DEFAULTS.degPerSec);
+    stub("?globe-debug&spin-speed=0.5");
+    applySpinFlags();
+    expect(SPIN.degPerSec).toBe(0.5);
+    expect(SPIN.enabled).toBe(true);
+    stub("?globe-debug&spin-speed=90");
+    applySpinFlags();
+    expect(SPIN.degPerSec).toBe(SPIN_DEFAULTS.degPerSec);
+    stub("?globe-debug&spin-speed=0");
+    applySpinFlags();
+    expect(SPIN.degPerSec).toBe(SPIN_DEFAULTS.degPerSec);
+    stub("");
+    applySpinFlags();
+    expect(SPIN.degPerSec).toBe(SPIN_DEFAULTS.degPerSec);
   });
   it("the idle delay can only be changed in debug mode, within sane bounds; settings do not leak from one call to the next", () => {
     stub("?spin-idle=1500");

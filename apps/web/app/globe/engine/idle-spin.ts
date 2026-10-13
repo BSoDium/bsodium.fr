@@ -21,9 +21,11 @@ export interface SpinConfig {
   /** Time without input or camera motion before the globe starts to turn, ms. */
   idleMs: number;
   /**
-   * Cruise speed, degrees of longitude per second: 4 is one turn in 90 s. A pixel-art globe cannot move smoother than one art pixel
-   * per frame, so the speed is as high as "slight" allows: at 1440x900 the disc's centre then moves one art pixel (2.5 css px) every
-   * 68 ms instead of every 227 ms at the old 1.2 deg/s.
+   * Cruise speed, degrees of longitude per second: 0.2 is one turn in 30 minutes. Chosen from measurements (docs/web-architecture.md, "Idle
+   * rotation": label events per minute at 4, 1.2, 0.6, 0.3, 0.2 and 0.15 degrees a second): the labels stop flickering below 0.3 and the
+   * globe still moves every frame, by a few dozen pixels (a pixel-art globe cannot move smoother than one art pixel per frame, so the motion
+   * is spread over the frames: each one changes about 40 pixels instead of the 650 of the 4 deg/s version). At 1440x900 the disc's
+   * centre moves one art pixel (2.5 css px) every 1.35 s.
    */
   degPerSec: number;
   /** Time to reach the cruise speed from rest (smoothstep velocity), ms. */
@@ -35,8 +37,9 @@ export interface SpinConfig {
   /** The longest time one frame may advance the rotation and its ease, ms: a stalled frame must not make the globe jump. */
   maxStepMs: number;
   /**
-   * Redraw period floor while turning, ms: the globe is redrawn on every animation frame (one per display refresh), but not faster
-   * than this, so a 120 Hz display draws at most about 70 a second (the turn is a fraction of an art pixel per frame either way).
+   * Redraw period floor while turning, ms: 0 = a frame on every animation frame, i.e. at the display's own rate (60, 90, 120 Hz...). A floor
+   * above 0 skips the frames that come sooner than that; 14 (the first version's, for 120 Hz screens) drew 60 a second there, 45 on a 90 Hz
+   * one and 37 on a 75 Hz one, which is choppier than the display allows, to save a GPU cost of 0.3 ms a frame.
    */
   minFrameMs: number;
 }
@@ -44,12 +47,12 @@ export interface SpinConfig {
 export const SPIN_DEFAULTS: Readonly<SpinConfig> = {
   enabled: true,
   idleMs: 8000,
-  degPerSec: 4,
+  degPerSec: 0.2,
   easeInMs: 3000,
   stopMs: 1000,
   unzoomedSlack: 0.15,
   maxStepMs: 100,
-  minFrameMs: 14,
+  minFrameMs: 0,
 };
 
 /** Live configuration (module state, like `QUALITY`): `applySpinFlags` sets it from the page's flags before the renderer is built. */
@@ -61,6 +64,8 @@ export const SPIN: SpinConfig = { ...SPIN_DEFAULTS };
  *  - a page in debug mode (`?globe-debug`, what the browser checks run in) has it OFF by default, because the checks assert zero
  *    frames at rest for longer than the idle delay; `?rotate` (or sessionStorage "rotate" = "1") turns it back on there, and
  *    `?spin-idle=MS` (100 to 600000, debug only) does too and shortens the delay.
+ *  - `?spin-speed=DEG` (0.01 to 20 degrees a second, debug only) turns it on there with another cruise speed: the measurements that
+ *    chose `degPerSec` (label slot changes per minute at each candidate speed, docs/web-architecture.md) run the real engine at them.
  */
 export function applySpinFlags(): void {
   Object.assign(SPIN, SPIN_DEFAULTS);
@@ -69,9 +74,11 @@ export function applySpinFlags(): void {
     const flag = (name: string) => q.get(name) ?? sessionStorage.getItem(name);
     const debug = q.has("globe-debug") || sessionStorage.getItem("globe-debug") === "1";
     const ms = Number(flag("spin-idle"));
-    const wanted = !debug || q.has("rotate") || sessionStorage.getItem("rotate") === "1" || flag("spin-idle") !== null;
+    const speed = Number(flag("spin-speed"));
+    const wanted = !debug || q.has("rotate") || sessionStorage.getItem("rotate") === "1" || flag("spin-idle") !== null || flag("spin-speed") !== null;
     if (q.has("no-rotate") || sessionStorage.getItem("no-rotate") === "1" || !wanted) SPIN.enabled = false;
     if (debug && ms >= 100 && ms <= 600_000) SPIN.idleMs = ms;
+    if (debug && speed >= 0.01 && speed <= 20) SPIN.degPerSec = speed;
   } catch {
     // no storage: keep the defaults
   }

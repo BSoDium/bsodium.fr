@@ -1,6 +1,6 @@
 // Checks for the detection boxes (every place and group is a rectangle; the hierarchy is cut in screen space), Playwright + headless Chrome with the GPU.
 //
-//   CHROME_PATH=... BASE_URL=http://localhost:5174 [SHOTS=1] node apps/web/scripts/globe/groups.mjs [lod|cases|pixels|empty|timed|at-rest|reduced|pick|targets|flicker|spin|open|crowd|cost|idle|handover|shots]
+//   CHROME_PATH=... BASE_URL=http://localhost:5174 [SHOTS=1] node apps/web/scripts/globe/groups.mjs [lod|cases|pixels|empty|timed|at-rest|reduced|pick|targets|flicker|spin|spin-flicker|open|crowd|cost|idle|handover|shots]
 //
 // Serve the app with demo content (`pnpm dev:demo`, or a production build with CATALYST_CONTENT=demo): the demo projection has
 // a hierarchy (3 continents, a region, a subregion, 3 countries, an area; 18 places). `handover` also needs the local tile server
@@ -31,6 +31,9 @@
 //           a bounded rate, the loop is quiet after the labels arrived (none gliding, none owed), and hovering label after label re-plans nothing
 // spin      (the owner's preview, or any content) the idle rotation turns the world: per frame a label with a kept slot moves exactly as its PROJECTED
 //           box does (within 0.1 px, in practice 1e-6), by fractions of a pixel and not by cells, and its element is where it says
+// spin-flicker  the idle rotation at its default speed over the world view (`?rotate&spin-idle=100`; three starting longitudes, 40 s each, a read
+//           of every drawn frame): the labels do not flicker as the camera turns: slot changes and swaps back to the slot just left stay under
+//           a few a minute, nothing teleports, no label appears and disappears again within 2 s (docs/web-architecture.md, "Idle rotation": the table)
 // open      (the owner's preview, or any content with a group of several places) a group OPENS EARLY into its most important places and cross-fades with
 //           them (docs/web-architecture.md, "Opening a group into its most important children"). At Western Europe, the Balkans, Iberia, Central Europe
 //           and Italy: a slow zoom sweep at rest, at every frame NO drawn node has a drawn ancestor, every box is fully drawn with its label element opaque
@@ -1089,6 +1092,69 @@ try {
     const after = await page.evaluate(() => window.__globeDebug.labelStats());
     expect(`20 frames of a sub-pixel camera change redraw the label canvas at most once (${after.drawn - before.drawn} draws, ${after.skipped - before.skipped} skipped)`, after.drawn - before.drawn <= 1, { before, after });
     await page.context().close();
+  }
+
+  /* ---------------------------------------------------------------------------------------------- spin-flicker */
+  if (run("spin-flicker")) {
+    // The idle rotation on the real app at its default speed (SPIN.degPerSec): labels are read after every frame the globe draws for 40 s, from the
+    // moment the ease-in is over. A SLOT CHANGE is a label shown in two consecutive frames with another candidate or wording; a SWAP BACK is one
+    // that returns to the slot it left less than 3 s ago; a BLINK is a label that disappears and appears again within 2 s. The numbers that chose
+    // the speed (docs/web-architecture.md): at 0.2 deg/s 3 to 15 slot changes a minute on the world view, against 58 and 76 at 1.2 and 4 deg/s
+    // before the labels kept their slots while it turns (`LabelTracker.setDrifting`, `PlanUnits.keepSlack`).
+    for (const lon of [15, -75, -30]) {
+      const { page, logs } = await openGlobe(browser, DESKTOP, "&rotate&spin-idle=100");
+      const r = await page.evaluate(async (lon) => {
+        const d = window.__globeDebug;
+        d.setView({ lon, lat: 20, zoom: d.minZoom() });
+        d.settle();
+        const sl = (ms) => new Promise((res) => setTimeout(res, ms));
+        for (let i = 0; i < 100 && !d.spin().spinning; i++) await sl(50);
+        await sl(d.spin().easeInMs + 300);
+        const out = { frames: 0, changes: 0, swapBacks: 0, blinks: 0, visibility: 0, labels: new Set(), speed: d.spin().speed, lon0: d.view().lon, drifting: d.spin().spinning };
+        const t0 = performance.now();
+        let last = new Map();
+        let lastFrames = d.frames();
+        const changed = new Map();
+        const gone = new Map();
+        for (;;) {
+          await new Promise((res) => requestAnimationFrame(res));
+          const t = performance.now() - t0;
+          if (t > 40000) break;
+          if (d.frames() === lastFrames) continue;
+          lastFrames = d.frames();
+          out.frames++;
+          const now = new Map();
+          for (const c of d.labelCells()) if (c.wanted) now.set(c.slug, `${c.label.variant}/${c.label.cand}`);
+          for (const [k, slot] of now) {
+            out.labels.add(k);
+            const p = last.get(k);
+            if (p === undefined) {
+              if (last.size) out.visibility++;
+              if (gone.has(k) && t - gone.get(k) < 2000) out.blinks++;
+              continue;
+            }
+            if (p !== slot) {
+              out.changes++;
+              const was = changed.get(k);
+              if (was && was.from === slot && t - was.t < 3000) out.swapBacks++;
+              changed.set(k, { from: p, t });
+            }
+          }
+          for (const k of last.keys()) if (!now.has(k)) (out.visibility++, gone.set(k, t));
+          last = now;
+        }
+        out.labels = out.labels.size;
+        out.lon1 = d.view().lon;
+        out.spinning = d.spin().spinning;
+        return out;
+      }, lon);
+      console.log(`     from lon ${lon}: ${r.labels} labels, ${r.frames} frames, ${r.changes} slot changes (${r.swapBacks} back to the slot just left), ${r.visibility} appearances and disappearances (${r.blinks} blinks), turned ${(r.lon0 - r.lon1).toFixed(2)} deg`);
+      expect(`from lon ${lon}: it turns for the whole 40 s, a frame per display refresh (${(r.frames / 40).toFixed(0)} a second)`, r.spinning && r.frames >= 40 * 50 && r.lon0 - r.lon1 > 0.05, r);
+      expect(`from lon ${lon}: at most 16 slot changes in 40 s (${r.changes}; 4 to 11 measured, 50 to 75 a minute before the labels kept their slots), at most 4 of them back to the slot just left (${r.swapBacks})`, r.changes <= 16 && r.swapBacks <= 4, r);
+      expect(`from lon ${lon}: no label blinks (disappears and returns within 2 s: ${r.blinks})`, r.blinks === 0, r);
+      expect(`from lon ${lon}: no console error or warning`, logs.length === 0, logs);
+      await page.context().close();
+    }
   }
 
   /* ---------------------------------------------------------------------------------------------- flicker */

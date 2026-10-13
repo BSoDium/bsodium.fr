@@ -181,6 +181,13 @@ export class LabelTracker {
   private count = 0;
   /** Reduced motion: no glide, a label is where its slot is. */
   instant = false;
+  /**
+   * The camera is turning without a pause but slowly (the idle rotation): a box moves one art cell only every second or so, so "no rectangle changed
+   * for `restMs`" would read as a camera at rest between two cell steps and run a plan with no upgrade margin and no dwell, in which a label takes
+   * its best slot back the moment a neighbour's cell jitter frees it (and loses it at the next step): two labels swapping places for as long as the
+   * globe turns, 10 to 50 times a minute at 0.15 to 0.6 degrees a second. While this is set the camera counts as moving (`setDrifting`).
+   */
+  private drifting = false;
   info: StepInfo = { changed: false, full: false, partial: 0 };
 
   constructor(
@@ -199,6 +206,13 @@ export class LabelTracker {
   /** Labels that have not arrived at their slot yet after the last step: the host keeps drawing frames while this is not 0. */
   get gliding(): number {
     return this.count;
+  }
+
+  /** The camera is (or is no longer) turning slowly and continuously. When it stops, the plan at rest is owed (every label settles on its best place). */
+  setDrifting(on: boolean): void {
+    if (on === this.drifting) return;
+    this.drifting = on;
+    if (!on) this.owed = true;
   }
 
   /** Run the owed plan at the next step whatever the time, and end every glide (checks, and a host that knows the camera is at rest and wants the final picture). */
@@ -276,7 +290,7 @@ export class LabelTracker {
       this.lastChange = t;
       this.owed = true;
     }
-    const moving = t - this.lastChange < this.opts.restMs;
+    const moving = this.drifting || t - this.lastChange < this.opts.restMs;
     // reduced motion has no glide, so a plan that moves a label is a hop: it runs only when the camera has stopped (as the labels did before they had a glide)
     const full = this.owed && t - this.lastFull >= this.opts.replanMs && !(this.instant && moving);
     if (full) {
@@ -356,7 +370,7 @@ export class LabelTracker {
     }
     if (held) this.owed = true;
     // a plan that ran while the camera was still moving (and kept slots from before) is followed by one at rest (the dwell is over, the upgrade margin is 0): every label ends on its best place
-    if (full && moving && before.some((b) => b !== null)) this.owed = true;
+    if (full && moving && !this.drifting && before.some((b) => b !== null)) this.owed = true;
     this.info = { changed, full, partial: full ? 0 : plan.length };
     return out;
   }

@@ -165,6 +165,11 @@ export class BoxScene {
     this.overlay.setRamp(theme.ramp as readonly (readonly [number, number, number])[]);
   }
 
+  /** The globe is turning slowly on its own (the idle rotation): the labels keep their slots as they do while the camera moves (engine/label-track.ts `setDrifting`). */
+  setDrifting(on: boolean) {
+    this.tracker.setDrifting(on);
+  }
+
   /** Reduced motion: labels jump to a new place instead of gliding. */
   setReducedMotion(on: boolean) {
     this.tracker.instant = on;

@@ -42,16 +42,24 @@ export interface PlanUnits {
   bleed: number;
   /** The art-pixel lattice the plates sit on (`pxUnits`): every position is a whole number of cells from its origin, like the boxes. */
   lattice?: Lattice | undefined;
+  /**
+   * Hysteresis of the slot a node already has: it keeps it while it is still free and clear of the neighbours' boxes with this much LESS room
+   * than a new position needs (0: none). Boxes snap to art cells one at a time, so two neighbours' relative offset jitters by a whole cell
+   * for as long as the camera drifts: without this a label gave its place up for the instant between the two snaps, and another took it
+   * back at the next (two labels swapping places every second or two, however slowly the globe turned). Not applied by a plan at rest
+   * (`upgradeMargin` 0: every label settles on its best place, with the full room).
+   */
+  keepSlack: number;
 }
 
 /** Whole art cells (the pixel text). */
-export const CELL_UNITS: PlanUnits = { clearance: 1, upgradeMargin: 2, shiftStep: 2, inset: 1, quant: 1, gap: 0, bleed: 0 };
+export const CELL_UNITS: PlanUnits = { clearance: 1, upgradeMargin: 2, shiftStep: 2, inset: 1, quant: 1, gap: 0, bleed: 0, keepSlack: 0 };
 /**
  * CSS px (the DOM labels): 4 px between two labels, 10 px of room before a label gives its place up, `LABEL_TYPE.boxGap` (3 px) of clear room
  * between a label and its box, the plate's edge ON the box's outer edge (`LABEL_TYPE.bleed` 0: the text starts `padX` inside it), a nested label
  * `inset` (the outline's thickness plus `LABEL_TYPE.nestInset`, set per plan from the cell) inside.
  */
-export const PX_UNITS: PlanUnits = { clearance: 4, upgradeMargin: 10, shiftStep: 6, inset: 2.5 + LABEL_TYPE.nestInset, quant: 0.5, gap: LABEL_TYPE.boxGap, bleed: LABEL_TYPE.bleed };
+export const PX_UNITS: PlanUnits = { clearance: 4, upgradeMargin: 10, shiftStep: 6, inset: 2.5 + LABEL_TYPE.nestInset, quant: 0.5, gap: LABEL_TYPE.boxGap, bleed: LABEL_TYPE.bleed, keepSlack: 2.75 };
 
 /**
  * The units of the labels as they are DRAWN (2026-10-13: the lattice was reverted for the labels, see docs/web-architecture.md "Labels move
@@ -67,6 +75,7 @@ export const smoothUnits = (cell: number): PlanUnits => ({
   quant: 0,
   shiftStep: PX_UNITS.shiftStep,
   lattice: undefined,
+  keepSlack: cell * 1.1,
 });
 
 /**
@@ -86,6 +95,7 @@ export const pxUnits = (cell: number, left = 0, top = 0): PlanUnits => {
     quant: cell,
     shiftStep: cells(PX_UNITS.shiftStep) * cell,
     lattice: { cell, ox: left, oy: top },
+    keepSlack: cell * 1.1,
   };
 };
 
@@ -193,6 +203,8 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
   const free = (x: number, y: number, w: number, h: number, pad: number) => !placed.some((p) => hits(p, x, y, w, h, pad));
   const rank = (v: number, id: number) => v * 64 + id;
   const { clearance, upgradeMargin, shiftStep } = units;
+  // the hysteresis of a kept slot is for plans that run while the camera moves; the plan at rest has the full room (`PlanUnits.keepSlack`)
+  const slack = upgradeMargin > 0 ? units.keepSlack : 0;
   const spotUnits = { inset: units.inset, quant: units.quant, gap: units.gap, bleed: units.bleed, lattice: units.lattice };
 
   for (const n of order) {
@@ -205,16 +217,25 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
      * one of the boxes to `avoid` (a neighbour's outline) is taken only when no position of ANY wording keeps clear of them: a shorter label
      * beside the box is better than the whole label over a neighbour's outline (and then the whole label's first such position wins).
      */
+    const fitsInside = (rect: CellRect, w: number, h: number) =>
+      Math.min(rect.c1, grid.cols) - Math.max(rect.c0, 0) - 2 * units.inset >= w && Math.min(rect.r1, grid.rows) - Math.max(rect.r0, 0) - 2 * units.inset >= h;
     const avoid = t.avoid;
-    const clearOfBoxes = (x: number, y: number, w: number, h: number) => !avoid || !avoid.some((p) => hits(p, x, y, w, h, 0));
+    const clearOfBoxes = (x: number, y: number, w: number, h: number, ease = 0) => !avoid || !avoid.some((p) => hits(p, x, y, w, h, -ease));
+    const prevAt = t.prev;
+    // the slot it has: judged with `slack` less room, so a cell of jitter in a neighbour's box does not take it away
+    const isKept = (v: number, id: number) => slack > 0 && prevAt !== null && prevAt.cand >= 0 && v === prevAt.variant && id === prevAt.cand;
     const first = (pad: number, before = Infinity): { v: number; s: LabelSpot } | null => {
       let touching: { v: number; s: LabelSpot } | null = null;
       for (let v = 0; v < count; v++) {
         const { w, h } = t.variants[v]!;
         for (const s of spotsOf(v)) {
           if (rank(v, s.id) >= before) return touching;
-          if (!free(s.x, s.y, w, h, clearance + pad)) continue;
-          if (clearOfBoxes(s.x, s.y, w, h)) return { v, s };
+          const ease = isKept(v, s.id) ? slack : 0;
+          if (!free(s.x, s.y, w, h, clearance + pad - ease)) continue;
+          // a nested position also needs room to spare to be taken as an upgrade: a box whose width snaps between two cells, around the
+          // width the plate needs, would otherwise take it and lose it at every step (it still leaves as soon as it does not fit)
+          if (pad > 0 && s.inside && !fitsInside(t.rect, w + pad, h + pad)) continue;
+          if (clearOfBoxes(s.x, s.y, w, h, ease)) return { v, s };
           touching ??= { v, s };
         }
       }
@@ -230,7 +251,8 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
     if (chosen && prev && prev.cand >= 0 && prev.variant < count) {
       const { w, h } = t.variants[prev.variant]!;
       const same = spotsOf(prev.variant).find((s) => s.id === prev.cand);
-      if (same && free(same.x, same.y, w, h, clearance) && rank(chosen.v, chosen.s.id) < rank(prev.variant, prev.cand)) {
+      const ease = isKept(prev.variant, prev.cand) ? slack : 0;
+      if (same && free(same.x, same.y, w, h, clearance - ease) && rank(chosen.v, chosen.s.id) < rank(prev.variant, prev.cand)) {
         // a better choice exists: take it only when it is free with room to spare, and not at all while the choice is a moment old...
         const better = chosen;
         const keep = { v: prev.variant, s: same };
@@ -238,7 +260,7 @@ export function planLabels(items: readonly PlanItem[], grid: GridSize, units: Pl
         // ...unless the kept position lies over another node's box and the better one does not: a plate never stays on a neighbour's outline for want of room to spare
         if (chosen === keep) {
           const bw = t.variants[better.v]!;
-          if (!clearOfBoxes(same.x, same.y, w, h) && clearOfBoxes(better.s.x, better.s.y, bw.w, bw.h)) chosen = better;
+          if (!clearOfBoxes(same.x, same.y, w, h, ease) && clearOfBoxes(better.s.x, better.s.y, bw.w, bw.h)) chosen = better;
         }
       }
     }
