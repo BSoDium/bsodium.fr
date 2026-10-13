@@ -6,7 +6,7 @@ import { AttributionSlot } from "~/components/attribution-slot";
 import { DetailPanel, type OpenIntent } from "~/components/detail-panel";
 import { LandingHero } from "~/components/landing-hero";
 import { PlacesNav } from "~/components/places-nav";
-import { Globe, placeFraming, type GlobeInitialView, type GlobeViewState } from "~/globe";
+import { Globe, placeFraming, ringPhrases, type GlobeInitialView, type GlobeViewState } from "~/globe";
 import { useIsMobile } from "~/hooks/use-is-mobile";
 import { useLandingHero } from "~/hooks/use-landing-hero";
 import { useViewportWidth } from "~/hooks/use-viewport-width";
@@ -15,6 +15,10 @@ import { getTilesConfig } from "~/lib/tiles-config.server";
 import { parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
 import { panelInset } from "~/lib/layout";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
+import { SITE } from "~/lib/site";
+
+/** The words of the globe's ring of type: the site's identity (name, role, fields, place), the same constant the head tags and the hero read. */
+const RING_PHRASES = ringPhrases(SITE);
 
 export async function loader() {
   // `tiles` is the street map's tile source configuration (CATALYST_TILES_* read at request time, see
@@ -124,6 +128,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
               insetRight={insetRight}
               tiles={tiles}
               attribution={AttributionSlot}
+              ringPhrases={RING_PHRASES}
               onSelect={select}
               onViewChange={saveView}
               onInteract={hero.onInteract}

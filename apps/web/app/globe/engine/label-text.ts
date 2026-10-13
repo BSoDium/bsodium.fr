@@ -3,7 +3,7 @@
  *
  * The labels of the detection boxes are HTML text in device pixels, not pixel art (the pixel font stays for text that is part of the map
  * itself, engine/pixel-labels.ts): the app's own monospace stack (`--font-mono`) on a plate of the page colour with a soft feathered edge
- * (app.css `.map-label`, `.map-halo`). Everything the layout needs is the SIZE of a label, which is measured once per string with a 2D canvas
+ * (app.css `.map-label`, engine/label-plate.ts). Everything the layout needs is the SIZE of a label, which is measured once per string with a 2D canvas
  * (`measureText`; the DOM is never read back) and cached: the planner (engine/label-plan.ts), the cut of the hierarchy (engine/lod-tree.ts: a
  * label counts as part of its node) and the hit hull (engine/hit-area.ts) all work from these numbers, in CSS px.
  *

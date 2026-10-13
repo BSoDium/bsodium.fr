@@ -884,6 +884,11 @@ export class GlobeRenderer {
     return c;
   }
 
+  /** The idle rotation is turning the globe now (a plain read: asked every camera frame, so it builds nothing, unlike `spinInfo`). */
+  get spinning(): boolean {
+    return this.spin.spinning;
+  }
+
   /** Why the globe is not turning (checks), or null while it is allowed to. */
   spinInfo() {
     return { spinning: this.spin.spinning, phase: this.spin.phase, speed: this.spin.speed, blockedBy: spinBlock(this.spinContext()), timerArmed: this.spinTimer !== 0 };

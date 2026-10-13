@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PX_UNITS, planLabels, pxUnits, smoothUnits, type PlanItem, type Prev } from "./label-plan";
-import { LabelTracker, SlotMemory, TRACK, glideRemainder, slotPosition, type Placed, type TrackItem } from "./label-track";
+import { LabelTracker, MOTION, SlotMemory, TRACK, glideRemainder, motionLimitPx, slotPosition, type Placed, type TrackItem } from "./label-track";
 import { SPOT } from "./pixel-labels";
 
 const VIEW = { cols: 800, rows: 600 };
@@ -490,6 +490,175 @@ describe("a globe that turns on its own: boxes change by one cell once a second 
     expect(t.dueAt).not.toBeNull();
     t.settleNow();
     expect(t.step((now += 16), items(200), VIEW, INSET)[1]!.cand).toBe(SPOT.aboveLeft);
+  });
+});
+
+describe("a globe that turns on its own does not re-plan for every quantum of motion", () => {
+  const items = (dx: number, extra: TrackItem[] = []) => [box(1, 100 + dx, 100), box(2, 230 + dx, 100), box(3, 100 + dx, 300), ...extra];
+  /** Drift every box by `px` per 16 ms frame for `frames` frames; returns the full plans that ran, and the clock. */
+  const drift = (t: LabelTracker, from: number, px: number, frames: number, start = 0) => {
+    let now = start;
+    let plans = 0;
+    for (let f = 0; f < frames; f++) {
+      t.step(now, items(from + px * f), VIEW, SMOOTH);
+      if (t.info.full) plans++;
+      now += 16;
+    }
+    return { plans, now, dx: from + px * frames };
+  };
+  it("0.02 px a frame: a plan about every keepSlack/2 px of drift (about a second), not ten a second; the boxes are re-labelled in the first step", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    t.setDrifting(true);
+    t.step(0, items(0), VIEW, SMOOTH);
+    const r = drift(t, 0, 0.02, 3750, 16); // a minute
+    const every = SMOOTH.keepSlack / 2 / 0.02; // frames per plan (the change is seen on a quantum of 0.25 px: a plan takes up to 13 frames more)
+    expect(r.plans).toBeGreaterThanOrEqual(Math.floor(3750 / (every + 13)) - 1);
+    expect(r.plans).toBeLessThanOrEqual(Math.ceil(3750 / every) + 1);
+    expect(r.plans).toBeLessThan(80); // (measured before: 588 a minute)
+    // the same drift with the hint off is the old rate: a plan for every 0.25 px quantum, bounded by replanMs
+    const u = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    u.step(0, items(0), VIEW, SMOOTH);
+    expect(drift(u, 0, 0.02, 3750, 16).plans).toBeGreaterThan(r.plans * 5);
+  });
+  it("nothing is owed (no timer) while the drift stays under the slack, and the plan comes within replanMs of the drift reaching it", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    t.setDrifting(true);
+    t.step(0, items(0), VIEW, SMOOTH);
+    const half = SMOOTH.keepSlack / 2;
+    let now = 16;
+    const a = t.step(now, items(half * 0.9), VIEW, SMOOTH);
+    expect(a).toHaveLength(3);
+    expect(t.info.full).toBe(false);
+    expect(t.dueAt).toBeNull();
+    now += 16;
+    t.step(now, items(half + 0.3), VIEW, SMOOTH); // the box has moved more than half the slack since the last plan
+    expect(t.dueAt).not.toBeNull();
+    let planned = t.info.full;
+    for (let k = 0; k < 8 && !planned; k++) {
+      now += 16;
+      t.step(now, items(half + 0.3), VIEW, SMOOTH);
+      planned = t.info.full;
+    }
+    expect(planned).toBe(true);
+    expect(now).toBeLessThanOrEqual(TRACK.replanMs + 16 * 2);
+  });
+  it("the drift is measured from the last plan, not from the last step: many small steps add up", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    t.setDrifting(true);
+    t.step(0, items(0), VIEW, SMOOTH);
+    const r = drift(t, 0, 0.1, 40, 16); // 4 px in 40 steps of 0.1 px
+    expect(r.plans).toBeGreaterThanOrEqual(2);
+  });
+  it("a node that appears or goes, or a room that changes, is planned at once whatever the drift", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS, { ...TRACK, dwellMs: 0 }); // (a young slot owes its own plan once it is old enough: not what is tested here)
+    t.setDrifting(true);
+    t.step(0, items(0), VIEW, SMOOTH);
+    t.step(16, items(0), VIEW, SMOOTH);
+    t.step(32, items(0.1), VIEW, SMOOTH);
+    expect(t.dueAt).toBeNull();
+    const added = t.step(48, items(0.1, [box(4, 400, 400)]), VIEW, SMOOTH);
+    expect(added[3]!.fresh).toBe(true); // placed in the gaps in this very step
+    expect(t.dueAt).not.toBeNull();
+    t.step(TRACK.replanMs + 48, items(0.1, [box(4, 400, 400)]), VIEW, SMOOTH);
+    expect(t.info.full).toBe(true);
+    t.step(TRACK.replanMs + 64, items(0.1, [box(4, 400, 400)]), VIEW, SMOOTH);
+    expect(t.dueAt).toBeNull();
+    t.step(TRACK.replanMs + 80, items(0.1), VIEW, SMOOTH); // one goes
+    expect(t.dueAt).not.toBeNull();
+    t.step(2 * TRACK.replanMs + 80, items(0.1), VIEW, SMOOTH);
+    expect(t.info.full).toBe(true);
+    expect(t.dueAt).toBeNull();
+    t.step(2 * TRACK.replanMs + 96, items(0.1), { cols: VIEW.cols + 40, rows: VIEW.rows }, SMOOTH);
+    expect(t.dueAt).not.toBeNull();
+  });
+  it("a node that is away for a few frames (a group opens and closes again) re-plans nothing: the plan of a changed set waits replanMs; one that stays away is planned", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS, { ...TRACK, dwellMs: 0 });
+    t.setDrifting(true);
+    const three = items(0);
+    const two = three.slice(0, 2);
+    let now = 0;
+    t.step(now, three, VIEW, SMOOTH);
+    const slots = t.step((now += 16), three, VIEW, SMOOTH).map((p) => p.cand);
+    let plans = 0;
+    const go = (list: TrackItem[]) => {
+      const out = t.step((now += 16), list, VIEW, SMOOTH);
+      if (t.info.full) plans++;
+      return out;
+    };
+    now = 500; // long after the last plan: a plan owed now would run at once
+    for (let f = 0; f < 4; f++) go(two); // away for 64 ms
+    expect(t.info.full).toBe(false);
+    const back = go(three);
+    expect(back.map((p) => p.cand)).toEqual(slots);
+    for (let f = 0; f < 10; f++) go(three);
+    expect(plans).toBe(0);
+    expect(t.dueAt).toBeNull();
+    go(two); // away for good
+    expect(t.dueAt).not.toBeNull(); // owed, replanMs after the set changed
+    for (let f = 0; f < 10; f++) go(two);
+    expect(plans).toBe(1);
+    expect(t.dueAt).toBeNull();
+  });
+  it("a box whose size changes counts as moved by the change of its edge", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    t.setDrifting(true);
+    const a = box(1, 100, 100);
+    t.step(0, [a], VIEW, SMOOTH);
+    t.step(16, [{ ...a, rect: { ...a.rect, c1: a.rect.c1 + 0.1 } }], VIEW, SMOOTH);
+    expect(t.dueAt).toBeNull();
+    t.step(32, [{ ...a, rect: { ...a.rect, c1: a.rect.c1 + 3 } }], VIEW, SMOOTH);
+    expect(t.dueAt).not.toBeNull();
+  });
+  it("when the drift stops the plan at rest is still owed (every label settles on its best place), and without the hint the old rule holds", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    t.setDrifting(true);
+    t.step(0, items(0), VIEW, SMOOTH);
+    t.step(16, items(0.3), VIEW, SMOOTH);
+    expect(t.dueAt).toBeNull();
+    t.setDrifting(false);
+    expect(t.dueAt).not.toBeNull();
+    const u = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    u.step(0, items(0), VIEW, SMOOTH);
+    u.step(16, items(0.3), VIEW, SMOOTH);
+    expect(u.dueAt).not.toBeNull(); // not drifting: any change owes a plan
+  });
+  it("units without a slack (keepSlack 0) owe a plan for any change, drifting or not", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    t.setDrifting(true);
+    const u = { ...SMOOTH, keepSlack: 0 };
+    t.step(0, items(0), VIEW, u);
+    t.step(16, items(0.5), VIEW, u);
+    expect(t.dueAt).not.toBeNull();
+  });
+  it("a reset (the host parked, or the tree changed under it) forgets where the rectangles were planned: the next change is planned", () => {
+    const t = new LabelTracker(new SlotMemory(100), PX_UNITS);
+    t.setDrifting(true);
+    t.step(0, items(0), VIEW, SMOOTH);
+    t.step(16, items(0.05), VIEW, SMOOTH);
+    expect(t.dueAt).toBeNull();
+    t.reset();
+    t.step(32, items(0.1), VIEW, SMOOTH);
+    expect(t.dueAt).not.toBeNull();
+  });
+});
+
+describe("what counts as a moving rectangle is a speed (MOTION), the same at any frame rate", () => {
+  it("the limit scales with the interval, within its bounds", () => {
+    expect(motionLimitPx(1000 / 60)).toBeCloseTo((MOTION.pxPerSec * 1000) / 60 / 1000, 12);
+    expect(motionLimitPx(1000 / 144)).toBeLessThan(motionLimitPx(1000 / 30));
+    expect(motionLimitPx(0)).toBeCloseTo((MOTION.pxPerSec * MOTION.minDtMs) / 1000, 12);
+    expect(motionLimitPx(60_000)).toBeCloseTo((MOTION.pxPerSec * MOTION.maxDtMs) / 1000, 12);
+    expect(motionLimitPx(NaN)).toBeNaN(); // the first run: nothing to compare with, everything counts as moved
+  });
+  it("the idle rotation (0.2 deg/s, 0.52 px/s at the centre of a 150 px disc) is motion at 30, 60 and 144 fps; a wobble of the last digits and a still camera are not", () => {
+    const pxPerSec = ((0.2 * Math.PI) / 180) * 150;
+    for (const fps of [30, 60, 144]) {
+      const dt = 1000 / fps;
+      expect((pxPerSec * dt) / 1000, `${fps} fps`).toBeGreaterThan(motionLimitPx(dt));
+      expect(1e-6, `${fps} fps: float noise`).toBeLessThan(motionLimitPx(dt));
+    }
+    // the old rule (0.01 px a frame) called 0.52 px/s at 60 fps (0.0087 px) still: that is the case this replaces
+    expect((pxPerSec * (1000 / 60)) / 1000).toBeLessThan(0.01);
   });
 });
 
