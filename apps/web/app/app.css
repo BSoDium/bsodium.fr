@@ -23,10 +23,10 @@
   /* The share of the page colour in a map label's plate (engine/label-plate.ts: the least that keeps the 11 px second line AA, 4.5:1, over the loudest map tone). */
   --label-plate-alpha: 0.7;
   --border: rgb(0 0 0 / 0.14);
-  --border-strong: rgb(0 0 0 / 0.4);
-  --ring: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #fbfbfb;
+  --border-strong: rgb(0 0 0 / 0.44);
+  --ring: #0067b8;
+  --primary: #0076d4;
+  --primary-foreground: #ffffff;
   --accent: #ececec;
   --accent-foreground: #0a0a0a;
   --globe-grid: rgb(0 0 0 / 0.12);
@@ -41,17 +41,21 @@
    * (24 px, or 18.66 px bold, and up), non-text marks (a tick, a rule, a cover's mark, an underline) and fills: 3:1 or more on the page,
    * the surface and the paper in both schemes. Text of any smaller size takes `--signal-text`: the same hue, deeper in the light scheme
    * and lighter in the dark one, AA (4.5:1) on the page, the surface and the hover grey. Text on a signal fill is `--signal-foreground`,
-   * white. The whole accent is these five lines (times the four copies of the list).
+   * white. The primary button is the accent's fill (`--primary` / `--primary-foreground`), `--signal-hover` and `--signal-active` its two deeper
+   * steps (lightness 38 % and 35 % against the fill's 42 %: white text stays AA on both and each is still 3:1 or more against the dark page, which a deeper step would not be), `--ring` the accent's text tone. The whole accent is these lines
+   * (times the four copies of the list).
    */
   --signal: #0076d4;
   --signal-text: #0067b8;
   --signal-foreground: #ffffff;
   --signal-wash: rgb(0 118 212 / 0.08);
-  /* Reading surface of the entries and their lists (docs/design-tokens.md, "Reading surface"): paper in the light scheme, night in the dark. */
-  --paper: #efeadf;
-  --paper-foreground: #16130f;
-  --paper-muted: #6b665b;
-  --paper-hover: #ebe7dc;
+  --signal-hover: #006cc2;
+  --signal-active: #0064b2;
+  /* Reading surface of the entries and their lists (docs/design-tokens.md, "Reading surface"): the page's own colours since 2026-10-14 (no cream), kept as tokens so it can differ again. */
+  --paper: #fbfbfb;
+  --paper-foreground: #0a0a0a;
+  --paper-muted: #595959;
+  --paper-hover: #ececec;
   --paper-signal: #0076d4;
   --paper-signal-text: #0067b8;
   /* The opposite scheme's page tokens: what an inverted frame rebinds the tokens to (a cycle-free swap). */
@@ -122,9 +126,9 @@
     --label-plate-alpha: 0.62;
     --border: rgb(255 255 255 / 0.16);
     --border-strong: rgb(255 255 255 / 0.45);
-    --ring: #f5f5f5;
-    --primary: #f5f5f5;
-    --primary-foreground: #0a0a0a;
+    --ring: #0a93ff;
+    --primary: #0076d4;
+    --primary-foreground: #ffffff;
     --accent: #1f1f1f;
     --accent-foreground: #f5f5f5;
     --globe-grid: rgb(255 255 255 / 0.14);
@@ -136,10 +140,12 @@
     --signal-text: #0a93ff;
     --signal-foreground: #ffffff;
     --signal-wash: rgb(0 118 212 / 0.12);
-    --paper: #0b0c0f;
-    --paper-foreground: #ece8df;
-    --paper-muted: #8d8a82;
-    --paper-hover: #17181b;
+    --signal-hover: #006cc2;
+    --signal-active: #0064b2;
+    --paper: #0a0a0a;
+    --paper-foreground: #f5f5f5;
+    --paper-muted: #a3a3a3;
+    --paper-hover: #1f1f1f;
     --paper-signal: #0076d4;
     --paper-signal-text: #0a93ff;
     --inverse-background: #f5f5f5;
@@ -282,10 +288,10 @@
   /* The share of the page colour in a map label's plate (engine/label-plate.ts: the least that keeps the 11 px second line AA, 4.5:1, over the loudest map tone). */
   --label-plate-alpha: 0.7;
   --border: rgb(0 0 0 / 0.14);
-  --border-strong: rgb(0 0 0 / 0.4);
-  --ring: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #fbfbfb;
+  --border-strong: rgb(0 0 0 / 0.44);
+  --ring: #0067b8;
+  --primary: #0076d4;
+  --primary-foreground: #ffffff;
   --accent: #ececec;
   --accent-foreground: #0a0a0a;
   --globe-grid: rgb(0 0 0 / 0.12);
@@ -296,10 +302,12 @@
   --signal-text: #0067b8;
   --signal-foreground: #ffffff;
   --signal-wash: rgb(0 118 212 / 0.08);
-  --paper: #efeadf;
-  --paper-foreground: #16130f;
-  --paper-muted: #6b665b;
-  --paper-hover: #ebe7dc;
+  --signal-hover: #006cc2;
+  --signal-active: #0064b2;
+  --paper: #fbfbfb;
+  --paper-foreground: #0a0a0a;
+  --paper-muted: #595959;
+  --paper-hover: #ececec;
   --paper-signal: #0076d4;
   --paper-signal-text: #0067b8;
   --inverse-background: #0a0a0a;
@@ -325,9 +333,9 @@
   --label-plate-alpha: 0.62;
   --border: rgb(255 255 255 / 0.16);
   --border-strong: rgb(255 255 255 / 0.45);
-  --ring: #f5f5f5;
-  --primary: #f5f5f5;
-  --primary-foreground: #0a0a0a;
+  --ring: #0a93ff;
+  --primary: #0076d4;
+  --primary-foreground: #ffffff;
   --accent: #1f1f1f;
   --accent-foreground: #f5f5f5;
   --globe-grid: rgb(255 255 255 / 0.14);
@@ -338,10 +346,12 @@
   --signal-text: #0a93ff;
   --signal-foreground: #ffffff;
   --signal-wash: rgb(0 118 212 / 0.12);
-  --paper: #0b0c0f;
-  --paper-foreground: #ece8df;
-  --paper-muted: #8d8a82;
-  --paper-hover: #17181b;
+  --signal-hover: #006cc2;
+  --signal-active: #0064b2;
+  --paper: #0a0a0a;
+  --paper-foreground: #f5f5f5;
+  --paper-muted: #a3a3a3;
+  --paper-hover: #1f1f1f;
   --paper-signal: #0076d4;
   --paper-signal-text: #0a93ff;
   --inverse-background: #f5f5f5;
@@ -487,13 +497,26 @@
     border-radius: var(--radius-sm);
   }
 
+  /*
+   * A moat of the page colour round the ring (5 px: the 2 px offset, the 2 px ring and a 1 px margin), so that the ring is 3:1 or more
+   * against what is drawn under it and never against what happens to be there (a cover image, the globe's lines, the scrim over a
+   * picture). Over the plain page it cannot be seen. Inputs keep the outline they were given (the palette's field draws its own rule).
+   */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    box-shadow: 0 0 0 5px var(--background);
+  }
+
   :target {
     scroll-margin-top: calc(var(--navbar-height) + 1.5rem);
   }
 
   ::selection {
-    background: var(--foreground);
-    color: var(--background);
+    background: var(--signal);
+    color: var(--signal-foreground);
   }
 }
 
@@ -586,11 +609,11 @@
     text-transform: uppercase;
   }
 
-  /* A link in running text: the text keeps its colour, the underline is the accent (a mark, 3:1 or more) and thickens under the pointer. */
+  /* A link in running text: the accent's text tone (4.5:1 or more on the page, the surface and the hover grey) with an underline that thickens under the pointer. */
   .type-link {
-    color: inherit;
+    color: var(--signal-text);
     text-decoration-line: underline;
-    text-decoration-color: var(--signal);
+    text-decoration-color: currentColor;
     text-decoration-thickness: 0.08em;
     text-underline-offset: 0.2em;
     transition: text-decoration-thickness var(--duration-fast) var(--ease-standard);
@@ -727,7 +750,7 @@
   }
 
   .ds-frame[data-variant="active"] {
-    border-color: var(--border-strong);
+    border-color: var(--signal);
     background: linear-gradient(var(--signal-wash), var(--signal-wash)), var(--surface);
   }
 
@@ -738,22 +761,22 @@
     --subtle-foreground: var(--inverse-muted);
     --border: var(--inverse-border);
     --border-strong: var(--inverse-border);
-    --ring: var(--inverse-foreground);
+    --ring: var(--inverse-signal-text);
     --signal: var(--inverse-signal);
     --signal-text: var(--inverse-signal-text);
     --surface: var(--inverse-background);
     --accent: color-mix(in srgb, var(--inverse-foreground) 14%, var(--inverse-background));
     --accent-foreground: var(--inverse-foreground);
-    --primary: var(--inverse-foreground);
-    --primary-foreground: var(--inverse-background);
+    --primary: var(--inverse-signal);
+    --primary-foreground: var(--signal-foreground);
     background: var(--inverse-background);
     border-color: var(--inverse-background);
   }
 
   .ds-frame[data-variant="inverted"]::selection,
   .ds-frame[data-variant="inverted"] ::selection {
-    background: var(--inverse-foreground);
-    color: var(--inverse-background);
+    background: var(--inverse-signal);
+    color: var(--signal-foreground);
   }
 
   /* Interactive frames (a link card): the line answers the pointer and the keyboard focus, no movement. */
@@ -783,7 +806,8 @@
 
   .ds-card:hover [data-slot="entry-card-title"] a {
     text-decoration: underline;
-    text-decoration-thickness: 1px;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 2px;
     text-underline-offset: 0.2em;
   }
 
@@ -867,7 +891,7 @@
   }
 
   .ds-tags a:hover {
-    color: var(--foreground);
+    color: var(--signal-text);
     text-decoration: underline;
     text-underline-offset: 0.2em;
   }
@@ -1006,8 +1030,19 @@
     --ds-button-line: var(--primary);
   }
 
+  /* The call to action is the accent's fill: hovered a step deeper, pressed another (white text stays AA on both). Its ring is the ink. */
   .ds-button[data-variant="primary"]:hover {
-    --ds-button-bg: color-mix(in srgb, var(--primary) 82%, var(--background));
+    --ds-button-bg: var(--signal-hover);
+    --ds-button-line: var(--signal-hover);
+  }
+
+  .ds-button[data-variant="primary"]:active {
+    --ds-button-bg: var(--signal-active);
+    --ds-button-line: var(--signal-active);
+  }
+
+  .ds-button[data-variant="primary"]:focus-visible {
+    outline-color: var(--foreground);
   }
 
   .ds-button[data-variant="secondary"]:hover,
@@ -1024,6 +1059,7 @@
   }
 
   .ds-button[data-variant="link"] {
+    --ds-button-fg: var(--signal-text);
     --ds-button-line: transparent;
     padding-inline: 0.25rem;
     text-decoration: underline;
@@ -1034,14 +1070,16 @@
     text-decoration: none;
   }
 
+  /* Pressed (a toggle that is on): the accent's fill, as the chosen filter has the accent's rule. */
   .ds-button[data-pressed="true"] {
-    --ds-button-bg: var(--foreground);
-    --ds-button-fg: var(--background);
-    --ds-button-line: var(--foreground);
+    --ds-button-bg: var(--signal);
+    --ds-button-fg: var(--signal-foreground);
+    --ds-button-line: var(--signal);
   }
 
   .ds-button[data-pressed="true"]:hover {
-    --ds-button-bg: color-mix(in srgb, var(--foreground) 82%, var(--background));
+    --ds-button-bg: var(--signal-hover);
+    --ds-button-line: var(--signal-hover);
   }
 
   /* A ghost toggle (the panel's full-screen switch) shows its state quietly: the hover grey stays on, the glyph has already swapped. */
@@ -1079,6 +1117,12 @@
 
   .ds-segmented > .ds-button {
     margin: 0 calc(var(--hairline) * -1) calc(var(--hairline) * -1) 0;
+  }
+
+  /* The focused one is above its neighbours (they overlap by a hairline and would paint over its ring). */
+  .ds-segmented > .ds-button:focus-visible {
+    position: relative;
+    z-index: 1;
   }
 
   /* Decorative textures: faint, behind content, never carrying information. */
@@ -1292,17 +1336,17 @@
     pointer-events: none;
     background: linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--background) 96%, transparent) 0%,
-      color-mix(in srgb, var(--background) 95%, transparent) 8%,
-      color-mix(in srgb, var(--background) 91%, transparent) 16%,
-      color-mix(in srgb, var(--background) 85%, transparent) 24%,
-      color-mix(in srgb, var(--background) 77%, transparent) 32%,
-      color-mix(in srgb, var(--background) 67%, transparent) 40%,
-      color-mix(in srgb, var(--background) 56%, transparent) 48%,
-      color-mix(in srgb, var(--background) 45%, transparent) 56%,
-      color-mix(in srgb, var(--background) 34%, transparent) 64%,
-      color-mix(in srgb, var(--background) 23%, transparent) 72%,
-      color-mix(in srgb, var(--background) 14%, transparent) 80%,
+      color-mix(in srgb, var(--background) 97%, transparent) 0%,
+      color-mix(in srgb, var(--background) 96%, transparent) 8%,
+      color-mix(in srgb, var(--background) 95%, transparent) 16%,
+      color-mix(in srgb, var(--background) 94%, transparent) 24%,
+      color-mix(in srgb, var(--background) 92%, transparent) 32%,
+      color-mix(in srgb, var(--background) 85%, transparent) 40%,
+      color-mix(in srgb, var(--background) 72%, transparent) 48%,
+      color-mix(in srgb, var(--background) 57%, transparent) 56%,
+      color-mix(in srgb, var(--background) 41%, transparent) 64%,
+      color-mix(in srgb, var(--background) 27%, transparent) 72%,
+      color-mix(in srgb, var(--background) 15%, transparent) 80%,
       color-mix(in srgb, var(--background) 7%, transparent) 88%,
       color-mix(in srgb, var(--background) 2%, transparent) 95%,
       transparent 100%
@@ -1507,11 +1551,16 @@
 
   .ds-prose p a,
   .ds-prose li a {
-    color: inherit;
+    color: var(--signal-text);
     text-decoration-line: underline;
-    text-decoration-color: var(--signal);
+    text-decoration-color: currentColor;
     text-decoration-thickness: 0.08em;
     text-underline-offset: 0.2em;
+  }
+
+  .ds-prose p a:hover,
+  .ds-prose li a:hover {
+    text-decoration-thickness: 0.16em;
   }
 
   .ds-prose [data-slot="verse"] {
@@ -1566,9 +1615,10 @@
     color: var(--foreground);
   }
 
+  /* Always drawn where there is no hover: at 75 % the muted glyph keeps 3:1 or more against the page in both schemes (it was 55 %: 2.4:1). */
   @media (hover: none) {
     .ds-anchor {
-      opacity: 0.55;
+      opacity: 0.75;
     }
   }
 
@@ -1713,7 +1763,7 @@
     margin: 0;
   }
 
-  .entry-margin a,
+  .entry-margin a:not(.ds-button),
   .entry-dateline a {
     color: inherit;
     text-decoration-line: underline;
@@ -1723,9 +1773,10 @@
     transition: color var(--duration-fast) var(--ease-standard);
   }
 
-  .entry-margin a:hover,
+  .entry-margin a:not(.ds-button):hover,
   .entry-dateline a:hover {
-    color: var(--foreground);
+    color: var(--signal-text);
+    text-decoration-color: currentColor;
   }
 
   /*
@@ -1886,7 +1937,7 @@
   }
 
   .ds-filter:hover {
-    color: var(--foreground);
+    color: var(--signal-text);
   }
 
   .ds-filter[aria-current="true"] {
@@ -1895,7 +1946,7 @@
   }
 
   .ds-filter[aria-current="true"] > span {
-    border-bottom-color: var(--foreground);
+    border-bottom-color: var(--signal);
   }
 
   /* The toggles: one row that scrolls sideways on a phone (it bleeds to the screen edges), wrapped from md. */
@@ -1951,11 +2002,43 @@
   --accent: var(--paper-hover);
   --border: color-mix(in srgb, var(--paper-foreground) 18%, transparent);
   --border-strong: color-mix(in srgb, var(--paper-foreground) 55%, transparent);
-  --ring: var(--paper-foreground);
+  --ring: var(--paper-signal-text);
   --signal: var(--paper-signal);
   --signal-text: var(--paper-signal-text);
-  --primary: var(--paper-foreground);
-  --primary-foreground: var(--paper);
+  --primary: var(--paper-signal);
+  --primary-foreground: var(--signal-foreground);
+}
+
+/*
+ * Accent states that have to beat Tailwind utilities (a `text-muted-foreground` on the element is in a later layer than the component's own
+ * `:hover`, so these are unlayered): the header's items turn to the accent under the pointer and the keyboard, the current one is underlined in
+ * it (2 px), the search triggers too, and the palette's field says it is the active one with the accent's rule under it (the caret is the
+ * accent as well).
+ */
+.nav-link:hover,
+.nav-link:focus-visible,
+[data-slot^="search-trigger"]:hover {
+  color: var(--signal-text);
+}
+
+.nav-link[aria-current="page"] {
+  text-decoration-color: var(--signal);
+  text-decoration-thickness: 2px;
+}
+
+/* The hero's rows over the globe: the accent text is 3:1 or more on a plate, not on whatever line of the map crosses the letters. */
+.hero-row:hover,
+.hero-row:focus-visible {
+  background: color-mix(in srgb, var(--background) 90%, transparent);
+}
+
+[data-slot="search-palette"] input[role="combobox"] {
+  caret-color: var(--signal);
+}
+
+[data-slot="search-palette"] :has(> input[role="combobox"]:focus-visible) {
+  border-bottom-color: var(--signal);
+  box-shadow: 0 1px 0 var(--signal);
 }
 
 /* Entry headings are focus targets by script, not controls: no ring on them (the panel announces the change). */
@@ -2156,6 +2239,9 @@ h1[tabindex="-1"]:focus-visible {
     --border-strong: rgb(0 0 0 / 0.6);
     --signal: #000;
     --signal-text: #000;
+    --primary: #000;
+    --primary-foreground: #fff;
+    --ring: #000;
     /* The reading surface rebinds the page tokens from these (`:root:has(main[data-surface="reading"])`, more specific than this
        block): in the dark scheme they would be night and ivory on paper. Ink on white, whatever the scheme. */
     --paper: #fff;

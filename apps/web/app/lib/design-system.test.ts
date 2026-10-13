@@ -42,7 +42,7 @@ function color(scheme: "light" | "dark", name: string): Rgba {
 
 describe("scheme blocks", () => {
   it("the dark media rule and the forced-scheme rules carry the same colour tokens as the root rule", () => {
-    const colorNames = [...light.keys()].filter((k) => /^--(background|foreground|muted-foreground|subtle-foreground|border|border-strong|ring|primary|primary-foreground|accent|accent-foreground|globe-grid|globe-limb|surface|line-faint|signal|signal-text|signal-foreground|signal-wash|inverse-[a-z-]+|kind-[a-z]+|label-plate-alpha)$/.test(k));
+    const colorNames = [...light.keys()].filter((k) => /^--(background|foreground|muted-foreground|subtle-foreground|border|border-strong|ring|primary|primary-foreground|accent|accent-foreground|globe-grid|globe-limb|surface|line-faint|signal|signal-text|signal-foreground|signal-wash|signal-hover|signal-active|inverse-[a-z-]+|kind-[a-z]+|label-plate-alpha)$/.test(k));
     expect(colorNames.length).toBeGreaterThan(25);
     for (const name of colorNames) {
       expect(dark.has(name), `dark ${name}`).toBe(true);
@@ -94,8 +94,9 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
     expect(contrastRatio(color(scheme, "--signal-foreground"), color(scheme, "--inverse-signal"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("fills with their text: primary, signal and the inverse pair are AA", () => {
-    expect(contrastRatio(color(scheme, "--primary-foreground"), color(scheme, "--primary"))).toBeGreaterThanOrEqual(7);
+  it("fills with their text: primary (the accent's fill, hovered and pressed), signal and the inverse pair are AA", () => {
+    expect(color(scheme, "--primary")).toEqual(color(scheme, "--signal"));
+    for (const fill of ["--primary", "--signal-hover", "--signal-active"]) expect(contrastRatio(color(scheme, "--primary-foreground"), color(scheme, fill)), fill).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(color(scheme, "--signal-foreground"), color(scheme, "--signal"))).toBeGreaterThanOrEqual(4.5);
     const inverseBg = color(scheme, "--inverse-background");
     expect(contrastRatio(color(scheme, "--inverse-foreground"), inverseBg)).toBeGreaterThanOrEqual(7);
@@ -115,10 +116,10 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
     expect(contrastRatio(color(scheme, "--foreground"), plate)).toBeGreaterThanOrEqual(7);
   });
 
-  it("hairlines are quiet (1.1 to 2:1) and the strong line identifies a control (at least 2.8:1)", () => {
+  it("hairlines are quiet (1.1 to 2:1) and the strong line identifies a control (at least 3:1, WCAG 1.4.11)", () => {
     expect(contrastRatio(color(scheme, "--border"), bg)).toBeGreaterThan(1.1);
     expect(contrastRatio(color(scheme, "--border"), bg)).toBeLessThan(2);
-    expect(contrastRatio(color(scheme, "--border-strong"), bg)).toBeGreaterThanOrEqual(2.8);
+    expect(contrastRatio(color(scheme, "--border-strong"), bg)).toBeGreaterThanOrEqual(3);
     expect(contrastRatio(color(scheme, "--line-faint"), bg)).toBeLessThan(1.3);
   });
 
@@ -139,7 +140,7 @@ describe("the accent is BSoD blue", () => {
     const h = d === 0 ? 0 : max === R ? ((G - B) / d) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4;
     return { hue: (h * 60 + 360) % 360, sat };
   }
-  const TONES = ["--signal", "--signal-text", "--paper-signal", "--paper-signal-text", "--inverse-signal", "--inverse-signal-text"] as const;
+  const TONES = ["--signal", "--signal-text", "--signal-hover", "--signal-active", "--ring", "--primary", "--paper-signal", "--paper-signal-text", "--inverse-signal", "--inverse-signal-text"] as const;
 
   it("is the Windows stop-screen blue (#0078d7 is 206.5 degrees, fully saturated): every tone of it, in both schemes, within 6 degrees: not cyan, not purple", () => {
     expect(hueSat(parseColor("#0078d7")!).hue).toBeCloseTo(206.5, 1);
@@ -216,7 +217,7 @@ describe("reading surface (paper in the light scheme, night in the dark)", () =>
       const hairline = over([ink[0], ink[1], ink[2], 0.18], paper);
       expect(contrastRatio(hairline, paper)).toBeGreaterThan(1.1);
       expect(contrastRatio(hairline, paper)).toBeLessThan(2);
-      expect(contrastRatio(over([ink[0], ink[1], ink[2], 0.55], paper), paper)).toBeGreaterThanOrEqual(2.8);
+      expect(contrastRatio(over([ink[0], ink[1], ink[2], 0.55], paper), paper)).toBeGreaterThanOrEqual(3);
     });
   });
 });

@@ -151,6 +151,9 @@ const SWATCHES: { token: string; role: string }[] = [
   { token: "--signal-text", role: "The accent as text under 24 px" },
   { token: "--signal-foreground", role: "Text on a signal fill" },
   { token: "--signal-wash", role: "Active plate" },
+  { token: "--signal-hover", role: "Primary fill, hovered" },
+  { token: "--signal-active", role: "Primary fill, pressed" },
+  { token: "--ring", role: "Focus ring" },
   { token: "--kind-article", role: "Article hue" },
   { token: "--kind-project", role: "Project hue" },
   { token: "--kind-artwork", role: "Artwork hue" },
@@ -170,7 +173,12 @@ const PAIRS: { fg: string; bg: string; need: number; use: string }[] = [
   { fg: "--signal", bg: "--background", need: 3, use: "Accent, large display text and marks" },
   { fg: "--signal", bg: "--surface", need: 3, use: "Accent mark on a frame" },
   { fg: "--signal-foreground", bg: "--signal", need: 4.5, use: "Text on a signal fill" },
-  { fg: "--border-strong", bg: "--background", need: 2.8, use: "Control outline" },
+  { fg: "--primary-foreground", bg: "--signal-hover", need: 4.5, use: "Primary label, hovered" },
+  { fg: "--primary-foreground", bg: "--signal-active", need: 4.5, use: "Primary label, pressed" },
+  { fg: "--ring", bg: "--background", need: 3, use: "Focus ring" },
+  { fg: "--ring", bg: "--accent", need: 3, use: "Focus ring on hover" },
+  { fg: "--signal-hover", bg: "--background", need: 3, use: "Hovered fill against the page" },
+  { fg: "--border-strong", bg: "--background", need: 3, use: "Control outline" },
 ];
 
 /** Reads the live computed values from a probe element, so the table always shows what the browser resolved. */
@@ -203,8 +211,10 @@ function Colour({ scheme }: { scheme: Scheme }) {
   return (
     <Stack gap={6}>
       <Note>
-        One grey family (the map's near-black and near-white) and one accent, BSoD blue. The accent is large display text, a mark (a tick, an underline, a
-        cover's mark) or a fill; text under 24 px takes its text variant (deeper in the light scheme, lighter in the dark one). The faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
+        One grey family (the map's near-black and near-white, no warm cast anywhere: the entries and the lists are on the page's own colour) and one accent, BSoD
+        blue. The accent is the call to action (the primary button's fill, hovered a step deeper, pressed another), the link in running text, the focus ring,
+        the selection and the current mark of a navigation or a filter; as large display text, a mark (a tick, an underline, a cover's mark) or a fill it is
+        `signal`, as text under 24 px its text variant (deeper in the light scheme, lighter in the dark one). The faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
       </Note>
       <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-5">
         {SWATCHES.map((s) => (
@@ -462,7 +472,7 @@ function Lines() {
         <Grid className="mt-2">
           {Array.from({ length: 12 }, (_, i) => (
             <Col key={i} span={1} className="ds-hatch flex h-8 items-center justify-center border border-border">
-              <span className="ds-meta">{i + 1}</span>
+              <span className="ds-meta bg-background">{i + 1}</span>
             </Col>
           ))}
         </Grid>
@@ -963,13 +973,13 @@ function Brand() {
 /**
  * The entry pages' grammar (docs/design-system.md, "Entry pages") at the width of a column, in both reading surfaces: the double rule, the
  * kicker, a headline whose clause after a comma is thin, the standfirst, the dateline, the marginalia, the body with its drop cap and
- * pull quote, a figure with its caption; then a poem. Made-up text. The surface is the page's reading surface (paper / night), bound
+ * pull quote, a figure with its caption; then a poem. Made-up text. The surface is the page's reading surface (the page's own colours), bound
  * for the element by `data-reading-surface`; the sizes follow the width of the block (`cqi`), as they do on the page.
  */
 function EntrySpecimen({ scheme }: { scheme: "light" | "dark" }) {
   return (
     <div data-scheme={scheme} data-reading-surface data-layout="full" data-kind="article" className="entry min-w-0 border border-border bg-background p-6 text-foreground">
-      <p className="ds-meta m-0 mb-6">Surface: {scheme === "light" ? "paper" : "night"}</p>
+      <p className="ds-meta m-0 mb-6">Surface: the page ({scheme})</p>
       <div className="entry-rule" aria-hidden="true" />
       <p className="type-meta m-0 mt-[1.375rem] flex justify-between text-muted-foreground">
         <span>Article &middot; Placeholder Bay</span>
@@ -1058,7 +1068,7 @@ function EntryPages() {
       <Note>
         The article and poem boards of the owner's canvas, as the entry pages build them: Newsreader 700 for the headline (its clause after a comma, a colon or
         a dash at 300), thin italic for the standfirst and the pull quote, mono for the kicker, the dateline, the marginalia and the captions, a drop cap in the
-        ink, ink rules, and a poem set as its own page: a thin italic title over lines at 300. Paper in the light scheme, night in the dark.
+        ink, ink rules, and a poem set as its own page: a thin italic title over lines at 300. On the page's own colours, near-white in the light scheme and near-black in the dark one.
       </Note>
       <div className="grid gap-6 lg:grid-cols-2">
         {(["light", "dark"] as const).map((scheme) => (
