@@ -731,6 +731,7 @@ export const MEDIA = [
   { name: "cover-monsoon-index", size: COVER, motif: "monsoon", plate: "dark", opts: { drops: 120 }, alt: "Rooftops under a dithered storm sky, thin diagonal rain streaks and ripples on a wet street" },
   { name: "cover-layover", size: COVER, motif: "verse", plate: "dark", opts: { stanzas: 5, drift: 0.04 }, alt: "Short white lines grouped in stanzas, one of them cyan, beside a dithered shadow at the right edge" },
   { name: "cover-voie-b", size: COVER, motif: "verse", plate: "light", opts: { stanzas: 4, drift: 0.1 }, alt: "Short black lines grouped in four stanzas on pale paper, one line in cyan" },
+  { name: "cover-figure-study", size: COVER, motif: "nested", plate: "dark", opts: { rects: 18 }, alt: "Rectangles nested one inside the next, each shifted a little from the last, in dithered grey on black with one cyan frame" },
   // figures
   { name: "fig-night-trains-board", size: FIGURE, motif: "timetable", plate: "light", opts: { rowsN: 13 }, alt: "A departures board reduced to bars and cells, several rows outlined in cyan where a time changed" },
   { name: "fig-night-trains-platform", size: FIGURE, motif: "platform", plate: "dark", opts: { lamps: 8 }, alt: "An empty platform in perspective, posts with lamps on both sides, one lamp in cyan, faint reflections on the floor" },
@@ -753,6 +754,7 @@ export const MEDIA = [
   { name: "fig-night-platform-2", size: FIGURE, motif: "platform", plate: "light", opts: { lamps: 10 }, alt: "The same platform reversed to pale paper, ten pairs of posts, one cyan lamp" },
   { name: "fig-monsoon-1", size: FIGURE, motif: "monsoon", plate: "dark", opts: { drops: 90 }, alt: "Study 1: rooftops and rain under a dithered sky" },
   { name: "fig-monsoon-2", size: FIGURE, motif: "monsoon", plate: "light", opts: { drops: 110 }, alt: "Study 2: dark rooftops and rain on pale paper" },
+  { name: "fig-figure-study-detail", size: FIGURE, motif: "contours", plate: "light", opts: { layers: 4, sun: false }, alt: "Four dithered ridge lines on pale paper, a loose study of a single curve" },
 ];
 
 export function renderImage(image) {

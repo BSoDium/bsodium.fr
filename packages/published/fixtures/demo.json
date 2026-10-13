@@ -396,6 +396,27 @@
         {"type":"link","title":"The full series","url":"https://example.org/prints/altiplano-sediment","description":"All twelve plates, with the processing notes for each."}
       ],
       "placeSlugs": ["cusco"]
+    },
+    {
+      "slug": "figure-study-two",
+      "title": "Figure Study in Charcoal, No. 2",
+      "summary": "A standing figure drawn in charcoal on toned paper in one three-hour life-drawing session: mature subject matter, so the images are blurred until you ask to see them.",
+      "date": "2025-11-08",
+      "cover": { "src": "/media/demo/cover-figure-study.svg", "alt": "Rectangles nested one inside the next, each shifted a little from the last, in dithered grey on black with one cyan frame", "width": 1200, "height": 630 },
+      "sensitive": true,
+      "tags": ["charcoal", "figure", "life-drawing", "study"],
+      "meta": [
+        { "label": "Medium", "value": "Charcoal on toned paper" },
+        { "label": "Year", "value": "2025" },
+        { "label": "Dimensions", "value": "50 × 65 cm" },
+        { "label": "Edition", "value": "Unique work" }
+      ],
+      "body": [
+        {"type":"paragraph","text":"Made in a single three-hour session from a standing pose, with the paper toned in advance so that the highlights could be lifted out with an eraser instead of added. The first hour was only proportion and weight; the rest was the long, slow edge of the shoulder and the hand."},
+        {"type":"image","src":"/media/demo/fig-figure-study-detail.svg","alt":"Four dithered ridge lines on pale paper, a loose study of a single curve","width":960,"height":600,"caption":"A page of quick contour studies from the same session, before the long pose."},
+        {"type":"paragraph","text":"The work contains a figure drawn from life. Its images are hidden behind a blur by default, and they stay hidden in link previews and search results."}
+      ],
+      "placeSlugs": ["kyoto"]
     }
   ],
   "poems": [
