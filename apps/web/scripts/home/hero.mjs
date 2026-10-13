@@ -785,8 +785,8 @@ for (const [name, options] of VIEWPORTS) {
   ok((await page.locator("header a[href='/articles']").count()) === 1 && (await page.locator("header a[href='/articles']").isVisible()), "tap-through: the header is there and visible");
   ok((await page.locator("header").getAttribute("data-guard")) === null, "tap-through: the guard is off a moment after the tap");
   // after the guard the link works with a real tap, and keyboard focus was never blocked
-  await page.locator("header a[href='/projects']").focus();
-  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/projects"), "tap-through: the header's links can be focused at once (keyboard and assistive technology are not guarded)");
+  await page.locator("header a[href='/software']").focus();
+  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/software"), "tap-through: the header's links can be focused at once (keyboard and assistive technology are not guarded)");
   await page.evaluate(() => document.activeElement?.blur());
   await page.touchscreen.tap(tx, ty);
   await page.waitForURL("**/articles", { timeout: 4000 }).catch(() => {});
