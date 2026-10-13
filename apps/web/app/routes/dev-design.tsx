@@ -30,6 +30,7 @@ import {
   MicroLabel,
   SectionHeader,
   SegmentedControl,
+  SensitiveMedia,
   Skeleton,
   Stack,
   StatePanel,
@@ -631,6 +632,20 @@ function Covers() {
   );
 }
 
+/** A made-up picture: one of the demo fixture's generated plates (the styleguide is dev-only; the files are in `public/media/demo/`). */
+const SAMPLE_PICTURE = "/media/demo/cover-figure-study.svg";
+
+function SensitiveSample() {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <div className="max-w-xl">
+      <SensitiveMedia revealed={revealed} onRevealedChange={setRevealed}>
+        <img src={SAMPLE_PICTURE} alt="Sample picture: nested rectangles" className="block aspect-[1.91/1] w-full object-cover" />
+      </SensitiveMedia>
+    </div>
+  );
+}
+
 function Cards() {
   const kinds = ["article", "project", "artwork", "poem"] as const;
   return (
@@ -662,6 +677,28 @@ function Cards() {
           <EntryCard kind="poem" showKind title={SAMPLES.poem.title} summary={SAMPLES.poem.summary} href="#s7" meta={SAMPLES.poem.meta} />
         </div>
       </Spec>
+      <Grid>
+        <Col span={12} spanMd={6}>
+          <Spec caption="Mature content in a card: blurred and labelled, no control (the entry's own page has it)">
+            <div className="max-w-sm">
+              <EntryCard
+                kind="artwork"
+                sensitive
+                image={{ src: SAMPLE_PICTURE, alt: "Sample picture: nested rectangles" }}
+                title={SAMPLES.artwork.title}
+                summary={SAMPLES.artwork.summary}
+                href="#s7"
+                meta={SAMPLES.artwork.meta}
+              />
+            </div>
+          </Spec>
+        </Col>
+        <Col span={12} spanMd={6}>
+          <Spec caption="On the entry's own page: the same blur with the control that shows and hides its images (this state is not stored)">
+            <SensitiveSample />
+          </Spec>
+        </Col>
+      </Grid>
     </Stack>
   );
 }

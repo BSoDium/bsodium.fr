@@ -29,9 +29,9 @@ describe("published package", () => {
     expect(loadPublishedProjection().groups).toEqual([]);
     expect(loadPublishedProjection().poems).toEqual([]);
   });
-  it("the demo has 17 entries (5 articles, 4 projects, 4 artworks, 4 poems) that together use every body block type", () => {
+  it("the demo has 18 entries (5 articles, 4 projects, 5 artworks, 4 poems) that together use every body block type", () => {
     const demo = loadDemoProjection();
-    expect([demo.articles.length, demo.projects.length, demo.artworks.length, demo.poems.length]).toEqual([5, 4, 4, 4]);
+    expect([demo.articles.length, demo.projects.length, demo.artworks.length, demo.poems.length]).toEqual([5, 4, 5, 4]);
     const all = [...demo.projects, ...demo.articles, ...demo.artworks, ...demo.poems];
     expect(new Set(all.flatMap((e) => (e.body ?? []).map((b) => b.type)))).toEqual(
       new Set(["paragraph", "heading", "list", "quote", "image", "verse", "code", "link", "divider"]),
@@ -50,6 +50,16 @@ describe("published package", () => {
     // the legacy slugs that tests and docs rely on stay, and are the first entry of their kind
     expect([demo.articles[0], demo.projects[0], demo.artworks[0], demo.poems[0]].map((e) => e?.slug)).toEqual(["demo-article", "demo-project", "demo-artwork", "demo-poem"]);
     expect(demo.places.flatMap((p) => p.related).some((r) => r.kind === "poem")).toBe(true);
+  });
+  it("the demo has exactly one sensitive (mature content) entry, a made-up artwork with a cover and an image block, and never writes `sensitive: false`", () => {
+    const demo = loadDemoProjection();
+    const all = [...demo.projects, ...demo.articles, ...demo.artworks, ...demo.poems];
+    expect(all.filter((e) => e.sensitive !== undefined).map((e) => [e.slug, e.sensitive])).toEqual([["figure-study-two", true]]);
+    const entry = demo.artworks.find((e) => e.sensitive)!;
+    expect(entry.cover?.src).toMatch(/^\/media\/demo\/.*\.svg$/);
+    expect((entry.body ?? []).some((b) => b.type === "image")).toBe(true);
+    // the other artworks keep their order: the sensitive one is added last
+    expect(demo.artworks.map((e) => e.slug)).toEqual(["demo-artwork", "night-platform-split", "monsoon-index", "altiplano-sediment", "figure-study-two"]);
   });
   it("the demo exercises every layout path: a long and a very short article, a long title, covers and generated art, three date precisions", () => {
     const demo = loadDemoProjection();

@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { CoverArt, EntryCard, StatusTag, TagList } from "~/components/ui";
+import { CoverArt, EntryCard, SensitiveMedia, StatusTag, TagList } from "~/components/ui";
 import { cn } from "~/lib/utils";
 import { formatEntryDate } from "~/lib/dates";
 import { splitMeta, type EntryRef, type EntrySummary } from "~/lib/entries";
@@ -44,6 +44,7 @@ export function EntryListCard({
       summary={entry.summary}
       href={entry.href}
       image={cover}
+      sensitive={entry.sensitive === true}
       seed={entry.slug}
       status={status}
       meta={[...(date ? [{ label: "Date", value: dateValue(date) }] : []), ...(place ? [{ label: "Place", value: place }] : [])]}
@@ -68,6 +69,7 @@ export function EntryRefCard({ entry, linkState, headingLevel = 3 }: { entry: En
       title={entry.title}
       href={entry.href}
       image={cover}
+      sensitive={entry.sensitive === true}
       seed={entry.slug}
       meta={date ? [{ label: "Date", value: dateValue(date) }] : undefined}
       linkState={linkState}
@@ -143,7 +145,11 @@ export function EntryRow({
       {showCover && (
         <div className="min-w-0 md:col-span-3">
           <div className="overflow-hidden">
-            {cover ? (
+            {cover && entry.sensitive === true ? (
+              <SensitiveMedia>
+                <img src={cover.src} alt={cover.alt} loading={priority ? "eager" : "lazy"} decoding="async" className="aspect-video w-full object-cover" />
+              </SensitiveMedia>
+            ) : cover ? (
               <img src={cover.src} alt={cover.alt} loading={priority ? "eager" : "lazy"} decoding="async" className="aspect-video w-full object-cover" />
             ) : (
               <CoverArt seed={entry.slug} kind={entry.kind} cols={48} rows={27} />

@@ -196,6 +196,7 @@ An **entry** is a published piece of content that can be linked to places. There
 | `date` | optional `YYYY`, `YYYY-MM` or `YYYY-MM-DD` | |
 | `url` | optional, https only, max 2000 | The entry's external destination (live demo, repository, original publication). No credentials, no whitespace. |
 | `cover` | optional `{ src, alt, width?, height? }` | Image shown in lists and on top of the entry. `src` is a `/media/...` path, `alt` is required (1 to 300), `width` and `height` go together or not at all. |
+| `sensitive` | optional boolean | `true` = mature content: clients should draw the entry's images (`cover` and `image` blocks) blurred until the visitor asks to see them, and must not use the cover as a share or structured-data image. **The exporter omits it when false** (absent and `false` mean the same). Any kind may carry it; only artworks do today. Only meaningful with a cover or an image block. Part of the list summaries too. |
 | `tags` | optional, max 12 | Unique lowercase kebab-case tags (`open-source`), max 40 characters each. |
 | `meta` | optional, max 10 `{ label, value }` | Kind-specific facts as plain text, see below. |
 | `body` | optional, max 200 blocks | The content as typed blocks, see below. **Detail and projection only.** |
@@ -223,11 +224,11 @@ Limits on the whole body: at most **200 blocks** and **60,000 characters** of te
 
 **Not in the contract (yet).** There is no inline emphasis or inline link inside a text field, no nested lists, no tables, no callouts and no entry-to-entry references. They would be new **optional** fields or new block types in a later additive change (for example a `spans` array next to `text`, which renderers that do not know it can ignore in favour of `text`). Until then a text is one plain string.
 
-All of this is **additive in schema version 1**: `poems`, `cover`, `tags`, `meta` and `body` are new and optional, `schemaVersion` stays `1`, and a projection that has none of them stays valid (`poems` defaults to `[]`, like `groups`). The only observable changes for existing clients: `/health` counts gained `poems`, `contentKindSchema` and the `kind` of a place's `related` refs gained `poem` (clients with an exhaustive switch over kinds must handle it), the list endpoints gained fields, `url` and media paths are validated slightly more strictly (https without credentials or whitespace; no `..` segments in `/media/` paths: nothing that was a sane value is affected), and there are new endpoints.
+All of this is **additive in schema version 1**: `poems`, `cover`, `tags`, `meta`, `body` and `sensitive` are new and optional, `schemaVersion` stays `1`, and a projection that has none of them stays valid (`poems` defaults to `[]`, like `groups`). The only observable changes for existing clients: `/health` counts gained `poems`, `contentKindSchema` and the `kind` of a place's `related` refs gained `poem` (clients with an exhaustive switch over kinds must handle it), the list endpoints gained fields, `url` and media paths are validated slightly more strictly (https without credentials or whitespace; no `..` segments in `/media/` paths: nothing that was a sane value is affected), and there are new endpoints.
 
 #### `GET /v1/projects`, `GET /v1/articles`, `GET /v1/artworks`, `GET /v1/poems`
 
-Arrays of **summaries**, in authored order: the entry without its `body` (`ContentItemsResponse`: `slug`, `title`, `summary?`, `date?`, `url?`, `cover?`, `tags?`, `meta?`, `placeSlugs`). Optional fields are omitted when absent. A list entry is roughly 0.4 to 0.7 KB (summary, cover, tags, meta), which is what a list page needs; fetch the detail (or the projection) for the text.
+Arrays of **summaries**, in authored order: the entry without its `body` (`ContentItemsResponse`: `slug`, `title`, `summary?`, `date?`, `url?`, `cover?`, `sensitive?`, `tags?`, `meta?`, `placeSlugs`). Optional fields are omitted when absent. A list entry is roughly 0.4 to 0.7 KB (summary, cover, tags, meta), which is what a list page needs; fetch the detail (or the projection) for the text.
 
 ```json
 [
@@ -248,7 +249,7 @@ Arrays of **summaries**, in authored order: the entry without its `body` (`Conte
 ]
 ```
 
-The real `/v1/poems` answer has four such items (the demo has 5 articles, 4 projects, 4 artworks and 4 poems); only the first is shown.
+The real `/v1/poems` answer has four such items (the demo has 5 articles, 4 projects, 5 artworks and 4 poems); only the first is shown.
 
 #### `GET /v1/projects/:slug`, `GET /v1/articles/:slug`, `GET /v1/artworks/:slug`, `GET /v1/poems/:slug`
 
@@ -297,7 +298,7 @@ The projection is **bundled** into the web app and into the API function, and `/
 | | raw | gzip | brotli |
 | --- | --- | --- | --- |
 | Committed projection today (empty) | 108 | 92 | 71 |
-| Demo fixture, `/v1/projection` (18 places, 8 groups, 17 entries) | 47,551 | 16,172 | 13,703 |
+| Demo fixture, `/v1/projection` (18 places, 8 groups, 17 entries; measured before the sensitive demo artwork was added: 18 entries now: the sensitive artwork adds about 1.5 KB raw) | 47,551 | 16,172 | 13,703 |
 | Demo: the 17 entries with their bodies (as in the projection) | 41,233 | 14,537 | 12,330 |
 | Demo: the four lists (summaries: 5 articles, 4 projects, 4 artworks, 4 poems) / the 17 details | 10,606 / 42,682 | | |
 | Demo: one detail, the shortest (a haiku-like poem) / a typical one (a 12-block article) / the longest (a 14-block project with code) | 520 / 3,348 / 4,566 | 341 / 1,597 / 2,125 | |

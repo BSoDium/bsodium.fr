@@ -1,6 +1,6 @@
 import { Fragment, useMemo } from "react";
 import type { PublishedBodyBlock } from "@catalyst/schemas";
-import { CopyButton, Divider, Frame, Icon } from "~/components/ui";
+import { CopyButton, Divider, Frame, Icon, SensitiveImage } from "~/components/ui";
 import {
   buildOutline,
   dedupeKeys,
@@ -181,15 +181,18 @@ export function ImageView({ block, number }: { block: Extract<Block, { type: "im
   return (
     <figure data-slot="entry-figure" className="entry-figure m-0 flex min-w-0 flex-col gap-2.5">
       <div className={cn("overflow-hidden", !sized && "aspect-4/3 bg-accent")}>
-        <img
-          src={src}
-          alt={block.alt}
-          width={block.width}
-          height={block.height}
-          loading="lazy"
-          decoding="async"
-          className={cn("block w-full", sized ? "h-auto" : "size-full object-contain")}
-        />
+        {/* Inside a sensitive entry the image is blurred until the visitor asks (`SensitiveMediaScope` in the entry view); else it is just the image. */}
+        <SensitiveImage className={sized ? undefined : "size-full"}>
+          <img
+            src={src}
+            alt={block.alt}
+            width={block.width}
+            height={block.height}
+            loading="lazy"
+            decoding="async"
+            className={cn("block w-full", sized ? "h-auto" : "size-full object-contain")}
+          />
+        </SensitiveImage>
       </div>
       {block.caption && (
         <figcaption className="ds-caption">

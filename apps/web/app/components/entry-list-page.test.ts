@@ -95,3 +95,23 @@ describe("EntryListPage", () => {
     expect(render(items)).toMatch(/<h2[^>]*class="ds-year type-display-lg type-thin[^"]*"/);
   });
 });
+
+describe("EntryListPage with a sensitive entry", () => {
+  const artworks = listEntries(demo, "artwork");
+  const html = renderToStaticMarkup(createElement(StaticRouter, { location: "/artworks" }, createElement(EntryListPage, { kind: "artwork", items: artworks })));
+
+  it("blurs the row's image from the server render, labels it and gives it no control", () => {
+    const row = html.slice(html.indexOf('id="figure-study-two"'));
+    const one = row.slice(0, row.indexOf("</article>"));
+    expect(one).toContain('data-slot="sensitive-media"');
+    expect(one).toContain('data-state="hidden"');
+    expect(one).toContain("Mature content");
+    expect(one).not.toContain("<button");
+    expect(one).not.toContain("data-interactive");
+    expect(one).toContain('href="/artworks/figure-study-two"');
+  });
+  it("leaves the other rows alone: exactly one frame in the list", () => {
+    expect((html.match(/data-slot="sensitive-media"/g) ?? []).length).toBe(1);
+    expect((html.match(/Mature content/g) ?? []).length).toBe(1);
+  });
+});

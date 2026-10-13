@@ -382,6 +382,13 @@ export const publishedContentItemSchema = z
     url: httpsUrlSchema.optional(),
     /** Optional, additive in schema version 1. Shown in lists and on top of the entry. */
     cover: publishedCoverSchema.optional(),
+    /**
+     * Optional, additive in schema version 1. `true` marks mature content: the web app draws the entry's images (cover and image
+     * blocks) blurred until the visitor asks to see them, and never uses the cover as a share or structured-data image. Only
+     * artworks use it today, but every kind accepts it. The exporter OMITS it when false (absent and `false` mean the same to
+     * readers); it only makes sense on an entry that has a cover or an image block.
+     */
+    sensitive: z.boolean().optional(),
     /** Optional, additive in schema version 1. Unique within the entry. */
     tags: z
       .array(tagSchema)
@@ -565,8 +572,9 @@ export function toPlaceSummary(place: PublishedPlace): PlaceSummary {
 export type PublishedContentSummary = Omit<PublishedContentItem, "body">;
 
 export function toContentSummary(item: PublishedContentItem): PublishedContentSummary {
-  const { slug, title, summary, date, url, cover, tags, meta, placeSlugs } = item;
-  return { slug, title, summary, date, url, cover, tags, meta, placeSlugs };
+  const { slug, title, summary, date, url, cover, sensitive, tags, meta, placeSlugs } = item;
+  // `sensitive` is only ever `true` in a summary: `false` is the same as absent, and absent keys vanish in JSON.
+  return { slug, title, summary, date, url, cover, sensitive: sensitive === true ? true : undefined, tags, meta, placeSlugs };
 }
 
 export const EMPTY_PROJECTION: PublishedProjection = {

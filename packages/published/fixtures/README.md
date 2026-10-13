@@ -9,18 +9,20 @@ content with real entries is all it takes to go from demo to real.
 ## What is in it
 
 - 18 places in 8 groups and one route (unchanged), a few of them with prose, dates, an image and `related` back-links.
-- **17 entries**, written to read like a finished personal travel, archive and creative-coding site. Every address is `example.org` or
+- **18 entries**, written to read like a finished personal travel, archive and creative-coding site. Every address is `example.org` or
   `example.com`; no real business, person or private data.
   - 5 articles (travel and field-notes essays): one long one with 14 blocks (`demo-article`), one very short (2 blocks), one with a very long
     title (`vietnam-by-rail`), two mid-sized. Date precisions: full date, month and year only.
   - 4 projects with `Stack`, `Status` (`Active`, `Paused`, `Archived`), `Repository`, a repository link, code blocks (TypeScript, GLSL,
     Rust, Python, shell) and a changelog list (`demo-project`, `timetable-diff`, `label-collision-engine`, `weather-ledger`).
-  - 4 artworks with `Medium`, `Year`, `Dimensions`, `Edition` (and `Series` for a 12-plate series): `demo-artwork`, `night-platform-split`,
-    `monsoon-index`, `altiplano-sediment`.
+  - 5 artworks with `Medium`, `Year`, `Dimensions`, `Edition` (and `Series` for a 12-plate series): `demo-artwork`, `night-platform-split`,
+    `monsoon-index`, `altiplano-sediment`, and `figure-study-two`, the one **`sensitive: true`** entry (a made-up charcoal study with an SVG
+    cover and one image block, at Kyoto): the conformance sample for mature content, used by the browser check
+    `apps/web/scripts/entries/sensitive.mjs`. Do not mark another entry sensitive: tests assert there is exactly one.
   - 4 poems: two in English (a six-stanza poem and a haiku-like one), one in French and one in Spanish, with a `Language` fact each,
     indented lines and one long verse line: `demo-poem`, `citadel-rain`, `quai-de-nuit`, `cuesta-arriba`.
 - Together they use every body block type, 1 to 4 places each (both directions of the place link are exercised, including one place that
-  names an entry the entry does not list), 2 to 6 kebab-case tags, and dates spread over 2021 to 2026. Ten of them have an authored
+  names an entry the entry does not list), 2 to 6 kebab-case tags, and dates spread over 2021 to 2026. Eleven of them have an authored
   cover; the other seven exercise the generated cover art (the design system's fallback).
 - The slugs `demo-article`, `demo-project`, `demo-artwork` and `demo-poem` are the first entry of their kind and are referenced by
   scripts and tests: do not rename them. The other slugs are referenced by tests too.

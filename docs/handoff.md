@@ -36,6 +36,19 @@ sections, then search; centred over the viewport, over the map while the panel i
 references and copy). Open: a phone has no search trigger (no room in the row at 390 px; the same as before, it was hidden below `sm`),
 the owner may want a menu button or a second row; the mark is not on any page yet.
 
+## Mature content (branch `feat/sensitive-media`, on the entry stack)
+
+Owner: some artworks (a figure or anatomy study) are included but must be blurred by default, so that nobody browsing at work is exposed by
+accident. Done on the public side: the contract's optional `sensitive: true` on an entry (schema version stays 1; the exporter omits it when
+false), every picture of such an entry blurred from the server render (entry view in the panel and full screen, list rows, place panel
+cards, related cards), a "Show image" button on the entry's own pictures (per page view only, never stored), the cover never used as a
+share image or JSON-LD `image` (the default image instead, plus `robots: noimageindex`), print kept blurred. Details:
+[design-system.md, Sensitive media](design-system.md#sensitive-media), [web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme),
+[api-contract.md](api-contract.md), [content-entry-model.md](content-entry-model.md) (the spec the private mapper must follow: vault header
+`sensitive: true` -> `sensitive: true`, warn when the entry has no image). Check: `apps/web/scripts/entries/sensitive.mjs` on `pnpm dev:demo`.
+Open: the private exporter and its header profile do not carry the key yet (somebody else's work); the image files stay public at their
+`/media/` addresses (the blur is for shoulders, not access control); Safari/iOS and real printing were not tried.
+
 ## Where the details are
 
 | Topic | Doc |

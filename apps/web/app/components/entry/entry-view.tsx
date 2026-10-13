@@ -4,7 +4,7 @@ import { PANEL_HEADING_ID } from "~/components/detail-panel";
 import { BlockRenderer, Figures } from "~/components/entry/blocks";
 import { EntryRefCard } from "~/components/entry/entry-list-card";
 import { TableOfContents } from "~/components/entry/toc";
-import { Button, CopyButton, CoverArt, Icon, StatusTag, TagList } from "~/components/ui";
+import { Button, CopyButton, CoverArt, Icon, SensitiveImage, SensitiveMediaScope, StatusTag, TagList } from "~/components/ui";
 import { shareUrl } from "~/lib/clipboard";
 import { formatEntryDate } from "~/lib/dates";
 import {
@@ -21,6 +21,7 @@ import {
 } from "~/lib/entries";
 import { displayHost, safeExternalUrl, safeMediaSrc } from "~/lib/entry-blocks";
 import { tagSearch } from "~/lib/entry-list";
+import { isSensitive } from "~/lib/sensitive";
 import { formatMonthYear, headlineScale, linkedLine, splitFigures, splitHeadline } from "~/lib/entry-typography";
 import { formatReadingTime, readingMinutes, tocItems } from "~/lib/reading";
 import { cn } from "~/lib/utils";
@@ -56,7 +57,17 @@ function placeNames(places: readonly EntryPlaceLink[]): string | null {
  * and the sections around the body (where, contents, related) are level 2. The contents are in the markup of both layouts (same
  * DOM, same order) and CSS shows them in the full one only; a skip link ("Jump to contents") saves the keyboard the way through the text.
  */
-export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID }: EntryViewProps) {
+export function EntryView(props: EntryViewProps) {
+  const { entry } = props;
+  // One reveal state for the entry's images, keyed by the entry so that another entry (the panel keeps this component mounted) starts hidden.
+  return (
+    <SensitiveMediaScope key={`${entry.kind}/${entry.slug}`} sensitive={isSensitive(entry)}>
+      <EntryArticle {...props} />
+    </SensitiveMediaScope>
+  );
+}
+
+function EntryArticle({ entry, layout, backTo, headingId = PANEL_HEADING_ID }: EntryViewProps) {
   const full = layout === "full";
   const poem = entry.kind === "poem";
   const { status, facts } = splitMeta(entry.meta);
@@ -145,6 +156,7 @@ export function EntryView({ entry, layout, backTo, headingId = PANEL_HEADING_ID 
       data-surface="reading"
       data-layout={layout}
       data-kind={entry.kind}
+      data-sensitive={isSensitive(entry) ? "" : undefined}
       className={cn("entry mx-auto w-full min-w-0", full ? "max-w-[90rem] px-4 pt-3 pb-20 md:px-14" : "px-6 pt-2 pb-10")}
     >
       <div className="entry-grid">
@@ -282,7 +294,8 @@ function PoemMargin({
 /**
  * The lead image: the authored cover, framed at 1.91:1 (the share-image ratio). A generated cover stands in only where the image IS the
  * page (an artwork): in an article, a project or a poem the type is the page and a placeholder would only be decoration. Not lazy: it is
- * the first image under the title. A rule of the ink above it, like every figure.
+ * the first image under the title. A rule of the ink above it, like every figure. In a sensitive entry it is blurred, with the control
+ * that shows the entry's images (the generated art is not a picture of anything: it is never blurred).
  */
 function Cover({ entry }: { entry: EntryDetail }) {
   const src = entry.cover ? safeMediaSrc(entry.cover.src) : null;
@@ -291,7 +304,9 @@ function Cover({ entry }: { entry: EntryDetail }) {
     <figure data-slot="entry-cover" className="entry-cover entry-figure m-0 min-w-0">
       <div className="overflow-hidden">
         {entry.cover && src ? (
-          <img src={src} alt={entry.cover.alt} width={entry.cover.width} height={entry.cover.height} decoding="async" className="block aspect-[1.91/1] w-full object-cover" />
+          <SensitiveImage>
+            <img src={src} alt={entry.cover.alt} width={entry.cover.width} height={entry.cover.height} decoding="async" className="block aspect-[1.91/1] w-full object-cover" />
+          </SensitiveImage>
         ) : (
           <CoverArt seed={entry.slug} kind={entry.kind} cols={96} rows={50} />
         )}

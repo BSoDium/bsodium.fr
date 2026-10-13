@@ -118,8 +118,9 @@ All in `app/components/ui/`, importable from `~/components/ui` (barrel) or by fi
 | `Stack`, `Grid`, `Col` | flex column with a 4 px-scale gap; the 12-column grid; a column with `span` / `spanMd` | |
 | `Skeleton`, `StatePanel` | skeleton block with a scan sweep; the three non-content states; `headingLevel` (1 to 4) and `titleId` (focus target) | `state` loading (polite `role=status`, `aria-busy`, no frame), empty (one muted line: no frame, glyph or code), error (`role=alert`, an active Frame, the `ERR / 500` code in mono, `Error`, a retry action) |
 | `EntryCard` | cover (authored image or generated, 16:9, one hairline) + optional kind (`showKind`, mixed lists only) + title + three-line summary + status + date and places as two plain lines + the first three tags as muted text | one link (the title), stretched over the card with `::after`; hover underlines the title, focus-within draws a ring; `orientation="horizontal"` puts the cover beside the text inside an `@container` of 28 rem or more (the place panel), `priority` loads the image at once (the first cards of a list) |
+| `SensitiveMedia` | a picture frame (`overflow: hidden`, a size container) that holds the picture blurred, with a plate over it: a mono label "Mature content" (eye-off icon) and, in an entry, a small `Toggle` "Show image" | `revealed`; `onRevealedChange` present = the entry's own picture (control, drawn once hydrated; before that the plate says "Image hidden"), absent = a card (label only, no control). `SensitiveMediaScope` / `SensitiveImage` share one state across an entry's pictures |
 | `CopyButton` | ghost button that copies a string (or a function of the window) and confirms in place: its word turns to `Copied` (or `Not copied`) for 2 s, a polite status says it; no toast | drawn only once hydrated; clipboard API with an `execCommand` fallback; `glyph`, `label` (the accessible name), `announcement` |
-| `Icon` | one icon of the set by name (5 kinds, close, expand, collapse, arrows, enter, command, copy, link, check, search, hash), from lucide-react | `size` inline (1.1 em), control (1.25 rem, default), large (1.5 rem); decorative (`aria-hidden`); "Icons" below |
+| `Icon` | one icon of the set by name (5 kinds, close, expand, collapse, arrows, enter, command, copy, link, check, search, hash, eye, eye-off), from lucide-react | `size` inline (1.1 em), control (1.25 rem, default), large (1.5 rem); decorative (`aria-hidden`); "Icons" below |
 | `KeyHint` | the shortcut's hint in a `kbd`: the command icon (Mac) or "Ctrl", then K, mono 13 px, muted, **plain text: no border, background or outline anywhere**; empty space of its final width until hydrated | none: the same in the header and on the hero's search line |
 
 ### Generative cover art
@@ -179,6 +180,35 @@ The grammar of the "Article on paper" and "Poem at night" boards of the owner's 
 - **Lists.** The double rule, a mono count, the section's name at the headline scale, an ink rule, the tag filter (text links, the chosen one heavier and underlined), then hairline rows: a mono column (date, places, status), the title in Bricolage 800 over a summary in Newsreader 300, the image where there is one; years as thin numerals only where a year holds more than one entry.
 - **Scale.** The entry is a container: headline, body and poem scale with its width (`cqi`), so the half panel and the full screen are one design at two widths; the clamps are in `app.css` (`--entry-title`, `--entry-body`, `--poem-title`, `--poem-size`).
 
+### Sensitive media
+
+An entry marked `sensitive: true` in the contract (mature content: a figure or anatomy study, for instance) is published and listed like
+any other, but **every picture of it is blurred until the visitor asks to see it**, so that someone browsing at work is never exposed by
+accident. Code: `components/ui/sensitive-media.tsx`, `.sensitive-media*` in `app.css`, the decisions in `lib/sensitive.ts`; live in
+`/dev/design` section 7.
+
+- **Where.** The cover and the image blocks of the entry view (panel and full screen), the image of every card (list rows, `EntryCard` in the
+  place panel and under "Related"). Nothing is sharp in the server render, with scripts off, while the page hydrates, or on paper.
+- **The blur.** CSS on an attribute (`data-state="hidden"`): `filter: blur(clamp(0.75rem, 6cqi, 3rem))` and `scale(1.3)` inside an
+  `overflow: hidden` frame that is its own size container, so the radius follows the width (about five cells across: a 170 px thumbnail and a
+  1400 px cover are equally unrecognisable) and the soft edge stays outside the frame. No sharp placeholder, no blur-up from the real image.
+  Generated cover art is never blurred (it depicts nothing).
+- **The plate.** Centred on a hidden picture: a hairline box on the page colour at 88 %, the label "Mature content" in mono capitals with the
+  eye-off icon, then (entry only, once hydrated) the button "Show image". Without scripts the button is not drawn and the plate says "Image
+  hidden". On a card the plate is the label alone and does not take pointer events: the card stays one link.
+- **The control.** One real `<button>` per picture, a `Toggle` (`aria-pressed`, the name "Show image" never changes, the icon is the action:
+  eye to show, eye-off to hide), 44 px high on a phone. Pressing it shows **all of the entry's pictures** (and nothing else: cards stay
+  blurred); once shown the plate shrinks to the pressed toggle in the picture's corner, which hides them again. Focus stays on it; a polite
+  status says "Image shown" / "Image hidden".
+- **Memory.** None. The state lives in the page view only (no storage, cookie or URL): a reload, or leaving and returning, blurs again.
+- **Motion.** The unblur is a `--duration-base` transition of `filter` and `transform` only under `prefers-reduced-motion:
+  no-preference`; otherwise it is immediate.
+- **Print.** Blurred whether revealed or not, the label printed, the control not.
+- **Alt text** stays as authored: it is the accessible description (a person using a screen reader is told what the work is, the
+  blur is for the eyes).
+- **Off the page.** The cover is never the share image (Open Graph, Twitter) nor a JSON-LD `image`: the site's default image is used, and the
+  page says `robots: noimageindex`. See web-architecture.md, "Sensitive media".
+
 ### The place panel
 
 The name (h1), then one quiet line: region and country (each word once; the country derived from the place's country code), the
@@ -226,7 +256,7 @@ hover and its scheme. An icon is decorative (`aria-hidden`); the control or the 
 
 **The set** (names are the interface's; see `ICONS`): kinds `article` (page of text), `project` (terminal prompt), `artwork` (image), `poem`
 (feather), `place` (map pin); `close`, `expand`, `collapse`, `arrow-left`, `arrow-right`, `arrow-up`, `arrow-down`, `arrow-up-right`,
-`arrow-up-left`, `enter`, `command`, `check`, `copy`, `link`, `hash`, `search`. Shown live in `/dev/design`, section 14.
+`arrow-up-left`, `enter`, `command`, `check`, `copy`, `link`, `hash`, `search`, `eye`, `eye-off` (the reveal control of mature content). Shown live in `/dev/design`, section 14.
 
 **The shortcut hint** (`KeyHint`): the command key is the library's `Command` icon (inline size) followed by "K"; elsewhere the word "Ctrl"
 then "K", in mono 13 px, as plain muted text everywhere it appears (the header, the hero's search line; the palette's footer writes "Esc" the

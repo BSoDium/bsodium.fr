@@ -1142,6 +1142,98 @@
     fill: var(--signal);
   }
 
+  /*
+   * Sensitive media (components/ui/sensitive-media.tsx, docs/design-system.md "Sensitive media"): an image of mature content is blurred
+   * from the first byte of HTML. The state is an attribute, so the server render, a browser without scripts and print all show the
+   * blur; only a press on the entry's own "Show image" removes it, for that page view. The frame is a size container so that the blur
+   * is relative to the width it is drawn at (about five cells across at any size: a 170 px thumbnail and a 1400 px cover are equally
+   * unrecognisable), and the picture is enlarged so that the blur's soft edge falls outside the frame (`overflow: hidden`).
+   */
+  .sensitive-media {
+    --sensitive-blur: clamp(0.75rem, 6cqi, 3rem);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    container-type: inline-size;
+  }
+
+  .sensitive-media-content {
+    height: 100%;
+  }
+
+  .sensitive-media[data-state="hidden"] .sensitive-media-content {
+    filter: blur(var(--sensitive-blur));
+    transform: scale(1.3);
+  }
+
+  /*
+   * Only the way OUT of the blur is animated (a transition takes the properties of the state it goes to): hiding again is immediate,
+   * and a style that is computed twice while the page loads (before and after the stylesheet, a script reading it early) can never
+   * show the picture fading into its blur, which would be a flash of the sharp image.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    .sensitive-media[data-state="revealed"] .sensitive-media-content {
+      transition:
+        filter var(--duration-base) var(--ease-standard),
+        transform var(--duration-base) var(--ease-standard);
+    }
+  }
+
+  .sensitive-media-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    pointer-events: none;
+  }
+
+  .sensitive-media-plate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--background) 88%, transparent);
+    border: var(--hairline) solid var(--border-strong);
+  }
+
+  .sensitive-media[data-interactive] .sensitive-media-plate {
+    pointer-events: auto;
+  }
+
+  .sensitive-media-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sensitive-media-note {
+    color: var(--muted-foreground);
+  }
+
+  /* Revealed: the plate shrinks to the toggle (pressed, inverted) in the corner, which hides the image again. */
+  .sensitive-media[data-state="revealed"] .sensitive-media-veil {
+    align-items: flex-start;
+    justify-content: flex-end;
+  }
+
+  .sensitive-media[data-state="revealed"] .sensitive-media-plate {
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+
+  .sensitive-media[data-state="revealed"] .sensitive-media-label,
+  .sensitive-media[data-state="revealed"] .sensitive-media-note {
+    display: none;
+  }
+
   /* Panel grid: 12 columns, the span set per element (`--span`, `--span-md`) so no class is generated per width. */
   .ds-grid {
     display: grid;
@@ -2090,6 +2182,33 @@ h1[tabindex="-1"]:focus-visible {
   h2,
   h3 {
     break-after: avoid;
+  }
+
+  /* Mature content stays blurred on paper, revealed or not, and says so: the control is not printed. */
+  .sensitive-media[data-state] .sensitive-media-content {
+    filter: blur(var(--sensitive-blur)) !important;
+    transform: scale(1.3) !important;
+    transition: none !important;
+  }
+
+  .sensitive-media[data-state] .sensitive-media-veil {
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .sensitive-media[data-state] .sensitive-media-plate {
+    padding: 0.5rem 0.75rem !important;
+    background: #fff !important;
+    border: 1px solid #000 !important;
+  }
+
+  .sensitive-media[data-state] .sensitive-media-label {
+    display: inline-flex !important;
+  }
+
+  .sensitive-media-toggle,
+  .sensitive-media-note {
+    display: none !important;
   }
 
   .ds-skeleton::after,
