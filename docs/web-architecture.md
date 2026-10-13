@@ -118,7 +118,7 @@ What a deployment needs beyond the features, in one place. Everything here is ve
 
 - `lib/site.ts` holds the site's identity as ONE constant, `SITE` (the owner's name "Elliot Négrel-Jerzy", its two halves for the hero, a short form "Elliot N.-J." for tight spots, the role, the place and the specialities: facts the owner stated, nothing else), and what is derived from it: the description, the home title (`Elliot Négrel-Jerzy · Front-end and UX software engineer`), the sentence under the hero's name, the default share image's alt text; plus the theme colours. The project's code name ("Catalyst") is for the repository, the packages and the environment variables only: it appears in no text the site serves (`lib/identity.test.ts` checks the markup, the head tags, the manifest and the source; `scripts/prod/check.mjs` checks every document, the manifest and the sitemap over HTTP). The one file that still carries it, `public/media/.catalyst-manifest.json`, belongs to the content export, which writes and verifies that name; `CATALYST_SITE_URL` (server env, default `https://v2.bsodium.fr`) is the origin of every absolute URL. The root loader returns it as `siteUrl`, so a route's `meta` (server and client) reads it from `matches` (`metaBase(args)` in `lib/meta.ts`) and the two agree.
 - Every route's `meta` goes through `pageMeta`: title `<Page> · Elliot Négrel-Jerzy` (the name from `SITE`), description, `<link rel="canonical">` (origin + path, never the query: `?view=full` is the same page), `og:site_name/type/title/description/url/locale/image(+type,width,height,alt)`, `twitter:card summary_large_image/title/description/image/image:alt`. An entry is `og:type article` (+ `article:published_time`, `article:tag`) when it is an article, `website` otherwise.
-- The share image of an entry is its authored cover when scrapers can read the format (png, jpg, gif, webp: never SVG, which Facebook, X, LinkedIn and Slack do not render), absolute; else `public/og-default.png` (1200x630, 28 kB). A place uses its first raster image the same way. Covers are authored paths under `/media/` (the contract), never external URLs.
+- The share image of an entry is its authored cover when scrapers can read the format (png, jpg, gif, webp: never SVG, which Facebook, X, LinkedIn and Slack do not render), absolute; else `public/og-default.png` (1200x630, 28 kB). **Never for a sensitive entry** (`sensitive: true`, "Sensitive media" below): it shares the default image, its JSON-LD has no `image`, and its head says `robots: noimageindex`. A place uses its first raster image the same way. Covers are authored paths under `/media/` (the contract), never external URLs.
 - `<html lang="en">`, `color-scheme`, `theme-color` for each scheme (`#fbfbfb` / `#0a0a0a`, kept equal to `--background` by a test), the SVG and `.ico` favicons, `apple-touch-icon.png` (180), `manifest.webmanifest` (192, 512 and a maskable 512 PNG; dark theme and background colours: a manifest cannot vary by scheme). All of them show the site's mark (below).
 - JSON-LD, from published fields only (no author, publisher or invented date): the home page is a `WebSite`; an article an `Article` (`headline` capped at 110 characters); a project `SoftwareSourceCode` when its `url` is a repository on a known forge, else `CreativeWork`; an artwork `CreativeWork`; a poem `CreativeWork` with `genre: "Poem"`. Each has `url`, `datePublished` (the authored partial ISO date), `image` (raster covers only), `keywords` (tags), `contentLocation` (its places) and `isPartOf` the site. `lib/json-ld.ts`; React Router escapes the script's content.
 - Not-found and error pages carry `noindex` (their status is 404/5xx anyway).
@@ -339,7 +339,35 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   must match, a word that starts a title word ranks above one inside it, then the tags and the summary). Nothing is rendered before the
   first open. The index route is cached at the CDN like the sitemap (an hour, then revalidated).
 - **Head.** `entryMeta`: title, summary as description, `og:type` article for articles, and `og:image` (made absolute with the
-  request's origin) only when the entry has an authored cover on a safe `/media/` path.
+  request's origin) only when the entry has an authored cover on a safe `/media/` path and is not sensitive (`shareableCover`).
+- **Sensitive media (mature content).** The contract's optional `sensitive: true` on an entry (docs/api-contract.md, "Entries") makes the
+  web app draw ALL of that entry's pictures (its cover and its image blocks) blurred, wherever they appear, and never use the cover where it
+  could leave the page. One rule, `lib/sensitive.ts` (pure, tested): `isSensitive` (only a literal `true` counts; absent and `false` are the
+  same), `shareableCover` (the cover a share image or JSON-LD may use: none when sensitive) and the interface words (`SENSITIVE_COPY`).
+  `getEntryDetail`, `listEntries`, `entriesOfPlace` and the related refs carry `sensitive: true` (and omit it otherwise), so every card
+  knows. Where it shows:
+  - the entry view, panel and full screen (`SensitiveMediaScope` around `EntryArticle` in `entry-view.tsx`, keyed by the entry; `Cover` and
+    `ImageView` wrap their picture in `SensitiveImage`): blurred, labelled "Mature content", with ONE control per picture, a real
+    `<button>` named "Show image" with `aria-pressed` (a `Toggle`: the name never changes, so focus stays on it), which shows or hides all
+    the entry's pictures at once. The state is `useState` in the scope: **not stored anywhere** (no storage, cookie or URL), so a reload, or
+    leaving the entry and coming back, hides the pictures again. A polite `role=status` says "Image shown" / "Image hidden" after a press;
+  - cards (`EntryCard` with `sensitive`, `EntryRow`; the list pages, the place panel, "Related"): blurred and labelled, **no control** (the
+    card is one link: the visitor opens the entry to reveal);
+  - the head tags and JSON-LD (above), the sitemap (it has no image tags and never lists media) and the search index (no pictures).
+  The blur is **CSS from the first byte**: the frame is `.sensitive-media[data-state="hidden"]` (an attribute rendered by the server), the
+  picture inside is `filter: blur(clamp(0.75rem, 6cqi, 3rem))` and `scale(1.3)` in an `overflow: hidden` frame that is a size container,
+  so the blur is a share of the width it is drawn at (about five cells across at any size) and its soft edge falls outside the frame. The
+  sharp pixels are never a placeholder: there is no blur-up, no LQIP (the app has none), and a generated cover (`CoverArt`, an artwork
+  without an image) is not a picture of anything and is not blurred. The control is drawn only once hydrated (as `CopyButton`): without
+  scripts the plate says "Mature content" and "Image hidden" and there is nothing to press (the images stay blurred). The unblur
+  transitions `filter` only under `prefers-reduced-motion: no-preference`; print keeps the blur (revealed or not) and prints the label, not
+  the control. There is no lightbox or zoom in the app, so nothing else can show a picture larger. The alt text stays as authored.
+  What the page cannot do: the image files stay public at their `/media/` addresses (the HTML names them: the blur is for people looking
+  over a shoulder, not access control).
+- **Browser check of mature content:** `apps/web/scripts/entries/sensitive.mjs` (demo content, the sensitive demo entry
+  `/artworks/figure-study-two`): the server HTML, no scripts, every moment of hydration (sampled filter), the control by keyboard, reload and
+  return, no storage, print, reduced motion, cards (list, tag filter, place panel, related), 390 px and both schemes, the head after a
+  client-side navigation.
 - **Browser check:** `apps/web/scripts/entries/check.mjs` (demo content; see the file header). Run against `pnpm dev:demo`; with `BASE_URL_EMPTY` set to a server on the empty published content it also checks the empty home and list. Sections 8 and 9 cover the reading aids, the filter, related entries, print, the empty home and the quick search.
 
 ## Globe seam (`app/globe/`)

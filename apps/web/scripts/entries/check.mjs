@@ -1,6 +1,7 @@
 // Entry views in a browser (docs/web-architecture.md, "Entries in the shell"): the four kinds open in the shell's side panel and in
 // the full-screen container (`?view=full`), the globe stays mounted while the container toggles, Escape and the toggle behave, the
 // place panel lists its entries and opens one in the same panel, headings are in order, nothing overflows at 390 px, no console errors.
+// (The blurred images of a sensitive entry have their own check: `scripts/entries/sensitive.mjs`.)
 // Uses the DEMO content (made-up placeholders): run against `pnpm dev:demo` or a demo build, never against real content.
 //
 //   CHROME_PATH=/path/to/chrome BASE_URL=http://localhost:5370 OUT_DIR=/some/dir node scripts/entries/check.mjs
@@ -281,7 +282,8 @@ for (const entry of ALL_ENTRIES) {
       const panel = document.querySelector("[data-panel]");
       const box = panel.getBoundingClientRect();
       const wide = [...panel.querySelectorAll("*")]
-        .filter((e) => !e.closest("pre") && e.getClientRects().length && e.getBoundingClientRect().right > box.right + 1)
+        // a blurred picture is enlarged inside its clipping frame (`.sensitive-media`): it is not wider than the panel, it is clipped
+        .filter((e) => !e.closest("pre") && !e.closest(".sensitive-media-content") && e.getClientRects().length && e.getBoundingClientRect().right > box.right + 1)
         .map((e) => `${e.tagName.toLowerCase()}.${String(e.className).slice(0, 30)}`);
       const images = [...panel.querySelectorAll("img")].map((i) => i.complete && i.naturalWidth > 0);
       const pre = [...panel.querySelectorAll("pre")].map((p) => ({ scrolls: p.scrollWidth > p.clientWidth, focusable: p.tabIndex >= 0 }));
