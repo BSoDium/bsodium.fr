@@ -7,7 +7,7 @@ The UI system for the data display: the side panel and the full-screen view that
 The first version of this system (2026-10-08) read the brief ("Y2K art, generative art, labellisation, square edges, Watch Dogs style") as a
 HUD: corner brackets on every box, index codes, numbered sections, tracked mono labels everywhere. The owner asked for something "a bit less
 AI" (2026-10-11) and the system was restrained (2026-10-12). What stayed of the brief is the square edges, the hairlines, the generative
-covers and the one accent (cyan until 2026-10-12, orange now); the annotation language is now used only where it carries information.
+covers and the one accent (cyan until 2026-10-12, orange until 2026-10-13, BSoD blue now); the annotation language is now used only where it carries information.
 
 | Principle | What it means here |
 | --- | --- |
@@ -15,7 +15,7 @@ covers and the one accent (cyan until 2026-10-12, orange now); the annotation la
 | Few boxes | Spacing and a cover separate things; a hairline box is for the few things that are one (a code block, a link card, the search dialog, an error). A card has no box, a list has no chips, metadata has no inner rules, an empty state is one muted line. No corner brackets anywhere in the UI (the map's detection boxes keep their own corner arms). |
 | Label only when it adds information | No decorative numbering (`01 ENTRIES`, `№ 0042`, `000 entries`), no index codes, no eyebrow that repeats the page's title, no kind on a card in a list of one kind, no "Place" on a place. A date, a place, a count, a tag say what they are. |
 | Type is the voice | Display type in a very heavy weight against a very thin one, a reading serif for long text, mono for metadata (see "Type"). Interface text (buttons, filters, tags) stays sans at comfortable sizes (16 px or more, secondary 14 px), sentence case; the tracked uppercase mono micro-label is the exception, not the language. |
-| One accent, for state | The orange `--signal` marks state: the contents entry being read, the highlighted search result, the active Frame, the error tag; and the marks of generated covers. Never decoration (no numerals, no rules, no labels). |
+| One accent, for state | The blue `--signal` marks state: the contents entry being read, the highlighted search result, the active Frame, the error tag; and the marks of generated covers. Never decoration (no numerals, no rules, no labels). |
 | Generative art | Entries without an image get a **seeded procedural cover**: a small dithered grid in the palette plus one signal mark. Deterministic, subtle, never carrying information. |
 | Clean grid | 4 px base grid; 12-column panel grid with 16 px gutters; 24 px panel padding. |
 
@@ -33,7 +33,7 @@ All in `app.css`; light and dark keep the map's near-black / near-white family. 
 | Text | `--foreground` / `--muted-foreground` | `#0a0a0a` / `#595959` | `#f5f5f5` / `#a3a3a3` | 18:1 / 6.4:1 on the surface (light) |
 | Hairline / control line | `--border` / `--border-strong` | 14 % / 40 % ink | 16 % / 45 % ink | strong is 2.8:1 or more (control outline) |
 | Texture | `--line-faint` | 7 % ink | 9 % ink | the 16 px grid and hatch only |
-| **Accent (one)** | `--signal` | `#ea6024` | `#f26a2e` | an orange (the owner's `#f26a2e`, deepened in light to reach 3:1): for large display text (24 px and up) and marks and fills, 3.1:1 on the surface (light), 6.1:1 (dark). Text under 24 px takes `--signal-text` (`#b8420f` / `#f26a2e`: 5.0:1 / 6.1:1 on the surface). Text on a fill is `--signal-foreground` (`#0a0a0a`, 5.8:1 / 6.5:1). `--signal-wash` is its 8 to 9 % plate for the active Frame. |
+| **Accent (one)** | `--signal` | `#0076d4` | `#0076d4` | BSoD blue (Windows' `#0078d7`, two steps deeper so white text on it clears AA): for large display text (24 px and up) and marks and fills, 4.2:1 on the surface (light), 4.05:1 (dark). Text under 24 px takes `--signal-text` (`#0067b8` / `#0a93ff`: 5.3:1 / 5.9:1 on the surface). Text on a fill is `--signal-foreground` (`#ffffff`, 4.6:1, both schemes). `--signal-wash` is its 8 % (light) and 12 % (dark) plate for the active Frame. |
 | Kind hues | `--kind-article` 275, `-project` 150, `-artwork` 55, `-poem` 340, `-place` (muted grey) | `oklch(.58 .10 H)` | `oklch(.76 .10 H)` | **faint and redundant** (see Kind coding) |
 | Inverse set | `--inverse-background/-foreground/-muted/-border/-signal` | the dark scheme's ink on page | and vice versa | what an inverted Frame rebinds the colour tokens to |
 

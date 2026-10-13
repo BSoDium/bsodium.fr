@@ -202,8 +202,8 @@ function Colour({ scheme }: { scheme: Scheme }) {
   return (
     <Stack gap={6}>
       <Note>
-        One grey family (the map's near-black and near-white) and one accent, orange. The accent is large display text, a mark (a tick, an underline, a
-        cover's mark) or a fill; text under 24 px takes its darker text variant. The faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
+        One grey family (the map's near-black and near-white) and one accent, BSoD blue. The accent is large display text, a mark (a tick, an underline, a
+        cover's mark) or a fill; text under 24 px takes its text variant (deeper in the light scheme, lighter in the dark one). The faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
       </Note>
       <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-5">
         {SWATCHES.map((s) => (
@@ -333,7 +333,7 @@ function TypeSpecimen() {
         </div>
       </div>
       <div>
-        <p className="type-meta m-0 mb-3 text-muted-foreground">Accent / the one orange, by size</p>
+        <p className="type-meta m-0 mb-3 text-muted-foreground">Accent / the one blue, by size</p>
         <div className="flex flex-col gap-3">
           <p className="type-display-lg m-0 text-signal">Display text in the accent</p>
           <p className="m-0 text-2xl font-extrabold text-signal">24 px bold, large text (accent)</p>

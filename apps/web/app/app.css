@@ -34,29 +34,31 @@
   --surface: #f4f4f4;
   --line-faint: rgb(0 0 0 / 0.07);
   /*
-   * The one accent: orange (the owner's #f26a2e, deepened to #ea6024 in the light scheme so it reaches 3:1 on the page and the surface).
-   * `--signal` is for LARGE display text (24 px, or 18.66 px bold, and up), non-text marks (a tick, a rule, a cover's mark, an underline)
-   * and fills. Text of any smaller size takes `--signal-text`, which is AA (4.5:1) on the page, the surface and the hover grey.
-   * Text on a signal fill is `--signal-foreground`. The whole accent is these five lines (times the four copies of the list).
+   * The one accent: BSoD blue (the reference hue is Windows' #0078d7, 206.5 degrees; the fill is #0076d4, two steps deeper, because white
+   * text on #0078d7 itself is 4.499:1, a thousandth under AA). `--signal` is the same fill in both schemes and is for LARGE display text
+   * (24 px, or 18.66 px bold, and up), non-text marks (a tick, a rule, a cover's mark, an underline) and fills: 3:1 or more on the page,
+   * the surface and the paper in both schemes. Text of any smaller size takes `--signal-text`: the same hue, deeper in the light scheme
+   * and lighter in the dark one, AA (4.5:1) on the page, the surface and the hover grey. Text on a signal fill is `--signal-foreground`,
+   * white. The whole accent is these five lines (times the four copies of the list).
    */
-  --signal: #ea6024;
-  --signal-text: #b8420f;
-  --signal-foreground: #0a0a0a;
-  --signal-wash: rgb(234 96 36 / 0.08);
+  --signal: #0076d4;
+  --signal-text: #0067b8;
+  --signal-foreground: #ffffff;
+  --signal-wash: rgb(0 118 212 / 0.08);
   /* Reading surface of the entries and their lists (docs/design-tokens.md, "Reading surface"): paper in the light scheme, night in the dark. */
   --paper: #efeadf;
   --paper-foreground: #16130f;
   --paper-muted: #6b665b;
   --paper-hover: #ebe7dc;
-  --paper-signal: #cf4f17;
-  --paper-signal-text: #a93a0a;
+  --paper-signal: #0076d4;
+  --paper-signal-text: #0067b8;
   /* The opposite scheme's page tokens: what an inverted frame rebinds the tokens to (a cycle-free swap). */
   --inverse-background: #0a0a0a;
   --inverse-foreground: #fbfbfb;
   --inverse-muted: #a3a3a3;
   --inverse-border: rgb(255 255 255 / 0.3);
-  --inverse-signal: #f26a2e;
-  --inverse-signal-text: #f26a2e;
+  --inverse-signal: #0076d4;
+  --inverse-signal-text: #0a93ff;
   /* Faint hue per entry kind: decorative and redundant (a glyph and a word always carry the kind); never used for text. */
   --kind-article: oklch(0.58 0.1 275);
   --kind-project: oklch(0.58 0.1 150);
@@ -127,22 +129,22 @@
 
     --surface: #121212;
     --line-faint: rgb(255 255 255 / 0.09);
-    --signal: #f26a2e;
-    --signal-text: #f26a2e;
-    --signal-foreground: #0a0a0a;
-    --signal-wash: rgb(242 106 46 / 0.09);
+    --signal: #0076d4;
+    --signal-text: #0a93ff;
+    --signal-foreground: #ffffff;
+    --signal-wash: rgb(0 118 212 / 0.12);
     --paper: #0b0c0f;
     --paper-foreground: #ece8df;
     --paper-muted: #8d8a82;
     --paper-hover: #17181b;
-    --paper-signal: #f26a2e;
-    --paper-signal-text: #f26a2e;
+    --paper-signal: #0076d4;
+    --paper-signal-text: #0a93ff;
     --inverse-background: #f5f5f5;
     --inverse-foreground: #0a0a0a;
     --inverse-muted: #595959;
     --inverse-border: rgb(0 0 0 / 0.3);
-    --inverse-signal: #ea6024;
-    --inverse-signal-text: #b8420f;
+    --inverse-signal: #0076d4;
+    --inverse-signal-text: #0067b8;
     --kind-article: oklch(0.76 0.1 275);
     --kind-project: oklch(0.76 0.1 150);
     --kind-artwork: oklch(0.76 0.1 55);
@@ -285,22 +287,22 @@
   --globe-limb: rgb(0 0 0 / 0.3);
   --surface: #f4f4f4;
   --line-faint: rgb(0 0 0 / 0.07);
-  --signal: #ea6024;
-  --signal-text: #b8420f;
-  --signal-foreground: #0a0a0a;
-  --signal-wash: rgb(234 96 36 / 0.08);
+  --signal: #0076d4;
+  --signal-text: #0067b8;
+  --signal-foreground: #ffffff;
+  --signal-wash: rgb(0 118 212 / 0.08);
   --paper: #efeadf;
   --paper-foreground: #16130f;
   --paper-muted: #6b665b;
   --paper-hover: #ebe7dc;
-  --paper-signal: #cf4f17;
-  --paper-signal-text: #a93a0a;
+  --paper-signal: #0076d4;
+  --paper-signal-text: #0067b8;
   --inverse-background: #0a0a0a;
   --inverse-foreground: #fbfbfb;
   --inverse-muted: #a3a3a3;
   --inverse-border: rgb(255 255 255 / 0.3);
-  --inverse-signal: #f26a2e;
-  --inverse-signal-text: #f26a2e;
+  --inverse-signal: #0076d4;
+  --inverse-signal-text: #0a93ff;
   --kind-article: oklch(0.58 0.1 275);
   --kind-project: oklch(0.58 0.1 150);
   --kind-artwork: oklch(0.58 0.1 55);
@@ -326,22 +328,22 @@
   --globe-limb: rgb(255 255 255 / 0.34);
   --surface: #121212;
   --line-faint: rgb(255 255 255 / 0.09);
-  --signal: #f26a2e;
-  --signal-text: #f26a2e;
-  --signal-foreground: #0a0a0a;
-  --signal-wash: rgb(242 106 46 / 0.09);
+  --signal: #0076d4;
+  --signal-text: #0a93ff;
+  --signal-foreground: #ffffff;
+  --signal-wash: rgb(0 118 212 / 0.12);
   --paper: #0b0c0f;
   --paper-foreground: #ece8df;
   --paper-muted: #8d8a82;
   --paper-hover: #17181b;
-  --paper-signal: #f26a2e;
-  --paper-signal-text: #f26a2e;
+  --paper-signal: #0076d4;
+  --paper-signal-text: #0a93ff;
   --inverse-background: #f5f5f5;
   --inverse-foreground: #0a0a0a;
   --inverse-muted: #595959;
   --inverse-border: rgb(0 0 0 / 0.3);
-  --inverse-signal: #ea6024;
-  --inverse-signal-text: #b8420f;
+  --inverse-signal: #0076d4;
+  --inverse-signal-text: #0067b8;
   --kind-article: oklch(0.76 0.1 275);
   --kind-project: oklch(0.76 0.1 150);
   --kind-artwork: oklch(0.76 0.1 55);

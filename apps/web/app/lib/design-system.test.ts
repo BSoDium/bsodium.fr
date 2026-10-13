@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { contrastRatio, over, parseColor, type Rgba } from "./contrast";
+import { contrastRatio, luminance, over, parseColor, type Rgba } from "./contrast";
 import { ENTRY_KINDS } from "./entry-kind";
 
 /**
@@ -124,6 +124,39 @@ describe.each(["light", "dark"] as const)("contrast (%s)", (scheme) => {
 
   it("every kind has a hue token", () => {
     for (const kind of ENTRY_KINDS) expect(SCHEMES[scheme].has(`--kind-${kind}`), `--kind-${kind}`).toBe(true);
+  });
+});
+
+describe("the accent is BSoD blue", () => {
+  /** HSL hue in degrees and saturation (0 to 1) of an opaque colour. */
+  function hueSat([r, g, b]: Rgba): { hue: number; sat: number } {
+    const [R, G, B] = [r / 255, g / 255, b / 255];
+    const max = Math.max(R, G, B);
+    const min = Math.min(R, G, B);
+    const d = max - min;
+    const l = (max + min) / 2;
+    const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    const h = d === 0 ? 0 : max === R ? ((G - B) / d) % 6 : max === G ? (B - R) / d + 2 : (R - G) / d + 4;
+    return { hue: (h * 60 + 360) % 360, sat };
+  }
+  const TONES = ["--signal", "--signal-text", "--paper-signal", "--paper-signal-text", "--inverse-signal", "--inverse-signal-text"] as const;
+
+  it("is the Windows stop-screen blue (#0078d7 is 206.5 degrees, fully saturated): every tone of it, in both schemes, within 6 degrees: not cyan, not purple", () => {
+    expect(hueSat(parseColor("#0078d7")!).hue).toBeCloseTo(206.5, 1);
+    for (const scheme of ["light", "dark"] as const)
+      for (const name of TONES) {
+        const { hue, sat } = hueSat(color(scheme, name));
+        expect(Math.abs(hue - 206.5), `${scheme} ${name} hue ${hue.toFixed(1)}`).toBeLessThanOrEqual(6);
+        expect(sat, `${scheme} ${name} saturation`).toBeGreaterThanOrEqual(0.95);
+      }
+  });
+
+  it("the fill is the same blue in both schemes; only the small-text tone changes (deeper in light, lighter in dark)", () => {
+    expect(light.get("--signal")).toBe(dark.get("--signal"));
+    expect(light.get("--signal-foreground")).toBe(dark.get("--signal-foreground"));
+    const lum = (scheme: "light" | "dark", name: string) => luminance(color(scheme, name));
+    expect(lum("light", "--signal-text")).toBeLessThan(lum("light", "--signal"));
+    expect(lum("dark", "--signal-text")).toBeGreaterThan(lum("dark", "--signal"));
   });
 });
 
