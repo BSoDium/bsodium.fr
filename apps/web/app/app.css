@@ -1720,16 +1720,6 @@
     gap: 2rem;
   }
 
-  /* The newspaper's double rule under the masthead: 3 px, a 3 px gap, 1 px. */
-  .entry-rule {
-    box-sizing: content-box;
-    height: 3px;
-    margin: 0;
-    border: 0;
-    border-top: 3px solid var(--foreground);
-    border-bottom: 1px solid var(--foreground);
-  }
-
   /* The headline: the reading face at 700, balanced, tight (the board: 132 px, 0.92, -0.03em, optical size 72 by `auto`). */
   .entry-title {
     /* The measure follows the role's size (`--entry-title`), not the title's own: a long title is set smaller by `--title-scale`, and
@@ -2032,8 +2022,10 @@
     flex-direction: column;
   }
 
-  /* The running head: the journal's name at the left, the folio at the right, mono 12 px muted; a hairline under it. */
-  .list-running {
+  /* The running head: the journal's name at the left, the folio at the right, mono 12 px muted; a hairline under it. An entry's kicker row
+     (kind and places left, status or reading time right) is the same head: `.entry-running`. */
+  .list-running,
+  .entry-running {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;

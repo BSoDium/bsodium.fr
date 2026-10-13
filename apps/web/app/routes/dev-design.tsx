@@ -980,7 +980,7 @@ function Brand() {
 /* ------------------------------------------------------------ entry pages */
 
 /**
- * The entry pages' grammar (docs/design-system.md, "Entry pages") at the width of a column, in both reading surfaces: the double rule, the
+ * The entry pages' grammar (docs/design-system.md, "Entry pages") at the width of a column, in both reading surfaces: the running head over one hairline, the
  * kicker, a headline whose clause after a comma is thin, the standfirst, the dateline, the marginalia, the body with its drop cap and
  * pull quote, a figure with its caption; then a poem. Made-up text. The surface is the page's reading surface (the page's own colours), bound
  * for the element by `data-reading-surface`; the sizes follow the width of the block (`cqi`), as they do on the page.
@@ -989,12 +989,11 @@ function EntrySpecimen({ scheme }: { scheme: "light" | "dark" }) {
   return (
     <div data-scheme={scheme} data-reading-surface data-layout="full" data-kind="article" className="entry min-w-0 border border-border bg-background p-6 text-foreground">
       <p className="ds-meta m-0 mb-6">Surface: the page ({scheme})</p>
-      <div className="entry-rule" aria-hidden="true" />
-      <p className="type-meta m-0 mt-[1.375rem] flex justify-between text-muted-foreground">
+      <p className="type-meta entry-running m-0 flex justify-between text-muted-foreground">
         <span>Article &middot; Placeholder Bay</span>
         <span>6 min read</span>
       </p>
-      <h3 className="entry-title mt-[1.625rem]">
+      <h3 className="entry-title mt-8">
         Notes on a quiet compiler<span className="entry-title-tail">, written on a slow train</span>
       </h3>
       <p className="type-standfirst mt-6 max-w-[25.4em]">One made-up sentence that says what the piece is, set thin and italic against the heavy headline.</p>
