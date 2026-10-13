@@ -253,9 +253,14 @@ async function layoutChecks(page, label) {
   const hdr = await page.evaluate(() => {
     const k = document.querySelector("header [data-slot=search-trigger] kbd");
     const cs = k && getComputedStyle(k);
-    return { icon: document.querySelector("header [data-slot=search-trigger] > svg")?.getBoundingClientRect().width, kbd: k ? { border: cs.borderTopWidth, bg: cs.backgroundColor, text: k.textContent.replace(/\s+/g, " ").trim() } : null };
+    const t = document.querySelector("header [data-slot=search-trigger]");
+    const r = t.getBoundingClientRect();
+    return { icon: t.querySelector(":scope > svg")?.getBoundingClientRect().width, command: k?.querySelector("svg")?.getBoundingClientRect().width ?? null, font: parseFloat(getComputedStyle(t).fontSize), word: t.querySelector(":scope > span")?.textContent, h: r.height, linkH: document.querySelector("header a").getBoundingClientRect().height, kbd: k ? { border: cs.borderTopWidth, bg: cs.backgroundColor, text: k.textContent.replace(/\s+/g, " ").trim() } : null };
   });
-  ok(Math.abs(hdr.icon - 20) < 0.5, `desktop: collapsed, the header's search icon is 20 px (${hdr.icon})`);
+  // [icon] Search [command K]: the two glyphs are one size (1.1 em of the nav type), the word is there, the row is as tall as the links
+  ok(Math.abs(hdr.icon - hdr.font * 1.1) < 0.5 && hdr.icon < 20, `desktop: collapsed, the header's search icon is 1.1 em of the nav type, not the 20 px control size (${hdr.icon} px for ${hdr.font} px type)`);
+  ok(hdr.command === null || Math.abs(hdr.command - hdr.icon) < 0.5, `desktop: collapsed, the command key is the same size as the search icon (${hdr.command} against ${hdr.icon})`);
+  ok(hdr.word === "Search" && Math.abs(hdr.h - hdr.linkH) < 0.5, `desktop: collapsed, the trigger says "Search" and is as tall as the links (${hdr.h} / ${hdr.linkH})`);
   ok(hdr.kbd && hdr.kbd.border === "0px" && /rgba\(0, 0, 0, 0\)|transparent/.test(hdr.kbd.bg) && /^(Ctrl K|K)$/.test(hdr.kbd.text), `desktop: collapsed, the header's key hint is plain text, unboxed (${JSON.stringify(hdr.kbd)})`);
   ok((await page.locator(".hero-row").first().evaluate((a) => getComputedStyle(a).visibility)) === "hidden", "desktop: the hidden rows are out of the tab order (visibility hidden)");
   ok((await page.locator("h1").count()) === 1 && (await page.locator("h1").evaluate((h) => getComputedStyle(h).visibility)) !== "hidden", "desktop: the h1 stays in the accessibility tree");
@@ -386,8 +391,8 @@ for (const width of [320, 360, 390, 430]) {
   const g = await geometry(page);
   ok(g.header !== null && g.nav.l >= 0 && g.nav.r <= g.vw, `${width} px: collapsed, the header row fits (${g.nav ? `${Math.round(g.nav.l)} to ${Math.round(g.nav.r)}` : "missing"})`);
   ok(g.overflowX <= 0, `${width} px: collapsed, no horizontal overflow`);
-  const compact = page.locator("[data-slot=search-trigger-compact]");
-  ok(await compact.isVisible(), `${width} px: the header has a text search button`);
+  const compact = page.locator("[data-slot=search-trigger]");
+  ok(await compact.isVisible() && /^search/i.test((await compact.innerText()).trim()), `${width} px: the header has a search button with the word "Search"`);
   const box = await compact.boundingBox();
   ok(box.height >= 43.5 && box.width >= 43.5, `${width} px: the header search is a 44 px target (${Math.round(box.width)} x ${Math.round(box.height)})`);
   if (width === 390) {
@@ -417,7 +422,7 @@ for (const width of [320, 360, 390, 430]) {
   const at = stops.indexOf("button[hero-search]");
   ok(at > 0, `keyboard: Tab reaches the hero's search line (${stops.slice(0, 12).join(" > ")})`);
   ok(JSON.stringify(stops.slice(at + 1, at + 5)) === JSON.stringify(PATHS.map((p) => `a ${p}`)), `keyboard: then the four lists, in order (${stops.slice(at + 1, at + 5).join(", ")})`);
-  ok(!stops.includes("button[search-trigger]") && !stops.includes("button[search-trigger-compact]"), "keyboard: at rest there is no header search in the order: the hero's search line is the first control after the skip links");
+  ok(!stops.includes("button[search-trigger]"), "keyboard: at rest there is no header search in the order: the hero's search line is the first control after the skip links");
   ok(stops.slice(at + 5).some((s) => s !== "none"), "keyboard: focus moves on past the hero");
 
   await page.evaluate(() => document.activeElement?.blur());
@@ -595,7 +600,7 @@ for (const width of [320, 360, 390, 430]) {
   ok(state.rows === 4, `no scripts: the four lists are links that work (${state.rows})`);
   await page.screenshot({ path: `${OUT_DIR}/hero-no-script-1440.png` });
   await page.goto(`${BASE_URL}/articles`);
-  const triggers = await page.evaluate(() => ["search-trigger", "search-trigger-compact"].map((s) => { const e = document.querySelector(`[data-slot=${s}]`); return !!e && getComputedStyle(e).display !== "none"; }));
+  const triggers = await page.evaluate(() => ["search-trigger"].map((s) => { const e = document.querySelector(`[data-slot=${s}]`); return !!e && getComputedStyle(e).display !== "none"; }));
   ok(triggers.every((v) => v === false), "no scripts: the header's search triggers are not drawn either");
   await ctx.close();
 }

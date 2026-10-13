@@ -89,13 +89,13 @@ app/
   throws `data({ message }, { status: 404 })`. Its `ErrorBoundary` renders `PlaceNotFound` inside the panel
   (message, link to `/`, a plain inline list of all places); the shell and globe stay mounted. Status is a real 404.
 - Unmatched URLs fall to the root `ErrorBoundary` (404 page inside the navbar).
-- The list pages (`/software`, `/articles`, `/artworks`, `/poetry`) are plain pages outside the shell: the double rule, a mono line with the plain
-  count ("5 articles", "2 of 5 articles" when filtered; no eyebrow, no index codes), the section's name as the h1 at the headline scale, then
+- The list pages (`/software`, `/articles`, `/artworks`, `/poetry`) are plain pages outside the shell: a running head (the owner's name, the plain
+  count "5 articles" / "2 of 5 articles" when filtered, one hairline under it; no eyebrow, no index codes), the section's name as the h1 in the reading face at a medium weight, then
   hairline rows (`EntryRow`, `components/entry/entry-list-card.tsx`: a mono column with the date, the places and a status word when there is one;
   the title heavy over a thin summary, at most four tags as muted text; the image where there is one; no box, and no kind: the page already says
   it) whose rows keep `id={slug}` anchors (`/software#slug`) and link to the entry route; an empty collection is one muted line ("Nothing here
   yet.", no row). Loaders return summaries only (`listEntries`: no body). **Tag filter:** one row of text links (`?tag=rail`, one tag; "All"
-  clears it) under an ink rule above the rows, the selected one heavier and underlined with `aria-current="true"`; no boxes and no counts; the URL is the state (shareable, a reload
+  clears it) in plain space above the rows, the selected one heavier and underlined with `aria-current="true"`; no boxes and no counts; the URL is the state (shareable, a reload
   and the Back button work, the server renders the filtered list, no script needed); an unknown tag shows everything and a polite status says
   what is shown. The row scrolls sideways on a phone and wraps from `md`; more than 12 tags fold behind "+N more". **Year groups:** newest first,
   with a year heading in thin display numerals (h2, the rows then h3) only when the years hold two entries or more on average (`shouldGroupByYear`):
@@ -225,9 +225,9 @@ Not verified: how Vercel merges the `vercel.json` headers with the ones our serv
   the header, which stays centred over the whole screen.
 - **What the row shows follows its own width** (the header is an `@container`; Tailwind `@md`, `@xl`, `@min-[...]`): below 28 rem
   "Globe" and the four sections only (about 305 px at 320, 325 px at 360 to 390: they fit, with 44 px targets, down to a 320 px phone,
-  the padding between links going 4, 6, 8, 10 px per side at 0, 340, 400 px and 32 rem); from 28 rem the search trigger; from 36 rem its
-  `Ctrl K` hint. So a phone has no search trigger (as before: it was hidden below `sm`; `Ctrl K` and the
-  search dialog are unchanged), a phone in landscape and a half-width map have the icon, a desktop the hint.
+  the padding between links going 4, 6, 8, 10 px per side at 0, 340, 400 px and 32 rem); the search trigger is always there as the word "Search" (with its
+  icon from 22 rem); from 36 rem its `Ctrl K` / command-K hint. So a phone has the word, a half-width map the icon and the word, a desktop the
+  hint too (owner, 2026-10-13: text beside the icon and the shortcut, the two glyphs one size).
 - Readability: **lists, 404, error pages** (content scrolls under the row) have `NavScrim` (`.nav-scrim` in `app.css`, documented in
   `docs/design-tokens.md`): a fixed, `pointer-events-none` band between content (z 30) and the nav (z 40), rendered by `PageNavScrim`
   (in `root.tsx`) on every route except the shell. **The globe and the map** (the shell: home, place, entry beside the globe) have
@@ -365,7 +365,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   summary, date and cover so a tile needs no other fetch. Tags on an entry link to the kind's list filtered by that tag.
 - **Navigation feedback.** While another entry or place loads, the panel's content stays, dimmed and `aria-busy` (only when the
   path changes: a `?view` toggle is not a page); the top line of `NavProgress` shows after 150 ms.
-- **Quick search.** `components/search-palette.tsx`, mounted by the navbar (a trigger button from 28 rem of header width up, and Cmd/Ctrl-K anywhere): a
+- **Quick search.** `components/search-palette.tsx`, mounted by the navbar (a trigger button at every width, "Search" with its icon and, from 36 rem, its key hint, and Cmd/Ctrl-K anywhere): a
   modal `<dialog>` with an ARIA combobox (the input keeps the focus, `aria-activedescendant` follows the highlighted option, arrows /
   Home / End move, Enter opens, Escape closes), results grouped into places and the four kinds, each row led by the kind's icon (`Icon`, control size, the same set as everywhere). The index
   (`/search-index.json`, built from the projection by `buildSearchIndex`: titles, kind, region or code and date, tags and summaries, never

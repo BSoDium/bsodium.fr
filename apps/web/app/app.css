@@ -601,26 +601,63 @@
   }
 
   /*
-   * Drop cap: the first letter of the first paragraph, in the reading face at 700 and the ink (the "Article on paper" board), a
-   * float five lines of the body tall. A float and not `initial-letter` on purpose: the board's letter sits on the third line of the
-   * body, and `initial-letter` sinks differently in each engine. A narrow column (a phone, the half panel) takes a smaller letter.
+   * Drop cap (docs/design-system.md, "Entry pages", "Drop cap"): the first letter of the first paragraph, in the reading face at 700
+   * and the ink, spanning EXACTLY `--dc-n` lines of the body: its cap height starts at the cap height of the first line and its
+   * baseline sits on the baseline of line `--dc-n`, so the line after it starts flush under the letter, with no air below it.
+   *
+   * The sizes are the font's own (Newsreader 5.3.0, 2000 units; `scripts/entries/dropcap.mjs` measures them again in the browser):
+   *   ascent 0.735 em, descent 0.265 em, no line gap (the content area of a line is 1 em);
+   *   cap height of the body (wght 400, opsz 18 to 21): 0.672 em;
+   *   cap height of the letter (wght 700, opsz 72, pinned below so that it does not drift with the size): 0.715 em.
+   * The letter is `--dc-k` body ems: (N - 1) line pitches plus the body's cap height, over the letter's cap height. Its box is a float
+   * exactly N lines tall (`line-height`), the glyph put on the right baseline by the padding above it; nothing sits below. The
+   * paragraph contains the float (`flow-root`): a short paragraph never lets the letter run into the next block.
+   *
+   * `::first-letter` takes a mark that touches the letter ("L'" would be a wedge as tall as the cap). `dropCapKind`
+   * (lib/entry-typography.ts) keeps out what does not fit: an opening quote, Q and Ç (tails under the baseline), a lowercase start, a
+   * mark after the capital. A column narrower than 30 rem takes two lines instead of three.
+   *
+   * Not `initial-letter`: measured in Chrome it sizes the letter from the font's default cap height (0.67 em) and not the bold,
+   * optical-size 72 instance's (0.715 em), so the letter stands 4 to 5 px above the first line at a 21 px body; engines differ and
+   * Firefox has none. The float below is the same on every engine and is measured (`scripts/entries/dropcap.mjs`).
    */
+  .drop-cap {
+    --dc-n: 3;
+    --dc-lh: var(--reading-lh, 1.65);
+    --dc-cap: 0.715;
+    --dc-body-cap: 0.672;
+    --dc-ascent: 0.735;
+    --dc-k: calc(((var(--dc-n) - 1) * var(--dc-lh) + var(--dc-body-cap)) / var(--dc-cap));
+    /* The air above the glyph's line box, in ems of the letter: the baseline of line N minus what a box N lines tall gives it. */
+    --dc-pad: calc(((var(--dc-n) - 1) * var(--dc-lh) + 2 * (var(--dc-ascent) - 0.5) * (1 - var(--dc-k))) / var(--dc-k));
+    display: flow-root;
+    line-height: var(--dc-lh);
+  }
+
   .drop-cap::first-letter {
     float: left;
-    padding: 0.07em 0.13em 0 0;
+    /* The right gap: a tenth of the letter's em beyond its advance. The 1 px under it keeps line N + 1 out of the float whatever the
+       rounding of a fractional line height (a float a hair taller than N lines pushes that line right). */
+    margin: 0 0.1em -1px 0;
+    padding: calc(var(--dc-pad) * 1em) 0 0;
     font-family: var(--font-reading);
     font-weight: 700;
-    font-size: 5.33em;
-    line-height: 0.8;
-    letter-spacing: 0;
-    font-optical-sizing: auto;
+    font-size: calc(var(--dc-k) * 1em);
+    line-height: calc(var(--dc-n) * var(--dc-lh) / var(--dc-k) - var(--dc-pad));
+    font-variation-settings: "opsz" 72;
     font-synthesis: none;
+    letter-spacing: 0;
     color: var(--foreground);
   }
 
-  @container (max-width: 40rem) {
-    .drop-cap::first-letter {
-      font-size: 4.2em;
+  /* A mark above the capital (É, À): the paragraph makes room for it, so it never meets the block or the rule above. */
+  .drop-cap[data-drop-cap="accent"] {
+    padding-top: calc((0.235 * var(--dc-k) - (var(--dc-lh) - 1) / 2 - (var(--dc-ascent) - var(--dc-body-cap))) * 1em);
+  }
+
+  @container (max-width: 30rem) {
+    .drop-cap {
+      --dc-n: 2;
     }
   }
 
@@ -1440,7 +1477,8 @@
     font-optical-sizing: auto;
     font-kerning: normal;
     font-size: var(--text-reading);
-    line-height: var(--text-reading--line-height);
+    --reading-lh: var(--text-reading--line-height);
+    line-height: var(--reading-lh);
     font-weight: var(--weight-reading);
     font-variant-numeric: proportional-nums;
   }
@@ -1759,7 +1797,8 @@
   /* The body: the board's 21 px / 1.55 at full width, the reading role's size in the half panel and on a phone. */
   .entry-text .ds-prose {
     font-size: var(--entry-body);
-    line-height: 1.55;
+    --reading-lh: 1.55;
+    line-height: var(--reading-lh);
   }
 
   .entry-text .ds-prose h2,
@@ -1929,6 +1968,49 @@
     display: flex;
     align-items: baseline;
     gap: 0.75rem;
+  }
+
+  /*
+   * The head of a list page, set as the contents page of a journal (docs/design-system.md, "Entry pages", "Lists"). ONE hairline, under
+   * the running head, in the strong border (not the ink: nothing here is a masthead); the title is the reading face at a regular-to-medium
+   * weight with air above it. The page is an `.entry` container: `cqi` is its width.
+   */
+  .list-head {
+    --list-title: clamp(2.5rem, 6.4cqi, 5.75rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The running head: the journal's name at the left, the folio at the right, mono 12 px muted; a hairline under it. */
+  .list-running {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1.5rem;
+    margin: 0;
+    padding-bottom: 0.75rem;
+    border-bottom: var(--hairline) solid var(--border-strong);
+    color: var(--muted-foreground);
+  }
+
+  .list-title {
+    margin: clamp(2rem, 4.4cqi, 4rem) 0 0;
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    font-synthesis: none;
+    font-size: var(--list-title);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  /* The tag filter: plain space under the title, a little more than the title's descender (the rows' own hairline closes the head below). */
+  .list-filter {
+    margin-top: 2rem;
   }
 }
 
@@ -2298,6 +2380,33 @@ h1[tabindex="-1"]:focus-visible {
   .nav-link:hover,
   .nav-link:focus-visible {
     color: var(--signal-text);
+  }
+
+  /*
+   * The search trigger is one run of this type: [icon] SEARCH [command K]. The icon and the command key are `inline` icons (1.1 em) of
+   * the SAME font size, so they are the same size (13 px at 12 px type: the hint's own 13 px is not used here); the row centres them on
+   * the middle of the capitals. The icon is dropped under 22 rem of header (the smallest phones keep the word).
+   */
+  .nav-search {
+    gap: 0.5em;
+  }
+
+  .nav-search .ui-icon {
+    display: none;
+  }
+
+  .nav-search .ds-kbd {
+    justify-content: flex-start;
+    margin-inline-start: 0.5em;
+    font-size: inherit;
+    letter-spacing: inherit;
+  }
+
+  @container (min-width: 22rem) {
+    .nav-search .ui-icon {
+      display: inline-block;
+      vertical-align: baseline;
+    }
   }
 
   @container (min-width: 23rem) {
