@@ -97,7 +97,7 @@ Pushing opens or refreshes the publication PR; **merging it is the publication**
 
 ### Edit the career document
 
-The career page reads ONE document, `content/career/index.md` in the private repo: a header with the roles (most recent first), education, languages, skill groups and links, and below it the profile statement as one paragraph. It is a draft until you set `status: published`, and then it travels like any other content (the publication PR; merging it is the publication). There is no email, phone number or address field on purpose: they cannot be published by accident. Writing rules: the private repo's `docs/writing-entries.md`, "Career"; the shape: [api-contract.md](api-contract.md#the-career-document-career).
+The career page reads ONE document, `content/career/index.md` in the private repo: a header with the roles (most recent first), education, languages, skill groups and links, and below it the profile statement as one paragraph. It is a draft until you set `status: published`, and then it travels like any other content (the publication PR; merging it is the publication). There is no email, phone number or address field on purpose: they cannot be published by accident (the only availability is the dated `availability` line: refresh its month when you confirm it). Writing rules: the private repo's `docs/writing-entries.md`, "Career"; the shape: [api-contract.md](api-contract.md#the-career-document-career).
 
 ```bash
 # [private]

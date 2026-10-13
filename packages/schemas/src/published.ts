@@ -514,6 +514,18 @@ export const careerSkillGroupSchema = z
 
 export const careerLinkSchema = z.object({ label: line(40), url: httpsUrlSchema }).strict();
 
+/**
+ * A dated availability statement ("Open to opportunities", as of 2026-10). It always carries its month, so the page can show how
+ * old it is and it cannot silently go stale. Plain text; no contact detail belongs here (there is no email or phone field).
+ */
+export const careerAvailabilitySchema = z
+  .object({
+    text: line(120),
+    /** `YYYY-MM`: when the owner last confirmed the statement. Authored, never the clock. */
+    asOf: z.string().regex(/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])$/, "YYYY-MM"),
+  })
+  .strict();
+
 const uniqueBy = <T>(items: readonly T[], key: (t: T) => string) => new Set(items.map(key)).size === items.length;
 
 export const publishedCareerSchema = z
@@ -524,6 +536,8 @@ export const publishedCareerSchema = z
     summary: line(1000),
     /** `YYYY-MM`: when the owner last reviewed the document. Authored, never the clock. */
     updated: z.string().regex(/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])$/, "YYYY-MM"),
+    /** Optional: a dated "open to work" statement, shown with its date. Absent = the document says nothing. */
+    availability: careerAvailabilitySchema.optional(),
     /** Most recent first (by `start`), at least one. */
     roles: z.array(careerRoleSchema).min(1).max(CAREER_LIMITS.roles),
     education: z.array(careerEducationSchema).max(CAREER_LIMITS.education),
@@ -715,6 +729,7 @@ export type PublishedCareerEducation = z.infer<typeof careerEducationSchema>;
 export type PublishedCareerLanguage = z.infer<typeof careerLanguageSchema>;
 export type PublishedCareerSkillGroup = z.infer<typeof careerSkillGroupSchema>;
 export type PublishedCareerLink = z.infer<typeof careerLinkSchema>;
+export type PublishedCareerAvailability = z.infer<typeof careerAvailabilitySchema>;
 export type PublishedProjection = z.infer<typeof publishedProjectionSchema>;
 
 /** Light shape for lists and the globe. Derived, never stored. */

@@ -105,6 +105,7 @@ describe("endpoints (demo content)", () => {
     const body = (await (await app.request("/v1/projection")).json()) as PublishedProjection;
     expect(body.career).toEqual(loadDemoProjection().career);
     expect(body.career?.roles.length).toBeGreaterThan(0);
+    expect(body.career?.availability).toEqual({ text: "Open to example opportunities", asOf: "2026-09" });
     // the career is part of the projection only: it is not a list, a detail or a count
     const health = await json<HealthResponse>(await app.request("/health"));
     expect(Object.keys(health.counts)).not.toContain("career");

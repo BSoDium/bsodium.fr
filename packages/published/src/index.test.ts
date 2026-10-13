@@ -177,6 +177,7 @@ describe("career", () => {
     expect(roles.some((r) => r.employment !== undefined) && roles.some((r) => r.employment === undefined)).toBe(true);
     expect(roles.some((r) => r.place !== undefined) && roles.some((r) => r.place === undefined)).toBe(true);
     expect(roles.some((r) => r.highlights.length === 0)).toBe(true);
+    expect(career.availability).toEqual({ text: "Open to example opportunities", asOf: "2026-09" });
     expect(career.education.length).toBeGreaterThanOrEqual(2);
     expect(career.education.some((e) => e.place !== undefined)).toBe(true);
     expect(career.languages.some((l) => l.label !== undefined) && career.languages.some((l) => l.label === undefined)).toBe(true);
@@ -194,6 +195,7 @@ describe("career", () => {
     for (const slug of [...career.roles, ...career.education].flatMap((x) => (x.place ? [x.place] : []))) expect(places.has(slug), slug).toBe(true);
     expect(career.roles.map((r) => r.org)).toContain("Example Studio");
     expect(JSON.stringify(career)).not.toMatch(/lorem|ipsum|@|\+\d{2}|tel:|mailto:/i);
+    expect(Object.keys(career)).not.toEqual(expect.arrayContaining(["email", "phone", "address"]));
   });
 
   it("the demo career is small (a few KB), and the demo projection still validates strictly", () => {

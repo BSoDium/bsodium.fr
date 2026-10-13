@@ -84,7 +84,37 @@ describe("career (an optional singleton document, additive in schema version 1)"
     };
     walk(JSON.parse(buildJsonSchema()).properties.career);
     expect(names.length).toBeGreaterThan(20);
-    expect(names.filter((n) => /mail|phone|^tel|mobile|street|address|zip|postcode|postal|birth|^age$|nationality|photo|salary/i.test(n))).toEqual([]);
+    expect(names.filter((n) => /mail|phone|^tel|mobile|street|address|residen|^home|zip|postcode|postal|birth|^age$|nationality|photo|salary/i.test(n))).toEqual([]);
+  });
+
+  describe("availability (a dated, optional statement)", () => {
+    const avail = (extra: object = {}) => ({ text: "Open to opportunities", asOf: "2026-10", ...extra });
+
+    it("is optional: a career without it is valid and the key stays absent", () => {
+      expect(parse(career()).career).not.toHaveProperty("availability");
+    });
+    it("accepts exactly { text, asOf }, kept as given", () => {
+      expect(parse(career({ availability: avail() })).career!.availability).toEqual({ text: "Open to opportunities", asOf: "2026-10" });
+      ok(career({ availability: avail({ text: "x".repeat(120) }) }));
+    });
+    it("needs both fields, a month, plain text of 1 to 120 characters and nothing else", () => {
+      bad(career({ availability: { text: "Open" } }));
+      bad(career({ availability: { asOf: "2026-10" } }));
+      bad(career({ availability: avail({ text: "" }) }));
+      bad(career({ availability: avail({ text: "   " }) }));
+      bad(career({ availability: avail({ text: "x".repeat(121) }) }));
+      bad(career({ availability: avail({ text: "line\nbreak" }) }));
+      for (const asOf of ["2026", "2026-10-01", "2026-13", "soon", ""]) bad(career({ availability: avail({ asOf }) }));
+      for (const extra of [{ email: "a@b.c" }, { phone: "+33 1" }, { until: "2027-01" }, { open: true }]) bad(career({ availability: avail(extra) }));
+      bad(career({ availability: "Open to opportunities" }));
+    });
+    it("is described by the generated JSON Schema as an optional strict object with these two properties only", () => {
+      const a = JSON.parse(buildJsonSchema()).properties.career.properties.availability;
+      expect(Object.keys(a.properties).sort()).toEqual(["asOf", "text"]);
+      expect(a.required.sort()).toEqual(["asOf", "text"]);
+      expect(a.additionalProperties).toBe(false);
+      expect(a.properties.text.maxLength).toBe(120);
+    });
   });
 
   describe("dates", () => {

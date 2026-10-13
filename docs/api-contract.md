@@ -319,6 +319,7 @@ A curriculum vitae as data, for the page recruiters read. It is **one optional t
   "title": "Career",
   "summary": "Frontend engineer who builds interfaces for map-heavy and data-heavy products.",
   "updated": "2026-09",
+  "availability": { "text": "Open to example opportunities", "asOf": "2026-09" },
   "roles": [
     {
       "id": "lead-frontend-example-studio",
@@ -348,6 +349,7 @@ A curriculum vitae as data, for the page recruiters read. It is **one optional t
 | `title` | 1 to 80, one line | "Career". |
 | `summary` | 1 to 1000, one line | The profile statement, plain text. |
 | `updated` | `YYYY-MM` | When the owner last reviewed the document. Authored, never the clock of the export. |
+| `availability` | optional `{ text, asOf }` | A dated "open to work" statement: `text` 1 to 120, one line of plain text; `asOf` `YYYY-MM`, authored, when the owner last confirmed it. Shown with its date so it cannot silently go stale; absent = the document says nothing. Nothing else belongs in it (a contact detail is not a field). |
 | `roles` | 1 to 20, **most recent first by `start`** | See below. |
 | `education` | 0 to 12 | See below. Authored order (the main degree before an exchange year, say). |
 | `languages` | 0 to 10 | `name` (1 to 40), `level` (1 to 20: `C2`, `B1`, `Native`), `label?` (1 to 40: `Native`, `Upper-intermediate`). Names unique (case-insensitive). |
@@ -358,7 +360,7 @@ A **role**: `id` (kebab-case slug, unique across roles and education: an anchor)
 
 Rules the JSON Schema cannot express (zod in `packages/schemas`, re-implemented by the private export's second gate): `end` not before `start`; roles most recent first; ids unique across roles and education; unique language names, group names, skills and link addresses; every `place` resolves to a place of the projection.
 
-**What is deliberately not here.** There is no field for an email address, a phone number or a street address, no `openToWork` status and no line for where the owner lives; every object is `.strict()`, so none can be served by accident (a test walks the generated JSON Schema and fails on any property named like one). Adding one is a contract decision, not an authoring one. All text is plain text under the entries' rules (no control characters, no bidirectional overrides, trimmed; `<b>` is displayed as written, and the private vault refuses markup-looking text earlier).
+**What is deliberately not here.** There is no field for an email address, a phone number or a street address, no boolean `openToWork` flag (the only availability is the dated, optional `availability` text above) and no line for where the owner lives; every object is `.strict()`, so none can be served by accident (a test walks the generated JSON Schema and fails on any property named like one). Adding one is a contract decision, not an authoring one. All text is plain text under the entries' rules (no control characters, no bidirectional overrides, trimmed; `<b>` is displayed as written, and the private vault refuses markup-looking text earlier).
 
 **Size.** Bounded by the limits (the theoretical maximum, every list full and every text at its limit, is under 100 KB; a test pins it). The owner's real document is 5.0 KB compact (about 2 KB gzip), the demo's 3.1 KB. It is part of the bundled projection, so it is paid for in the same three places as an entry's body ("Payload size and cost").
 

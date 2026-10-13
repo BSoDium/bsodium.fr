@@ -496,6 +496,7 @@
     "title": "Career",
     "summary": "Frontend engineer who builds interfaces for map-heavy and data-heavy products. A made-up profile: every employer, school and link on this page is invented, so the page can be designed and tested without anything real.",
     "updated": "2026-09",
+    "availability": { "text": "Open to example opportunities", "asOf": "2026-09" },
     "roles": [
       {
         "id": "lead-frontend-example-studio",

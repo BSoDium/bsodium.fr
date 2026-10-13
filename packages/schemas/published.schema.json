@@ -358,6 +358,26 @@
           "type": "string",
           "pattern": "^(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])$"
         },
+        "availability": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
+            },
+            "asOf": {
+              "type": "string",
+              "pattern": "^(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])$"
+            }
+          },
+          "required": [
+            "text",
+            "asOf"
+          ],
+          "additionalProperties": false
+        },
         "roles": {
           "minItems": 1,
           "maxItems": 20,
