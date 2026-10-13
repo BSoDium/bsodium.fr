@@ -82,7 +82,7 @@ Originals stay out of Git. Merged images stay in the public Git history forever.
 
 ### Add an entry (article, project, artwork, poem)
 
-Entries are Markdown documents in the private repo, one folder per entry: `content/<kind>s/<slug>/index.md` (`articles`, `projects`, `artworks`, `poems`). The file is a typed YAML header (title, summary, date, tags, places, facts, images, `status`) and a Markdown body that the export turns into typed blocks, never HTML ([content-entry-model.md](content-entry-model.md); the writing rules are in the private repo's `docs/writing-entries.md`). The images go beside the file.
+Entries are Markdown documents in the private repo, one folder per entry: `content/<kind>s/<slug>/index.md` (`articles`, `projects`, `artworks`, `poems`; the website names the projects' section **Software**, `/software`, and the folder stays `projects`). The file is a typed YAML header (title, summary, date, tags, places, facts, images, `status`) and a Markdown body that the export turns into typed blocks, never HTML ([content-entry-model.md](content-entry-model.md); the writing rules are in the private repo's `docs/writing-entries.md`). The images go beside the file.
 
 ```bash
 # [private]

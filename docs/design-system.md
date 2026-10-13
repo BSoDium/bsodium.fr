@@ -41,7 +41,7 @@ The accent is for state and for the generated covers' marks, nothing else: the c
 
 ### Kind coding
 
-Each kind has an **icon** from the icon set (article: a page of text; project: a terminal prompt; artwork: an image; poem: a feather; place: a map pin; "Icons" below) AND its word. `KindTag` draws the icon plain beside the word (no box, no tint) and is used only where kinds are mixed: the search results (glyph; the group heading says the word) and the related entries of an entry. A list of one kind, a place's entries (already grouped under "Articles", "Projects") and an entry's own header do not repeat it as a tag (the entry says it once, in plain words, in its meta line). The kind hues only tint the lightest tone of a generated cover. Text is never set in a kind hue.
+Each kind has an **icon** from the icon set (article: a page of text; project: a terminal prompt; artwork: an image; poem: a feather; place: a map pin; "Icons" below) AND its word (the `project` kind's word is "Software": the contract's kind id and the section's name are separate, `lib/sections.ts`). `KindTag` draws the icon plain beside the word (no box, no tint) and is used only where kinds are mixed: the search results (glyph; the group heading says the word) and the related entries of an entry. A list of one kind, a place's entries (already grouped under "Articles", "Software") and an entry's own header do not repeat it as a tag (the entry says it once, in plain words, in its meta line). The kind hues only tint the lightest tone of a generated cover. Text is never set in a kind hue.
 
 ### Type
 
@@ -284,7 +284,7 @@ a bounding box cut out of it (bold, but a round silhouette like any button); a C
 mark to the project's first name); a disc with one squared corner (a leaf shape, generic).
 
 **The header** (`components/navbar.tsx`): one centred row of text and no logo (owner: the icon in the corner went). In order: "Globe"
-(the way home, in mono capitals like the rest: the site's name is the home hero's headline, not the header's), Projects, Articles, Artworks, Poetry (muted; the
+(the way home, in mono capitals like the rest: the site's name is the home hero's headline, not the header's), Software, Articles, Artworks, Poetry (muted; the
 current one in the foreground and underlined, `aria-current="page"`), the search trigger. **On the home page, while the landing hero is at
 rest, there is no header at all** (its four rows are the sections and its search line is the search: docs/landing.md); the header is back,
 tabs and search, whenever the hero has stepped back, and on every other route. Centred over the viewport; while the place
