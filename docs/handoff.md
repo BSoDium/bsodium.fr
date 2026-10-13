@@ -20,7 +20,7 @@ Where the project stands and what is left. Details live in the linked docs; this
 | Landing hero: the owner's name in the studio typography over the globe; no header at all on the home page at rest | [landing.md](landing.md) |
 | Entry pages in the studio typography (headline, standfirst, marginalia, lists as hairline rows) | [design-system.md](design-system.md#entry-pages-typography) |
 | Identity and one icon library (lucide, one scale): the site carries the owner's name, never the project's code name | [web-architecture.md](web-architecture.md#production-readiness), [design-system.md](design-system.md#icons) |
-| Ring of type around the planet when zoomed out (labelled an **experiment**); `?no-ring` switches it off | [web-architecture.md](web-architecture.md) ("Ring of type") |
+| Orbiting type on the home screen (a 3D mono ring and a caption round the planet; the page opens zoomed out, the planet is lifted, the boxes fade, the name shrinks into the small line; round 3 of the hero, 2026-10-13; still an **experiment**); `?no-ring` switches it off | [web-architecture.md](web-architecture.md) ("Orbiting type"), [landing.md](landing.md) ("Showcase") |
 | Idle rotation 20 times slower (0.2 degrees a second), a frame per display refresh, labels keep their slots while it turns | [web-architecture.md](web-architecture.md) ("Idle rotation"), [performance.md](performance.md) |
 | BSoD blue accent in place of the orange | [design-tokens.md](design-tokens.md#accent) |
 | Poetry: the poems' section is "Poetry" at `/poetry`; `/poems` and `/poems/:slug` answer a 301 | [web-architecture.md](web-architecture.md#entries-in-the-shell-routes-containers-url-scheme) |
