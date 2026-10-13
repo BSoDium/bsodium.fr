@@ -5,7 +5,7 @@ import { createStaticHandler, createStaticRouter, StaticRouterProvider, type Sta
 import { describe, expect, it } from "vitest";
 import { createHeroMachine } from "~/lib/hero-machine";
 import { SITE_FOCUS, SITE_IDENTITY, SITE_NAME, SITE_TAGLINE } from "~/lib/site";
-import { NAME_TRAVEL_MS, LandingHero } from "./landing-hero";
+import { LandingHero, NAME_TRAVEL_EASE, NAME_TRAVEL_MS } from "./landing-hero";
 
 async function render(props: { away?: boolean; empty?: boolean; orbit?: boolean | null } = {}, machine = createHeroMachine()): Promise<string> {
   const routes = [{ id: "routes/shell", path: "*", Component: () => createElement(LandingHero, { machine, away: props.away ?? false, empty: props.empty ?? false, orbit: props.orbit ?? null }) }];
@@ -126,26 +126,42 @@ describe("the orbiting caption and the hero's how-to line", () => {
   });
 });
 
-describe("the name's travel (item 10 of the owner's round)", () => {
+describe("the name's travel and the collapsed name (owner, round 3, item 3)", () => {
   const css = readFileSync(new URL("../app.css", import.meta.url), "utf8");
-  const tokens = readFileSync(new URL("../app.css", import.meta.url), "utf8");
+  const src = readFileSync(new URL("./landing-hero.tsx", import.meta.url), "utf8");
 
-  it("takes the panel's duration and ease, so the hero and the panel move as one family", () => {
-    expect(tokens).toMatch(/--duration-slow:\s*360ms/);
-    expect(NAME_TRAVEL_MS).toBe(360);
+  it("runs the CSS custom properties' duration and ease: 300 to 360 ms, a fast start and a soft landing", () => {
+    expect(css).toMatch(/--hero-travel:\s*320ms;/);
+    expect(css).toContain("--hero-travel-ease: cubic-bezier(0.2, 0.9, 0.1, 1);");
+    expect(NAME_TRAVEL_MS).toBe(320);
+    expect(NAME_TRAVEL_EASE).toBe("cubic-bezier(0.2, 0.9, 0.1, 1)");
   });
 
-  it("is a transform animation of the two halves: no font-size, layout or per-frame script, and the source has no requestAnimationFrame", () => {
-    const src = readFileSync(new URL("./landing-hero.tsx", import.meta.url), "utf8");
+  it("is a transform animation of the two halves: no font-size, layout or per-frame script", () => {
     expect(src).toContain("el.animate(");
     expect(src).not.toMatch(/requestAnimationFrame|setInterval/);
-    const frames = [...src.matchAll(/\{ transform: [^}]*\}/g)].map((m) => m[0]);
-    expect(frames).toHaveLength(2);
+    // the keyframes: the start and the end, transform only
+    expect([...src.matchAll(/\{ transform(?:: [^}]*)? \}/g)]).toHaveLength(3); // the start, the end, and the held state's, whichever way it goes
+    expect(src).not.toContain('direction: "reverse"');
     expect(css).toMatch(/\.hero-given,\s*\.hero-family \{\s*display: inline-block;\s*transform-origin: 0 0;/);
   });
 
+  it("has no second copy of the name to hand over to: the ghost line is never painted, and the h1 is not faded out when collapsed", () => {
+    const ghost = css.slice(css.indexOf("  .hero-mini-name {"), css.indexOf("  .hero-mini-hint {"));
+    expect(ghost).toContain("visibility: hidden;");
+    // the pinned optical size: the ghost is the big name's drawing at another size, so a width ratio is a scale
+    expect(ghost).toContain('font-variation-settings: "opsz" 96;');
+    expect(css).not.toMatch(/\.landing-hero\[data-hero="collapsed"\] \.hero-name \{/);
+    // the collapsed name is the halves held at the ghost's boxes
+    expect(src).toContain("holdName(");
+    expect(src).toContain("el.style.transform = transform");
+  });
+
+  it("makes the collapsed name 40 to 48 px on a wide screen, and no smaller than 28 px on a phone", () => {
+    expect(css).toContain("--hero-mini-size: clamp(1.75rem, 9.5vw, 2.75rem);");
+  });
+
   it("is instant under reduced motion", () => {
-    const src = readFileSync(new URL("./landing-hero.tsx", import.meta.url), "utf8");
     expect(src).toContain("prefers-reduced-motion: reduce");
   });
 });

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { CAPTION_FONTS } from "~/globe/engine/caption";
 import { DISPLAY_FONT_URL, FONT_DIR, FONT_FILES } from "./fonts";
 
 const css = readFileSync(new URL("../app.css", import.meta.url), "utf8");
@@ -143,3 +144,27 @@ describe("type roles", () => {
     for (const role of ["display-xl", "display-lg", "display-md", "standfirst", "reading", "meta"]) expect(css, role).toMatch(new RegExp(`--text-${role}:`));
   });
 });
+
+describe("the caption's two extra faces (loaded by the globe only when the page asks for them, not declared in the stylesheet)", () => {
+  it("are real woff2 subsets of Basic Latin next to their OFL licence, versioned in the name (the year-long immutable cache), small", () => {
+    for (const [key, licence] of [
+      ["jacquard", "jacquard-24"],
+      ["pixelify", "pixelify-sans"],
+    ] as const) {
+      const url = CAPTION_FONTS[key].url!;
+      const file = publicFile(url.slice(1));
+      expect(existsSync(file), url).toBe(true);
+      expect(readFileSync(file).toString("latin1", 0, 4), url).toBe("wOF2");
+      expect(statSync(file).size, url).toBeLessThan(30 * 1024);
+      expect(url, url).toMatch(/-\d+\.\d+-latin-\d+\.woff2$/);
+      const text = readFileSync(publicFile(`fonts/LICENSE-${licence}.txt`), "utf8");
+      expect(text, licence).toContain("SIL Open Font License, Version 1.1");
+      expect(text, licence).toMatch(/^Copyright /);
+    }
+  });
+
+  it("are not in the stylesheet: no page pays for them", () => {
+    expect(css).not.toMatch(/jacquard|pixelify/i);
+  });
+});
+

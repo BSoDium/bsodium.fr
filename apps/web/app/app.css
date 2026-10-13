@@ -2810,15 +2810,28 @@ h1[tabindex="-1"]:focus-visible {
     }
   }
 
+  /*
+   * The collapsed name's place, not a second copy of it: this line is the GHOST the two halves of the real name (`.hero-given`, `.hero-family`)
+   * travel to and stay on (landing-hero.tsx `travelName`: it measures these boxes, never paints them). It is set like the big name (the same face, weights,
+   * tracking, and the optical size pinned at the big name's 96, so it is the same drawing at another size) at `--hero-mini-size`: 44 px on a wide
+   * screen, 9.5 vw down to 28 px on a phone, so that it clears the credits line, the dev badge and the hint beside it from 320 px.
+   */
   .hero-mini-name {
+    --hero-mini-size: clamp(1.75rem, 9.5vw, 2.75rem);
+    visibility: hidden;
     font-family: var(--font-display);
-    font-optical-sizing: auto;
+    font-variation-settings: "opsz" 96;
     font-synthesis: none;
-    font-size: 1.875rem;
+    font-size: var(--hero-mini-size);
     line-height: 1;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.055em;
+    margin-inline-start: -0.035em;
     font-weight: var(--weight-heavy);
-    color: var(--foreground);
+    white-space: nowrap;
+  }
+
+  .hero-mini-given {
+    letter-spacing: -0.02em;
   }
 
   .hero-mini-hint {
@@ -2859,18 +2872,14 @@ h1[tabindex="-1"]:focus-visible {
   }
 
   /*
-   * The name does not fade like the rest: its two halves shrink and travel to where the small line has them (landing-hero.tsx, a transform animation
-   * of `--duration-slow`, the compositor's), and it is the SAME text that stays on screen until it has arrived, so the h1 is visible for the whole
-   * of the travel and gives way to the small line in the last 90 ms (they coincide). Coming back is the other way round: the small line goes at
-   * once and the name travels out of its place. The h1 stays in the accessibility tree at opacity 0 (it is the page's heading).
+   * The name does not fade like the rest and is not handed over to another element: its two halves shrink and travel to the ghost line's boxes
+   * (landing-hero.tsx, a transform animation of `--hero-travel`, the compositor's, an ease with a fast start and a soft landing) and STAY there as
+   * the collapsed name (the final transform is kept as their own style); coming back is the same motion reversed from where they are. The h1 stays in
+   * the accessibility tree and on screen throughout; the rest of the block fades as before.
    */
-  .hero-name {
-    transition: opacity 90ms linear;
-  }
-
-  .landing-hero[data-hero="collapsed"] .hero-name {
-    opacity: 0;
-    transition: opacity 90ms linear calc(var(--duration-slow) - 90ms);
+  .landing-hero {
+    --hero-travel: 320ms;
+    --hero-travel-ease: cubic-bezier(0.2, 0.9, 0.1, 1);
   }
 
   /* The controls are removed from the tab order. */
@@ -2889,11 +2898,11 @@ h1[tabindex="-1"]:focus-visible {
   .landing-hero[data-hero="collapsed"] .hero-mini {
     opacity: 1;
     visibility: visible;
-    transition: opacity 90ms linear calc(var(--duration-slow) - 90ms), visibility 0s;
+    transition: opacity 90ms linear calc(var(--hero-travel) - 90ms), visibility 0s;
   }
 
   /*
-   * The how-to line is said by the orbiting caption while the globe has one (`data-orbit`: "pending" until the globe is up, "true" with the type,
+   * The how-to line is said by the caption while the globe has one (`data-orbit`: "pending" until the globe is up, "true" with the caption,
    * "false" without it, on the empty archive, or when the globe cannot start). Then it is for assistive technology only: visually hidden, in the
    * accessibility tree, out of the layout. With scripts off (`scripting: none`) nothing says it but this line, and it stays.
    */

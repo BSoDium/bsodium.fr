@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHeroMachine, HERO_IDLE_MS, isWorldView, showcaseOf, WORLD_ZOOM01, type HeroMachine } from "./hero-machine";
 
-describe("showcaseOf: when the home screen shows the orbiting type and lifts the planet", () => {
+describe("showcaseOf: when the home screen shows the caption and lifts the planet", () => {
   it("is on only for the full hero at the world view, with the measured cover; off, the planet comes back down", () => {
     expect(showcaseOf({ state: "rest", world: true }, 182)).toEqual({ on: true, coverBottom: 182 });
     expect(showcaseOf({ state: "collapsed", world: true }, 182)).toEqual({ on: false, coverBottom: 0 });

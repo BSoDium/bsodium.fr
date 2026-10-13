@@ -6,6 +6,7 @@ import type { Polylines } from "@catalyst/geodata";
 import { isFitView, type GlobeInitialView, type GlobePlace, type GlobeProps, type GlobeRoute, type GlobeViewState } from "../types";
 import { readTheme } from "./colors";
 import { BoxScene } from "./box-scene";
+import type { CaptionFont } from "./caption";
 import { placeFraming } from "./framing";
 import type { LodTree } from "./lod-tree";
 import { GlobeRenderer, type RendererOptions, type StartView } from "./renderer";
@@ -53,8 +54,9 @@ interface GlobeOptions {
   pickOverride?: RendererOptions["pickOverride"];
   /** The line of the ring of type (see `RendererOptions.ringText`); absent = no ring. */
   ringText?: string;
-  /** The phrases of the caption that wraps the planet (see `RendererOptions.captionPhrases`). */
+  /** The lines of the caption that wraps the planet and the face they are set in (see `RendererOptions.captionPhrases`). */
   captionPhrases?: readonly string[];
+  captionFont?: CaptionFont;
   /** See `GlobeProps.coverBottom` and `GlobeProps.showcase`: read at creation. */
   coverBottom?: number;
   showcase?: boolean;
@@ -109,9 +111,15 @@ export interface GlobeDebug {
   spin(): ReturnType<GlobeRenderer["spinInfo"]> & { idleMs: number; degPerSec: number; easeInMs: number; stopMs: number; enabled: boolean };
   /** The sky: the earth rotation angle, its timed value (0..1), whether it is wanted and drawn, the farthest corner in earth radii; null when switched off (debug pages default to off, `?sky`). */
   sky(): ReturnType<GlobeRenderer["skyState"]>;
-  /** The orbiting type (ring and caption): whether it is drawn, its glyphs, repeats, canvas size, the showcase and the zoom numbers behind it; null when there is none (`?no-ring`, a debug page without `?ring`). */
+  /** The ring of type: whether it is drawn, its tone, glyphs, repeats, canvas size and the zoom numbers behind it; null when there is none (`?no-ring`, a debug page without `?ring`). */
   ring(): ReturnType<GlobeRenderer["ringState"]>;
-  /** Turn the showcase (the orbiting type in, the boxes out) on or off as the app's hero would (checks and the perf scenarios). */
+  /** The caption (lines wrapped on the sphere): its face, lines (turn, visibility, extent), phase and the showcase's state; null without one (`?no-ring`, a debug page without `?showcase`). */
+  caption(): ReturnType<GlobeRenderer["captionState"]>;
+  /** Hold the caption's entrance at `ms` after its start (null releases it): captures and checks. */
+  pinCaption(ms: number | null): void;
+  /** Hold every caption line at `deg` degrees east of its place (null releases it): the limb close-ups. */
+  pinCaptionAngle(deg: number | null): void;
+  /** Turn the showcase (the caption in, the boxes out) on or off as the app's hero would (checks and the perf scenarios). */
   showcase(on: boolean): void;
   /** Set the earth rotation angle in degrees (moves the sky against the earth) and draw. */
   setSkyEra(deg: number): void;
@@ -241,6 +249,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         pickOverride: opts.pickOverride,
         ringText: opts.ringText,
         captionPhrases: opts.captionPhrases,
+        captionFont: opts.captionFont,
         coverBottom: opts.coverBottom,
         showcase: opts.showcase,
         onSelect: opts.onSelect,
@@ -343,7 +352,10 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       spin: () => ({ ...renderer.spinInfo(), idleMs: SPIN.idleMs, degPerSec: SPIN.degPerSec, easeInMs: SPIN.easeInMs, stopMs: SPIN.stopMs, enabled: SPIN.enabled }),
       sky: () => renderer.skyState(),
       ring: () => renderer.ringState(),
+      caption: () => renderer.captionState(),
       showcase: (on) => renderer.setShowcase(on),
+      pinCaption: (ms) => renderer.pinCaption(ms),
+      pinCaptionAngle: (deg) => renderer.pinCaptionAngle(deg),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),
       info: () => renderer.renderInfo(),

@@ -949,7 +949,7 @@ function run(t: LodTree, start: number) {
   for (let k = 0; k <= 70; k++) t.advance(start + 1 + k * 16);
 }
 
-describe("suppression: the home screen's orbiting type replaces every box and label", () => {
+describe("suppression: the home screen's caption replaces every box and label", () => {
   it("sends every node's target OFF, keeps the cut itself, and brings them back; a node that is on its way out is no click target", () => {
     const t = new LodTree([g("de", "country", undefined, 51, 10, 400, 70), ...germany().slice(1)]);
     const cam = camAt(10, 50.5, 2.7);
