@@ -35,7 +35,7 @@ describe("label size (CSS px, measured once per string)", () => {
     expect(long.w).toBeGreaterThan(labelText("Lyon", null).w);
     expect(long.subW).toBeGreaterThan(long.nameW);
   });
-  it("the type: the name about 14 px and weight 500 to 600, the second line about 11 px, regular or lighter; 3 px from the box, the plate's edge on the box's edge", () => {
+  it("the type: the name about 14 px and weight 500 to 600, the second line about 11 px, regular or lighter; 3 px from the box, the plate's padding outside the box's edge so the text is on it", () => {
     expect(LABEL_TYPE.name.size).toBe(14);
     expect(LABEL_TYPE.name.weight).toBeGreaterThanOrEqual(500);
     expect(LABEL_TYPE.name.weight).toBeLessThanOrEqual(600);
@@ -43,7 +43,9 @@ describe("label size (CSS px, measured once per string)", () => {
     expect(LABEL_TYPE.sub.weight).toBeLessThanOrEqual(400);
     expect(LABEL_TYPE.sub.size).toBeLessThan(LABEL_TYPE.name.size);
     expect(LABEL_TYPE.boxGap).toBe(3);
-    expect(LABEL_TYPE.bleed).toBe(0);
+    // the text is flush with the box's edge: the plate's padding hangs outside it by exactly that padding (and a plate beside its box, its top padding)
+    expect(LABEL_TYPE.bleed).toBe(LABEL_TYPE.padX);
+    expect(LABEL_TYPE.bleedY).toBe(LABEL_TYPE.padY);
     expect(LABEL_TYPE.padX).toBeGreaterThanOrEqual(5);
     // the feather of the translucent plate is 1 to 2 px: no halo that dims the map around the text
     expect(LABEL_TYPE.feather.blur).toBeGreaterThanOrEqual(1);

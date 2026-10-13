@@ -77,8 +77,19 @@ export type NodeKind = "place" | GroupKind;
 export const LOD = {
   /** The half side of a place's box is its view radius over this: the framed place's box then fits the free area with the framing's 25 % margin. */
   halfSideDivisor: 1.25,
-  /** A box is at least this many art cells across (9 cells = 22 CSS px at 2.5 px): far away places are small rectangles, not dots. */
+  /**
+   * The room a box reserves for the CUT: at least this many art cells across (9 cells = 22 CSS px at 2.5 px): far away places are small
+   * rectangles, not dots, and the cut (which boxes and labels fit, which groups open) keeps its room from this footprint. It is not what is
+   * drawn: the rectangle that is drawn, labelled and picked is `drawX0..drawY1`, whose floor is `floorCells`.
+   */
   minBoxCells: 9,
+  /**
+   * The smallest a box is DRAWN (2026-10-13, owner: "the min height and width could be smaller", it was `minBoxCells`): 5 cells = 12.5 CSS px at
+   * 2.5 px, 10 px on a phone. A box at this size is a closed rectangle with its interior masked, and it opens into corner arms and dashes as its
+   * true size grows (engine/pixel-labels.ts `boxOpenness`: from `floorCells` to twice it). The drawn rectangle is concentric with, and inside,
+   * the footprint, so the cut's decisions (which are made on footprints) do not depend on it. Its pointer target is at least `HIT.minBoxPx`.
+   */
+  floorCells: 5,
   /** The mask of a box at the minimum size: its TRUE side as a multiple of the minimum goes from `fillFadeFrom` (masked) to `fillFadeTo` (hollow); the switch has the hysteresis `fillHyst`. */
   fillFadeFrom: 1,
   fillFadeTo: 1.6,
@@ -305,6 +316,14 @@ export class LodTree {
   readonly boxY0: Float64Array;
   readonly boxX1: Float64Array;
   readonly boxY1: Float64Array;
+  /**
+   * The rectangle that is DRAWN (and labelled and picked), the same space and the same centre as `box*`: its floor is `LOD.floorCells` where the
+   * footprint's is `LOD.minBoxCells`, so it is the footprint or inside it. `box*` is the room the cut keeps.
+   */
+  readonly drawX0: Float64Array;
+  readonly drawY0: Float64Array;
+  readonly drawX1: Float64Array;
+  readonly drawY1: Float64Array;
   /** The true boxes of the places (no minimum) and their unions per group, before clamping. */
   private readonly trueX0: Float64Array;
   private readonly trueY0: Float64Array;
@@ -514,6 +533,10 @@ export class LodTree {
     this.boxY0 = new Float64Array(n);
     this.boxX1 = new Float64Array(n);
     this.boxY1 = new Float64Array(n);
+    this.drawX0 = new Float64Array(n);
+    this.drawY0 = new Float64Array(n);
+    this.drawX1 = new Float64Array(n);
+    this.drawY1 = new Float64Array(n);
     this.trueX0 = new Float64Array(n);
     this.trueY0 = new Float64Array(n);
     this.trueX1 = new Float64Array(n);
@@ -740,6 +763,7 @@ export class LodTree {
   private evaluate(cam: LodCamera, forced0: number, forced1: number) {
     const cell = cam.cell;
     const minHalf = (LOD.minBoxCells * cell) / 2;
+    const floorHalf = (LOD.floorCells * cell) / 2;
     const pad = LOD.padCells * cell;
     const basis = viewBasis({ lon: cam.lon, lat: cam.lat, zoom: cam.zoom }, cam.height);
     const c = basis.c;
@@ -751,6 +775,10 @@ export class LodTree {
     const y0 = this.boxY0;
     const x1 = this.boxX1;
     const y1 = this.boxY1;
+    const dx0 = this.drawX0;
+    const dy0 = this.drawY0;
+    const dx1 = this.drawX1;
+    const dy1 = this.drawY1;
 
     // 1. project every place and give it its rectangle; a group's rectangle is the union of the TRUE boxes of its visible places
     // (then clamped to the minimum like any rectangle, and padded)
@@ -789,6 +817,13 @@ export class LodTree {
       x1[p] = out.x + hx;
       y0[p] = out.y - hy;
       y1[p] = out.y + hy;
+      // ... and the rectangle that is drawn has the lower floor, about the same centre
+      const fx = trueX < floorHalf ? floorHalf : trueX;
+      const fy = trueY < floorHalf ? floorHalf : trueY;
+      dx0[p] = out.x - fx;
+      dx1[p] = out.x + fx;
+      dy0[p] = out.y - fy;
+      dy1[p] = out.y + fy;
       if (!shown) continue;
       projected++;
       for (let a = this.parent[p]!; a >= 0; a = this.parent[a]!) {
@@ -814,6 +849,12 @@ export class LodTree {
       x1[g] = cx + hx;
       y0[g] = cy - hy;
       y1[g] = cy + hy;
+      const fx = (w < 2 * floorHalf ? floorHalf : w / 2) + pad;
+      const fy = (h < 2 * floorHalf ? floorHalf : h / 2) + pad;
+      dx0[g] = cx - fx;
+      dx1[g] = cx + fx;
+      dy0[g] = cy - fy;
+      dy1[g] = cy + fy;
     }
 
     // 2. top down: which nodes the cut wants drawn (`cut`), then the selected, the focused place and the stops of the shown routes, which are
@@ -1345,14 +1386,14 @@ export class LodTree {
       return true;
     }
     this.plateX = cand === 0 || cand === 2 ? this.boxX0[c]! - bleed : cand === 1 || cand === 3 ? this.boxX1[c]! - w + bleed : cand === 4 ? this.boxX1[c]! + g : this.boxX0[c]! - w - g;
-    this.plateY = cand < 2 ? this.boxY0[c]! - h - g : cand < 4 ? this.boxY1[c]! + g : this.boxY0[c]!;
+    this.plateY = cand < 2 ? this.boxY0[c]! - h - g : cand < 4 ? this.boxY1[c]! + g : this.boxY0[c]! - LABEL_TYPE.bleedY;
     return true;
   }
 
   /** Node `i` is wanted drawn, with the interior mask the switch (with its hysteresis) says. */
   private mark(i: number, cam: LodCamera) {
     this.want[i] = 1;
-    const minSide = LOD.minBoxCells * cam.cell;
+    const minSide = LOD.floorCells * cam.cell; // (the box drawn at its floor is the one that is masked)
     const f = 1 - smooth((this.side[i]! / minSide - LOD.fillFadeFrom) / (LOD.fillFadeTo - LOD.fillFadeFrom));
     const on = this.fillOn[i]! ? f > LOD.fillHyst.off : f > LOD.fillHyst.on;
     this.fillOn[i] = on ? 1 : 0;

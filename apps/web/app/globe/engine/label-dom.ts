@@ -39,6 +39,13 @@ export interface LabelView {
   over: boolean;
   /** The node's own opacity (its timed fade), 0..1. */
   alpha: number;
+  /**
+   * How far the plate moves when the label is selected (px; engine/pixel-labels.ts `selectedShift`): the plate at rest hangs outside its box so the
+   * text is flush with the box's edge, the selected card is flush with the box. Written as the CSS custom properties the stylesheet's `translate`
+   * of a selected label reads (a compositor transition, no layout); written whenever the slot changes, whatever the mode is.
+   */
+  dx: number;
+  dy: number;
 }
 
 interface Slot {
@@ -55,6 +62,8 @@ interface Slot {
   mode: LabelMode | "";
   over: boolean;
   alpha: number;
+  dx: number;
+  dy: number;
   used: boolean;
   shown: boolean;
   slug: string;
@@ -106,6 +115,7 @@ export class LabelLayer {
       s.mode = "";
       s.over = false;
       s.alpha = NaN;
+      s.dx = s.dy = NaN;
     }
     s.used = true;
     if (!s.shown) {
@@ -139,6 +149,13 @@ export class LabelLayer {
     if (v.alpha !== s.alpha) {
       s.el.style.opacity = v.alpha === 1 ? "" : String(v.alpha);
       s.alpha = v.alpha;
+      this.writes++;
+    }
+    if (v.dx !== s.dx || v.dy !== s.dy) {
+      s.el.style.setProperty("--map-label-dx", `${v.dx}px`);
+      s.el.style.setProperty("--map-label-dy", `${v.dy}px`);
+      s.dx = v.dx;
+      s.dy = v.dy;
       this.writes++;
     }
     if (v.w !== s.w || v.h !== s.h) {
@@ -198,7 +215,7 @@ export class LabelLayer {
     Object.assign(subEl.style, { display: "none", fontSize: `${t.sub.size}px`, fontWeight: String(t.sub.weight), letterSpacing: `${t.sub.tracking}em`, lineHeight: `${t.sub.lineHeight}px` } satisfies Partial<CSSStyleDeclaration>);
     el.append(nameEl, subEl);
     this.root.append(el);
-    return { el, nameEl, subEl, x: NaN, y: NaN, w: NaN, h: NaN, name: "", sub: null, mode: "", over: false, alpha: NaN, used: false, shown: false, slug: "" };
+    return { el, nameEl, subEl, x: NaN, y: NaN, w: NaN, h: NaN, name: "", sub: null, mode: "", over: false, alpha: NaN, dx: NaN, dy: NaN, used: false, shown: false, slug: "" };
   }
 
   /** Number of labels shown. */

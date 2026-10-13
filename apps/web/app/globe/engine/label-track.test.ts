@@ -350,7 +350,7 @@ describe("a plate follows its box smoothly: exactly as far as the box moved, to 
       const it = box(1, 100.3, 100.7, { variants: [{ w: 90, h }] });
       const p = t.step(0, [it], VIEW, SMOOTH)[0]!;
       expect(it.rect.r0 - (p.y + p.h)).toBeCloseTo(SMOOTH.gap, 9);
-      expect(p.x).toBeCloseTo(it.rect.c0, 9);
+      expect(p.x).toBeCloseTo(it.rect.c0 - BLEED, 9);
       t.mem.set[1] = 0;
     }
   });
@@ -785,7 +785,7 @@ describe("a node that is fading out", () => {
     expect(slotPosition(t.mem, 9, { c0: 200, r0: 220, c1: 250, r1: 260 }, FULL, VIEW, { ...PX_UNITS, inset: INSET })).toEqual({ x: 200, y: 220 - FULL.h });
     // with the smooth units the slot's place is exact: one gap above the projected edge
     const q = slotPosition(t.mem, 1, { c0: 200.3, r0: 220.6, c1: 250.3, r1: 260.6 }, FULL, VIEW, SMOOTH);
-    expect(q.x).toBeCloseTo(200.3, 9);
+    expect(q.x).toBeCloseTo(200.3 - BLEED, 9);
     expect(220.6 - (q.y + FULL.h)).toBeCloseTo(SMOOTH.gap, 9);
   });
 });
@@ -837,7 +837,7 @@ interface Sweep {
 }
 
 /** The every-frame plan with the distances the pixel version had: 1 cell of clearance, 2 cells of margin before a better slot is taken, on 2.5 px cells. */
-const OLD_UNITS = { clearance: 2.5, upgradeMargin: 5, shiftStep: 5, inset: 2.5, quant: 2.5, gap: 0, bleed: 0, keepSlack: 0 };
+const OLD_UNITS = { clearance: 2.5, upgradeMargin: 5, shiftStep: 5, inset: 2.5, quant: 2.5, gap: 0, bleed: 0, bleedY: 0, keepSlack: 0 };
 
 interface Seen {
   cand: number;

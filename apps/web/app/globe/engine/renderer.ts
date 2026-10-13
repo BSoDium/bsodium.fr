@@ -660,16 +660,16 @@ export class GlobeRenderer {
     let boxes = 0;
     for (let k = 0; k < lod.count; k++) {
       const i = lod.visible[k]!;
-      const r = snapBox(lod.boxX0[i]!, lod.boxY0[i]!, lod.boxX1[i]!, lod.boxY1[i]!, P);
+      const r = snapBox(lod.drawX0[i]!, lod.drawY0[i]!, lod.drawX1[i]!, lod.drawY1[i]!, P);
       screen.bx0[i] = r.c0 * P + this.canvasLeft;
       screen.by0[i] = r.r0 * P + this.canvasTop;
       screen.bx1[i] = r.c1 * P + this.canvasLeft;
       screen.by1[i] = r.r1 * P + this.canvasTop;
       // the box as projected, for the labels (they move smoothly; the drawn box steps by cells)
-      screen.fx0[i] = lod.boxX0[i]! + this.canvasLeft;
-      screen.fy0[i] = lod.boxY0[i]! + this.canvasTop;
-      screen.fx1[i] = lod.boxX1[i]! + this.canvasLeft;
-      screen.fy1[i] = lod.boxY1[i]! + this.canvasTop;
+      screen.fx0[i] = lod.drawX0[i]! + this.canvasLeft;
+      screen.fy0[i] = lod.drawY0[i]! + this.canvasTop;
+      screen.fx1[i] = lod.drawX1[i]! + this.canvasLeft;
+      screen.fy1[i] = lod.drawY1[i]! + this.canvasTop;
       screen.x[i] = (screen.bx0[i]! + screen.bx1[i]!) / 2;
       screen.y[i] = (screen.by0[i]! + screen.by1[i]!) / 2;
       // Drawn = the node's places passed the visibility rule and its rectangle touches the buffer.
