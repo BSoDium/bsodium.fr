@@ -12,11 +12,13 @@
  *     passed since the last plan, so at most 10 plans a second while the camera moves, and once more after it stopped (a timer: an idle map
  *     draws no frames, `dueAt`). A plan is sticky (the planner keeps a choice that is still free and gives it up for a better one only when that
  *     one is free with `upgradeMargin` px of room), so slots change rarely, but they change WHEN they have to, in the middle of the motion, not
- *     in a lump after it. At the edges of the screen the plate slides along its box (or stays at the screen's edge, over the box) instead of
+ *     in a lump after it. While the globe turns on its own (`setDrifting`: 0.02 px a frame) the rectangles change in every frame but only
+ *     slightly: a plan is then owed only once a rectangle has moved `keepSlack / 2` px since the last plan (about once a second instead of
+ *     ten times), or when the set of labels or the room changed. At the edges of the screen the plate slides along its box (or stays at the screen's edge, over the box) instead of
  *     changing slot (`slide`).
  *  3. A slot change never moves the plate at once. The plate is drawn at `target + glide`: the target is the slot's place around the box NOW,
- *     the glide a remainder (in px, relative to the box) that runs to zero in `TRACK.glideMs` (about 200 ms) on a continuous ease-out curve,
- *     a function of time only (the same path at any frame rate). Plates and boxes move continuously: the host gives the PROJECTED rectangle
+ *     the glide a remainder (in px, relative to the box) that runs to zero in `TRACK.glideMs` (about 200 ms) on a continuous smoothstep curve
+ *     (ease-in-out), a function of time only (the same path at any frame rate). Plates and boxes move continuously: the host gives the PROJECTED rectangle
  *     of a box (not the one snapped to art cells), so while a slot is kept the plate follows its box exactly, to the sub-pixel, and with the
  *     earth spinning the labels glide instead of stepping by a cell (2026-10-13; on 2026-10-12 they moved in whole-cell steps and the owner
  *     took that back). A re-plan that changes a slot sets the glide to "where the plate was minus the new target", so the plate stays where
@@ -42,7 +44,7 @@ import { HASH_SEED, hashStep, spotAt, type CellRect, type GridSize } from "./pix
 export const TRACK = {
   /** Least time between two plans while the rectangles change (ms); the plan owed after the last change runs this long after the previous one. */
   replanMs: 100,
-  /** How long a glide takes, from the frame the slot changed (ms): the plate has arrived exactly `glideMs` later, on an ease-out curve. */
+  /** How long a glide takes, from the frame the slot changed (ms): the plate has arrived exactly `glideMs` later, on a smoothstep (ease-in-out) curve. */
   glideMs: 200,
   /** 0: the glide is continuous. More: a staircase that changes at most once per this many ms (with a lattice, whole cells): the 2026-10-12 version had 36, taken back on 2026-10-13. */
   stepMs: 0,
@@ -55,6 +57,25 @@ export const TRACK = {
   /** A label that was drawn this recently (ms) as a node fading out (`follow`) and is wanted again glides from where it was: a frame or two, a hitch included. */
   shownMs: 100,
 } as const;
+
+/**
+ * When a rectangle counts as moving (the host draws labels at their exact sub-pixel positions while it does, and rounded to device pixels once nothing
+ * moves): a SPEED, not a distance per frame, so the answer is the same at 30, 60 and 144 fps and on any screen. The idle rotation (0.2 degrees a second)
+ * moves a box on a phone about 0.5 px a second, 0.008 px a frame: it must stay on the sub-pixel path, while a float that wobbles in its last digits (a
+ * thousandth of a px at most) or a camera that stopped is far under the speed.
+ */
+export const MOTION = {
+  /** Least speed of a rectangle's edge that is motion (px/s). */
+  pxPerSec: 0.05,
+  /** The interval a speed is measured over is held within these (ms): two runs in the same instant must not turn a rounding error into a speed, and a long pause must not hide a jump. */
+  minDtMs: 4,
+  maxDtMs: 100,
+} as const;
+
+/** The distance (px) an edge may have moved in `dtMs` and still not be moving (`MOTION`). */
+export function motionLimitPx(dtMs: number): number {
+  return (MOTION.pxPerSec * Math.min(MOTION.maxDtMs, Math.max(MOTION.minDtMs, dtMs))) / 1000;
+}
 
 export type TrackOptions = { [K in keyof typeof TRACK]: number };
 
@@ -172,7 +193,15 @@ export class LabelTracker {
   private sig = NaN;
   private lastFull = -Infinity;
   private owed = false;
+  /** The plan that is owed is owed only because the set of labels changed (a drifting globe): it is cancelled when the set is the planned one again and nothing moved. */
+  private owedBySet = false;
   private lastChange = -Infinity;
+  /** Where every rectangle was (c0, r0, c1, r1 per node id; NaN: none) when it was last planned, and the identity of the set of labels and room then: what a drift is measured from. */
+  private anchor: Float64Array;
+  private planSet = NaN;
+  /** The identity of the set of labels at the previous step, and when it last changed (a drifting globe only plans a changed set after `replanMs` of it staying changed). */
+  private prevSet = NaN;
+  private setAt = -Infinity;
   /** The art cell of the lattice of the step in progress (CSS px; 0: none), set by `step` and `follow`. */
   private cell = 0;
   private snapOnce = false;
@@ -194,12 +223,15 @@ export class LabelTracker {
     readonly mem: SlotMemory,
     private units: PlanUnits,
     private opts: TrackOptions = TRACK,
-  ) {}
+  ) {
+    this.anchor = new Float64Array(mem.set.length * 4).fill(NaN);
+  }
 
   /** When the re-plan that is owed is due (ms on the clock of `step`), or null when none is. The host arms a timer for it: an idle map draws no frames. */
   get dueAt(): number | null {
     if (!this.owed) return null;
-    const due = this.lastFull + this.opts.replanMs;
+    let due = this.lastFull + this.opts.replanMs;
+    if (this.drifting) due = Math.max(due, this.setAt + this.opts.replanMs);
     return this.instant ? Math.max(due, this.lastChange + this.opts.restMs) : due;
   }
 
@@ -212,22 +244,53 @@ export class LabelTracker {
   setDrifting(on: boolean): void {
     if (on === this.drifting) return;
     this.drifting = on;
-    if (!on) this.owed = true;
+    if (!on) this.owe();
   }
 
   /** Run the owed plan at the next step whatever the time, and end every glide (checks, and a host that knows the camera is at rest and wants the final picture). */
   settleNow(): void {
     this.lastFull = -Infinity;
     this.lastChange = -Infinity;
-    this.owed = true;
+    this.owe();
     this.snapOnce = true;
+  }
+
+  /** A plan is owed (for a reason that nothing cancels). */
+  private owe(): void {
+    this.owed = true;
+    this.owedBySet = false;
   }
 
   /** Forget that a plan is owed (the host is parked, or the tree changed under it). */
   reset(): void {
     this.sig = NaN;
     this.owed = false;
+    this.owedBySet = false;
     this.count = 0;
+    this.planSet = NaN;
+    this.prevSet = NaN;
+    this.anchor.fill(NaN);
+  }
+
+  /** Has any rectangle of `items` moved (or resized) by `limit` px or more since it was planned? A node that was never planned has. */
+  private drifted(items: readonly TrackItem[], limit: number): boolean {
+    const a = this.anchor;
+    for (const it of items) {
+      const o = it.id * 4;
+      const r = it.rect;
+      if (!(Math.abs(r.c0 - a[o]!) < limit && Math.abs(r.r0 - a[o + 1]!) < limit && Math.abs(r.c1 - a[o + 2]!) < limit && Math.abs(r.r1 - a[o + 3]!) < limit)) return true;
+    }
+    return false;
+  }
+
+  /** Remember where the rectangle of `it` was when it was planned. */
+  private anchorAt(it: TrackItem): void {
+    const o = it.id * 4;
+    const a = this.anchor;
+    a[o] = it.rect.c0;
+    a[o + 1] = it.rect.r0;
+    a[o + 2] = it.rect.c1;
+    a[o + 3] = it.rect.r1;
   }
 
   /**
@@ -279,23 +342,48 @@ export class LabelTracker {
     this.snap = this.snapOnce;
     this.snapOnce = false;
     // Did the rectangles change? (rounded: a float that wobbles in its last digits is not motion)
-    let h = hashStep(hashStep(HASH_SEED, grid.cols * 4096 + grid.rows), items.length);
+    // (`set`: which labels, in which room, without where they are: what a plan owed by a drift must not have changed)
+    let set = hashStep(hashStep(HASH_SEED, grid.cols * 4096 + grid.rows), items.length);
+    let h = set;
     for (const it of items) {
+      set = hashStep(set, it.id);
       h = hashStep(hashStep(h, it.id), Math.round(it.rect.c0 * 4) * 8192 + Math.round(it.rect.r0 * 4));
       h = hashStep(h, Math.round(it.rect.c1 * 4) * 8192 + Math.round(it.rect.r1 * 4));
     }
     const changed = h !== this.sig;
     this.sig = h;
+    if (set !== this.prevSet) {
+      if (this.prevSet === this.prevSet) this.setAt = t; // (not the first step, or the first after a reset)
+      this.prevSet = set;
+    }
     if (changed) {
       this.lastChange = t;
-      this.owed = true;
+      // A globe that turns on its own moves every rectangle a little in every frame: a plan is owed when one has moved far enough to matter to a
+      // kept slot (`keepSlack`, half of it) since the last plan, not for every quantum of motion. Everything else owes it at once.
+      const far = !this.drifting || this.drifted(items, units.keepSlack / 2);
+      if (!this.owed) {
+        if (far) this.owe();
+        else if (set !== this.planSet) {
+          this.owe();
+          this.owedBySet = true;
+        }
+      } else if (this.owedBySet && set === this.planSet && !far) {
+        this.owed = false; // the node that was away is back and nothing moved: the plan it owed has nothing to do
+        this.owedBySet = false;
+      }
     }
     const moving = this.drifting || t - this.lastChange < this.opts.restMs;
     // reduced motion has no glide, so a plan that moves a label is a hop: it runs only when the camera has stopped (as the labels did before they had a glide)
-    const full = this.owed && t - this.lastFull >= this.opts.replanMs && !(this.instant && moving);
+    // A turning globe plans a changed set of labels (a node comes or goes: the limb, a group opening) only after it has stayed changed for `replanMs`: a
+    // node that is away for a few frames (its group opens and closes again) must not send every label elsewhere and back (the node that comes is
+    // labelled at once in the gaps, as ever; the others keep their slots meanwhile).
+    const settled = !this.drifting || t - this.setAt >= this.opts.replanMs;
+    const full = this.owed && t - this.lastFull >= this.opts.replanMs && settled && !(this.instant && moving);
     if (full) {
       this.owed = false;
+      this.owedBySet = false;
       this.lastFull = t;
+      this.planSet = set;
     }
 
     // Slots that stay: remembered, still possible. Everything else is planned.
@@ -368,9 +456,11 @@ export class LabelTracker {
         out[n] = { variant: p.variant, cand: p.cand, x: d.x, y: d.y, w: p.w, h: p.h, gx: d.gx, gy: d.gy, inside: p.inside, overlap: p.overlap, moved: changedSlot, fresh };
       });
     }
-    if (held) this.owed = true;
+    if (full) for (const it of items) this.anchorAt(it);
+    else for (const n of plan) this.anchorAt(items[n]!);
+    if (held) this.owe();
     // a plan that ran while the camera was still moving (and kept slots from before) is followed by one at rest (the dwell is over, the upgrade margin is 0): every label ends on its best place
-    if (full && moving && !this.drifting && before.some((b) => b !== null)) this.owed = true;
+    if (full && moving && !this.drifting && before.some((b) => b !== null)) this.owe();
     this.info = { changed, full, partial: full ? 0 : plan.length };
     return out;
   }

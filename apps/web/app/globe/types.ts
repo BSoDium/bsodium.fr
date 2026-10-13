@@ -181,6 +181,12 @@ export interface GlobeProps {
    * (the app must pass one wherever the maps are shown, they carry licence-required credits).
    */
   attribution?: ComponentType<GlobeAttributionProps>;
+  /**
+   * The words of the ring of type that circles the planet when it is zoomed out (engine/ring.ts), supplied by the app because they are the
+   * site's identity (`ringPhrases` in ring-text.ts builds them from it): capitals, the separator and the closing dot are the engine's.
+   * Read once, when the globe is created. Optional: omitted or empty = no ring.
+   */
+  ringPhrases?: readonly string[];
   onSelect(slug: string): void;
   onViewChange(view: GlobeViewState): void;
   /**

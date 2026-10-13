@@ -120,7 +120,7 @@ export interface GlobeDebug {
   /** Ids of the routes drawn now (only the ones through the selected place). */
   routesShown(): string[];
   /** Hierarchy in tree order: slug, kind, parent slug (or null), radius km. */
-  tree(): { slug: string; kind: string; parent: string | null; radiusKm: number }[];
+  tree(): { slug: string; kind: string; parent: string | null; radiusKm: number; lon: number; lat: number }[];
   /** Measurement: cost in ms of `n` forced semantic-zoom evaluations at the current camera (the pure O(visible) pass, no drawing). */
   benchLod(n: number): { msPerEval: number; visited: number; nodes: number };
 }
@@ -189,7 +189,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       opts.labelsRoot.style.setProperty("-webkit-mask-image", mask ?? "");
     }
     if (labelsActive) {
-      labels.setDrifting(renderer.spinInfo().spinning);
+      labels.setDrifting(renderer.spinning);
       labels.update(renderer.nodeScreen, renderer.pixelGrid());
     }
     const next = toViewState(v, renderer.getFitZoom(), TUNING.maxZoom);
@@ -368,7 +368,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         };
       },
       routesShown: () => renderer.routesShown(),
-      tree: () => Array.from({ length: lod.size }, (_, i) => ({ slug: lod.slug[i]!, kind: lod.kind[i]!, parent: lod.parent[i]! >= 0 ? lod.slug[lod.parent[i]!]! : null, radiusKm: lod.radiusKm[i]! })),
+      tree: () => Array.from({ length: lod.size }, (_, i) => ({ slug: lod.slug[i]!, kind: lod.kind[i]!, parent: lod.parent[i]! >= 0 ? lod.slug[lod.parent[i]!]! : null, radiusKm: lod.radiusKm[i]!, lon: lod.lon[i]!, lat: lod.lat[i]! })),
       benchLod(n) {
         const cam = renderer.lodCameraNow();
         const t0 = performance.now();

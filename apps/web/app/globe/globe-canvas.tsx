@@ -17,7 +17,6 @@ import { applyDebugLevels } from "./engine/palette";
 import { applySpinFlags } from "./engine/idle-spin";
 import { applySkyFlags } from "./engine/sky";
 import { applyRingFlags, ringText } from "./engine/ring";
-import { RING_PHRASES } from "./ring-text";
 import { applyDebugArtPixel } from "./engine/tuning";
 import { enablePerf, perfEnd, perfStart } from "./engine/perf";
 import { startsVeiled, type GlobeProps } from "./types";
@@ -96,9 +95,6 @@ function lodStressCount(): number {
   }
 }
 
-/** The line of the ring of type (engine/ring.ts): built once, from the site identity constant of `ring-text.ts`. */
-const RING_TEXT = ringText(RING_PHRASES);
-
 const isWebGLUnavailable = (e: unknown) => e instanceof Error && e.name === "WebGLUnavailableError";
 
 export default function GlobeCanvas({
@@ -112,6 +108,7 @@ export default function GlobeCanvas({
   insetRight,
   tiles,
   attribution: Attribution,
+  ringPhrases,
   onSelect,
   onViewChange,
   onInteract,
@@ -135,9 +132,9 @@ export default function GlobeCanvas({
   const tilesKey = tiles && !(debugEnabled() && streetDisabledForTests()) ? JSON.stringify(tiles) : "";
   const viewRef = useRef(initialView);
   const appliedSelection = useRef(selectedSlug);
-  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, onSelect, onViewChange, onInteract });
+  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, onSelect, onViewChange, onInteract });
   useEffect(() => {
-    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, onSelect, onViewChange, onInteract };
+    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, onSelect, onViewChange, onInteract };
   });
 
   // `onInteract`: a gesture that starts ON the globe (its stage holds the canvas; the labels and the street map ignore the pointer, the
@@ -194,7 +191,7 @@ export default function GlobeCanvas({
           reducedMotion: now.reducedMotion,
           insetRight: now.insetRight,
           tiles: tilesKey ? JSON.parse(tilesKey) : null,
-          ringText: RING_TEXT,
+          ringText: ringText(now.ringPhrases ?? []), // the line of the ring of type, from the identity the app hands in (the words, capitals and closing seam are the engine's)
           onNotice: setNotice,
           onSelect: (slug) => latest.current.onSelect(slug),
           onViewChange: (view) => {

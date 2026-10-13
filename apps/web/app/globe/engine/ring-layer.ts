@@ -39,6 +39,9 @@ export interface RingState {
   level: number;
   alpha: number;
   repeats: number;
+  /** Characters of the line (spaces included: the glyph slots of one turn) and the ones that are drawn (not spaces), for checks. */
+  length: number;
+  letters: number;
   /** Tracking the layout picked so that the line closes, em. */
   tracking: number;
   glyphs: number;
@@ -182,6 +185,8 @@ export class RingLayer {
       level: f ? ringTone(f.alpha, this.theme.ramp.length) : 0,
       alpha: f?.alpha ?? 0,
       repeats: this.layout.repeats,
+      length: this.text.length,
+      letters: this.text.replace(/ /g, "").length,
       tracking: this.layout.tracking,
       glyphs: this.glyphs.count,
       em: this.glyphs.em,

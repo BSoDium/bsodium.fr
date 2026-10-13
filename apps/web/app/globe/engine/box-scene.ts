@@ -43,7 +43,7 @@ import { isBigBox, pickAlpha, pickNode, type PointerKind, type Target } from "./
 import { FrameDriver } from "./frame-driver";
 import { LabelLayer, type LabelMode } from "./label-dom";
 import { PX_UNITS, boxesToAvoid, smoothUnits } from "./label-plan";
-import { LabelTracker, SlotMemory, type Placed, type TrackItem } from "./label-track";
+import { LabelTracker, SlotMemory, motionLimitPx, type Placed, type TrackItem } from "./label-track";
 import { subText } from "./label-sub";
 import { labelVariants, type LabelText } from "./label-text";
 import { LOD, type LodTree } from "./lod-tree";
@@ -53,6 +53,9 @@ import { ALPHA_STEPS, HASH_SEED, PixelOverlay, SPOT, drawBox, hashStep, labelTon
 
 /** Room kept between a label and the boxes of the other nodes, px (the early opening keeps `LOD.open.gapPx.leave` from every box and label: the same). */
 const AVOID_PAD = LOD.open.gapPx.leave;
+
+/** How long nothing may have moved before the labels are rounded to device pixels (ms). */
+const SETTLE_MS = 150;
 
 /** The planner's candidates (`SPOT`) for the positions the cut of the hierarchy reserves a label at (`LodTree.plateSlot`). */
 const CUT_SPOT: readonly number[] = [SPOT.aboveLeft, SPOT.aboveRight, SPOT.belowLeft, SPOT.belowRight, SPOT.right, SPOT.left, SPOT.insideTopLeft];
@@ -134,6 +137,10 @@ export class BoxScene {
   private moving = false;
   private prevCont: Float64Array;
   private settleTimer = 0;
+  /** Clock (ms) of the last frame that moved something: the one settle timer is re-armed only when it fires before `SETTLE_MS` have passed since. */
+  private lastMoveAt = 0;
+  /** Clock (ms) of the last run, the interval the speed of the rectangles is measured over. */
+  private lastRunAt = NaN;
   // per node, computed on first use
   private variantsOf: (readonly LabelText[] | undefined)[];
   private vkeyOf: Int32Array;
@@ -365,6 +372,7 @@ export class BoxScene {
     window.clearTimeout(this.timer);
     window.clearTimeout(this.settleTimer);
     this.timer = 0;
+    this.settleTimer = 0;
     this.tracker.reset();
   }
 
@@ -454,15 +462,18 @@ export class BoxScene {
       t.place = { x: p.x, y: p.y, gx: p.gx, gy: p.gy, variant: v, cand: mem.set[t.i] ? mem.cand[t.i]! : 0, inside: false, overlap: false, moved: false, fresh: false };
     });
     this.last = items;
-    // moving: a rectangle moved by more than a hundredth of a px since the last frame, or a plate is still gliding. A frame that moved nothing
+    // moving: a rectangle moves faster than `MOTION.pxPerSec` (a speed over the interval since the last run: the same at any frame rate and
+    // on any screen, so the idle rotation on a phone, 0.5 px/s, is still motion), or a plate is still gliding. A frame that moved nothing
     // (and no glide) is the label layer's resting picture: positions rounded to device pixels. The camera may stop without another frame
     // after the last moving one, so a timer asks for the resting picture.
     let moved = this.tracker.gliding > 0;
     const pc = this.prevCont;
+    const lim = motionLimitPx(now - this.lastRunAt); // (NaN on the first run: every rectangle is new, NaN, and counts as moved)
+    this.lastRunAt = now;
     for (const t of items) {
       const o = t.i * 4;
       const c = t.cont;
-      if (!(Math.abs(c.c0 - pc[o]!) < 0.01 && Math.abs(c.r0 - pc[o + 1]!) < 0.01 && Math.abs(c.c1 - pc[o + 2]!) < 0.01 && Math.abs(c.r1 - pc[o + 3]!) < 0.01)) moved = true;
+      if (!(Math.abs(c.c0 - pc[o]!) < lim && Math.abs(c.r0 - pc[o + 1]!) < lim && Math.abs(c.c1 - pc[o + 2]!) < lim && Math.abs(c.r1 - pc[o + 3]!) < lim)) moved = true;
       pc[o] = c.c0;
       pc[o + 1] = c.r0;
       pc[o + 2] = c.c1;
@@ -470,7 +481,7 @@ export class BoxScene {
     }
     this.moving = moved;
     this.present();
-    if (moved) this.armSettle();
+    if (moved) this.armSettle(now);
     this.arm();
     this.driver.ride();
   }
@@ -528,17 +539,28 @@ export class BoxScene {
     this.targets = targets;
   }
 
-  /** Ask for the resting picture (labels rounded to whole device pixels) once nothing has moved for a moment. */
-  private armSettle() {
-    window.clearTimeout(this.settleTimer);
-    this.settleTimer = window.setTimeout(() => {
-      this.settleTimer = 0;
-      if (this.parked || this.disposed || !this.moving) return;
-      if (this.tracker.gliding > 0) return this.armSettle();
-      this.moving = false;
-      this.represent();
-    }, 150);
+  /**
+   * Ask for the resting picture (labels rounded to whole device pixels) once nothing has moved for `SETTLE_MS`. Called in every frame that moved
+   * something: it only notes the time, and a timer is set when none is pending (one `setTimeout` per settle, not a `clearTimeout` and a
+   * `setTimeout` per frame); a timer that fires early (something moved since it was set) sets itself again for the rest of the interval.
+   */
+  private armSettle(now: number) {
+    this.lastMoveAt = now;
+    if (!this.settleTimer) this.settleTimer = window.setTimeout(this.settleFire, SETTLE_MS);
   }
+
+  private settleFire = () => {
+    this.settleTimer = 0;
+    if (this.parked || this.disposed || !this.moving) return;
+    const wait = this.lastMoveAt + SETTLE_MS - performance.now();
+    if (wait > 1) {
+      this.settleTimer = window.setTimeout(this.settleFire, wait);
+      return;
+    }
+    if (this.tracker.gliding > 0) return this.armSettle(performance.now());
+    this.moving = false;
+    this.represent();
+  };
 
   /** Arm the timer of the re-plan that is owed (the last one after the camera stopped, or a young slot waiting out its dwell): an idle map draws no frames, so nothing else would run it. */
   private arm() {
@@ -572,6 +594,7 @@ export class BoxScene {
     this.driver.stop();
     window.clearTimeout(this.timer);
     window.clearTimeout(this.settleTimer);
+    this.settleTimer = 0;
     this.ro?.disconnect();
     this.layer.dispose();
     this.overlay.dispose();

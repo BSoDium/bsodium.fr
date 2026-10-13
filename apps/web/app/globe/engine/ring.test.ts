@@ -2,10 +2,18 @@ import { describe, expect, it } from "vitest";
 import { DEG, fitZoom, silhouetteRadiusPx, silhouetteZoom } from "./geo";
 import { activeLevels, roleLevel } from "./palette";
 import { CAP_HEIGHT_EM, GlyphBuffer, placeGlyphs, ringAlpha, ringFloorZoom, ringLayout, ringPhase, ringText, ringTone } from "./ring";
+import { SPIN } from "./idle-spin";
 import { RING } from "./tuning";
-import { RING_PHRASES } from "../ring-text";
+import { RING_LINE_BUDGET, ringPhrases } from "../ring-text";
 
-const LINE = ringText(RING_PHRASES);
+/** The identity the app hands in (the shape of `SITE` in lib/site.ts: this folder imports nothing from the app). */
+const IDENTITY = {
+  name: "Elliot Négrel-Jerzy",
+  role: "Front-end and UX software engineer",
+  location: "Paris",
+  speciality: "Data visualisation, geospatial and cartography interfaces, design systems, computer graphics",
+};
+const LINE = ringText(ringPhrases(IDENTITY));
 
 describe("silhouette zoom", () => {
   it("is the inverse of the silhouette radius, and `fitZoom` is built on it", () => {
@@ -23,8 +31,30 @@ describe("the ring's text", () => {
     expect(ringText(["  ", ""])).toBe("");
   });
 
-  it("is the site identity, nothing else", () => {
-    expect(LINE).toBe("ELLIOT NÉGREL-JERZY · FRONT-END ENGINEER · DATA VISUALISATION · CARTOGRAPHY · DESIGN SYSTEMS · PARIS · ");
+  it("is the site identity, nothing else: the name, the role, the specialities that fit, the place", () => {
+    // all of them when the budget allows
+    expect(ringPhrases(IDENTITY, 1000)).toEqual([
+      "Elliot Négrel-Jerzy",
+      "Front-end and UX software engineer",
+      "Data visualisation",
+      "geospatial and cartography interfaces",
+      "design systems",
+      "computer graphics",
+      "Paris",
+    ]);
+    // by default the last specialities that would make the line longer than the ring closes well with are left off
+    expect(ringPhrases(IDENTITY)).toEqual(["Elliot Négrel-Jerzy", "Front-end and UX software engineer", "Data visualisation", "geospatial and cartography interfaces", "Paris"]);
+    expect(LINE).toBe("ELLIOT NÉGREL-JERZY · FRONT-END AND UX SOFTWARE ENGINEER · DATA VISUALISATION · GEOSPATIAL AND CARTOGRAPHY INTERFACES · PARIS · ");
+    expect(LINE.length).toBeLessThanOrEqual(RING_LINE_BUDGET);
+    // never the name, the role or the place
+    expect(ringPhrases(IDENTITY, 10)).toEqual(["Elliot Négrel-Jerzy", "Front-end and UX software engineer", "Paris"]);
+  });
+
+  it("leaves out what is blank, and a lone speciality is one phrase", () => {
+    expect(ringPhrases({ name: " Ada ", role: "", location: "Lyon", speciality: "maps,, ,graphs" })).toEqual(["Ada", "maps", "graphs", "Lyon"]);
+    expect(ringPhrases({ name: "Ada", role: "", location: "Lyon", speciality: "" })).toEqual(["Ada", "Lyon"]);
+    expect(ringPhrases({ name: "A", role: "B", location: "C", speciality: "one field" })).toEqual(["A", "B", "one field", "C"]);
+    expect(ringText(ringPhrases({ name: "", role: "", location: "", speciality: "" }))).toBe("");
   });
 });
 
@@ -48,10 +78,15 @@ describe("the layout: the line closes evenly round the ring", () => {
     for (const r of radii.filter((v) => v >= 100)) {
       const l = ringLayout(LINE.length, r);
       const em = l.emPerR * r;
-      expect(em).toBeGreaterThanOrEqual(RING.type.targetEmPx * (1 - RING.type.emSlack) - 1e-9);
       expect(em).toBeLessThanOrEqual(RING.type.targetEmPx * (1 + RING.type.emSlack) + 1e-9);
       expect(l.tracking).toBeGreaterThan(0.02 - 1e-9);
       expect(Math.abs(l.tracking - RING.type.tracking)).toBeLessThan(0.2);
+      // within the slack of the target, or, when the line is too long for the ring at that size (a phone: about 160 letters on a circle of 770 px),
+      // shrunk by what it takes to keep the tightest tracking: never more than a third below the target
+      if (em < RING.type.targetEmPx * (1 - RING.type.emSlack) - 1e-9) {
+        expect(l.tracking).toBeCloseTo(0.02, 9);
+        expect(em).toBeGreaterThan(RING.type.targetEmPx * (2 / 3));
+      }
     }
     // A ring too small for the line at the smallest em shrinks the type instead of overlapping it.
     const tiny = ringLayout(LINE.length, 30);
@@ -159,10 +194,17 @@ describe("placement of the glyphs on the flat circle", () => {
 });
 
 describe("the ring's clock", () => {
-  it("runs clockwise at RING.degPerSec, gentler than the globe's rotation", () => {
+  it("runs clockwise at RING.degPerSec, on its own clock: the globe's idle rotation (SPIN) does not change it", () => {
     expect((ringPhase(1000) - ringPhase(0)) / DEG).toBeCloseTo(RING.direction * RING.degPerSec, 9);
     expect(RING.direction).toBe(1);
-    expect(RING.degPerSec).toBeLessThan(4); // SPIN.degPerSec
+    expect(RING.degPerSec).toBeGreaterThan(0);
+    const was = SPIN.degPerSec;
+    try {
+      SPIN.degPerSec = was * 20;
+      expect((ringPhase(1000) - ringPhase(0)) / DEG).toBeCloseTo(RING.degPerSec, 9);
+    } finally {
+      SPIN.degPerSec = was;
+    }
   });
 });
 
