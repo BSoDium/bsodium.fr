@@ -26,18 +26,18 @@
   </g>
 
   <!-- A route between two places, and the places: square markers with a leader and a micro-label. -->
-  <path d="M812 400 Q 850 270 960 226" fill="none" stroke="#f26a2e" stroke-width="2.5" stroke-linecap="square"/>
+  <path d="M812 400 Q 850 270 960 226" fill="none" stroke="#0a93ff" stroke-width="2.5" stroke-linecap="square"/>
   <g fill="#f5f5f5">
     <rect x="1038" y="352" width="8" height="8"/>
     <rect x="707" y="262" width="8" height="8"/>
     <rect x="930" y="500" width="8" height="8"/>
     <rect x="760" y="150" width="8" height="8"/>
   </g>
-  <g fill="#f26a2e">
+  <g fill="#0a93ff">
     <rect x="806" y="394" width="12" height="12"/>
     <rect x="954" y="220" width="12" height="12"/>
   </g>
-  <g fill="none" stroke="#f26a2e" stroke-width="1.25">
+  <g fill="none" stroke="#0a93ff" stroke-width="1.25">
     <path d="M800 388h8M800 388v8M824 388h-8M824 388v8M800 412h8M800 412v-8M824 412h-8M824 412v-8" transform="translate(0 0)"/>
     <path d="M948 214h8M948 214v8M972 214h-8M972 214v8M948 238h8M948 238v-8M972 238h-8M972 238v-8"/>
   </g>

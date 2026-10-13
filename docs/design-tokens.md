@@ -22,9 +22,9 @@ The navbar has no surface of its own: it floats over the page and a gradient (a 
 | `--border-strong` | `rgb(0 0 0 / .4)` | `rgb(255 255 255 / .45)` | outlined buttons (not the credits dialog, which uses `--border`) |
 | `--ring` | `#0a0a0a` | `#f5f5f5` | focus ring (2px outline, 2px offset, all focusable elements) |
 | `--primary` / `--primary-foreground` | `#0a0a0a` / `#fbfbfb` | `#f5f5f5` / `#0a0a0a` | default button |
-| `--signal` | `#ea6024` | `#f26a2e` | the one accent: LARGE display text (24 px, or 18.66 px bold, and up), non-text marks (underline, tick, rule, a cover's mark) and fills. 3.27:1 on the page and 3.08:1 on the surface in light, 6.5:1 and 6.1:1 in dark. See "Accent" below |
-| `--signal-text` | `#b8420f` | `#f26a2e` | the accent as text of any size under 24 px: 5.31:1 on the page, 4.99:1 on the surface, 4.65:1 on the hover grey (light); 6.5 / 6.1 / 5.4:1 (dark) |
-| `--signal-foreground` | `#0a0a0a` | `#0a0a0a` | text on a `--signal` fill: 5.84:1 (light), 6.48:1 (dark) |
+| `--signal` | `#0076d4` | `#0076d4` | the one accent, BSoD blue, the same in both schemes: LARGE display text (24 px, or 18.66 px bold, and up), non-text marks (underline, tick, rule, a cover's mark) and fills. 4.47:1 on the page and 4.20:1 on the surface in light, 4.28:1 and 4.05:1 in dark. See "Accent" below |
+| `--signal-text` | `#0067b8` | `#0a93ff` | the accent as text of any size under 24 px: 5.59:1 on the page, 5.26:1 on the surface, 4.89:1 on the hover grey (light); 6.25 / 5.91 / 5.20:1 (dark) |
+| `--signal-foreground` | `#ffffff` | `#ffffff` | text on a `--signal` fill: 4.62:1 (both schemes: the fill is the same) |
 | `--globe-grid`, `--globe-limb` | `rgb(0 0 0 / .12)`, `rgb(0 0 0 / .3)` | `rgb(255 255 255 / .14)`, `rgb(255 255 255 / .34)` | no longer read by the map: the graticule is the palette's `faint` level (level 3) and the horizon outline is one level fainter (level 2, `outlineLevel` in `engine/colors.ts`: 1.24:1 light, 1.21:1 dark against the page; it was `soft` until 2026-10-07 and `faint` until 2026-10-08, when the owner found the globe's ring still too visible; floor 1.2:1, `colors.test.ts`); the tokens remain for any other use |
 
 ### Map palette
@@ -33,18 +33,18 @@ The globe and the street map draw with one grey palette derived from `--backgrou
 
 The globe's ocean has no token of its own: it is `--background` (the disc and the clear colour are exactly the page colour, so the canvas never shows a seam). The detail panel uses `--background` at 85% with a backdrop blur.
 
-UI-system additions (2026-10-08, values and use in design-system.md): `--surface` (`#f4f4f4` / `#121212`, the panel plate), `--line-faint` (grid and tick texture), the one accent `--signal` with `--signal-text`, `--signal-foreground` and `--signal-wash` (see "Accent" below; it was a cyan until 2026-10-12), the `--inverse-*` set (an inverted frame's rebinding, including `--inverse-signal` and `--inverse-signal-text`), and a faint hue per kind (`--kind-article|project|artwork|poem|place`, the generated covers' lightest tone only). `design-system.test.ts` keeps the four copies of the colour list (light, dark, and the two forced-scheme rules) identical and asserts the AA pairs.
+UI-system additions (2026-10-08, values and use in design-system.md): `--surface` (`#f4f4f4` / `#121212`, the panel plate), `--line-faint` (grid and tick texture), the one accent `--signal` with `--signal-text`, `--signal-foreground` and `--signal-wash` (see "Accent" below; it was a cyan until 2026-10-12 and an orange until 2026-10-13), the `--inverse-*` set (an inverted frame's rebinding, including `--inverse-signal` and `--inverse-signal-text`), and a faint hue per kind (`--kind-article|project|artwork|poem|place`, the generated covers' lightest tone only). `design-system.test.ts` keeps the four copies of the colour list (light, dark, and the two forced-scheme rules) identical and asserts the AA pairs.
 
 ### Accent
 
-The one accent is orange. The owner's value is `#f26a2e`; it is used as is in the dark scheme (6.48:1 on the page, so it is AA even as small text there). In the light scheme `#f26a2e` is 2.95:1 on `#fbfbfb` and 2.78:1 on `#f4f4f4`, a little under the 3:1 that large text and graphics need, so `--signal` is `#ea6024` there (3.27:1 on the page, 3.08:1 on the surface; the same hue, 8 / 10 / 10 steps of RGB deeper). Changing the accent later is the five accent lines of `app.css` (`--signal`, `--signal-text`, `--signal-foreground`, `--signal-wash`, and the two `--inverse-signal*`), times the four copies of the list; the tests say what no longer holds.
+The one accent is **BSoD blue**, after the owner's handle (BSoDium) and the Windows stop screen: the reference is `#0078d7` (hue 206.5 degrees, HSL 100 % 42 %). Every tone of it keeps that hue and saturation and moves along lightness only, so nothing drifts to cyan or to purple. The fill is `--signal` `#0076d4`, the same in both schemes (two steps deeper than the reference: white text on `#0078d7` itself is 4.499:1, a thousandth under AA, and on `#0076d4` it is 4.62:1). On a fill the text is white (`--signal-foreground`), as on the stop screen. Text under 24 px needs more against a light page than the fill gives (4.47:1 on the page, 3.91:1 on the hover grey) and against a dark one more against the hover grey (3.57:1 for the fill), so `--signal-text` is a tone of the same hue: `#0067b8` in light (5.59:1 on the page, 4.89:1 on the hover grey) and `#0a93ff` in dark (6.25:1 on the page, 5.20:1 on the hover grey). Contrast is computed with `lib/contrast.ts` (WCAG 2) and asserted for every pair, both schemes, by `design-system.test.ts`. Changing the accent later is the five accent lines of `app.css` (`--signal`, `--signal-text`, `--signal-foreground`, `--signal-wash`, and the two `--inverse-signal*`), times the four copies of the list; the tests say what no longer holds.
 
 | Use | Token | Rule |
 | --- | --- | --- |
 | Display text of 24 px and up (or 18.66 px and up in bold), the drop cap, `text-signal` | `--signal` | 3:1 on the page and the surface (`design-system.test.ts`) |
 | Non-text marks: link underline, the active tick, the progress line, a cover's mark, a rule | `--signal` | 3:1 |
 | Any text under that size (a status word, a micro-label, a meta line) | `--signal-text` (`text-signal-text`) | 4.5:1 on the page, the surface and the hover grey |
-| Text on a filled accent block | `--signal-foreground` on `--signal` | 4.5:1; the fill is orange with ink on it in both schemes |
+| Text on a filled accent block | `--signal-foreground` on `--signal` | 4.5:1; the fill is blue with white on it in both schemes |
 | Inside an inverted frame | `--signal` and `--signal-text` are rebound to `--inverse-signal` / `--inverse-signal-text` | 3:1 and 4.5:1 on the inverted page |
 
 The accent stays out of the map and the globe (they are monochrome); on paper (`@media print`) both tokens are black.
@@ -145,8 +145,8 @@ The entry pages and the four lists sit on **paper** in the light scheme and on *
 | `--paper-foreground` | `#16130f` | `#ece8df` | ink: text and the rules (15.4:1 / 16.0:1) |
 | `--paper-muted` | `#6b665b` | `#8d8a82` | secondary text and the mono marginalia (4.76:1 / 5.67:1; 4.5:1 or more on the hover grey) |
 | `--paper-hover` | `#ebe7dc` | `#17181b` | the hover grey (rows, contents links) |
-| `--paper-signal` | `#cf4f17` | `#f26a2e` | the accent as large text and marks: 3.66:1 on the paper (the page accent `#ea6024` is 2.82:1 there) / 6.4:1 |
-| `--paper-signal-text` | `#a93a0a` | `#f26a2e` | the accent as text under 24 px: 5.31:1 / 6.4:1 |
+| `--paper-signal` | `#0076d4` | `#0076d4` | the accent as large text and marks: 3.85:1 on the paper / 4.23:1 on the night (the page accent is the same value: blue is deep enough on the warm paper, so no separate tone is needed, unlike the orange) |
+| `--paper-signal-text` | `#0067b8` | `#0a93ff` | the accent as text under 24 px: 4.82:1 on the paper, 4.68:1 on its hover grey / 6.18:1 on the night, 5.61:1 on its hover grey |
 
 They are bound, not used by name: for an entry's panel (`[data-panel]:has([data-surface="reading"])`), for the root of a list page (`:root:has(main[data-surface="reading"])`) and for one element (`[data-reading-surface]`, the styleguide), `--background`, `--surface`, `--foreground`, `--muted-foreground`, `--accent`, `--border`, `--border-strong`, `--ring`, `--signal`, `--signal-text` and `--primary` take these values, so every component inside follows (the navigation's scrim, the focus ring, the buttons). The rule is unlayered on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The map, the place panel and the home page keep the neutral page colours. `design-system.test.ts` ("reading surface") tests the pairs in both schemes.
 
