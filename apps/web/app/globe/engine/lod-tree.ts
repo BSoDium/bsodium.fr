@@ -667,7 +667,7 @@ export class LodTree {
   }
 
   /**
-   * Hide every box and label (the home screen's orbiting type replaces them: `GlobeProps.showcase`) or bring them back: the targets of all nodes
+   * Hide every box and label (the home screen's caption replaces them: `GlobeProps.showcase`) or bring them back: the targets of all nodes
    * go OFF (or back to what the cut wants) and each runs to it by its own timed opacity (engine/fade.ts), so the overlay cross-fades with
    * whatever replaces it and a node that is mostly gone takes no click (`pickAlpha`). The cut itself is untouched: nothing is re-planned.
    */

@@ -10,9 +10,12 @@ import { SITE, SITE_FOCUS, SITE_IDENTITY } from "~/lib/site";
 /** The four shortcuts, in the header's order. Paths and words come from the one table the lists and the navigation use. */
 const SHORTCUTS = (["project", "article", "artwork", "poem"] as const).map((kind) => ({ to: KIND_PATHS[kind], label: KIND_PLURALS[kind] }));
 
-/** The name's travel to the small line and back (item of the owner's round 3): the same duration and ease as the panel's slide (`--duration-slow`, `--ease-standard`; `lib/tokens.test.ts` keeps them equal). */
-export const NAME_TRAVEL_MS = 360;
-const NAME_TRAVEL_EASE = "cubic-bezier(0.2, 0, 0, 1)";
+/**
+ * The name's travel to the collapsed line and back (owner, round 3, items 10 and 3): `--hero-travel` of app.css, with its ease (a fast start and a
+ * soft landing). The two must be the same; `landing-hero.test.ts` keeps them so.
+ */
+export const NAME_TRAVEL_MS = 320;
+export const NAME_TRAVEL_EASE = "cubic-bezier(0.2, 0.9, 0.1, 1)";
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** The text's own box (the font's content area), page px: what travels, whatever the element's line box is. */
@@ -22,12 +25,54 @@ function textBox(el: Element): DOMRect {
   return range.getBoundingClientRect();
 }
 
+const HALVES = [
+  [".hero-given", ".hero-mini-given"],
+  [".hero-family", ".hero-mini-family"],
+] as const;
+
 /**
- * The name's two halves shrink and travel to their places in the small line, or back (a FLIP: the two rectangles are measured once, here, and the
- * browser runs a `transform` animation on the compositor: translate and ONE uniform scale per half, no font size, no layout, no frame loop in
- * JS, `will-change` only for the length of the animation, by the Web Animations API itself). The scale is the ratio of the two text boxes'
- * widths, the translation puts the box's top-left corner on the other's. An animation still running is turned round, not restarted. Returns the
- * running animations (empty when there is nothing to move: a layout without the small line, a zero-size box).
+ * Where each half of the name must be when it is the collapsed name: the transform that puts its text box on the ghost's (`.hero-mini-given`,
+ * `.hero-mini-family`, never painted). Measured in the half's REST position (no transform: the caller clears it first), so it is the
+ * same whatever the state it is read in; the scale is the ratio of the boxes' widths (the ghost is the same drawing at another size), the
+ * translation puts the box's top-left corner on the other's (the origin of the transform is the element's own top-left corner).
+ */
+function finalTransforms(root: HTMLElement): { el: HTMLElement; transform: string }[] {
+  const out: { el: HTMLElement; transform: string }[] = [];
+  for (const [from, to] of HALVES) {
+    const el = root.querySelector<HTMLElement>(from);
+    const ghost = root.querySelector<HTMLElement>(to);
+    if (!el || !ghost) continue;
+    const prev = el.style.transform;
+    el.style.transform = "none";
+    const a = textBox(el);
+    const o = el.getBoundingClientRect();
+    el.style.transform = prev;
+    const b = textBox(ghost);
+    if (!(a.width > 0) || !(b.width > 0)) continue;
+    const s = b.width / a.width;
+    const dx = b.left - o.left - (a.left - o.left) * s;
+    const dy = b.top - o.top - (a.top - o.top) * s;
+    out.push({ el, transform: `translate(${dx}px, ${dy}px) scale(${s})` });
+  }
+  return out;
+}
+
+/** Hold the collapsed name where it belongs (its final transform as the halves' own style), or put it back in place. */
+function holdName(root: HTMLElement, collapsed: boolean): void {
+  if (!collapsed) {
+    for (const [from] of HALVES) root.querySelector<HTMLElement>(from)?.style.removeProperty("transform");
+    return;
+  }
+  for (const { el, transform } of finalTransforms(root)) el.style.transform = transform;
+}
+
+/**
+ * The name's two halves shrink and travel to the collapsed line, or back (a FLIP: the rectangles are measured once, here, and the browser runs a
+ * `transform` animation on the compositor: translate and ONE uniform scale per half, no font size, no layout, no JS per frame; `will-change` only
+ * for the length of the animation, by the Web Animations API itself). The collapsed name IS these halves: the inline transform that is the
+ * animation's end is set at the start (the animation overrides it while it runs), so there is no frame at which anything is handed over; going
+ * back the inline transform is removed at the start and the animation runs from where they were. An animation still running is turned round, not
+ * restarted. Returns the running animations.
  */
 function travelName(root: HTMLElement, running: Animation[], toMini: boolean): Animation[] {
   if (running.length > 0 && running.every((a) => a.playState === "running")) {
@@ -35,28 +80,25 @@ function travelName(root: HTMLElement, running: Animation[], toMini: boolean): A
     return running;
   }
   for (const a of running) a.cancel();
+  const finals = finalTransforms(root);
   const out: Animation[] = [];
-  for (const [from, to] of [
-    [".hero-given", ".hero-mini-given"],
-    [".hero-family", ".hero-mini-family"],
-  ] as const) {
-    const el = root.querySelector<HTMLElement>(from);
-    const mini = root.querySelector<HTMLElement>(to);
-    if (!el || !mini || typeof el.animate !== "function") continue;
-    const a = textBox(el);
-    const b = textBox(mini);
-    if (!(a.width > 0) || !(b.width > 0)) continue;
-    const o = el.getBoundingClientRect(); // transform-origin is the element's top-left corner
-    const s = b.width / a.width;
-    const dx = b.left - o.left - (a.left - o.left) * s;
-    const dy = b.top - o.top - (a.top - o.top) * s;
-    const animation = el.animate([{ transform: "translate(0px, 0px) scale(1)" }, { transform: `translate(${dx}px, ${dy}px) scale(${s})` }], {
+  for (const { el, transform } of finals) {
+    if (typeof el.animate !== "function") {
+      if (toMini) el.style.transform = transform;
+      else el.style.removeProperty("transform");
+      continue;
+    }
+    if (toMini) el.style.transform = transform;
+    else el.style.removeProperty("transform");
+    // The way back is the same motion with the same ease (a fast start and a soft landing), from the corner to the place: not the ease run backwards
+    // (playing the animation in reverse would give a slow start and an arrival at speed).
+    const identity = { transform: "translate(0px, 0px) scale(1)" };
+    const animation = el.animate(toMini ? [identity, { transform }] : [{ transform }, identity], {
       duration: NAME_TRAVEL_MS,
       easing: NAME_TRAVEL_EASE,
       fill: "both",
-      direction: toMini ? "normal" : "reverse",
     });
-    // Out of the compositor's hands the moment it is over: what is left is the CSS state (the name faded out, or in place).
+    // Out of the compositor's hands the moment it is over: what is left is the inline state, which is the same picture.
     animation.onfinish = () => animation.cancel();
     out.push(animation);
   }
@@ -90,7 +132,7 @@ function FamilyName() {
 interface LandingHeroProps {
   machine: HeroMachine;
   /**
-   * The globe has the orbiting type (`GlobeProps.onOrbit`): it says what the how-to line says, so the line is kept for assistive technology only. `null` or
+   * The globe has the caption (`GlobeProps.onOrbit`): it says what the how-to line says, so the line is kept for assistive technology only. `null` or
    * absent while the globe is not up (on the server too), where it is hidden under a script too (`scripting: enabled`: the globe is about to say it) and
    * shown without one; `false` when there is no such type (no WebGL, `?no-ring`) and the line stays.
    */
@@ -128,24 +170,38 @@ export function LandingHero({ machine, away, empty, orbit = null, onCover }: Lan
   const Name = away ? "p" : "h1";
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // The name shrinks into the small line when the hero steps back, and grows out of it on the way back (rest <-> collapsed only: from or to
-  // `away` the hero is not on screen; reduced motion: instant, as the CSS).
+  // The name shrinks into the collapsed line when the hero steps back, and grows out of it on the way back (rest <-> collapsed: from or to
+  // `away` the hero is not on screen and the name just sits where the state says; reduced motion: instant, as the CSS). The collapsed name is the
+  // two halves of the big name held at the ghost line's boxes: it is re-measured when the block is resized (a window, a font arriving).
   const previous = useRef<typeof state>(state);
   const travelling = useRef<Animation[]>([]);
   useIsoLayoutEffect(() => {
     const was = previous.current;
     previous.current = state;
     const root = rootRef.current;
-    if (!root || was === state) return;
+    if (!root) return;
     const toMini = was === "rest" && state === "collapsed";
     const back = was === "collapsed" && state === "rest";
     const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (was === state) return;
     if ((!toMini && !back) || reduced) {
       for (const a of travelling.current) a.cancel();
       travelling.current = [];
+      holdName(root, state === "collapsed");
       return;
     }
     travelling.current = travelName(root, travelling.current, toMini);
+  }, [state]);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || state !== "collapsed" || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      if (travelling.current.some((a) => a.playState === "running")) return;
+      holdName(root, true);
+    });
+    ro.observe(root);
+    void document.fonts?.ready.then(() => holdName(root, true));
+    return () => ro.disconnect();
   }, [state]);
 
   // How much of the page's bottom the name covers: the globe lifts the planet clear of it (docs/landing.md). Layout offsets, so a transform
@@ -189,7 +245,7 @@ export function LandingHero({ machine, away, empty, orbit = null, onCover }: Lan
             {SITE_IDENTITY}
             <span className="hero-intro-more">{` ${SITE_FOCUS}`}</span>
           </p>
-          {/* How to use the page. While the globe says it itself (the orbiting caption, `data-orbit`), this line is for assistive technology only. */}
+          {/* How to use the page. While the globe says it itself (the caption, `data-orbit`), this line is for assistive technology only. */}
           <p className="hero-hint">
             {empty ? (
               HINT_NO_PLACE

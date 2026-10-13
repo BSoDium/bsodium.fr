@@ -370,7 +370,7 @@ section("assets");
   for (const file of readdirSync(`${webDir}build/client/fonts`).filter((f) => f.endsWith(".woff2"))) {
     const r = await get(`/fonts/${file}`);
     const buf = Buffer.from(await r.arrayBuffer());
-    ok(r.status === 200 && /^font\/woff2/.test(r.headers.get("content-type") ?? "") && buf.length > 20_000 && buf.toString("latin1", 0, 4) === "wOF2", `/fonts/${file}: 200 font/woff2, ${(buf.length / 1024).toFixed(0)} kB`);
+    ok(r.status === 200 && /^font\/woff2/.test(r.headers.get("content-type") ?? "") && buf.length > 2_000 && buf.toString("latin1", 0, 4) === "wOF2", `/fonts/${file}: 200 font/woff2, ${(buf.length / 1024).toFixed(0)} kB`);
     ok(r.headers.get("cache-control") !== null && (!deployed || /immutable/.test(r.headers.get("cache-control") ?? "")), `/fonts/${file}: cache-control ${r.headers.get("cache-control")}${deployed ? " (immutable on a deployment)" : ""}`);
   }
   const mediaPath = /\/media\/[\w./-]+\.(?:svg|png|jpe?g|webp)/.exec((await text(articlePath ?? "/")).body)?.[0];

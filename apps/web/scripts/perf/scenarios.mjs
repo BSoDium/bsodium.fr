@@ -98,7 +98,7 @@ export const SCENARIOS = [
   },
   {
     id: "ring-rest",
-    title: "orbiting type: the home screen at rest at its lowest zoom, the type turning (5 s; no GL frame is wanted, the cost is the layer's own)",
+    title: "ring of type: zoomed out to its lowest zoom at rest, the ring turning (5 s; no GL frame is wanted, the cost is the ring's own)",
     ring: true,
     async setup(page) {
       await settleWorld(page);
@@ -117,23 +117,45 @@ export const SCENARIOS = [
     },
   },
   {
-    id: "ring-fade",
-    title: "orbiting type: the showcase turned off and on five times, 600 ms apart (boxes and labels fade in and out against the type; each fade is the globe's own timed opacity)",
+    id: "ring-wheel",
+    title: "ring of type: wheel zoom out from the fit to the lowest zoom and back (the ring fades in step with the globe's frames)",
     ring: true,
+    async setup(page) {
+      await settleWorld(page);
+    },
+    async run(page) {
+      const c = centre(page);
+      await wheel(page, 40, 2500, c);
+      await sleep(600);
+      await wheel(page, -40, 2500, c);
+      await waitQuiet(page, { quietMs: 600, minMs: 200, maxMs: 4000 });
+      const r = await page.evaluate(() => window.__globeDebug.ring());
+      return { ringFrames: r.frames, ringMs: r.totalMs, shown: r.shown, zoom: await zoomNow(page) };
+    },
+  },
+  {
+    id: "caption-enter",
+    title: "caption: the showcase turned off and on five times, 1.4 s apart (boxes and labels fade against the caption's entrance round the planet; it is part of the globe's own frames)",
+    ring: true,
+    flags: { showcase: "1" },
     async setup(page) {
       await settleWorld(page);
       await waitQuiet(page, { quietMs: 600, minMs: 300 });
     },
     async run(page) {
-      const a = await page.evaluate(() => ({ r: window.__globeDebug.ring(), draws: window.__pf.drawsTotal }));
+      const a = await page.evaluate(() => ({ draws: window.__pf.drawsTotal, frames: window.__globeDebug.frames() }));
       for (let k = 0; k < 5; k++) {
         await page.evaluate(() => window.__globeDebug.showcase(false));
-        await sleep(600);
+        await sleep(700);
         await page.evaluate(() => window.__globeDebug.showcase(true));
-        await sleep(600);
+        await sleep(1400);
       }
-      const b = await page.evaluate(() => ({ r: window.__globeDebug.ring(), draws: window.__pf.drawsTotal }));
-      return { ringFrames: b.r.frames - a.r.frames, ringMs: b.r.totalMs - a.r.totalMs, glDraws: b.draws - a.draws, shown: b.r.shown, showcase: b.r.showcase };
+      const b = await page.evaluate(() => ({ draws: window.__pf.drawsTotal, frames: window.__globeDebug.frames(), c: window.__globeDebug.caption() }));
+      await waitQuiet(page, { quietMs: 600, minMs: 200, maxMs: 4000 });
+      const rest = await page.evaluate(() => ({ draws: window.__pf.drawsTotal, raf: window.__pf.rafCalls }));
+      await sleep(1500);
+      const rest2 = await page.evaluate(() => ({ draws: window.__pf.drawsTotal, raf: window.__pf.rafCalls }));
+      return { glFrames: b.frames - a.frames, glDraws: b.draws - a.draws, built: b.c?.built, font: b.c?.font, showcase: b.c?.showcase, restDraws: rest2.draws - rest.draws };
     },
   },
   {

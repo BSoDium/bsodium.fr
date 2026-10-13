@@ -75,25 +75,38 @@ The globe's skybox (`SKY` in `app/globe/engine/tuning.ts`; architecture in web-a
 | `eraDeg` | 70 | the earth rotation angle at load (the sky's one placement against the earth) |
 | `seed` | `0x5ca1ab1e` | every random choice (positions, tiers, keep ranks) |
 
-### Orbiting type
+### Ring of type
 
-The orbiting type of the home screen (`RING` and `LIFT` in `app/globe/engine/tuning.ts`; web-architecture.md, "Orbiting type") has no colour of its own either: the ring is one palette tone (the `peak` role, no alpha; the far arc is drawn at `farAlpha` of it), the caption is the ink with a keyline in the page colour. Decorative and `aria-hidden` (the hero's how-to line is the text).
+The ring of type that circles the planet's disc when the globe is zoomed out below its whole-globe fit (`RING` in `app/globe/engine/tuning.ts`; web-architecture.md, "Ring of type") has no colour of its own either: one palette tone, no alpha, the `coast` role (3.1:1 dark / 3.2:1 light on the page: the loudest the MAP itself gets, never above a coastline), its fade a staircase of tones; decorative and `aria-hidden`, so not held to WCAG, and below the boxes (5.2:1) and the labels (ink). Type: `--font-mono` (the labels' stack), weight 500, tracking about 0.14 em like `.nav-link` (adjusted per viewport so the line closes the circle), uppercase, about 11 px (10 to 13) at the lowest zoom, scaling with the planet. No new token.
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `gap` | 0.22 | the ring's baseline radius over the planet's: 1 + gap |
-| `tiltDeg`, `rollDeg` | 72, -8 | the ring's plane: tipped about the view's horizontal axis (top away from the viewer), then rolled about the view axis |
-| `degPerSec`, `direction`, `startDeg` | 3, -1, 0 | its own turn on its own clock (the globe's idle rotation is 0.2 degrees a second); the near arc slides left |
+| `gap` | 0.06 | the baseline's distance from the silhouette, a fraction of its radius (17 px at the lowest zoom on 1440 x 900) |
+| `degPerSec`, `direction`, `startDeg` | 3, 1 (clockwise), 0 | its own turn on its own clock (the globe's idle rotation is 0.2 degrees a second, so the ring turns 15 times faster); degrees clockwise from twelve o'clock at the start |
 | `type` | weight 500, tracking 0.14, advance 0.6 em, target 11 px, slack 15 % | the line goes round a whole number of times, nearest the target em; the em may move by the slack and the tracking takes the rest, so the seam closes |
-| `tone`, `farAlpha` | `peak`, 0.5 | palette role of the ring's letters, opacity of the far arc |
-| `band.radius`, `emR`, `leading`, `lines` | 1.04, 0.2, 1.0, 2 | the caption's shell (planet radii), its em (planet radii), the line gap (em) and the number of lines |
-| `band.leanDeg`, `riseDeg`, `rollDeg` | -18, 22, -9 | the lines' axis leans away from the viewer (so they arch), sits higher on the face, rolled |
-| `band.weight`, `tracking`, `outlineEm`, `minGapEm` | 800, -0.02, 0.11, 2 | the display face at its heaviest, tight; the keyline round each letter; the air kept at each loop's seam |
-| `band.degPerSec` | 4 | the caption's own slide, on the same clock |
 | `zoom.floorBelowFit`, `zoom.fitMargin` | 0.5 levels, 0.12 | the camera goes at least this far below the whole-globe fit, and further until the ring fits the free area with this margin |
 | `zoom.fade` | from 0.08, to 0.6 | strength by the way from the fit (0) to the lowest zoom (1): absent up to `from`, full from `to` |
+| `tone` | `coast` | palette role of the letters |
 | `frameMs`, `maxStepMs`, `maxDpr` | 32, 100, 2 | at most 30 repaints a second, the largest step of its clock, the largest device pixel ratio its canvas is drawn at |
-| `LIFT.gapPx`, `marginPx` | 14, 14 | air between the planet and what covers it; the least room kept above the highest thing (the lift's tween is `TUNING.insetMs` / `INSET_EASE`) |
+
+Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251), because at those values it reads as the same barely-there haze as the dark one and the stipple does not compete with the boxes; `?no-sky` is the off switch.
+
+### Caption (the home screen's call to action)
+
+The caption that wraps the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Orbiting type") is drawn in the globe's own art-pixel pass, so it holds exactly two colours of the theme: the ink and, for the keyline that separates it from the coastlines under it, the page colour. No tone of its own, no alpha.
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `radius` | 1.022 | the shell the lines wrap, in planet radii (the coastlines and the outline are at 1) |
+| `capR`, `leading` | 0.16, 1.75 | cap height in planet radii; distance between baselines in cap heights |
+| `leanDeg`, `centreDeg` | -16, 26 | the lines' axis leans away from the viewer (they arch); the block's centre is this far above the view's centre; no roll |
+| `maxSpanDeg` | 120 | the most a line may span round the planet (the cap height shrinks to it) |
+| `enter` | from 100 degrees, 1000 ms, stagger 140 ms, 350 ms after load | each line comes round from behind the planet with an ease-out-expo |
+| `leaveMs` | 200 | leaving is quick, on behind the planet the other way |
+| `outline`, `texCap` | 0.09, 64 | the keyline in cap heights; texels in a cap height |
+| `cut`, `lodBias`, `bitmapBold` | 0.35, -0.7, 0.18 | the shader's coverage threshold and sharpening, and the bitmap face's weight |
+
+Faces (`CAPTION_FONTS`, chosen with `?orbit-font=jacquard|pixelify|bitmap`, default `jacquard`): Jacquard 24 (SIL OFL 1.1, a pixel blackletter; `public/fonts/jacquard-24-1.002-latin-400.woff2`, 18.9 kB, Basic Latin subset of google/fonts `ofl/jacquard24/Jacquard24-Regular.ttf`, 313.6 kB), Pixelify Sans at weight 700 (SIL OFL 1.1; `pixelify-sans-1.000-latin-700.woff2`, 3.9 kB, instanced and subset from google/fonts `ofl/pixelifysans/PixelifySans[wght].ttf`, 79.2 kB), and the map's own bitmap font (`engine/pixel-font`, no file). The licence of each is `LICENSE-<name>.txt` beside it. A face that would have strokes under a cell at the page's art-cell size falls back along that chain (`legibleFont`: Jacquard needs a cap height of 13 cells, Pixelify 12, the bitmap font 7); on a 390 px phone (2 px cell, a 60-cell planet) every face but the bitmap one is under it.
 
 ### Map card and credits line
 

@@ -17,15 +17,12 @@ import type { GlobePlace, GlobeRoute } from "../types";
 import type { GlobeTheme } from "./colors";
 import { attachControls, type ControlsHost, type PointerKind } from "./controls";
 import { watchDevicePixelRatio } from "./dpr";
-import { FADE_MS, FadeArray, clockStep } from "./fade";
 import { groupFitZoom, radiusFitZoom } from "./framing";
 import {
   DEG,
   FOV_DEG,
-  cameraDistance,
   clamp,
   fitZoom,
-  focalPx,
   silhouetteRadiusPx,
   normalizeLon,
   projectLonLat,
@@ -55,9 +52,10 @@ import { IdleSpin, SPIN, spinBlock, spinFrameDue, type SpinContext } from "./idl
 import { liftFor } from "./lift";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
-import { orbitZoomAlpha, ringFloorZoom, ringReach } from "./orbit";
-import { OrbitLayer } from "./orbit-layer";
-import { RING_STATE } from "./ring";
+import { CaptionLayer } from "./caption-layer";
+import { type CaptionFont, SHOWCASE_STATE } from "./caption";
+import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
+import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
 import { INSET_EASE, RING, SKY, TUNING } from "./tuning";
 import { fromViewState } from "./view";
@@ -109,11 +107,12 @@ export interface RendererOptions {
    * (`?no-ring`): no ring, and the lowest zoom is the whole-globe fit.
    */
   ringText?: string;
-  /** The phrases of the heavy caption that wraps the planet with the ring (engine/orbit.ts `layoutBand`); absent or empty: the ring alone. */
+  /** The lines of the caption that wraps the planet (engine/caption.ts), and the face they are set in; absent or empty: no caption. */
   captionPhrases?: readonly string[];
+  captionFont?: CaptionFont;
   /** CSS px of the container's bottom that the app covers at start (`GlobeProps.coverBottom`); the planet is lifted clear of them as far as there is room. */
   coverBottom?: number;
-  /** The home screen starts at rest: the orbiting type is in and the boxes and labels are out from the first frame (`GlobeProps.showcase`). */
+  /** The home screen starts at rest: the caption is in and the boxes and labels are out from the first frame (`GlobeProps.showcase`). */
   showcase?: boolean;
 }
 
@@ -153,15 +152,16 @@ export class GlobeRenderer {
   private minZoom = 1;
   /** The zoom at which the whole globe fits the free area (`TUNING.fitMargin`): the 0 of `GlobeViewState.zoom`, the world view of the idle rotation, the floor of programmatic framing. */
   private fit = 1;
-  /** The orbiting type (the ring and the caption), when there is one (engine/orbit-layer.ts). */
-  private orbit: OrbitLayer | null = null;
+  /** The ring of type, when there is one (engine/ring-layer.ts: a flat circle of text round the disc, unchanged by the showcase). */
+  private ring: RingLayer | null = null;
+  /** The caption: lines wrapped on a sphere in the globe's own scene (engine/caption-layer.ts), when the showcase is on this page. */
+  private caption: CaptionLayer | null = null;
   /**
-   * The showcase: the home screen is at rest, so the boxes and labels are out and the orbiting type is in. `showcaseOn` is what is wanted, the
-   * fade (engine/fade.ts, the same primitive and duration as the boxes' own) is how present the type is, 1 - it is how present the overlay is.
+   * The showcase: the home screen is at rest, so the boxes and labels are out (`LodTree.setSuppressed`) and the caption is in. `showcaseOn` is
+   * what is wanted now; `showcaseActive` whether this page has a showcase at all (a ring, and not a debug page without `?showcase`).
    */
   private showcaseOn = false;
-  private showcaseFade = new FadeArray(1, FADE_MS);
-  private showcaseLast = 0;
+  private showcaseActive = false;
   /** A press began while the showcase was on: its tap is not a click on a box nobody could see (cleared a moment after the press ends). */
   private inertPress = false;
   /** CSS px of the container's bottom the app covers (the hero), the lift it asks for now, and the animated lift (see `setCover`). */
@@ -269,13 +269,24 @@ export class GlobeRenderer {
     opts.container.append(this.canvas);
 
     this.globe = new GlobeScene(opts);
-    if (opts.ringText && RING_STATE.enabled) this.orbit = new OrbitLayer(opts.container, opts.ringText, opts.captionPhrases ?? [], opts.theme, this.reduced);
+    if (opts.ringText && RING_STATE.enabled) this.ring = new RingLayer(opts.container, opts.ringText, opts.theme, this.reduced);
+    this.showcaseActive = !!this.ring && SHOWCASE_STATE.enabled;
     this.cover = Math.max(0, opts.coverBottom ?? 0);
-    if (opts.showcase && this.orbit) {
-      // The home screen opens in its showcase: the type is in and the boxes are out from the first frame, nothing fades.
+    if (this.showcaseActive && opts.captionPhrases && opts.captionPhrases.length > 0) {
+      this.caption = new CaptionLayer(this.globe.scene, {
+        phrases: opts.captionPhrases,
+        font: opts.captionFont ?? "jacquard",
+        theme: opts.theme,
+        reduced: this.reduced,
+        maxAnisotropy: this.gl.capabilities.getMaxAnisotropy(),
+        onChange: () => this.requestRender(),
+      });
+    }
+    if (opts.showcase && this.showcaseActive) {
+      // The home screen opens in its showcase: the boxes are out from the first frame (nothing fades), and the caption comes in with the first frame.
       this.showcaseOn = true;
-      this.showcaseFade.snap(0, true);
       this.lod.setSuppressed(true);
+      this.caption?.show(null);
     }
     this.setTheme(opts.theme);
 
@@ -349,9 +360,9 @@ export class GlobeRenderer {
     const inset = clampInset(this.inset, w);
     this.shiftBuf = insetShiftBuf(inset, P);
     this.fit = fitZoom(freeWidth(w, inset), h, TUNING.fitMargin);
-    this.minZoom = this.orbit ? Math.min(this.fit, ringFloorZoom({ fit: this.fit, freeWidth: freeWidth(w, inset), height: h })) : this.fit;
+    this.minZoom = this.ring ? Math.min(this.fit, ringFloorZoom({ fit: this.fit, freeWidth: freeWidth(w, inset), height: h })) : this.fit;
     this.containerMask = fadeMask(w, inset);
-    this.orbit?.setMask(this.containerMask);
+    this.ring?.setMask(this.containerMask);
     this.layoutRing();
     // The lift follows the viewport and the lowest zoom: a change of those (not of the cover, which animates) applies at once.
     const key = `${w}x${h}@${this.minZoom.toFixed(4)}`;
@@ -368,7 +379,7 @@ export class GlobeRenderer {
   /** The number of times the line goes round follows the viewport and the panel's SETTLED inset (not the animated one: the text must not reflow while the panel slides). */
   private ringLayoutKey = "";
   private layoutRing() {
-    if (!this.orbit) return;
+    if (!this.ring) return;
     const { width: w, height: h } = this;
     const key = `${w}x${h}@${this.insetTarget}`;
     if (key === this.ringLayoutKey) return;
@@ -376,20 +387,22 @@ export class GlobeRenderer {
     const free = freeWidth(w, clampInset(this.insetTarget, w));
     const fit = fitZoom(free, h, TUNING.fitMargin);
     const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h }));
-    this.orbit.setLayout(silhouetteRadiusPx(floor, h));
+    this.ring.setLayout(silhouetteRadiusPx(floor, h));
+    this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h));
   }
 
   /**
    * How far the planet's centre should be lifted for the cover now (engine/lift.ts): the planet at the lowest zoom (where the home screen
-   * rests) clear of the cover as far as the room above allows, the ring's top included while there is a ring.
+   * rests) clear of the cover as far as the room above allows, the ring's top included (the flat ring's outer edge, as `ringFloorZoom` has it).
    */
   private liftWanted(): number {
-    // The lift belongs to the showcase: without the orbiting type (`?no-ring`, a debug page) the page is the one of before it.
-    if (!this.orbit || this.cover <= 0 || this.width < 1 || this.height < 1) return 0;
+    // The lift belongs to the showcase: on a page without it (`?no-ring`, a debug page) the page is the one of before it.
+    if (!this.showcaseActive || this.cover <= 0 || this.width < 1 || this.height < 1) return 0;
     const h = this.height;
     const rPx = silhouetteRadiusPx(this.minZoom, h);
-    const reachTopPx = this.orbit ? Math.max(rPx, ringReach(rPx, h).yUp + RING.type.targetEmPx * 1.5) : rPx;
-    return liftFor({ cover: this.cover, height: h, planetPx: rPx, reachTopPx });
+    const t = RING.type.targetEmPx;
+    const ringTop = rPx * (1 + RING.gap) + CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
+    return liftFor({ cover: this.cover, height: h, planetPx: rPx, reachTopPx: Math.max(rPx, ringTop) });
   }
 
   private retargetLift(animate: boolean) {
@@ -455,8 +468,9 @@ export class GlobeRenderer {
   /** Where the camera starts, once the minimum zoom is known. */
   private startView(): ViewState {
     const s = this.start;
-    // The home screen opens fully zoomed OUT (the lowest zoom, which is the fit when there is no orbiting type): the type is there from the first frame.
-    if (!s) return { lon: 15, lat: 28, zoom: this.minZoom };
+    // The home screen opens fully zoomed OUT (the lowest zoom: the fit when there is no ring): the ring and the caption are there from the first frame.
+    // The world view is the whole-globe fit on a page without the showcase, as before it.
+    if (!s) return { lon: 15, lat: 28, zoom: this.showcaseActive ? this.minZoom : this.fit };
     if (s.fitRadiusKm !== undefined) return { lon: s.lon, lat: s.lat, zoom: Math.max(this.fit, this.fitZoomFor(s.fitRadiusKm)) };
     if (s.zoom01 === null) return { lon: s.lon, lat: s.lat, zoom: TUNING.selectZoom };
     return fromViewState({ lon: s.lon, lat: s.lat, zoom: s.zoom01, street: s.street }, this.fit, TUNING.maxZoom);
@@ -589,7 +603,8 @@ export class GlobeRenderer {
 
   setReducedMotion(on: boolean) {
     this.reduced = on;
-    this.orbit?.setReduced(on);
+    this.ring?.setReduced(on);
+    this.caption?.setReduced(on);
     this.noteActivity();
     if (on) {
       if (this.flight) this.view = this.clampView(this.flight.to);
@@ -606,7 +621,8 @@ export class GlobeRenderer {
 
   setTheme(theme: GlobeTheme) {
     this.theme = theme;
-    this.orbit?.setTheme(theme);
+    this.ring?.setTheme(theme);
+    this.caption?.setTheme(theme);
     // Tones of the semantic zoom: group squares in map levels per kind (below the ink), a place marker the ink.
     this.lod.setTones(theme.ramp.length);
     this.gl.setClearColor(new Color(...theme.background), 1);
@@ -1072,7 +1088,7 @@ export class GlobeRenderer {
     this.lastTickAt = now;
     const flying = this.flight !== null;
     const moving = this.advance(now);
-    const fading = this.stepShowcase(now);
+    const fading = this.caption?.animating ?? false;
     if (moving) this.spin.settle(now); // a flight, inertia or the inset slide is camera motion: not idle (a turning globe coasts to rest)
     // The flight has just landed exactly on its target: whatever is left of the coasting is dropped, so the camera stays on it.
     if (flying && this.flight === null) this.spin.activity(now);
@@ -1114,73 +1130,73 @@ export class GlobeRenderer {
     this.opts.onFrame();
     perfEnd("frame.callbacks", t1);
     // Whoever drew this frame (the tick, a resize, a check), the transitions run to their end, and the idle rotation's chain (cancelled above) goes on.
-    if (this.lod.animating || this.globe.animating || this.showcaseFade.moving || this.opts.labelsAnimating?.()) this.keepGoing(false);
+    if (this.lod.animating || this.globe.animating || (this.caption?.animating ?? false) || this.opts.labelsAnimating?.()) this.keepGoing(false);
     else if (this.spin.spinning) this.chainSpin();
   }
 
   /**
-   * The orbiting type goes where the planet is, in the same frame (a camera frame, drawn or suspended). Cheap when it is not shown: one comparison.
-   * It runs on its own clock for the slow turn (engine/orbit-layer.ts) and never asks for a frame of the globe. Its presence is the showcase's
-   * fade times the zoom regime (`orbitZoomAlpha`): a planet too big for the ring has none.
+   * The ring goes where the planet is, in the same frame (a camera frame, drawn or suspended). Cheap when it is not shown: one comparison.
+   * It runs on its own clock for the slow turn (engine/ring-layer.ts) and never asks for a frame of the globe.
    */
   private syncRing() {
-    const orbit = this.orbit;
-    if (!orbit) return;
-    const alpha = this.orbitAlpha();
-    if (alpha <= 0 && !orbit.isShown) return;
+    const ring = this.ring;
+    if (!ring) return;
+    const alpha = ringAlpha(this.view.zoom, this.fit, this.minZoom);
+    if (alpha <= 0 && !ring.isShown) return;
     const P = this.pixel;
     const ch = this.bufH * P;
-    const v = this.drawView();
-    orbit.update({
+    ring.update({
       cx: (this.bufW * P) / 2 - this.shiftBuf * P + this.canvasLeft,
       cy: ch / 2 - this.liftBuf * P + this.canvasTop,
-      r: silhouetteRadiusPx(v.zoom, ch),
-      d: cameraDistance(v.zoom, ch),
-      f: focalPx(ch),
+      r: silhouetteRadiusPx(this.view.zoom, ch),
       alpha,
       width: this.width,
       height: this.height,
     });
   }
 
-  /** How present the orbiting type is now, 0..1. */
-  private orbitAlpha(): number {
-    if (!this.orbit) return 0;
-    const f = this.showcaseFade.value(0);
-    return f <= 0 ? 0 : f * orbitZoomAlpha(this.view.zoom, this.fit, this.minZoom);
-  }
-
-  /** Whether there is an orbiting type (a ring was asked for and the page does not switch it off). */
-  hasOrbit(): boolean {
-    return this.orbit !== null;
-  }
-
-  /** The orbiting type's state and the numbers behind it (checks): null when there is none. */
+  /** The ring's state (checks): shown, tone, glyphs, size of its canvas; null when there is none. */
   ringState() {
-    const orbit = this.orbit;
-    if (!orbit) return null;
-    return {
-      ...orbit.state(),
-      zoomAlpha: orbitZoomAlpha(this.view.zoom, this.fit, this.minZoom),
-      showcase: this.showcaseOn,
-      showcaseFade: this.showcaseFade.value(0),
-      fit: this.fit,
-      floor: this.minZoom,
-      silhouettePx: silhouetteRadiusPx(this.view.zoom, this.bufH * this.pixel),
-      overlayHidden: this.lod.isSuppressed,
-    };
+    const ring = this.ring;
+    if (!ring) return null;
+    const alpha = ringAlpha(this.view.zoom, this.fit, this.minZoom);
+    return { ...ring.state(), zoomAlpha: alpha, fit: this.fit, floor: this.minZoom, silhouettePx: silhouetteRadiusPx(this.view.zoom, this.bufH * this.pixel) };
+  }
+
+  /** Checks and captures: hold the caption's entrance at `ms` after its start (null releases it) and draw. */
+  pinCaption(ms: number | null) {
+    this.caption?.pin(ms);
+    this.requestRender();
+  }
+
+  /** Checks and captures: hold every caption line at `deg` degrees east of its place (null releases it). */
+  pinCaptionAngle(deg: number | null) {
+    this.caption?.pinAngle(deg);
+    this.requestRender();
+  }
+
+  /** Whether there is a caption (the page has the showcase and the app gave it lines). */
+  hasCaption(): boolean {
+    return this.caption !== null;
+  }
+
+  /** The caption's state and the showcase's (checks): null when there is none. */
+  captionState() {
+    const c = this.caption;
+    if (!c) return null;
+    return { ...c.state(), showcase: this.showcaseOn, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
   }
 
   /* ------------------------------ showcase ------------------------------ */
 
   /**
    * The home screen is at rest (`GlobeProps.showcase`): every box and label fades out (the tree's targets go off: engine/lod-tree.ts
-   * `setSuppressed`, inert by the pick rules) and the orbiting type fades in over the planet; the camera, when it is not at the lowest zoom
-   * (the home screen's own composition), comes back to it. Off: the other way round. Without an orbiting type (`?no-ring`) there is nothing to
-   * show: the boxes stay.
+   * `setSuppressed`, inert by the pick rules) and the caption comes in, each line round from behind the planet (engine/caption.ts); the camera,
+   * when it is not at the lowest zoom (the home screen's own composition), comes back to it. Off: the other way round, quickly. On a page without
+   * the showcase (`?no-ring`, a debug page) this does nothing: the boxes stay.
    */
   setShowcase(on: boolean) {
-    const want = on && !!this.orbit;
+    const want = on && this.showcaseActive;
     if (want === this.showcaseOn) return;
     this.showcaseOn = want;
     this.applyShowcase();
@@ -1195,22 +1211,11 @@ export class GlobeRenderer {
   }
 
   private applyShowcase() {
-    this.showcaseFade.set(0, this.showcaseOn);
     this.lod.setSuppressed(this.showcaseOn);
-    this.showcaseLast = 0;
+    const now = performance.now();
+    if (this.showcaseOn) this.caption?.show(now);
+    else this.caption?.hide(now);
     this.requestRender();
-  }
-
-  /** Advance the showcase's fade to `now`; true while it has not reached its end (the frame loop keeps going). */
-  private stepShowcase(now: number): boolean {
-    const f = this.showcaseFade;
-    if (!f.moving) {
-      this.showcaseLast = now;
-      return false;
-    }
-    const dt = clockStep(this.showcaseLast, now);
-    this.showcaseLast = now;
-    return f.step(dt, this.reduced);
   }
 
   private syncCamera() {
@@ -1233,6 +1238,7 @@ export class GlobeRenderer {
     cam.updateMatrixWorld();
     const now = performance.now();
     this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced);
+    this.caption?.sync(b, now);
     this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf, lift: this.liftBuf }, now, this.reduced);
   }
 
@@ -1288,8 +1294,10 @@ export class GlobeRenderer {
     this.cancelFrame();
     for (const c of this.cleanups) c();
     this.cleanups = [];
-    this.orbit?.dispose();
-    this.orbit = null;
+    this.ring?.dispose();
+    this.ring = null;
+    this.caption?.dispose();
+    this.caption = null;
     this.globe.dispose();
     this.gl.dispose();
     this.gl.forceContextLoss();

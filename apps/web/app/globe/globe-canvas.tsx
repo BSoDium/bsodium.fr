@@ -17,6 +17,7 @@ import { applyDebugLevels } from "./engine/palette";
 import { applySpinFlags } from "./engine/idle-spin";
 import { applySkyFlags } from "./engine/sky";
 import { applyRingFlags, ringText } from "./engine/ring";
+import { applyShowcaseFlags, captionFontFrom } from "./engine/caption";
 import { applyDebugArtPixel } from "./engine/tuning";
 import { enablePerf, perfEnd, perfStart } from "./engine/perf";
 import { startsVeiled, type GlobeProps } from "./types";
@@ -95,6 +96,15 @@ function lodStressCount(): number {
   }
 }
 
+/** A sessionStorage value, or null where there is no storage (private windows, blocked site data). */
+function safeStored(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 const isWebGLUnavailable = (e: unknown) => e instanceof Error && e.name === "WebGLUnavailableError";
 
 export default function GlobeCanvas({
@@ -168,6 +178,7 @@ export default function GlobeCanvas({
     applySpinFlags(); // `?no-rotate` works on any page, `?spin-idle=MS` in debug mode
     applySkyFlags(); // `?no-sky` works on any page, `?sky` turns it on in debug mode
     applyRingFlags(); // `?no-ring` works on any page, `?ring` turns it on in debug mode
+    applyShowcaseFlags(); // the showcase is on every page but a debug one, where `?showcase` turns it on
     if (debugEnabled()) {
       applyDebugLevels();
       applyDebugArtPixel();
@@ -196,6 +207,7 @@ export default function GlobeCanvas({
           tiles: tilesKey ? JSON.parse(tilesKey) : null,
           ringText: ringText(now.ringPhrases ?? []), // the line of the ring of type, from the identity the app hands in (the words, capitals and closing seam are the engine's)
           captionPhrases: now.captionPhrases,
+          captionFont: captionFontFrom(location.search, safeStored("orbit-font")),
           coverBottom: now.showcase?.get().coverBottom ?? 0,
           showcase: now.showcase?.get().on ?? false,
           onNotice: setNotice,

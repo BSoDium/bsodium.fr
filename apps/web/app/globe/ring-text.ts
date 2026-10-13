@@ -1,6 +1,6 @@
 /**
- * The words of the mono ring that circles the planet in the orbiting type (engine/ring.ts, engine/orbit.ts, docs/web-architecture.md, "Orbiting
- * type"), built from the site's identity. (The heavy caption's words, "Drag to explore" and "Pick a place", are `SITE_CALL` in `lib/site.ts`.)
+ * The words of the ring of type that circles the planet when the globe is zoomed out (engine/ring.ts, docs/web-architecture.md, "Ring of type"),
+ * built from the site's identity.
  *
  * Decorative (the ring is `aria-hidden`; none of this is the page's content) and one place only: the app's `SITE` constant (`lib/site.ts`) is
  * the single source of who the site is, and the component that mounts the globe (`routes/shell.tsx`) hands the phrases in through

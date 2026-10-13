@@ -22,7 +22,7 @@ const NOSCRIPT_KINDS = ["project", "article", "artwork", "poem"] as const;
 
 /** The words of the globe's ring of type: the site's identity (name, role, fields, place), the same constant the head tags and the hero read. */
 const RING_PHRASES = ringPhrases(SITE);
-/** The caption that wraps the planet with it: what to do (it replaces the hero's how-to line while the globe has the orbiting type). */
+/** The caption that wraps the planet with it: what to do (it replaces the hero's how-to line while the globe has the caption). */
 const CAPTION_PHRASES = [...SITE_CALL];
 const NO_PHRASES: readonly string[] = [];
 
@@ -101,7 +101,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
     intent.current.user = true;
   }, []);
   const hero = useLandingHero(isOpen);
-  // The globe has the orbiting type (it is up, and the page does not switch it off): the hero's how-to line is then said by the caption and is
+  // The globe has the caption (it is up, and the page does not switch it off): the hero's how-to line is then said by the caption and is
   // kept for assistive technology only (visually hidden). Nothing else of the shell depends on it.
   const [orbit, setOrbit] = useState<boolean | null>(null);
   const empty = places.length === 0;

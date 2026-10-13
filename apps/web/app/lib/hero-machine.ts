@@ -37,7 +37,7 @@ export function isWorldView(view: Pick<GlobeViewState, "zoom" | "street"> | null
 export type HeroState = "rest" | "collapsed";
 
 /**
- * What the globe is told about the home screen (`GlobeProps.showcase`): the showcase (the orbiting type in, the boxes and labels out, the planet
+ * What the globe is told about the home screen (`GlobeProps.showcase`): the showcase (the caption in, the boxes and labels out, the planet
  * lifted clear of the name) is ON while the full hero is at rest AT the world view, and only then; `coverBottom` is the height the name covers at
  * the bottom of the page then (0 when the showcase is off: the planet comes back down). Pure.
  */
