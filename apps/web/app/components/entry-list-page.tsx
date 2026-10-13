@@ -4,7 +4,7 @@ import type { ContentKind } from "@catalyst/schemas";
 import { EntryRow } from "~/components/entry/entry-list-card";
 import { Button, StatePanel } from "~/components/ui";
 import { KIND_NOUNS, KIND_PLURALS, type EntrySummary } from "~/lib/entries";
-import { collectTags, filterByTag, groupByYear, listSpan, parseTagFilter, shouldGroupByYear, tagSearch, type TagCount } from "~/lib/entry-list";
+import { collectTags, filterByTag, groupByYear, parseTagFilter, shouldGroupByYear, tagSearch, type TagCount } from "~/lib/entry-list";
 import { SITE_NAME } from "~/lib/site";
 
 /** Tags shown before "more": the rest sit one press away (the selected tag is always shown). */
@@ -13,8 +13,7 @@ const TAGS_SHOWN = 10;
 /**
  * `/projects`, `/articles`, `/artworks`, `/poetry`: the section's front page, set as the contents page of a journal (docs/design-system.md,
  * "Entry pages", "Lists"): a running head (the journal's name, the owner's, at the left; the folio, the plain count, at the right) over ONE
- * hairline, the section's name at the headline scale and in a lighter weight, a thin italic standfirst computed from the entries (the years
- * they span, the places they are set in), the tag filter in plain space, then the entries as hairline rows (`EntryRow`: date and places in
+ * hairline, the section's name at the headline scale in a lighter weight, the tag filter in plain space, then the entries as hairline rows (`EntryRow`: date and places in
  * mono, the title heavy over a thin summary, the image where there is one), grouped by year (newest first) when a year holds more than
  * one. The filter is the URL (`?tag=rail`: a link, a reload, the back button; works without scripts) and each choice is a link. An empty
  * collection is one muted line. Each row keeps the entry's slug as its anchor id (`/articles#slug`).
@@ -31,8 +30,6 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
   const cardLevel = grouped ? 3 : 2;
   // The section's name for labels ("Filter poetry by tag"), the count noun for counts ("4 poems").
   const section = KIND_PLURALS[kind].toLowerCase();
-  // What the entries on show span (computed, never authored): the years and the number of places.
-  const standfirst = listSpan(shown);
   const nouns = KIND_NOUNS[kind];
   let seen = 0;
 
@@ -52,11 +49,6 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
           </span>
         </p>
         <h1 className="list-title">{KIND_PLURALS[kind]}</h1>
-        {standfirst && (
-          <p data-slot="list-standfirst" className="list-standfirst">
-            {standfirst}
-          </p>
-        )}
       </header>
 
       {tags.length > 0 && items.length > 1 && <TagFilter tags={tags} selected={tag} search={search} label={`Filter ${section} by tag`} />}

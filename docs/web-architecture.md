@@ -88,7 +88,7 @@ app/
   (message, link to `/`, a plain inline list of all places); the shell and globe stay mounted. Status is a real 404.
 - Unmatched URLs fall to the root `ErrorBoundary` (404 page inside the navbar).
 - The list pages (`/projects`, `/articles`, `/artworks`, `/poetry`) are plain pages outside the shell: a running head (the owner's name, the plain
-  count "5 articles" / "2 of 5 articles" when filtered, one hairline under it; no eyebrow, no index codes), the section's name as the h1 in the reading face at a medium weight, a computed italic standfirst (years and places: `listSpan`), then
+  count "5 articles" / "2 of 5 articles" when filtered, one hairline under it; no eyebrow, no index codes), the section's name as the h1 in the reading face at a medium weight, then
   hairline rows (`EntryRow`, `components/entry/entry-list-card.tsx`: a mono column with the date, the places and a status word when there is one;
   the title heavy over a thin summary, at most four tags as muted text; the image where there is one; no box, and no kind: the page already says
   it) whose rows keep `id={slug}` anchors (`/projects#slug`) and link to the entry route; an empty collection is one muted line ("Nothing here

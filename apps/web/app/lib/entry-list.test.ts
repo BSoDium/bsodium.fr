@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectTags, filterByTag, groupByYear, listSpan, shouldGroupByYear, parseTagFilter, tagSearch, yearOf } from "./entry-list";
+import { collectTags, filterByTag, groupByYear, shouldGroupByYear, parseTagFilter, tagSearch, yearOf } from "./entry-list";
 
 const e = (slug: string, tags: string[], date?: string) => ({ slug, tags, ...(date ? { date } : {}) });
 
@@ -95,21 +95,5 @@ describe("shouldGroupByYear", () => {
     expect(shouldGroupByYear([group(6, 2026)])).toBe(false);
     expect(shouldGroupByYear([group(1, 2026), group(1, 2024), group(1, 2021)])).toBe(false);
     expect(shouldGroupByYear([group(2, 2026), group(1, 2024), group(1, 2021)])).toBe(false);
-  });
-});
-
-describe("listSpan", () => {
-  const at = (date: string | undefined, ...places: string[]) => ({ ...(date ? { date } : {}), places: places.map((name) => ({ slug: name.toLowerCase(), name, href: `/locations/${name.toLowerCase()}` })) });
-  it("says the years the entries span and how many places they are set in", () => {
-    expect(listSpan([at("2019-03", "Paris"), at("2026-09", "Toulouse"), at("2024", "Paris", "Lisbon")])).toBe("2019 to 2026, across 3 places.");
-    expect(listSpan([at("2026-01", "Paris"), at("2026-09", "Paris")])).toBe("2026, in Paris.");
-  });
-  it("says what it can: a span alone, a place count alone, nothing", () => {
-    expect(listSpan([at("2019"), at("2026")])).toBe("From 2019 to 2026.");
-    expect(listSpan([at("2026")])).toBe("2026.");
-    expect(listSpan([at(undefined, "Paris"), at(undefined, "Paris")])).toBe("In Paris.");
-    expect(listSpan([at(undefined, "Paris", "Lisbon")])).toBe("Across 2 places.");
-    expect(listSpan([at(undefined)])).toBeNull();
-    expect(listSpan([])).toBeNull();
   });
 });
