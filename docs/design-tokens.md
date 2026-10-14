@@ -93,7 +93,7 @@ Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251
 
 ### Caption (the home screen's words over the planet)
 
-The rows that float over the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Caption on the sphere"): the reading serif (Newsreader, the intro's own face, no file of its own) in medium and heavy weights and a heavy italic, the code face (JetBrains Mono, the page's own) for "Software" and a calligraphic script (Allura) for "Poetry", **outlined** (face colour inside, a thin outline outside the glyph) and given a short **thickness** on the Z axis (a stack of slices towards the planet). Monochrome, from the globe's own palette (`captionColors`): no accent, no pure black or white; the colours are uniforms, so a theme change is no rebuild.
+The rows that float over the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Caption on the sphere"): the reading serif (Newsreader, the intro's own face, no file of its own) in medium and heavy weights and a heavy italic, the code face (JetBrains Mono, the page's own) for "Software" and an ornate copperplate script (Imperial Script) for "Poetry", **outlined** (face colour inside, a thin outline outside the glyph) and given a short **thickness** on the Z axis (a stack of slices towards the planet). Monochrome, from the globe's own palette (`captionColors`): no accent, no pure black or white; the colours are uniforms, so a theme change is no rebuild.
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
@@ -109,7 +109,7 @@ The rows that float over the planet on the home screen (`CAPTION` in `app/globe/
 | `fadeMs`, `leaveMs` | 180, 200 | the interaction's exit is an opacity fade of the canvas; the orbit exit (kept) takes `leaveMs` |
 | `glideMs` | 110 | the parallels glide to a new tilt |
 
-Faces (`CAPTION_FACES`, `CAPTION_STYLES`): `plain` Newsreader 500, `heavy` 800, `heavy-italic` 800 italic, `mono` JetBrains Mono 700 (scaled 0.88 to the serif's caps), `script` Allura 400 (scaled 1.12, thickened 0.05 caps; SIL OFL 1.1, `public/fonts/allura-1.110-latin-400.woff2`, 13.7 kB, Basic Latin subset of google/fonts `ofl/allura/Allura-Regular.ttf` (246.6 kB), `kern` only; the licence is `LICENSE-allura.txt` beside it; loaded by the globe with the `FontFace` API only when a caption has a word in it). A face that fails falls back (the script to the heavy italic serif).
+Faces (`CAPTION_FACES`, `CAPTION_STYLES`): `plain` Newsreader 500, `heavy` 800, `heavy-italic` 800 italic, `mono` JetBrains Mono 700 (scaled 0.88 to the serif's caps), `script` Imperial Script 400 (scaled 1.0, thickened 0.05 caps; SIL OFL 1.1, `public/fonts/imperial-script-1.010-latin-400.woff2`, 19.7 kB, Basic Latin + Latin-1 subset of google/fonts `ofl/imperialscript/ImperialScript-Regular.ttf` (154.8 kB), `kern` only; the licence is `LICENSE-imperial-script.txt` beside it; loaded by the globe with the `FontFace` API only when a caption has a word in it). A face that fails falls back (the script to the heavy italic serif).
 
 ### Map card and credits line
 

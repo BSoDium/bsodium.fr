@@ -148,18 +148,18 @@ describe("type roles", () => {
 describe("the caption's one extra face (loaded by the globe only when the page's caption has a word in it, not declared in the stylesheet)", () => {
   it("is a real woff2 subset of Basic Latin next to its OFL licence, versioned in the name (the year-long immutable cache), small", () => {
     const url = CAPTION_FACES.script.url;
-    expect(url).toMatch(/^\/fonts\/allura-\d+\.\d+-latin-400\.woff2$/);
+    expect(url).toMatch(/^\/fonts\/imperial-script-\d+\.\d+-latin-400\.woff2$/);
     const file = publicFile(url.slice(1));
     expect(existsSync(file), url).toBe(true);
     expect(readFileSync(file).toString("latin1", 0, 4), url).toBe("wOF2");
     expect(statSync(file).size, url).toBeLessThan(30 * 1024);
-    const text = readFileSync(publicFile("fonts/LICENSE-allura.txt"), "utf8");
+    const text = readFileSync(publicFile("fonts/LICENSE-imperial-script.txt"), "utf8");
     expect(text).toContain("SIL Open Font License, Version 1.1");
     expect(text).toMatch(/^Copyright /);
   });
 
   it("is not in the stylesheet: no page pays for it, and the caption's other faces are the page's own (Newsreader, JetBrains Mono)", () => {
-    expect(css).not.toMatch(/allura/i);
+    expect(css).not.toMatch(/imperial/i);
     expect(CAPTION_FACES.serif.url).toBeNull();
     expect(CAPTION_FACES.mono.url).toBeNull();
     expect(css).toContain('font-family: "JetBrains Mono Variable"');

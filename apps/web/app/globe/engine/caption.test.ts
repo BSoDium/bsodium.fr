@@ -663,7 +663,7 @@ describe("faces, styles and colours", () => {
     expect(CAPTION_FACES.mono.family).toMatch(/JetBrains Mono/);
     expect(CAPTION_FACES.serif.url).toBeNull();
     expect(CAPTION_FACES.mono.url).toBeNull();
-    expect(CAPTION_FACES.script.url).toMatch(/^\/fonts\/allura-\d+\.\d+-latin-400\.woff2$/);
+    expect(CAPTION_FACES.script.url).toMatch(/^\/fonts\/imperial-script-\d+\.\d+-latin-400\.woff2$/);
     expect(CAPTION_FACE.capEm).toBeGreaterThan(0.5);
   });
 

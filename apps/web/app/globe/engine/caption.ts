@@ -21,7 +21,7 @@ import { clamp, DEG } from "./geo";
 
 /* ------------------------------------------------------------------ the faces */
 
-/** The three faces of the caption: the reading serif, the site's mono and a calligraphic script (Allura). */
+/** The three faces of the caption: the reading serif, the site's mono and an ornate copperplate script (Imperial Script). */
 export type CaptionFaceKey = "serif" | "mono" | "script";
 
 /**
@@ -61,12 +61,12 @@ export const CAPTION_FACES = {
   script: {
     family: '"Caption Script"',
     fallback: '"Snell Roundhand", "Apple Chancery", "Segoe Script", cursive',
-    scale: 1.12,
+    scale: 1.0,
     dy: 0,
     tracking: 0.004,
     /** A formal script's hairlines would vanish under a thin outline: its letters are thickened by this many caps (a stroke in the face colour). */
     embolden: 0.05,
-    url: "/fonts/allura-1.110-latin-400.woff2",
+    url: "/fonts/imperial-script-1.010-latin-400.woff2",
   },
 } as const;
 
