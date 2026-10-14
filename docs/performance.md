@@ -114,7 +114,7 @@ The ring of text that circles the planet's disc below the whole-globe fit (web-a
 
 ### Round 3: the home screen rests on the ring, and the caption is part of the globe's own frames (2026-10-14)
 
-The home page now opens at the globe's lowest zoom, where the ring of type (round 2, unchanged: restored exactly after the owner's review) is shown, so **the page at rest is no longer idle**: it repaints 30 times a second for the ring, until a gesture, a zoom in or a place opening (reduced motion: a static ring, no timer). That is the one standing cost, and it is the ring's own, above. **The caption adds nothing at rest**: it is textured geometry in the globe's scene, drawn in frames the globe draws anyway, and the frame loop is asked for frames only while an entrance (1.14 s) or a departure (200 ms) runs.
+The home page now opens at the globe's lowest zoom, where the ring of type (round 2, unchanged: restored exactly after the owner's review) is shown, so **the page at rest is no longer idle**: it repaints 30 times a second for the ring, until a gesture, a zoom in or a place opening (reduced motion: a static ring, no timer). That is the one standing cost, and it is the ring's own, above. **The caption adds nothing at rest**: it is textured geometry, drawn in frames the globe draws anyway, and the frame loop is asked for frames only while an entrance or a departure (200 ms) runs (round 4 below: the caption is now crisp, in a second canvas).
 
 Measured on a production build served by `react-router-serve` (demo content), headless Chrome for Testing 153 with the GPU, 1440 x 900 @2, 2 repeats, `node apps/web/scripts/perf/run.mjs --scenarios idle,ring-rest,caption-enter`:
 
@@ -129,11 +129,32 @@ Measured on a production build served by `react-router-serve` (demo content), he
 
 `caption-enter` (the showcase turned off and on five times, 700 ms and 1.4 s apart: the boxes and labels cross-fade with the caption's entrance and departure): 421 GL frames in 14.3 s, **p50, p95 and max frame interval 16.7 / 16.7 to 16.8 / 16.8 ms, 0 missed against the 60 Hz compositor, 0 long tasks**, GPU 0.17 to 0.18 ms a frame (mean), and **0 GL draws in the 1.5 s of rest after the last entrance**. The two lines are two draw calls over one shared shader; the geometry is built once (a strip of one column per 2 degrees: about 60 columns x 2 rows x 2 lines), each frame of an entrance is a matrix per line.
 
-The texture (one small canvas per line, drawn once per face and size class: about 900 x 150 texels with mipmaps for Jacquard at 64 texels a cap height) is the only new memory: well under 1 MB.
+The texture (one small canvas per line, drawn once per size class) is the only new memory: well under 1 MB (round 3's first version drew it in a pixel face; see round 4 below).
 
 Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 669.7 KB raw / 182.1 KB gzip against the release's 658.8 / 179.6 (+10.9 KB raw, +2.5 KB gzip: `caption.ts`, `caption-layer.ts`, `lift.ts`, the showcase wiring). The two fonts (18.9 kB and 3.9 kB) are fetched only when the page's caption face is that one, by the globe, after the page is up; Jacquard is the default so it is 18.9 kB on the home page, once (immutable cache).
 
 **Not measured:** a real phone, a CPU-throttled run, a 120 Hz headed run, battery (30 repaints a second as the resting state of the home page is the thing to watch: the knob is `RING.frameMs`, 32). The perf budgets (`pnpm perf`) were not run in full for this change.
+
+### Round 4: the caption in the reading serif, outlined and extruded (2026-10-14)
+
+The caption is now three lines of Newsreader (the face the page already has: no file), outlined and given a thickness (5 stacked slices in one geometry), floating at 1.15 radii, drawn **crisp** by a second small WebGL canvas over the globe's (the pixel pass is `?orbit-pixel=1`; an outlined serif is not readable there). The two pixel faces and their licences are gone from `public/fonts` (-22.8 kB of files, never on the page unless asked).
+
+Measured as above (production build, `react-router-serve`, demo content, headless Chrome for Testing 153 with the GPU, 1440 x 900 @2, 2 repeats, `node apps/web/scripts/perf/run.mjs --scenarios idle,ring-rest,caption-enter --repeat 2`):
+
+| | idle (3.2 s) | `ring-rest` (5.5 s, ring shown) |
+| --- | --- | --- |
+| main thread `RunTask` | 82 to 124 ms | 261 to 323 ms (47 to 58 ms a second) |
+| `Commit` | 11 to 17 ms (180 frames) | 69 to 91 ms (301 frames) |
+| ring repaints | | 150 in 5 s (30 a second), 42 to 55 ms |
+| GL draws | 0 | 0 |
+
+**The resting repaint rate is unchanged: the ring's 30 a second, nothing from the caption.** `caption-enter` (the showcase off and on five times): 640 frames in 15 s (the entrance is longer: 3 logical lines, 260 ms apart), **p50, p95 and max frame interval 16.7 / 16.7 / 16.8 ms, 0 long tasks, 0 GL draws in the rest after the last entrance**; GPU 2.2 ms a frame on average, 4.5 ms at the 95th percentile (the first version's was 0.17 ms: the cost of a second multisampled canvas at 2 x; it is drawn only while a line is in view, into a window round the planet (about a third of the canvas), and only in frames the globe draws anyway). An idle-rotation frame with the caption in view costs the same; at rest nothing is drawn.
+
+Memory: one small canvas texture per line (about 1300 to 1700 x 170 texels with mipmaps) and a second WebGL context (the pixel mode has none).
+
+Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 676.4 KB raw / 184.0 KB gzip against round 3's 669.7 / 182.1 (+6.7 KB raw, +1.9 KB gzip: the real-parallel layout, wrapping, the stack, the crisp canvas; the pixel-font caption code and the bitmap sheets are gone). The fonts the caption used to fetch (18.9 and 3.9 kB) are removed; Newsreader is the page's own.
+
+**Not measured:** a real phone, a CPU-throttled run, Safari (a second context, alpha to coverage), battery. The perf budgets (`pnpm perf`) were not run in full.
 
 ## Testing on a phone
 

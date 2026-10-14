@@ -93,20 +93,21 @@ Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251
 
 ### Caption (the home screen's call to action)
 
-The caption that wraps the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Orbiting type") is drawn in the globe's own art-pixel pass, so it holds exactly two colours of the theme: the ink and, for the keyline that separates it from the coastlines under it, the page colour. No tone of its own, no alpha.
+The three lines that float over the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Orbiting type"): the reading serif (Newsreader, the intro's own face, no file of its own), **outlined** (the inside of a letter is the page colour, its outline the ink) and given **thickness** on the Z axis (a stack of slices towards the planet, in the ink). Two colours of the theme and nothing else: no tone of its own, a theme change is two shader uniforms, no rebuild.
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `radius` | 1.022 | the shell the lines wrap, in planet radii (the coastlines and the outline are at 1) |
-| `capR`, `leading` | 0.16, 1.75 | cap height in planet radii; distance between baselines in cap heights |
-| `leanDeg`, `centreDeg` | -16, 26 | the lines' axis leans away from the viewer (they arch); the block's centre is this far above the view's centre; no roll |
-| `maxSpanDeg` | 120 | the most a line may span round the planet (the cap height shrinks to it) |
-| `enter` | from 100 degrees, 1000 ms, stagger 140 ms, 350 ms after load | each line comes round from behind the planet with an ease-out-expo |
+| `radius`, `depth`, `slices` | 1.15, 0.015, 5 | the shell the front faces float on, in planet radii (the coastlines and the graticule are at 1: parallax is visible while the globe turns); the thickness towards the planet and the slices that make it |
+| `capR` | 0.06, 0.06, 0.1 | cap height per logical line in planet radii: what the site is, what it holds, the call to action (the largest) |
+| `aboveDeg`, `aboveWrappedDeg`, `topLat` | 24, 30, -45 to 60 | the top baseline is the multiple of 7.5 degrees nearest the view's latitude plus this (28 + 24: 52.5); a small screen starts higher; the clamp |
+| `gapDeg`, `maxSpanDeg` | 0.3, 116 | the room under a line, and the most a line may span round its parallel (the cap shrinks to it) |
+| `minCapPx`, `wrapCapPx` | 11, 12 | under 11 CSS px a letter the lines are wrapped (each long line cut in two at its best delimiter) and the caps are brought up to 12 |
+| `enter` | from 100 degrees, 1000 ms, stagger 260 ms, 350 ms after load | each line comes round from behind the planet with an ease-out-expo, line 1 first |
 | `leaveMs` | 200 | leaving is quick, on behind the planet the other way |
-| `outline`, `texCap` | 0.09, 64 | the keyline in cap heights; texels in a cap height |
-| `cut`, `lodBias`, `bitmapBold` | 0.35, -0.7, 0.18 | the shader's coverage threshold and sharpening, and the bitmap face's weight |
+| `outline`, `texCap` | 0.085, 96 | the outline in cap heights; texels in a cap height |
+| `cut`, `lodBias`, `pixel` | 0.4, -0.5, false | the pixel pass's coverage threshold and sharpening; the render mode (false: crisp) |
 
-Faces (`CAPTION_FONTS`, chosen with `?orbit-font=jacquard|pixelify|bitmap`, default `jacquard`): Jacquard 24 (SIL OFL 1.1, a pixel blackletter; `public/fonts/jacquard-24-1.002-latin-400.woff2`, 18.9 kB, Basic Latin subset of google/fonts `ofl/jacquard24/Jacquard24-Regular.ttf`, 313.6 kB), Pixelify Sans at weight 700 (SIL OFL 1.1; `pixelify-sans-1.000-latin-700.woff2`, 3.9 kB, instanced and subset from google/fonts `ofl/pixelifysans/PixelifySans[wght].ttf`, 79.2 kB), and the map's own bitmap font (`engine/pixel-font`, no file). The licence of each is `LICENSE-<name>.txt` beside it. A face that would have strokes under a cell at the page's art-cell size falls back along that chain (`legibleFont`: Jacquard needs a cap height of 13 cells, Pixelify 12, the bitmap font 7); on a 390 px phone (2 px cell, a 60-cell planet) every face but the bitmap one is under it.
+Face: Newsreader (`CAPTION_FACE`: weight 500 at the display optical size, a literary serif like Times New Roman, its italic is in the same file family). The two pixel faces of the first version (Jacquard 24, Pixelify Sans) and their licences are gone. Render mode: `?orbit-pixel=0|1` (or sessionStorage `orbit-pixel`).
 
 ### Map card and credits line
 
