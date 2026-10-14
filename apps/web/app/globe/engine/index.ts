@@ -6,7 +6,6 @@ import type { Polylines } from "@catalyst/geodata";
 import { isFitView, type GlobeInitialView, type GlobePlace, type GlobeProps, type GlobeRoute, type GlobeViewState } from "../types";
 import { readTheme } from "./colors";
 import { BoxScene } from "./box-scene";
-import type { CaptionFont } from "./caption";
 import { placeFraming } from "./framing";
 import type { LodTree } from "./lod-tree";
 import { GlobeRenderer, type RendererOptions, type StartView } from "./renderer";
@@ -54,9 +53,9 @@ interface GlobeOptions {
   pickOverride?: RendererOptions["pickOverride"];
   /** The line of the ring of type (see `RendererOptions.ringText`); absent = no ring. */
   ringText?: string;
-  /** The lines of the caption that wraps the planet and the face they are set in (see `RendererOptions.captionPhrases`). */
+  /** The lines of the caption that floats over the planet, and whether it is drawn in the globe's pixel pass (see `RendererOptions.captionPhrases`). */
   captionPhrases?: readonly string[];
-  captionFont?: CaptionFont;
+  captionPixel?: boolean;
   /** See `GlobeProps.coverBottom` and `GlobeProps.showcase`: read at creation. */
   coverBottom?: number;
   showcase?: boolean;
@@ -119,6 +118,8 @@ export interface GlobeDebug {
   pinCaption(ms: number | null): void;
   /** Hold every caption line at `deg` degrees east of its place (null releases it): the limb close-ups. */
   pinCaptionAngle(deg: number | null): void;
+  /** Lay the caption on a shell of this radius (1.001: on the surface, over the graticule's parallels; null: the tuned one): the alignment check. */
+  captionRadius(r: number | null): void;
   /** Turn the showcase (the caption in, the boxes out) on or off as the app's hero would (checks and the perf scenarios). */
   showcase(on: boolean): void;
   /** Set the earth rotation angle in degrees (moves the sky against the earth) and draw. */
@@ -249,7 +250,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         pickOverride: opts.pickOverride,
         ringText: opts.ringText,
         captionPhrases: opts.captionPhrases,
-        captionFont: opts.captionFont,
+        captionPixel: opts.captionPixel,
         coverBottom: opts.coverBottom,
         showcase: opts.showcase,
         onSelect: opts.onSelect,
@@ -356,6 +357,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       showcase: (on) => renderer.setShowcase(on),
       pinCaption: (ms) => renderer.pinCaption(ms),
       pinCaptionAngle: (deg) => renderer.pinCaptionAngle(deg),
+      captionRadius: (r) => renderer.setCaptionRadius(r),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),
       info: () => renderer.renderInfo(),

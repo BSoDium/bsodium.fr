@@ -99,7 +99,10 @@ async function geometry(page) {
     const shown = (node) => {
       const cs = getComputedStyle(node);
       // (`display: none` has no box: the how-to line is not drawn on a wide, short window)
-      return cs.display !== "none" && cs.visibility !== "hidden" && Number(cs.opacity) > 0.01;
+      if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) <= 0.01) return false;
+      // (a visually hidden line, one clipped pixel while the globe says it itself, is no ink: its text is wider than its box)
+      const r = node.getBoundingClientRect();
+      return !(r.width <= 1.5 && r.height <= 1.5);
     };
     const root = el("[data-slot=landing-hero]");
     const state = root.getAttribute("data-hero");
@@ -184,7 +187,7 @@ async function layoutChecks(page, label) {
   const intro = await page.locator(".hero-intro").innerText();
   ok(/^Front-end and UX software engineer based in Warsaw\. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\.$/.test(intro), `desktop: the intro says who the owner is (${intro})`);
   const hintText = await page.locator(".hero-hint").innerText();
-  ok(/^(Pick a point on the globe, or start from a list\.|No place is published yet: start from a list\.)$/.test(hintText), `desktop: then how to use the page (${hintText})`);
+  ok(/^(Drag the globe to explore and pick a place, or start from a list\.|No place is published yet: start from a list\.)$/.test(hintText), `desktop: then how to use the page (${hintText})`);
   // the name: one line, a share of the width (not the full width), the given name heavy and the family name thin
   const nm = await page.evaluate(() => {
     const n = document.querySelector(".hero-name");
@@ -380,7 +383,7 @@ for (const width of [320, 360, 390, 430]) {
   const g0 = await geometry(page);
   ok(g0.header === null, `${width} px: no header at rest`);
   ok(g0.overflowX <= 0, `${width} px: no horizontal overflow`);
-  ok(g0.inks.every((i) => i.r <= g0.vw - 0.5 && i.l >= 0), `${width} px: the hero (name included) is inside the viewport`);
+  ok(g0.inks.every((i) => i.r <= g0.vw - 0.5 && i.l >= 0), `${width} px: the hero (name included) is inside the viewport${g0.inks.filter((i) => i.r > g0.vw - 0.5 || i.l < 0).map((i) => ` [${i.name} ${Math.round(i.l)}..${Math.round(i.r)}]`).join("")}`);
   if (width === 390) {
     await page.locator("[data-slot=hero-search]").tap();
     await page.waitForSelector("[data-slot=search-palette]", { state: "visible", timeout: 3000 });
@@ -534,7 +537,29 @@ for (const width of [320, 360, 390, 430]) {
     ok((await heroState(page)) === "away" && (await hero(page).getAttribute("aria-hidden")) === "true", "place open: the hero is away and hidden from assistive technology");
     ok((await page.locator("h1:visible").count()) === 1, "place open: one visible h1 (the panel's)");
     ok((await page.locator("[data-slot=landing-hero]").evaluate((h) => getComputedStyle(h).visibility)) === "hidden", "place open: nothing of the hero is shown");
+    // Closing the panel (from a place the globe is zoomed in on): the hero's text never flashes on its way to the collapsed state. Sampled every frame
+    // for a second, the introduction, the how-to line, the rows and the search line stay under 5 % opacity (the bug was a flash and a fade of the intro).
+    await page.evaluate(() => {
+      const parts = [".hero-intro", ".hero-hint", ".hero-list", ".hero-search"];
+      window.__heroFlash = { max: 0, frames: 0, stop: false };
+      const tick = () => {
+        for (const s of parts) {
+          const el = document.querySelector(s);
+          if (el) window.__heroFlash.max = Math.max(window.__heroFlash.max, Number(getComputedStyle(el).opacity));
+        }
+        window.__heroFlash.frames++;
+        if (!window.__heroFlash.stop) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
     await page.keyboard.press("Escape");
+    await sleep(1000);
+    const flash = await page.evaluate(() => {
+      window.__heroFlash.stop = true;
+      return window.__heroFlash;
+    });
+    ok(flash.frames > 20 && flash.max <= 0.05, `place closed: the hero's text never shows on the way back (max opacity ${flash.max.toFixed(3)} over ${flash.frames} frames)`);
+    ok((await heroState(page)) === "collapsed", "place closed: the globe is zoomed in on the place, so the hero is collapsed (not at rest)");
   }
   ok(logs.length === 0, `place open: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
   await ctx.close();
@@ -599,7 +624,7 @@ for (const width of [320, 360, 390, 430]) {
     };
   });
   ok(state.hint === "Start from a list.", `no scripts: the how-to line only says to start from a list (${JSON.stringify(state.hint)})`);
-  ok(!/Pick a point/.test(state.text), "no scripts: nothing on the page tells the visitor to pick a point on the globe");
+  ok(!/Drag the globe/.test(state.text), "no scripts: nothing on the page tells the visitor to drag the globe");
   ok(!state.search, "no scripts: the search line (a script) is not drawn");
   ok(state.rows === 4, `no scripts: the four lists are links that work (${state.rows})`);
   await page.screenshot({ path: `${OUT_DIR}/hero-no-script-1440.png` });
@@ -688,7 +713,7 @@ for (const [label, options, scheme] of SHAPES) {
   await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
   await waitGlobe(page);
   await waitDebug(page);
-  await sleep(1800);
+  await sleep(3400); // (the entrance: three lines, 260 ms apart, a second each, after the page's own fade-in)
   const p = await planetOf(page);
   const c = await captionOf(page);
   const ring = await ringOf(page);
@@ -696,12 +721,20 @@ for (const [label, options, scheme] of SHAPES) {
   const nums = await page.evaluate(() => ({ fit: window.__globeDebug.fitZoom(), floor: window.__globeDebug.floorZoom() }));
   ok(Math.abs(v.zoom - nums.floor) < 1e-6 && nums.floor < nums.fit - 0.3, `${label}: the page opens fully zoomed out (zoom ${v.zoom.toFixed(2)}, the fit is ${nums.fit.toFixed(2)})`);
   ok(ring.shown && ring.alpha > 0, `${label}: the flat ring of type is shown (the ring is main's, unchanged)`);
-  ok(c.built && c.showcase && c.overlayHidden && c.lines.length === 2 && c.lines.every((l) => l.visible && Math.abs(l.theta) < 1e-3), `${label}: the caption is built and in place (${c.font}, ${c.lines.map((l) => l.text).join(" / ")})`);
+  ok(c.built && c.showcase && c.overlayHidden && c.lines.length >= 3 && c.lines.every((l) => l.visible && Math.abs(l.theta) < 1e-3), `${label}: the caption is built and in place (${c.pixel ? "pixel pass" : "crisp"}, ${c.lines.map((l) => l.text).join(" / ")})`);
+  {
+    const said = c.lines.map((l) => l.text).join(" ").replace(/\s+/g, " ");
+    ok(/A personal archive, organised around places\./.test(said) && /Software \u00b7 Articles( \u00b7)? Artworks \u00b7 Poetry/.test(said) && /Drag to explore\. Pick a place\./.test(said), `${label}: the caption says what the site is, what it holds and what to do (${said})`);
+    // the lines lie on real parallels, top to bottom, the call to action the largest letters
+    const lats = c.lines.map((l) => l.baseLat);
+    ok(lats.every((x, i) => i === 0 || x < lats[i - 1]) && lats.every((x) => Math.abs((x / 7.5) % 1) < 1e-9), `${label}: every line is on a parallel (7.5 degree grid), one under the other (${lats.join(", ")})`);
+    ok(c.lines.at(-1).capR >= Math.max(...c.lines.map((l) => l.capR)) - 1e-9, `${label}: the call to action has the largest letters`);
+  }
   ok(p.labels === 0, `${label}: every box and label is out`);
   ok(p.lift > 5 && p.cy - p.r >= -0.5, `${label}: the planet is lifted by ${p.lift.toFixed(0)} px (cover ${p.cover}), its top is inside the window (${Math.round(p.cy - p.r)} px)`);
   ok(p.cy + p.r <= p.h - p.cover + 1 || roomUsedUp(p), `${label}: it clears what covers the bottom, or the room above is used up`);
   const hintBox = await page.locator(".hero-hint").boundingBox();
-  ok(hintBox !== null && hintBox.width <= 1.5 && hintBox.height <= 1.5 && /Pick a point on the globe/.test(await page.locator(".hero-hint").textContent()), `${label}: the how-to line is visually hidden, not removed`);
+  ok(hintBox !== null && hintBox.width <= 1.5 && hintBox.height <= 1.5 && /Drag the globe to explore and pick a place/.test(await page.locator(".hero-hint").textContent()), `${label}: the how-to line is visually hidden, not removed`);
   ok((await hero(page).getAttribute("data-orbit")) === "true", `${label}: the hero knows the globe has the caption`);
   ok((await page.evaluate(() => window.__globeDebug.pick(innerWidth / 2, 330))) === null, `${label}: a hidden box takes no pick`);
   await page.screenshot({ path: `${OUT_DIR}/hero-showcase-${label.replace(" ", "-")}.png` });
@@ -760,7 +793,7 @@ for (const [label, options, scheme] of SHAPES) {
   await ctx.close();
 }
 
-// The caption's entrance, held at times (pinned): each line starts behind the planet, arrives fast and settles slowly, line 2 140 ms after line 1.
+// The caption's entrance, held at times (pinned): each line starts behind the planet, arrives fast and settles slowly, each line 260 ms after the one before.
 {
   const { ctx, page } = await newPage(DESKTOP);
   await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
@@ -773,15 +806,15 @@ for (const [label, options, scheme] of SHAPES) {
     return (await captionOf(page)).lines;
   };
   const f0 = await at(0);
-  ok(f0.every((l) => !l.visible && l.theta > 1.5), "entrance: at 0 ms both lines are behind the planet");
+  ok(f0.every((l) => !l.visible && l.theta > 1.5), "entrance: at 0 ms every line is behind the planet");
   const f100 = await at(100);
   ok(f100[0].visible && !f100[1].visible, "entrance: at 100 ms line 1 is arriving and line 2 has not started");
-  const f200 = await at(200);
-  ok(f200[0].visible && f200[1].visible && f200[1].theta > f200[0].theta, "entrance: at 200 ms both are in view, line 2 behind line 1");
   const f400 = await at(400);
-  ok(f400[0].theta < 0.2 && f400[1].theta > f400[0].theta && f400[1].theta < 0.5, "entrance: at 400 ms line 1 is almost there (fast), line 2 settling");
-  const f1100 = await at(1100);
-  ok(f1100.every((l) => Math.abs(l.theta) < 0.01), "entrance: at 1100 ms both are in place (the ease has 0.1 % of the way left)");
+  ok(f400[0].visible && f400[1].visible && !f400[2].visible && f400[1].theta > f400[0].theta, "entrance: at 400 ms lines 1 and 2 are in view (line 2 behind line 1), line 3 is waiting for its turn (260 ms stagger)");
+  const f700 = await at(700);
+  ok(f700[0].theta < 0.1 && f700[1].theta > f700[0].theta && f700[2].theta > f700[1].theta, "entrance: at 700 ms line 1 is almost there (fast), the others settling in order");
+  const fEnd = await at(500 + 1000 + 300);
+  ok(fEnd.every((l) => Math.abs(l.theta) < 0.01), "entrance: once the last line's turn has run every line is in place (the ease has 0.1 % of the way left)");
   await page.evaluate(() => window.__globeDebug.pinCaption(null));
   // the limb: lines held half past the horizon on either side never mirror: the shell's front faces end before the limb and the planet's depth does the rest
   for (const deg of [58, 70, -58, -70, 80, -80]) {
@@ -821,7 +854,7 @@ for (const [name, options] of VIEWPORTS) {
   await sleep(900);
   const p = await planetOf(page);
   const c = await captionOf(page);
-  ok(c.showcase && p.labels === 0, `${name}: the caption is in and the boxes are out (${c.font})`);
+  ok(c.showcase && p.labels === 0, `${name}: the caption is in and the boxes are out (${c.pixel ? "pixel" : "crisp"})`);
   ok(p.cy - p.r >= -0.5, `${name}: the lifted planet's top is inside the window (${Math.round(p.cy - p.r)} px, lift ${p.lift.toFixed(0)}, cover ${p.cover})`);
   ok(p.cy + p.r <= p.h - p.cover + 1 || roomUsedUp(p), `${name}: it clears what covers the bottom, or the room above is used up`);
   ok(logs.length === 0, `${name}: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);

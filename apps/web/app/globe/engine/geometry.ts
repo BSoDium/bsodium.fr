@@ -63,6 +63,9 @@ export function polylinesToSegments(p: Polylines, radius: number, maxStepDeg: nu
 }
 
 /** Meridians and parallels every `stepDeg`, sampled every `sampleDeg`, as segment pairs on the unit sphere. */
+/** The graticule's step, degrees: its parallels and meridians are this far apart (the caption's baselines sit on them). */
+export const GRATICULE_STEP_DEG = 15;
+
 export function graticuleSegments(stepDeg: number, sampleDeg: number): Float32Array {
   const pts: number[] = [];
   const push = (lon: number, lat: number) => pts.push(...lonLatToVec3(lon, lat));

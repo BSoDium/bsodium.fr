@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  CAPTION_FONTS,
+  CAPTION_FACE,
   CaptionMotion,
-  bandFrame,
+  bandColumns,
   bandMesh,
-  captionFontFrom,
+  captionPixelFrom,
   easeInCubic,
   easeOutExpo,
   enteringAngle,
@@ -12,70 +12,88 @@ import {
   entranceStart,
   faceTowardsViewer,
   layoutCaption,
-  legibleFont,
   leavingAngle,
   lineHidden,
+  parallelPoint,
   shellHorizon,
-  shellPoint,
+  snapLat,
+  splitLine,
+  topLatitude,
 } from "./caption";
-import { DEG, cameraDistance } from "./geo";
+import { DEG, cameraDistance, lonLatToVec3, viewBasis } from "./geo";
+import { GRATICULE_STEP_DEG } from "./geometry";
 import { CAPTION } from "./tuning";
 
-const TEXTS = ["Drag to explore", "Pick a place"];
-const WIDTHS = [7.4, 6.1];
-const layout = () => layoutCaption(TEXTS, WIDTHS, CAPTION_FONTS.jacquard.capEm, CAPTION_FONTS.jacquard.boxCaps);
+const TEXTS = ["A personal archive, organised around places.", "Software \u00b7 Articles \u00b7 Artworks \u00b7 Poetry", "Drag to explore. Pick a place."];
+/** Widths in ems of the three lines (a serif at about half an em a letter). */
+const measure = (t: string) => t.length * 0.5;
+const DESKTOP = 330; // the planet's radius at the lowest zoom, CSS px, at 1440x900
+const PHONE = 150; // and at 390x844
+const layout = (rPx = DESKTOP, viewLat = 28) => layoutCaption({ texts: TEXTS, measure, rPx, viewLat });
 const d = cameraDistance(2.2, 900);
+/** The screen height (planet radii) of a point of the earth frame seen from a camera over `lat`, longitude 0: the point's component along the view's north. */
+const screenY = (p: readonly number[], lat: number) => {
+  const { north } = viewBasis({ lon: 0, lat, zoom: 1 }, 900);
+  return p[0]! * north[0] + p[1]! * north[1] + p[2]! * north[2];
+};
 
-describe("the shell and the bands", () => {
-  it("has the bands' axis leaning away by `leanDeg` and NO roll: at the central meridian a band is horizontal on the screen", () => {
-    const { A, e1, e2 } = bandFrame();
-    expect(A[0]).toBe(0); // no x component: nothing leans sideways
-    expect(e2).toEqual([1, 0, 0]); // the reading direction is the screen's horizontal at the meridian
-    expect(Math.hypot(...A)).toBeCloseTo(1, 12);
-    expect(A[0] * e1[0] + A[1] * e1[1] + A[2] * e1[2]).toBeCloseTo(0, 12);
-    for (const lambda of [-0.2, 0, 0.3]) {
-      const l = shellPoint(-0.01, lambda);
-      const r = shellPoint(0.01, lambda);
-      // a hundredth of a radian either side of the central meridian: the line's tangent has no vertical component
-      expect(Math.abs(r[1] - l[1])).toBeLessThan(1e-9);
-      expect(r[0]).toBeGreaterThan(l[0]);
-    }
-  });
-
-  it("is the shell: every point at `CAPTION.radius`, and a line's points all at one latitude (the same distance along the axis)", () => {
-    const lines = layout().lines;
-    const { A } = bandFrame();
-    for (const line of lines) {
-      const m = bandMesh(line, 24, 2);
+describe("real parallels", () => {
+  it("is the shell: every point at `CAPTION.radius`, and a row of a band is a circle of one latitude about the earth's axis", () => {
+    for (const line of layout().lines) {
+      const m = bandMesh(line, 24, 1, CAPTION.depth);
       const cols = 25;
-      for (let j = 0; j < 3; j++) {
-        let along = NaN;
+      for (let j = 0; j < 2; j++) {
+        let y = NaN;
         for (let i = 0; i < cols; i++) {
           const k = (j * cols + i) * 3;
-          const x = m.positions[k]!;
-          const y = m.positions[k + 1]!;
-          const z = m.positions[k + 2]!;
-          expect(Math.hypot(x, y, z)).toBeCloseTo(CAPTION.radius, 5);
-          const a = x * A[0] + y * A[1] + z * A[2];
-          if (i === 0) along = a;
-          expect(a).toBeCloseTo(along, 5); // a row is a circle about the axis: constant latitude
+          expect(Math.hypot(m.positions[k]!, m.positions[k + 1]!, m.positions[k + 2]!)).toBeCloseTo(CAPTION.radius, 5);
+          if (i === 0) y = m.positions[k + 1]!;
+          expect(m.positions[k + 1]!).toBeCloseTo(y, 5); // the same height along the axis: the same parallel
         }
       }
     }
   });
 
-  it("stacks the lines one under the other, centred on the block's latitude, each on its own", () => {
+  it("has every baseline on a graticule parallel or midway between two, the block above the view's latitude, the lines in order", () => {
     const l = layout().lines;
-    expect(l).toHaveLength(2);
-    expect(l[0]!.lambda).toBeGreaterThan(l[1]!.lambda);
-    const gap = (CAPTION.leading * layout().capR) / CAPTION.radius;
-    expect(l[0]!.lambda - l[1]!.lambda).toBeCloseTo(gap, 9);
-    expect((l[0]!.lambda + l[1]!.lambda) / 2).toBeCloseTo((CAPTION.leanDeg + CAPTION.centreDeg) * DEG, 9);
+    expect(l).toHaveLength(3);
+    for (const line of l) expect(Math.abs(line.baseLat % (GRATICULE_STEP_DEG / 2))).toBe(0);
+    expect(l[0]!.baseLat).toBe(topLatitude(28));
+    expect(l[0]!.baseLat).toBe(52.5);
+    for (let i = 1; i < l.length; i++) expect(l[i]!.baseLat).toBeLessThan(l[i - 1]!.baseLat);
+  });
+
+  it("has the tilt and the curvature of the graticule's parallel at the view's latitude: from the north the ends rise, from the south they fall, at the equator it is straight", () => {
+    const line = layout().lines[0]!;
+    for (const view of [28, 55, 0, -28, -50]) {
+      const mid = screenY(parallelPoint(0, line.baseLat, 1), view);
+      const end = screenY(parallelPoint(line.halfSpan, line.baseLat, 1), view);
+      // the graticule's dotted parallel at the same latitude, on the planet's surface, for the same two longitudes
+      const gMid = screenY(lonLatToVec3(0, line.baseLat), view);
+      const gEnd = screenY(lonLatToVec3(line.halfSpan / DEG, line.baseLat), view);
+      expect(end - mid).toBeCloseTo(gEnd - gMid, 9); // the shell is the surface scaled: the same shape
+      if (view > 1) expect(end).toBeGreaterThan(mid);
+      else if (view < -1) expect(end).toBeLessThan(mid);
+      else expect(end).toBeCloseTo(mid, 9);
+    }
+    // the line lies in the plane of its parallel: all its points are at one height along the earth's axis, whatever the camera
+    const ys = [-1, -0.3, 0, 0.5, 1].map((u) => parallelPoint(u * line.halfSpan, line.baseLat, CAPTION.radius)[1]);
+    for (const y of ys) expect(y).toBeCloseTo(CAPTION.radius * Math.sin(line.baseLat * DEG), 9);
+  });
+
+  it("follows the view's latitude in graticule steps, and stays inside the clamp", () => {
+    expect(topLatitude(28)).toBe(52.5);
+    expect(topLatitude(10)).toBe(37.5);
+    expect(topLatitude(-10)).toBe(15);
+    expect(topLatitude(80)).toBe(CAPTION.topLat.max);
+    expect(topLatitude(-70)).toBe(CAPTION.topLat.min);
+    expect(snapLat(37.4, 15)).toBe(30);
+    expect(layout(DESKTOP, 5).lines[0]!.baseLat).toBe(30);
   });
 
   it("is centred on the central meridian: the strip is symmetric about longitude 0", () => {
     const line = layout().lines[0]!;
-    const m = bandMesh(line, 20, 1);
+    const m = bandMesh(line, 20, 1, CAPTION.depth);
     const cols = 21;
     const first = [m.positions[0]!, m.positions[1]!, m.positions[2]!];
     const last = [m.positions[(cols - 1) * 3]!, m.positions[(cols - 1) * 3 + 1]!, m.positions[(cols - 1) * 3 + 2]!];
@@ -84,18 +102,9 @@ describe("the shell and the bands", () => {
     expect(first[2]).toBeCloseTo(last[2]!, 6);
   });
 
-  it("bends down towards the limbs: the line's ends are lower than its middle (it arches over the planet)", () => {
-    const line = layout().lines[0]!;
-    const mid = shellPoint(0, line.lambda);
-    const end = shellPoint(line.halfSpan, line.lambda);
-    expect(end[1]).toBeLessThan(mid[1]);
-    // and it foreshortens: the end is further from the viewer's axis in depth than the middle
-    expect(end[2]).toBeLessThan(mid[2]);
-  });
-
-  it("is wound counter-clockwise seen from outside: every triangle's normal points away from the planet (back faces are the far side's)", () => {
-    const line = layout().lines[0]!;
-    const m = bandMesh(line, 12, 2);
+  it("is wound counter-clockwise seen from outside, on every slice: every triangle's normal points away from the planet (back faces are the far side's)", () => {
+    const line = layout().lines[2]!;
+    const m = bandMesh(line, 12, CAPTION.slices, CAPTION.depth);
     const P = (i: number) => [m.positions[3 * i]!, m.positions[3 * i + 1]!, m.positions[3 * i + 2]!] as const;
     for (let t = 0; t < m.indices.length; t += 3) {
       const a = P(m.indices[t]!);
@@ -109,22 +118,77 @@ describe("the shell and the bands", () => {
     }
   });
 
-  it("reads left to right: texture u grows with the longitude, to the right of the screen at the meridian", () => {
+  it("reads left to right: texture u grows with the longitude (east), v is 1 at the top (the higher latitude)", () => {
     const line = layout().lines[0]!;
-    const m = bandMesh(line, 10, 1);
+    const m = bandMesh(line, 10, 1, CAPTION.depth);
     expect(m.uvs[2]).toBeGreaterThan(m.uvs[0]!);
     expect(m.positions[3]).toBeGreaterThan(m.positions[0]!);
-    // v is 1 at the top (the higher latitude)
     const cols = 11;
     expect(m.uvs[2 * cols + 1]).toBe(1);
     expect(m.positions[3 * cols + 1]).toBeGreaterThan(m.positions[1]!);
   });
 
-  it("shrinks to the span the planet can carry, and never past it", () => {
-    const wide = layoutCaption(["a very long call to action that does not fit round a planet"], [40], CAPTION_FONTS.jacquard.capEm, 2.3);
-    expect(wide.capR).toBeLessThan(CAPTION.capR);
+  it("is a stack: the front face at the shell, `depth` of slices behind it towards the planet, every slice with its layer", () => {
+    const line = layout().lines[1]!;
+    const slices = CAPTION.slices;
+    const m = bandMesh(line, 8, slices, CAPTION.depth);
+    const perSlice = 9 * 2;
+    expect(m.layers).toHaveLength(slices * perSlice);
+    expect(m.indices).toHaveLength(slices * 8 * 6);
+    const radius = (n: number) => Math.hypot(m.positions[3 * n]!, m.positions[3 * n + 1]!, m.positions[3 * n + 2]!);
+    expect(m.layers[0]).toBe(0);
+    expect(radius(0)).toBeCloseTo(CAPTION.radius - CAPTION.depth, 5);
+    const front = (slices - 1) * perSlice;
+    expect(m.layers[front]).toBe(1);
+    expect(radius(front)).toBeCloseTo(CAPTION.radius, 5);
+    expect(CAPTION.depth).toBeGreaterThan(0);
+    expect(CAPTION.radius - CAPTION.depth).toBeGreaterThan(1.02); // the back of the letters is still clear of the surface
+    expect(bandColumns(line)).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe("the layout: sizes, call to action, wrapping", () => {
+  it("makes the call to action (the last line) the largest, and the others equal", () => {
+    const l = layout().lines;
+    expect(l[2]!.capR).toBeGreaterThan(l[0]!.capR);
+    expect(l[2]!.capR).toBeGreaterThan(l[1]!.capR);
+  });
+
+  it("spans no more than `maxSpanDeg` of its parallel, shrinking a long line to it", () => {
+    const wide = layoutCaption({ texts: ["x".repeat(50)], measure, rPx: DESKTOP, viewLat: 28 });
+    expect(wide.lines[0]!.capR).toBeLessThan(CAPTION.capR[0]!);
     expect(2 * wide.lines[0]!.halfSpan).toBeLessThanOrEqual(CAPTION.maxSpanDeg * DEG + 1e-9);
-    expect(layout().capR).toBe(CAPTION.capR);
+  });
+
+  it("keeps three lines on a desktop-sized planet, wrapped when there is not the room", () => {
+    const l = layout(DESKTOP);
+    expect(l.wrapped).toBe(false);
+    expect(l.stepDeg).toBe(GRATICULE_STEP_DEG);
+    expect(l.lines).toHaveLength(3);
+    // the whole block is above the plate under the page's own text: the call to action is no lower than the view's own latitude less a step
+    expect(l.lines[2]!.baseLat).toBeGreaterThanOrEqual(28 - GRATICULE_STEP_DEG);
+  });
+
+  it("wraps the lines when a letter would be under the least size, at half the step, never leaving a letter under it when it can help it", () => {
+    const l = layout(PHONE);
+    expect(l.wrapped).toBe(true);
+    expect(l.stepDeg).toBe(GRATICULE_STEP_DEG / 2);
+    expect(l.lines.length).toBeGreaterThan(3);
+    expect(l.lines[0]!.baseLat).toBe(topLatitude(28, CAPTION.aboveWrappedDeg));
+    for (const line of l.lines) expect(Math.abs((line.baseLat / l.stepDeg) % 1)).toBe(0);
+    expect(l.lines.map((x) => x.parent)).toEqual([...l.lines.map((x) => x.parent)].sort((a, b) => a - b));
+    // the pieces read in order and are the whole line
+    for (let p = 0; p < TEXTS.length; p++) {
+      const joined = l.lines.filter((x) => x.parent === p).map((x) => x.text).join(" ").replace(/\s+/g, " ");
+      expect(joined.replace(/ \u00b7 /g, " ")).toBe(TEXTS[p]!.replace(/ \u00b7 /g, " "));
+    }
+  });
+
+  it("splits at the delimiter nearest the middle, and says null where there is none", () => {
+    expect(splitLine("A personal archive, organised around places.")).toEqual(["A personal archive,", "organised around places."]);
+    expect(splitLine("Software \u00b7 Articles \u00b7 Artworks \u00b7 Poetry")).toEqual(["Software \u00b7 Articles", "Artworks \u00b7 Poetry"]);
+    expect(splitLine("Drag to explore. Pick a place.")).toEqual(["Drag to explore.", "Pick a place."]);
+    expect(splitLine("Explore")).toBeNull();
   });
 });
 
@@ -143,18 +207,33 @@ describe("what is seen: faces and the horizon", () => {
   });
 
   it("hides a line whose nearest edge is past the horizon, on either side, and shows it when any of it is in view", () => {
-    const line = { halfSpan: 0.8 };
+    const line = { halfSpan: 0.8, baseLat: 0 };
     const h = shellHorizon(d);
-    expect(lineHidden(h + 0.8 + 0.01, line, d)).toBe(true);
-    expect(lineHidden(-(h + 0.8 + 0.01), line, d)).toBe(true);
-    expect(lineHidden(h + 0.8 - 0.05, line, d)).toBe(false);
-    expect(lineHidden(0, line, d)).toBe(false);
+    // on the equator seen from the equator the central angle is the longitude offset itself
+    expect(lineHidden(h + 0.8 + 0.01, line, d, 0)).toBe(true);
+    expect(lineHidden(-(h + 0.8 + 0.01), line, d, 0)).toBe(true);
+    expect(lineHidden(h + 0.8 - 0.05, line, d, 0)).toBe(false);
+    expect(lineHidden(0, line, d, 0)).toBe(false);
   });
 
-  it("starts every line hidden: from `entranceStart` the whole line is behind the horizon of any camera the page has", () => {
-    for (const l of layout().lines) {
-      const start = entranceStart(l);
-      for (const dist of [cameraDistance(0.5, 900), cameraDistance(2.2, 900), cameraDistance(6.5, 900), 1.2]) expect(lineHidden(start, l, dist)).toBe(true);
+  it("counts the parallel's own latitude: a line high up stays in view longer than its longitude says (it curves round the pole)", () => {
+    const line = { halfSpan: 0.4, baseLat: 60 };
+    const theta = shellHorizon(d) + 0.4 + 0.1;
+    expect(lineHidden(theta, { ...line, baseLat: 0 }, d, 0)).toBe(true);
+    expect(lineHidden(theta, line, d, 50)).toBe(false);
+  });
+
+  it("starts every line hidden: from `entranceStart` the whole line is behind the horizon of any camera the page has, at any view latitude it can have", () => {
+    for (const viewLat of [28, 10, -20, 40]) {
+      for (const l of layout(DESKTOP, viewLat).lines) {
+        const start = entranceStart(l, viewLat);
+        expect(start).toBeGreaterThanOrEqual(CAPTION.enter.fromDeg * DEG);
+        expect(start).toBeLessThanOrEqual(Math.PI);
+        for (const dist of [cameraDistance(0.5, 900), cameraDistance(2.2, 900), cameraDistance(6.5, 900), 1.2]) {
+          if (l.baseLat > 40 && viewLat > 30) continue; // a pole-ward parallel is seen over the pole from every side: it cannot be hidden by turning
+          expect(lineHidden(start, l, dist, viewLat)).toBe(true);
+        }
+      }
     }
   });
 });
@@ -185,9 +264,9 @@ describe("the entrance: fast, then a slow settle, staggered, a function of time"
   });
 
   it("staggers the lines: line 1 starts `staggerMs` after line 0 and stays behind it all the way", () => {
-    expect(CAPTION.enter.staggerMs).toBe(140);
-    for (const t of [0, 100, 139]) expect(enteringAngle(t, 1, start)).toBe(start); // it has not started
-    for (const t of [200, 400, 800]) expect(enteringAngle(t, 1, start)).toBeGreaterThan(enteringAngle(t, 0, start));
+    expect(CAPTION.enter.staggerMs).toBe(260);
+    for (const t of [0, 100, 259]) expect(enteringAngle(t, 1, start)).toBe(start); // it has not started
+    for (const t of [300, 500, 900]) expect(enteringAngle(t, 1, start)).toBeGreaterThan(enteringAngle(t, 0, start));
     expect(enteringAngle(CAPTION.enter.staggerMs + CAPTION.enter.ms, 1, start)).toBe(0);
     expect(entranceMs(2)).toBe(CAPTION.enter.ms + CAPTION.enter.staggerMs);
   });
@@ -258,7 +337,7 @@ describe("leaving and entering again, cut short", () => {
     const m = new CaptionMotion();
     m.setStarts([start, start]);
     m.enter(0);
-    // 50 ms in: line 0 has begun, line 1 is still waiting for its stagger (140 ms)
+    // 50 ms in: line 0 has begun, line 1 is still waiting for its stagger (260 ms)
     m.leave(50);
     for (const t of [50, 90, 150, 240]) {
       expect(m.angle(t, 1, start)).toBe(start);
@@ -308,23 +387,17 @@ describe("leaving and entering again, cut short", () => {
   });
 });
 
-describe("the faces", () => {
-  it("falls back along the chain to the face that reads at the size the page has, the bitmap font last", () => {
-    expect(legibleFont("jacquard", 19)).toBe("jacquard");
-    expect(legibleFont("jacquard", 12.5)).toBe("pixelify");
-    expect(legibleFont("jacquard", 9)).toBe("bitmap");
-    expect(legibleFont("pixelify", 19)).toBe("pixelify");
-    expect(legibleFont("bitmap", 30)).toBe("bitmap");
-    expect(legibleFont("jacquard", 0)).toBe("bitmap");
+describe("the face and the toggle", () => {
+  it("is the site's reading serif, no file of its own: Newsreader, with a system serif behind it", () => {
+    expect(CAPTION_FACE.family).toMatch(/Newsreader/);
+    expect(CAPTION_FACE.fallback).toMatch(/serif/);
   });
 
-  it("is chosen with ?orbit-font= (or the session's), a bad value is the default, and the repo's own font needs no file", () => {
-    expect(captionFontFrom("?orbit-font=pixelify", null)).toBe("pixelify");
-    expect(captionFontFrom("?x=1", "bitmap")).toBe("bitmap");
-    expect(captionFontFrom("?orbit-font=comic", "bitmap")).toBe("jacquard");
-    expect(captionFontFrom("", null)).toBe("jacquard");
-    expect(CAPTION_FONTS.bitmap.url).toBeNull();
-    expect(CAPTION_FONTS.jacquard.url).toMatch(/^\/fonts\/.*\.woff2$/);
-    expect(CAPTION_FONTS.pixelify.url).toMatch(/^\/fonts\/.*\.woff2$/);
+  it("is chosen with ?orbit-pixel=0|1 (or the session's); anything else is the page's choice", () => {
+    expect(captionPixelFrom("?orbit-pixel=1", null)).toBe(true);
+    expect(captionPixelFrom("?orbit-pixel=0", "1")).toBe(false);
+    expect(captionPixelFrom("?x=1", "1")).toBe(true);
+    expect(captionPixelFrom("?orbit-pixel=maybe", null)).toBeNull();
+    expect(captionPixelFrom("", null)).toBeNull();
   });
 });

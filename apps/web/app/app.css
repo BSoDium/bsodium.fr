@@ -3057,8 +3057,14 @@ h1[tabindex="-1"]:focus-visible {
     transition-timing-function: var(--ease-standard), var(--ease-standard), linear, var(--ease-standard);
   }
 
-  .landing-hero[data-hero="collapsed"] .hero-intro,
-  .landing-hero[data-hero="collapsed"] .hero-hint {
+  /*
+   * `away` carries the collapsed state's styles on the parts that fade (not only the container, which is hidden): the hero is hidden while a place or
+   * an entry is open and comes back COLLAPSED when the panel closes; if its parts kept their resting styles while it was away they would be at
+   * full opacity the moment it is shown again and fade out from there (a flash of the intro, owner 2026-10-14). With the end state already on them
+   * there is nothing to transition when it comes back.
+   */
+  .landing-hero:is([data-hero="collapsed"], [data-hero="away"]) .hero-intro,
+  .landing-hero:is([data-hero="collapsed"], [data-hero="away"]) .hero-hint {
     opacity: 0;
     transform: translateY(0.5rem);
   }
@@ -3075,15 +3081,15 @@ h1[tabindex="-1"]:focus-visible {
   }
 
   /* The controls are removed from the tab order. */
-  .landing-hero[data-hero="collapsed"] .hero-search,
-  .landing-hero[data-hero="collapsed"] .hero-list {
+  .landing-hero:is([data-hero="collapsed"], [data-hero="away"]) .hero-search,
+  .landing-hero:is([data-hero="collapsed"], [data-hero="away"]) .hero-list {
     opacity: 0;
     transform: translateY(0.5rem);
     visibility: hidden;
     transition-delay: 0s, 0s, var(--duration-base), 0s;
   }
 
-  .landing-hero[data-hero="collapsed"]::before {
+  .landing-hero:is([data-hero="collapsed"], [data-hero="away"])::before {
     opacity: 0;
   }
 

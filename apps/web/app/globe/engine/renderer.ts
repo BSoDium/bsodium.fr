@@ -21,6 +21,7 @@ import { groupFitZoom, radiusFitZoom } from "./framing";
 import {
   DEG,
   FOV_DEG,
+  cameraDistance,
   clamp,
   fitZoom,
   silhouetteRadiusPx,
@@ -53,11 +54,11 @@ import { liftFor } from "./lift";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
-import { type CaptionFont, SHOWCASE_STATE } from "./caption";
+import { SHOWCASE_STATE } from "./caption";
 import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
-import { INSET_EASE, RING, SKY, TUNING } from "./tuning";
+import { CAPTION, INSET_EASE, RING, SKY, TUNING } from "./tuning";
 import { fromViewState } from "./view";
 import { markerShown } from "./visibility";
 import { perfEnd, perfStart } from "./perf";
@@ -109,7 +110,8 @@ export interface RendererOptions {
   ringText?: string;
   /** The lines of the caption that wraps the planet (engine/caption.ts), and the face they are set in; absent or empty: no caption. */
   captionPhrases?: readonly string[];
-  captionFont?: CaptionFont;
+  /** Drawn in the globe's pixel pass (true) or crisp in a canvas of its own (false); absent: the page's choice (`CAPTION.pixel`). */
+  captionPixel?: boolean;
   /** CSS px of the container's bottom that the app covers at start (`GlobeProps.coverBottom`); the planet is lifted clear of them as far as there is room. */
   coverBottom?: number;
   /** The home screen starts at rest: the caption is in and the boxes and labels are out from the first frame (`GlobeProps.showcase`). */
@@ -275,7 +277,8 @@ export class GlobeRenderer {
     if (this.showcaseActive && opts.captionPhrases && opts.captionPhrases.length > 0) {
       this.caption = new CaptionLayer(this.globe.scene, {
         phrases: opts.captionPhrases,
-        font: opts.captionFont ?? "jacquard",
+        pixel: opts.captionPixel ?? CAPTION.pixel,
+        host: opts.container,
         theme: opts.theme,
         reduced: this.reduced,
         maxAnisotropy: this.gl.capabilities.getMaxAnisotropy(),
@@ -389,7 +392,7 @@ export class GlobeRenderer {
     const fit = fitZoom(free, h, TUNING.fitMargin);
     const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h }));
     this.ring.setLayout(silhouetteRadiusPx(floor, h));
-    this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h));
+    this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h), cameraDistance(floor, this.bufH * this.pixel));
   }
 
   /**
@@ -558,8 +561,10 @@ export class GlobeRenderer {
     // street map's dissolving edge (the inset fade) or anywhere else. Made transparent here (NOT `visibility: hidden`: the
     // canvas is the pointer target at every scale and a hidden element gets no pointer events), shown again by the next drawn
     // frame (renderNow), never before: a canvas that never drew is black.
-    if (on) this.canvas.style.opacity = "0";
-    else this.requestRender();
+    if (on) {
+      this.canvas.style.opacity = "0";
+      this.caption?.hideCrisp();
+    } else this.requestRender();
   }
   isSuspended() {
     return this.suspended;
@@ -1104,6 +1109,37 @@ export class GlobeRenderer {
     else this.armSpin();
   };
 
+  /**
+   * The crisp caption (a canvas of its own over the globe's, same camera): drawn into a window round the planet only (the lines never leave the
+   * shell's disc), by the same camera narrowed to that window (`setViewOffset` composed with the lift and the inset's shift). Nothing in pixel mode.
+   */
+  private renderCrispCaption() {
+    const caption = this.caption;
+    if (!caption || caption.isPixel) return;
+    const P = this.pixel;
+    const cw = this.bufW * P;
+    const ch = this.bufH * P;
+    const R = silhouetteRadiusPx(this.drawView().zoom, ch) * 1.2 + 4;
+    const cx = cw / 2 - this.shiftBuf * P;
+    const cy = ch / 2 - this.liftBuf * P;
+    const x0 = Math.max(0, Math.floor(cx - R));
+    const y0 = Math.max(0, Math.floor(cy - R));
+    const x1 = Math.min(cw, Math.ceil(cx + R));
+    const y1 = Math.min(ch, Math.ceil(cy + R));
+    if (x1 - x0 < 1 || y1 - y0 < 1) return;
+    const cam = this.camera;
+    cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf + x0 / P, this.liftBuf + y0 / P, (x1 - x0) / P, (y1 - y0) / P);
+    cam.updateProjectionMatrix();
+    caption.renderCrisp(
+      cam,
+      { w: x1 - x0, h: y1 - y0, left: this.canvasLeft + x0, top: this.canvasTop + y0, mask: this.canvas.style.maskImage, full: { w: cw, h: ch }, at: { x: x0, y: y0 } },
+      window.devicePixelRatio || 1,
+    );
+    if (this.shiftBuf || this.liftBuf) cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf, this.liftBuf, this.bufW, this.bufH);
+    else cam.clearViewOffset();
+    cam.updateProjectionMatrix();
+  }
+
   /** Synchronous render (also used by resize and by the measurement hooks). */
   renderNow() {
     if (this.disposed || this.lost || !this.sized) return;
@@ -1123,6 +1159,8 @@ export class GlobeRenderer {
     // and left the area outside it stale, which the CSS edge-fade mask then revealed.
     const t0 = performance.now();
     this.gl.render(this.globe.scene, this.camera);
+    // The crisp caption (a canvas of its own over the globe's, same camera and rectangle); nothing in the pixel mode.
+    this.renderCrispCaption();
     this.lastRenderMs = performance.now() - t0;
     this.frames++;
     if (this.canvas.style.opacity === "0") this.canvas.style.opacity = "";
@@ -1176,6 +1214,12 @@ export class GlobeRenderer {
     this.requestRender();
   }
 
+  /** Checks only: lay the caption on a shell of this radius (null: the tuned one). */
+  setCaptionRadius(r: number | null) {
+    this.caption?.setRadius(r);
+    this.requestRender();
+  }
+
   /** Whether there is a caption (the page has the showcase and the app gave it lines). */
   hasCaption(): boolean {
     return this.caption !== null;
@@ -1225,8 +1269,10 @@ export class GlobeRenderer {
     const cam = this.camera;
     cam.fov = FOV_DEG;
     cam.aspect = this.bufW / this.bufH;
-    cam.near = Math.max(0.02, b.d - 1.05);
-    cam.far = b.d + 1.05;
+    // (the caption's shell is above the planet: its nearest point must be inside the near plane)
+    const reach = this.caption ? CAPTION.radius + 0.05 : 1.05;
+    cam.near = Math.max(0.02, b.d - reach);
+    cam.far = b.d + reach;
     cam.position.set(b.c[0] * b.d, b.c[1] * b.d, b.c[2] * b.d);
     cam.up.set(b.north[0], b.north[1], b.north[2]);
     cam.lookAt(0, 0, 0);
@@ -1239,7 +1285,7 @@ export class GlobeRenderer {
     cam.updateMatrixWorld();
     const now = performance.now();
     this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced);
-    this.caption?.sync(b, now);
+    this.caption?.sync(b.d, v.lon, v.lat, now);
     this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf, lift: this.liftBuf }, now, this.reduced);
   }
 

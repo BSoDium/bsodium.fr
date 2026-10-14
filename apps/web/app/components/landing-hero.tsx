@@ -96,7 +96,7 @@ function halvesOf(root: HTMLElement): TravelHalf[] {
 const SERVER_SNAPSHOT: HeroSnapshot = { state: "rest", world: true };
 
 /** Under who the owner is (`SITE_IDENTITY`): how to use the page. With no published place it must not send the visitor to a globe with nothing on it. */
-const HINT_GLOBE_LEAD = "Pick a point on the globe, or start";
+const HINT_GLOBE_LEAD = "Drag the globe to explore and pick a place, or start";
 const HINT_LIST_LEAD = "Start";
 const HINT_LIST_TAIL = " from a list.";
 const HINT_NO_PLACE = "No place is published yet: start from a list.";

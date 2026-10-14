@@ -69,9 +69,9 @@ export interface HandoverOptions {
   onNotice(notice: Notice | null): void;
   /** The line of the ring of type round the planet when zoomed out (`engine/ring.ts`); absent = no ring. Handed to the globe unchanged. */
   ringText?: string;
-  /** The lines of the caption that wraps the planet (`GlobeProps.captionPhrases`), its face, the cover and the showcase at start: handed to the globe unchanged. */
+  /** The lines of the caption that wraps the planet (`GlobeProps.captionPhrases`), its render mode, the cover and the showcase at start: handed to the globe unchanged. */
   captionPhrases?: readonly string[];
-  captionFont?: import("../engine/caption").CaptionFont;
+  captionPixel?: boolean;
   coverBottom?: number;
   showcase?: boolean;
   /** Testing and tuning: street engine options (pinned source, timings ...). */
@@ -225,7 +225,7 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     zoomLimit: restoring ? Infinity : GLOBE_MAX_ZOOM,
     ringText: opts.ringText,
     captionPhrases: opts.captionPhrases,
-    captionFont: opts.captionFont,
+    captionPixel: opts.captionPixel,
     coverBottom: opts.coverBottom,
     showcase: opts.showcase,
     onSelect: opts.onSelect,

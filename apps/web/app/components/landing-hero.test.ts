@@ -46,10 +46,10 @@ describe("LandingHero", () => {
       "Front-end and UX software engineer based in Warsaw. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.",
     );
     // the how-to line: the globe is a script, so the part about it is marked and a no-script variant stands beside it
-    expect(html).toContain('<p class="hero-hint"><span data-needs-script="">Pick a point on the globe, or start</span><noscript>Start</noscript> from a list.</p>');
+    expect(html).toContain('<p class="hero-hint"><span data-needs-script="">Drag the globe to explore and pick a place, or start</span><noscript>Start</noscript> from a list.</p>');
     const empty = await render({ empty: true });
     expect(empty).toContain('<p class="hero-hint">No place is published yet: start from a list.</p>');
-    expect(empty).not.toContain("Pick a point");
+    expect(empty).not.toContain("Drag the globe");
   });
 
   it("is the home page's primary navigation: the four lists in a nav landmark, with an icon each that is decoration", async () => {
@@ -163,6 +163,17 @@ describe("the name's travel and the collapsed name (owner, round 3, item 3)", ()
 
   it("is instant under reduced motion", () => {
     expect(src).toContain("prefers-reduced-motion: reduce");
+  });
+});
+
+describe("coming back from away (a panel closed): nothing of the hero fades out of its resting look", () => {
+  const css = readFileSync(new URL("../app.css", import.meta.url), "utf8");
+
+  it("has the collapsed styles on the parts that fade while the hero is away, so there is nothing to transition when it is shown again", () => {
+    for (const part of [".hero-intro", ".hero-hint", ".hero-search", ".hero-list"]) {
+      expect(css, part).toContain(`.landing-hero:is([data-hero="collapsed"], [data-hero="away"]) ${part}`);
+    }
+    expect(css).toContain('.landing-hero:is([data-hero="collapsed"], [data-hero="away"])::before');
   });
 });
 

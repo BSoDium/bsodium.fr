@@ -1,3 +1,5 @@
+import { SECTIONS } from "./sections";
+
 /**
  * The site's identity: what the head tags, the sitemap, the robots file and the share cards say about it. Pure (no environment access):
  * `site.server.ts` reads `CATALYST_SITE_URL` and calls these. Documented in docs/web-architecture.md, "Production readiness".
@@ -39,11 +41,18 @@ export const SITE_TITLE = `${SITE_NAME} · ${SITE.role}`;
 export const DEFAULT_SITE_URL = "https://v2.bsodium.fr";
 
 /**
- * What the home screen asks of the visitor, as the two short phrases that wrap the planet in capitals (`GlobeProps.captionPhrases`): what to do with
- * the globe. Interface copy, not a fact about the owner; the hero's how-to line says the same in the page as text (visually hidden while the caption
- * is there).
+ * The three lines that float over the planet on the home screen (`GlobeProps.captionPhrases`, set in the reading serif on parallels of the globe):
+ * what the site is, what it holds (the sections' own public names, in the order of the lists: they can never drift from them), and the call to
+ * action, which is the largest. Facts about the site and interface copy, nothing about the owner; the hero's how-to line says the same in the page
+ * as text (visually hidden while the caption is there).
  */
-export const SITE_CALL = ["Drag to explore", "Pick a place"] as const;
+export const SITE_CALL = [
+  "A personal archive, organised around places.",
+  Object.values(SECTIONS)
+    .map((s) => s.name)
+    .join(" \u00b7 "),
+  "Drag to explore. Pick a place.",
+] as const;
 
 /** The role inside a sentence, as the share image's alt text says it: lower-cased where it starts a clause, but "UX" stays "UX" (never `role.toLowerCase()`). */
 export const ROLE_IN_SENTENCE = "front-end and UX software engineer";

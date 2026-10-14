@@ -2,188 +2,238 @@
  * The caption: the pure maths (no DOM, no Three.js; unit tested in `caption.test.ts`). The Three.js objects are engine/caption-layer.ts; the tuned
  * numbers are `CAPTION` (engine/tuning.ts); docs/web-architecture.md, "Orbiting type".
  *
- * Model. A few lines of type wrap a sphere of radius `CAPTION.radius` (a little above the planet, which has radius 1) centred on the planet,
- * in the VIEW's frame (x right, y up, z toward the viewer), so the globe turning under the camera does not move them. Each line is a band of
- * constant latitude about an axis `A` that leans away from the viewer by `leanDeg` (which is what makes the lines arch like the reference's), and
- * has NO roll: at the central meridian the bands are horizontal on the screen. With `a` the longitude about `A` (0 is the meridian nearest the
- * viewer, positive to the right) and `lambda` the latitude:
+ * Model. A few lines of type float over the planet on a shell of radius `CAPTION.radius` (well above the surface, so it orbits it: the
+ * parallax against the coastlines is visible while the globe turns). Each line lies on a REAL PARALLEL of the globe: the circle of latitude `L`
+ * about the earth's own axis, so in whatever orientation the camera has (the view's latitude tilts the axis towards or away from the viewer,
+ * which is the tilt and the curvature of the graticule's dotted parallels) the line has exactly the tilt and curvature of that parallel, as the
+ * owner asked: seen from the north it bends one way, from the south the other, from the equator it is straight. A line is centred on the
+ * VIEW's central meridian (it stays in the middle of the face while the earth turns under it), so in the earth's frame
  *
- *   P(a, lambda) = r (cos(lambda) (cos(a) e1 + sin(a) e2) + sin(lambda) A)          A = (0, cos l, sin l), e1 = (0, -sin l, cos l), e2 = (1, 0, 0)
+ *   P(a, L) = r (cos L sin a, sin L, cos L cos a)          a: longitude from the central meridian, L: latitude
  *
- * The geometry is built once; the entrance turns a band about `A` (a rotation: its matrix, nothing re-laid out). Because the shell is part of the
- * globe's scene it is drawn in the same art-pixel pass, hidden by the planet's depth where the planet is in front of it, and its back faces are
- * culled, so a letter past the horizon simply is not there (it can never be seen from behind, mirrored).
+ * and the mesh is turned about the earth's axis (y) by the view's longitude plus the entrance's turn. Geometry is built once per layout;
+ * nothing is laid out per frame. The lines are on the globe's scene: depth-tested against the planet, back faces culled, so a letter past the
+ * horizon is not there (it can never be seen from behind, mirrored).
  */
 import { CAPTION } from "./tuning";
+import { GRATICULE_STEP_DEG } from "./geometry";
 import { clamp, DEG } from "./geo";
 
-/* ------------------------------------------------------------------ the faces */
+/* ------------------------------------------------------------------ the face */
 
-export type CaptionFont = "jacquard" | "pixelify" | "bitmap";
-
-export interface CaptionFontSpec {
-  /** Where the face is (self-hosted, `public/fonts`, the OFL licence beside it); null for the repo's own bitmap font. */
-  url: string | null;
-  family: string;
-  weight: number;
-  /** Cap height over the em (the size of a letter is set by its cap height, the faces differ so much in it). */
-  capEm: number;
-  /** The whole line box (above the capitals' top to below the descenders), in caps: the texture's height. */
-  boxCaps: number;
-  /** Set in capitals (a blackletter's capitals are for initials; a pixel face reads either way). */
-  upper: boolean;
+/**
+ * The one face: Newsreader (the site's reading serif, self-hosted, already on the page for the intro: no file of its own, no licence added). A
+ * literary serif, outlined, at the display optical size (the canvas applies `font-optical-sizing: auto` at the large size it is drawn at).
+ */
+export const CAPTION_FACE = {
+  family: '"Newsreader Variable"',
+  /** Fallback stack when the face has not arrived or cannot be had. */
+  fallback: 'Georgia, "Times New Roman", serif',
+  weight: 500,
+  /** Cap height and x-height over the em, as the face sets them. */
+  capEm: 0.66,
+  /** The line box in caps: above the baseline (ascenders, with the outline) and below it (descenders, with the outline). */
+  above: 1.3,
+  below: 0.45,
   /** Tracking, em. */
-  tracking: number;
-  /** The least cap height, in art cells, at which the face still reads (its strokes are a pixel of its own grid): below it the next face of the chain is used. */
-  minCapCells: number;
-}
+  tracking: 0.005,
+} as const;
 
-export const CAPTION_FONTS: Record<CaptionFont, CaptionFontSpec> = {
-  /** Jacquard 24 (The Soft Type Project Authors, SIL OFL 1.1): a pixel blackletter; subset of Basic Latin, `public/fonts/jacquard-24-1.002-latin-400.woff2` (18.9 kB). */
-  jacquard: { url: "/fonts/jacquard-24-1.002-latin-400.woff2", family: "Jacquard 24", weight: 400, capEm: 750 / 1290, boxCaps: 2.3, upper: false, tracking: 0.02, minCapCells: 13 },
-  /** Pixelify Sans (The Pixelify Sans Project Authors, SIL OFL 1.1), instanced at weight 700; Basic Latin, `public/fonts/pixelify-sans-1.000-latin-700.woff2` (3.9 kB). */
-  pixelify: { url: "/fonts/pixelify-sans-1.000-latin-700.woff2", family: "Pixelify Sans", weight: 700, capEm: 0.7, boxCaps: 1.9, upper: true, tracking: 0.04, minCapCells: 12 },
-  /** The map's own pixel font (engine/pixel-font), 7 px capitals, scaled up by a whole number: no file, no font load. */
-  bitmap: { url: null, family: "Fusion Pixel", weight: 400, capEm: 0.7, boxCaps: 2, upper: true, tracking: 0, minCapCells: 7 },
-};
-
-/** The faces in the order a page falls back along when the face asked for would not read at its size (a phone's art cell is 2 px and its planet 60 cells across). */
-export const CAPTION_FALLBACK: readonly CaptionFont[] = ["jacquard", "pixelify", "bitmap"];
-
-/** The first face of the chain from `wanted` whose least cap height fits `capCells`; the bitmap font is the last resort and always taken. */
-export function legibleFont(wanted: CaptionFont, capCells: number): CaptionFont {
-  const chain = CAPTION_FALLBACK.slice(CAPTION_FALLBACK.indexOf(wanted));
-  for (const f of chain) if (capCells >= CAPTION_FONTS[f].minCapCells) return f;
-  return "bitmap";
-}
-
-/** The face used when the page does not choose (`?orbit-font=`). */
-export const DEFAULT_CAPTION_FONT: CaptionFont = "jacquard";
-
-/** `?orbit-font=jacquard|pixelify|bitmap` (or sessionStorage "orbit-font"), any page: the face the caption is set in. */
-export function captionFontFrom(search: string, stored: string | null): CaptionFont {
-  const want = new URLSearchParams(search).get("orbit-font") ?? stored;
-  return want === "jacquard" || want === "pixelify" || want === "bitmap" ? want : DEFAULT_CAPTION_FONT;
+/** `?orbit-pixel=0|1` (or sessionStorage "orbit-pixel"): 1 draws the caption in the globe's pixel pass, 0 crisp (depth-tested against the globe). Null: the page's choice. */
+export function captionPixelFrom(search: string, stored: string | null): boolean | null {
+  const want = new URLSearchParams(search).get("orbit-pixel") ?? stored;
+  return want === "1" ? true : want === "0" ? false : null;
 }
 
 /* ------------------------------------------------------------------ geometry */
 
+/** The latitude `lat` (degrees) on the nearest multiple of `step`. */
+export const snapLat = (lat: number, step: number): number => Math.round(lat / step) * step;
+
 /** One line of the caption, laid out. */
 export interface CaptionLine {
   text: string;
-  /** Latitude of the line's centre, radians, in the leaning frame. */
-  lambda: number;
+  /** The logical line it belongs to (a wrapped line has two pieces). */
+  parent: number;
+  /** Latitude of its baseline, degrees: a real parallel. */
+  baseLat: number;
+  /** Cap height and em in planet radii. */
+  capR: number;
+  emR: number;
   /** Half the line's width in longitude, radians (the text is centred on the central meridian). */
   halfSpan: number;
-  /** Half the band's height in latitude, radians. */
-  halfLat: number;
+  /** The band's latitude extent, radians, below and above the baseline. */
+  below: number;
+  above: number;
   /** The text's width in ems, as the face sets it. */
   widthEm: number;
 }
 
 export interface CaptionLayout {
-  /** The em in planet radii and the cap height in planet radii. */
-  emR: number;
-  capR: number;
   lines: CaptionLine[];
+  /** The step the baselines are spaced by, degrees (the graticule's, or half of it when the lines are wrapped), and whether lines were wrapped. */
+  stepDeg: number;
+  wrapped: boolean;
 }
 
-/** The shell's radius. */
-export const shellRadius = (): number => CAPTION.radius;
-
-/** The unit axis the lines go round (in the view's frame), and the two unit vectors that span its equator: `e1` nearest the viewer, `e2` to the right. */
-export function bandFrame(leanRad: number = CAPTION.leanDeg * DEG) {
-  const c = Math.cos(leanRad);
-  const s = Math.sin(leanRad);
-  return { A: [0, c, s] as const, e1: [0, -s, c] as const, e2: [1, 0, 0] as const };
+export interface LayoutInput {
+  /** The logical lines. */
+  texts: readonly string[];
+  /** A text's width in ems (measured from the face). */
+  measure(text: string): number;
+  /** The planet's radius at the lowest zoom, CSS px (the least size a letter may have is in CSS px). */
+  rPx: number;
+  /** The view's latitude, degrees: the block sits `CAPTION.aboveDeg` above it, on a graticule parallel. */
+  viewLat: number;
 }
 
-/** A point of the shell at longitude `a` and latitude `lambda` (radians, in the leaning frame), in the view's frame. */
-export function shellPoint(a: number, lambda: number, out: [number, number, number] = [0, 0, 0], leanRad: number = CAPTION.leanDeg * DEG): [number, number, number] {
-  const { A, e1, e2 } = bandFrame(leanRad);
-  const r = CAPTION.radius;
-  const cl = Math.cos(lambda);
-  const sl = Math.sin(lambda);
-  const ca = Math.cos(a);
-  const sa = Math.sin(a);
-  out[0] = r * (cl * (ca * e1[0] + sa * e2[0]) + sl * A[0]);
-  out[1] = r * (cl * (ca * e1[1] + sa * e2[1]) + sl * A[1]);
-  out[2] = r * (cl * (ca * e1[2] + sa * e2[2]) + sl * A[2]);
-  return out;
+/** A line cut in two where it reads best: the delimiter nearest its middle (" · ", ". ", ", "), else the space nearest it; null when it has none. */
+export function splitLine(text: string): [string, string] | null {
+  const mid = text.length / 2;
+  let best: { at: number; cut: number; dist: number } | null = null;
+  for (const [delim, keep] of [[" \u00b7 ", 0], [". ", 1], [", ", 1], [" ", 0]] as const) {
+    let from = 0;
+    for (;;) {
+      const k = text.indexOf(delim, from);
+      if (k < 0) break;
+      const at = k + keep; // where the first piece ends (a full stop or a comma stays with it)
+      const d = Math.abs(at - mid);
+      // a better delimiter beats a nearer plain space only when it is not far from the middle
+      const rank = delim === " " ? d + text.length * 0.12 : d;
+      if (at > 0 && at < text.length - 1 && (best === null || rank < best.dist)) best = { at, cut: k + delim.length, dist: rank };
+      from = k + 1;
+    }
+  }
+  if (!best) return null;
+  const a = text.slice(0, best.at).trim();
+  const b = text.slice(best.cut).trim();
+  return a && b ? [a, b] : null;
 }
+
+/** The latitude of the top baseline for a view at `viewLat`: the nearest multiple of half the graticule's step to `viewLat + above`, kept inside `topLat`. */
+export const topLatitude = (viewLat: number, above: number = CAPTION.aboveDeg): number => clamp(snapLat(viewLat + above, GRATICULE_STEP_DEG / 2), CAPTION.topLat.min, CAPTION.topLat.max);
+
+/** Arc width of a text in longitude (radians) on the parallel at `lat` (degrees) for a cap height `capR`. */
+const spanOf = (widthEm: number, capR: number, lat: number): number => (widthEm * capR) / CAPTION_FACE.capEm / (CAPTION.radius * Math.cos(clamp(lat, -85, 85) * DEG));
 
 /**
- * Lay the lines out. `widthEm` is each line's width in ems (measured from the face once); `capEm` the face's cap height over its em; `boxCaps` the
- * line box in cap heights. The cap height is `capRequested` (default `CAPTION.capR`), less when the widest line would span more than
- * `CAPTION.maxSpanDeg` of its circle.
- * Line i is `CAPTION.leading` cap heights under line i - 1, the block centred at latitude `CAPTION.centreDeg` + lean (the circle through the view's centre).
+ * Lay the lines out, top to bottom, on real parallels. The top baseline is the multiple of 7.5 degrees nearest `viewLat + aboveDeg`; each line is
+ * below the one before by the least multiple of the step (the graticule's 15 degrees; 7.5 when wrapped, on a small screen) that holds its cap
+ * height, a descender and a gap: a baseline is on a dotted parallel of the globe or midway between two. A line's cap height is its logical line's `capR` (the call to action is the
+ * biggest), shrunk until it spans no more than `maxSpanDeg` of its parallel; if that leaves any letter under `minCapPx` the layout is the small
+ * screen's: the caps are brought up to `wrapCapPx`, the block starts higher and the lines still too long are cut in two.
  */
-export function layoutCaption(texts: readonly string[], widthsEm: readonly number[], capEm: number, boxCaps: number, capRequested: number = CAPTION.capR): CaptionLayout {
-  const n = texts.length;
-  const lean = CAPTION.leanDeg * DEG;
-  const gapLat = (CAPTION.leading * capRequested) / CAPTION.radius;
-  const lambdaAt = (i: number) => lean + CAPTION.centreDeg * DEG + ((n - 1) / 2 - i) * gapLat;
-  // The widest line decides the size: its width in radii over the circle it goes round, at most `maxSpanDeg`.
-  let capR = capRequested;
-  for (let i = 0; i < n; i++) {
-    const wR = (widthsEm[i]! * capR) / capEm;
-    const circle = CAPTION.radius * Math.cos(lambdaAt(i));
-    const span = wR / circle;
-    if (span > CAPTION.maxSpanDeg * DEG) capR = Math.min(capR, (capR * CAPTION.maxSpanDeg * DEG) / span);
-  }
-  const emR = capR / capEm;
-  const lines: CaptionLine[] = texts.map((text, i) => {
-    const lambda = lambdaAt(i);
-    const wR = widthsEm[i]! * emR;
-    return {
-      text,
-      lambda,
-      halfSpan: wR / (2 * CAPTION.radius * Math.cos(lambda)),
-      halfLat: (boxCaps * capR) / (2 * CAPTION.radius),
-      widthEm: widthsEm[i]!,
+export function layoutCaption(input: LayoutInput): CaptionLayout {
+  const place = (wrap: boolean): CaptionLayout => {
+    const step = wrap ? GRATICULE_STEP_DEG / 2 : GRATICULE_STEP_DEG;
+    // (wrapped, on a small screen, the block starts higher: the lower half of the face is under the page's own text)
+    const top = topLatitude(input.viewLat, wrap ? CAPTION.aboveWrappedDeg : CAPTION.aboveDeg);
+    // A wrapped layout is the small-screen one: the caps are brought UP to the least size (the lines are shorter, so they can be bigger), and only
+    // the lines that would still be under it are cut in two.
+    const targetOf = (parent: number) => {
+      const t = CAPTION.capR[Math.min(parent, CAPTION.capR.length - 1)]!;
+      return wrap ? Math.max(t, CAPTION.wrapCapPx / input.rPx) : t;
     };
-  });
-  return { emR, capR, lines };
+    const capOf = (text: string, parent: number) => {
+      const t = targetOf(parent);
+      const span = spanOf(input.measure(text), t, top);
+      return span > CAPTION.maxSpanDeg * DEG ? (t * CAPTION.maxSpanDeg * DEG) / span : t;
+    };
+    const pieces: { text: string; parent: number }[] = [];
+    input.texts.forEach((t, parent) => {
+      const cut = wrap && capOf(t, parent) * input.rPx < CAPTION.minCapPx - 1e-6 ? splitLine(t) : null;
+      if (cut) pieces.push({ text: cut[0], parent }, { text: cut[1], parent });
+      else pieces.push({ text: t, parent });
+    });
+    const lines: CaptionLine[] = [];
+    let lat = top;
+    pieces.forEach((p, i) => {
+      const target = targetOf(p.parent);
+      const widthEm = input.measure(p.text);
+      let capR = target;
+      const span = spanOf(widthEm, capR, lat);
+      if (span > CAPTION.maxSpanDeg * DEG) capR *= (CAPTION.maxSpanDeg * DEG) / span;
+      if (i > 0) {
+        // the room the line needs under the one before: its own caps, the descenders of the one before, a gap
+        const prev = lines[i - 1]!;
+        // (a descender seldom reaches the band's own bottom edge, which has the outline's room too)
+        const needDeg = capR / CAPTION.radius / DEG + (0.8 * prev.below) / DEG + CAPTION.gapDeg;
+        lat = prev.baseLat - Math.max(step, Math.ceil(needDeg / step - 1e-9) * step);
+      }
+      const capLat = capR / CAPTION.radius;
+      lines.push({
+        text: p.text,
+        parent: p.parent,
+        baseLat: lat,
+        capR,
+        emR: capR / CAPTION_FACE.capEm,
+        halfSpan: spanOf(widthEm, capR, lat) / 2,
+        below: capLat * CAPTION_FACE.below,
+        above: capLat * CAPTION_FACE.above,
+        widthEm,
+      });
+    });
+    return { lines, stepDeg: step, wrapped: wrap };
+  };
+  const flat = place(false);
+  const tooSmall = flat.lines.some((l) => l.capR * input.rPx < CAPTION.minCapPx);
+  if (!tooSmall) return flat;
+  const wrapped = place(true);
+  return wrapped.lines.length > flat.lines.length ? wrapped : flat;
+}
+
+/** A point of the shell in the earth's frame at longitude `a` (from the central meridian) and latitude `lat` (degrees), radius `r` (default the shell's). */
+export function parallelPoint(a: number, lat: number, r: number = CAPTION.radius, out: [number, number, number] = [0, 0, 0]): [number, number, number] {
+  const L = lat * DEG;
+  const cl = Math.cos(L);
+  out[0] = r * cl * Math.sin(a);
+  out[1] = r * Math.sin(L);
+  out[2] = r * cl * Math.cos(a);
+  return out;
 }
 
 export interface BandMesh {
   positions: Float32Array;
   uvs: Float32Array;
+  /** 0 for the farthest slice (towards the planet), 1 for the front face. */
+  layers: Float32Array;
   indices: Uint16Array;
 }
 
 /**
- * The strip of one line: `nu` columns along the longitude (the text's direction, left to right), `nv` rows along the latitude, wound
- * counter-clockwise seen from OUTSIDE (so the front faces are the ones the viewer sees and back-face culling removes the far side). The texture's
- * u runs along the longitude, v up the latitude (1 at the top).
+ * The strip of one line, `slices` of it stacked radially from `r - depth` (back) to `r` (the front face), each of `nu` columns along the longitude
+ * (the text's direction, left to right) and one row, wound counter-clockwise seen from OUTSIDE (so back-face culling removes the far side). The
+ * texture's u runs along the longitude, v up the latitude (1 at the top). The band lies on the parallel of `line.baseLat`: v = 0 is `below` under it.
  */
-export function bandMesh(line: CaptionLine, nu: number, nv: number, leanRad: number = CAPTION.leanDeg * DEG): BandMesh {
+export function bandMesh(line: CaptionLine, nu: number, slices: number, depth: number, r: number = CAPTION.radius): BandMesh {
   const cols = nu + 1;
-  const rows = nv + 1;
-  const positions = new Float32Array(cols * rows * 3);
-  const uvs = new Float32Array(cols * rows * 2);
-  const indices = new Uint16Array(nu * nv * 6);
+  const perSlice = cols * 2;
+  const positions = new Float32Array(slices * perSlice * 3);
+  const uvs = new Float32Array(slices * perSlice * 2);
+  const layers = new Float32Array(slices * perSlice);
+  const indices = new Uint16Array(slices * nu * 6);
   const p: [number, number, number] = [0, 0, 0];
-  for (let j = 0; j < rows; j++) {
-    const v = j / nv;
-    // The bands are of constant latitude: a row is a circle about the axis.
-    const lambda = line.lambda - line.halfLat + 2 * line.halfLat * v;
-    for (let i = 0; i < cols; i++) {
-      const u = i / nu;
-      const a = -line.halfSpan + 2 * line.halfSpan * u;
-      shellPoint(a, lambda, p, leanRad);
-      const k = j * cols + i;
-      positions[3 * k] = p[0];
-      positions[3 * k + 1] = p[1];
-      positions[3 * k + 2] = p[2];
-      uvs[2 * k] = u;
-      uvs[2 * k + 1] = v;
-    }
-  }
+  const lo = line.baseLat - line.below / DEG;
+  const hi = line.baseLat + line.above / DEG;
   let t = 0;
-  for (let j = 0; j < nv; j++) {
+  for (let s = 0; s < slices; s++) {
+    const k = slices === 1 ? 1 : s / (slices - 1);
+    const rs = r - depth * (1 - k);
+    for (let j = 0; j < 2; j++) {
+      for (let i = 0; i < cols; i++) {
+        const u = i / nu;
+        parallelPoint(-line.halfSpan + 2 * line.halfSpan * u, j === 0 ? lo : hi, rs, p);
+        const n = s * perSlice + j * cols + i;
+        positions[3 * n] = p[0];
+        positions[3 * n + 1] = p[1];
+        positions[3 * n + 2] = p[2];
+        uvs[2 * n] = u;
+        uvs[2 * n + 1] = j;
+        layers[n] = k;
+      }
+    }
     for (let i = 0; i < nu; i++) {
-      const v00 = j * cols + i;
+      const v00 = s * perSlice + i;
       const v10 = v00 + 1;
       const v01 = v00 + cols;
       const v11 = v01 + 1;
@@ -195,7 +245,7 @@ export function bandMesh(line: CaptionLine, nu: number, nv: number, leanRad: num
       indices[t++] = v01;
     }
   }
-  return { positions, uvs, indices };
+  return { positions, uvs, layers, indices };
 }
 
 /** Columns for a line: about every 2 degrees of longitude (the strip is flat between columns: the shell's sag is far under a pixel). */
@@ -212,8 +262,19 @@ export const shellHorizon = (d: number, r: number = CAPTION.radius): number => M
 /** Whether a point at central angle `psi` from the view axis is on a front face. */
 export const faceTowardsViewer = (psi: number, d: number, r: number = CAPTION.radius): boolean => psi < shellHorizon(d, r);
 
-/** A line turned by `theta` about the axis (positive: to the right) is entirely out of sight: its nearest edge is past the horizon. */
-export const lineHidden = (theta: number, line: Pick<CaptionLine, "halfSpan">, d: number): boolean => Math.abs(theta) - line.halfSpan >= shellHorizon(d);
+/**
+ * A line turned by `theta` about the earth's axis (positive: to the right) is entirely out of sight: the nearest point of its parallel is past the
+ * shell's horizon. The central angle from the view axis to the point of the parallel `baseLat` at longitude offset `a` from the view's centre is
+ * `acos(sin(vl) sin(L) + cos(vl) cos(L) cos(a))`; the line's nearest point is at the offset `max(0, |theta| - halfSpan)`.
+ */
+export function lineHidden(theta: number, line: Pick<CaptionLine, "halfSpan" | "baseLat">, d: number, viewLat: number): boolean {
+  const off = Math.max(0, Math.abs(theta) - line.halfSpan);
+  const vl = viewLat * DEG;
+  const L = line.baseLat * DEG;
+  // (the band stands above its baseline: take the latitude nearest the view's own, so a band that straddles the limb counts as seen)
+  const cos = Math.sin(vl) * Math.sin(L) + Math.cos(vl) * Math.cos(L) * Math.cos(Math.min(off, Math.PI));
+  return !faceTowardsViewer(Math.acos(clamp(cos, -1, 1)), d);
+}
 
 /* ------------------------------------------------------------------ the entrance */
 
@@ -225,10 +286,23 @@ export const easeInCubic = (p: number): number => {
   return x * x * x;
 };
 
-/** Where line `i` starts, east of its resting place, radians: far enough that all of it is behind the horizon of any camera the page has. */
-export function entranceStart(line: Pick<CaptionLine, "halfSpan">): number {
-  return Math.max(CAPTION.enter.fromDeg * DEG, 90 * DEG + line.halfSpan + 4 * DEG);
+/**
+ * Where a line starts, east of its resting place, radians: far enough that all of it is behind the planet for any camera the page has. The
+ * point of its parallel at longitude offset `a` from the view's centre is out of sight when `sin(vl) sin(L) + cos(vl) cos(L) cos(a)` is under
+ * `r / d` (`d` at its largest, `START_D`: the farther the camera, the less is hidden); the line starts that far plus its own half width.
+ * (A parallel near the pole can be seen from the other side of the planet over the pole: then it starts at the farthest, 180 degrees.)
+ */
+export function entranceStart(line: Pick<CaptionLine, "halfSpan" | "baseLat">, viewLat: number, dMax: number = START_D): number {
+  const vl = viewLat * DEG;
+  const L = line.baseLat * DEG;
+  const denom = Math.cos(vl) * Math.cos(L);
+  const need = denom > 1e-6 ? (CAPTION.radius / dMax - Math.sin(vl) * Math.sin(L)) / denom : -1;
+  const hidden = Math.acos(clamp(need, -1, 1));
+  return Math.min(Math.PI, Math.max(CAPTION.enter.fromDeg * DEG, hidden + line.halfSpan + 4 * DEG));
 }
+
+/** The camera distance the entrance's start is computed for when none is given: beyond the farthest the page has (the lowest zoom of a narrow phone is about 13). */
+const START_D = 16;
 
 /**
  * The turn of line `i` `t` ms after the entrance began, radians: the start angle until the line's own start (`i` times `staggerMs`), then
@@ -257,9 +331,17 @@ export class CaptionMotion {
   /** An `in` that waits for the first frame (the time starts when something is there to see). */
   private pending = false;
 
-  /** Where each line starts (radians), set once the lines are laid out. */
-  setStarts(starts: readonly number[]): void {
+  /** The turn in the stagger of each line: a wrapped line's pieces come in together (its logical line's index); by default, the line's own. */
+  private order: number[] = [];
+
+  /** Where each line starts (radians), and its place in the stagger, set once the lines are laid out. */
+  setStarts(starts: readonly number[], order?: readonly number[]): void {
     this.starts = [...starts];
+    this.order = order ? [...order] : starts.map((_, i) => i);
+  }
+
+  private turns(): number {
+    return (this.order.length ? Math.max(...this.order) : 0) + 1;
   }
 
   /**
@@ -324,7 +406,8 @@ export class CaptionMotion {
   /** The turn of line `i` now, radians; its `start` is where it began. */
   angle(now: number, i: number, start: number): number {
     if (this.pinnedAngle !== null) return this.pinnedAngle;
-    if (this.pinned !== null) return enteringAngle(this.pinned, i, start);
+    const k = this.order[i] ?? i;
+    if (this.pinned !== null) return enteringAngle(this.pinned, k, start);
     switch (this.phase) {
       case "hidden":
         return start;
@@ -334,8 +417,8 @@ export class CaptionMotion {
         if (this.pending) return this.enterFrom?.[i] ?? start;
         const t = now - this.t0;
         const from = this.enterFrom?.[i];
-        const a = from === undefined ? enteringAngle(t, i, start) : from * (1 - easeOutExpo(t / CAPTION.enter.ms));
-        if (t >= entranceMs(this.starts.length || 1)) {
+        const a = from === undefined ? enteringAngle(t, k, start) : from * (1 - easeOutExpo(t / CAPTION.enter.ms));
+        if (t >= entranceMs(this.turns())) {
           this.phase = "rest";
           return 0;
         }

@@ -138,47 +138,51 @@ export const INSET_EASE = [0.2, 0, 0, 1] as const;
 
 /**
  * The caption (engine/caption.ts, engine/caption-layer.ts; docs/web-architecture.md, "Orbiting type"): the home screen's call to action, lines of
- * display type that wrap a sphere a little larger than the globe INSIDE the globe's own scene, so they are drawn in the art-pixel pass (the same
- * cells and palette), depth-tested (the planet hides their far side) and back-face culled (a letter past the horizon vanishes, it never mirrors).
- * The lines are bands of constant latitude of the VIEW's frame, centred on the central meridian, stacked one under the other.
+ * outlined serif type that FLOAT over the planet on a shell well above its surface, each on a real parallel of the globe (so each has that
+ * parallel's tilt and curvature in the camera's orientation), thick (extruded towards the planet in the outline's colour), centred on the central
+ * meridian, stacked one under the other. Two ways to draw them: in the globe's art-pixel pass (the same cells and palette), or crisp at the
+ * device's resolution in a second canvas that is still depth-tested against the planet; `pixel` is the default, `?orbit-pixel=0|1` overrides.
  *
  * Sizes in planet radii (1 = the sphere's radius), angles in degrees. Everything that can be tuned by eye is here.
  */
 export const CAPTION = {
-  /** The shell, a little above the surface (and above the coastlines and the outline, which are drawn at 1). */
-  radius: 1.022,
-  /** Cap height of the type, in planet radii: the face's own cap-height ratio sets the em from it. */
-  capR: 0.16,
-  /** Distance between the baselines of two lines, in cap heights. */
-  leading: 1.75,
+  /** The shell the letters' FRONT face is on: floating, clearly above the surface (the orbit). The extrusion goes down towards the planet from it. */
+  radius: 1.15,
+  /** Drawn in the globe's own pixel pass (true) or crisp, in a canvas of its own over it (false); the page's choice, `?orbit-pixel=0|1` overrides. */
+  pixel: false,
+  /** Cap height of each logical line, in planet radii (the call to action, the last, is the biggest); a line shrinks to the span it may have. */
+  capR: [0.06, 0.06, 0.1],
+  /** The block's top baseline is the graticule's parallel nearest the view's latitude plus this many degrees (clamped to `topLat`). */
+  aboveDeg: 24,
+  /** The same when the lines are wrapped (a phone: the lower half of the face is under the page's own text). */
+  aboveWrappedDeg: 30,
+  topLat: { min: -45, max: 60 },
+  /** The room a line needs under the one before it, as a gap in degrees of latitude (after its caps and the descenders of the line before). */
+  gapDeg: 0.3,
+  /** The most a line may span round its parallel, degrees (a long phrase shrinks to it), and the smallest cap height a letter may have, CSS px (under it the lines are wrapped). */
+  maxSpanDeg: 116,
+  minCapPx: 11,
+  /** When the lines are wrapped (a small screen) the caps are brought up to this many CSS px: the lines are shorter, so they can be. */
+  wrapCapPx: 12,
+  /** The thickness of the letters, in planet radii (towards the planet from the front face), and the number of slices stacked to make it. */
+  depth: 0.015,
+  slices: 5,
   /**
-   * The lines' axis leans away from the viewer by this much, which makes them arch (the reference's lines bend down towards the limbs); no roll:
-   * the bands are horizontal at the central meridian. `centreDeg`: the block's centre is this far above the view's centre, as seen on the shell.
+   * The entrance: each line starts hidden behind the planet (`fromDeg` east of the central meridian at least, and as far as its parallel needs to
+   * be hidden), travels round the sphere to its place with `easeOutExpo`, `ms` in all, line i starting `staggerMs` after line i - 1 (on load,
+   * `loadDelayMs` later still: the page's own fade-in goes first). Leaving is quick: it goes on behind the planet the other way in `leaveMs`.
    */
-  leanDeg: -16,
-  centreDeg: 26,
-  /** The most the caption may span round the planet, degrees (a long phrase shrinks to it). */
-  maxSpanDeg: 120,
-  /**
-   * The entrance: each line starts hidden behind the planet (`fromDeg` east of the central meridian, plus the line's own half-width so that all of
-   * it is past the horizon), travels round the sphere to its place with `easeOutExpo`, `ms` in all, line i starting `staggerMs` after line i - 1 (on load, `loadDelayMs`
-   * later still: the page's own fade-in goes first).
-   * Leaving is quick: it goes on behind the planet the other way in `leaveMs` (ease-in).
-   */
-  enter: { fromDeg: 100, ms: 1000, staggerMs: 140, loadDelayMs: 350 },
+  enter: { fromDeg: 100, ms: 1000, staggerMs: 260, loadDelayMs: 350 },
   leaveMs: 200,
-  /** The keyline round the letters, in cap heights (page colour: it separates them from the coastlines under them). */
-  outline: 0.09,
+  /** The outline's width, in cap heights (the ink; the inside of a letter is the page colour). */
+  outline: 0.085,
   /**
-   * Sampling. The shader draws a texel as ink where its coverage is at least `cut` (under a half: strokes survive being squeezed to a cell, they
-   * thicken a little rather than drop out) and looks `lodBias` levels sharper than the screen asks (negative: sharper). `bitmapBold`: the bitmap
-   * face's pixels are drawn this much larger on each side, in its own pixels.
+   * Sampling. The shader draws a texel where its coverage is at least `cut` and looks `lodBias` levels sharper than the screen asks (negative:
+   * sharper), so a thin stroke survives being squeezed to a cell. Texture: texels in a cap height.
    */
-  cut: 0.35,
-  lodBias: -0.7,
-  bitmapBold: 0.18,
-  /** Texture: texels in a cap height (the sampling is at the art cell, so this only has to be a couple of texels per cell on a big screen). */
-  texCap: 64,
+  cut: 0.4,
+  lodBias: -0.5,
+  texCap: 96,
 } as const;
 
 /**

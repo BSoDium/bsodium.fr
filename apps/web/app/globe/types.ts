@@ -200,8 +200,8 @@ export interface GlobeProps {
    */
   ringPhrases?: readonly string[];
   /**
-   * The lines of the caption that wraps the planet in 3D, one under the other: short, what the visitor should do ("Drag to explore", "Pick a
-   * place"). Drawn in the globe's own pixel pass (engine/caption.ts). Read once. Optional: omitted or empty = the ring alone.
+   * The lines of the caption that wraps the planet in 3D, one under the other: short, what the site is and what the visitor should do. Set in the
+   * reading serif, outlined and extruded, on real parallels of the globe (engine/caption.ts). Read once. Optional: omitted or empty = the ring alone.
    */
   captionPhrases?: readonly string[];
   /**
