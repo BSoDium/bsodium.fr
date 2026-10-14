@@ -140,8 +140,8 @@ export const INSET_EASE = [0.2, 0, 0, 1] as const;
  * The caption (engine/caption.ts, engine/caption-layer.ts; docs/web-architecture.md, "Orbiting type"): the home screen's call to action, lines of
  * outlined serif type that FLOAT over the planet on a shell well above its surface, each on a real parallel of the globe (so each has that
  * parallel's tilt and curvature in the camera's orientation), thick (extruded towards the planet in the outline's colour), centred on the central
- * meridian, stacked one under the other. Two ways to draw them: in the globe's art-pixel pass (the same cells and palette), or crisp at the
- * device's resolution in a second canvas that is still depth-tested against the planet; `pixel` is the default, `?orbit-pixel=0|1` overrides.
+ * meridian, stacked one under the other. Drawn crisp at the device's resolution in a second canvas that is still depth-tested against the
+ * planet (the art-pixel pass is not an option: an outlined serif is unreadable at its cell size).
  *
  * Sizes in planet radii (1 = the sphere's radius), angles in degrees. Everything that can be tuned by eye is here.
  */

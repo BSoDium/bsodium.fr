@@ -137,7 +137,7 @@ Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 66
 
 ### Round 4: the caption in the reading serif, outlined and extruded (2026-10-14)
 
-The caption is now three lines of Newsreader (the face the page already has: no file), outlined and given a thickness (5 stacked slices in one geometry), floating at 1.15 radii, drawn **crisp** by a second small WebGL canvas over the globe's (the pixel pass is `?orbit-pixel=1`; an outlined serif is not readable there). The two pixel faces and their licences are gone from `public/fonts` (-22.8 kB of files, never on the page unless asked).
+The caption is now Newsreader (the face the page already has: no file), outlined and given a thickness (6 stacked slices in one geometry; four rows in view since round 6, see "Caption on the sphere" in docs/web-architecture.md), floating at 1.15 radii, drawn **crisp** by a second small WebGL canvas over the globe's (there is no pixel pass option any more: an outlined serif is not readable there). The two pixel faces and their licences are gone from `public/fonts` (-22.8 kB of files, never on the page unless asked; later rounds add two caption faces, see below).
 
 Measured as above (production build, `react-router-serve`, demo content, headless Chrome for Testing 153 with the GPU, 1440 x 900 @2, 2 repeats, `node apps/web/scripts/perf/run.mjs --scenarios idle,ring-rest,caption-enter --repeat 2`):
 
