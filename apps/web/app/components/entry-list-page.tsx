@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router";
 import type { ContentKind } from "@catalyst/schemas";
 import { EntryRow } from "~/components/entry/entry-list-card";
 import { Button, StatePanel } from "~/components/ui";
-import { KIND_NOUNS, KIND_PLURALS, type EntrySummary } from "~/lib/entries";
+import { KIND_PLURALS, kindCount, type EntrySummary } from "~/lib/entries";
 import { collectTags, filterByTag, groupByYear, parseTagFilter, shouldGroupByYear, tagSearch, type TagCount } from "~/lib/entry-list";
 import { SITE_NAME } from "~/lib/site";
 
@@ -30,7 +30,8 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
   const cardLevel = grouped ? 3 : 2;
   // The section's name for labels ("Filter poetry by tag"), the count noun for counts ("4 poems", "33 software").
   const section = KIND_PLURALS[kind].toLowerCase();
-  const nouns = KIND_NOUNS[kind];
+  // One implementation of the count noun: `kindCount` ("33 software", "1 poem").
+  const total = kindCount(kind, items.length);
   let seen = 0;
 
   return (
@@ -45,7 +46,7 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
         <p className="list-running type-meta">
           <span>{SITE_NAME}</span>
           <span data-slot="list-count">
-            {tag ? `${shown.length} of ${items.length}` : items.length} {items.length === 1 ? nouns.one : nouns.many}
+            {tag ? `${shown.length} of ${total}` : total}
           </span>
         </p>
         <h1 className="list-title">{KIND_PLURALS[kind]}</h1>
@@ -53,7 +54,7 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
 
       {tags.length > 0 && items.length > 1 && <TagFilter tags={tags} selected={tag} search={search} label={`Filter ${section} by tag`} />}
       <p role="status" className="sr-only">
-        {tag ? `Showing ${shown.length} of ${items.length} ${nouns.many} tagged ${tag}` : ""}
+        {tag ? `Showing ${shown.length} of ${total} tagged ${tag}` : ""}
       </p>
 
       <div className="mt-8 flex flex-col gap-14">

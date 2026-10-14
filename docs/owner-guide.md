@@ -97,7 +97,7 @@ Pushing opens or refreshes the publication PR; **merging it is the publication**
 
 ### Edit the career document
 
-The career page reads ONE document, `content/career/index.md` in the private repo: a header with the roles (most recent first), education, languages, skill groups and links, and below it the profile statement as one paragraph. It is a draft until you set `status: published`, and then it travels like any other content (the publication PR; merging it is the publication). There is no email, phone number or address field on purpose: they cannot be published by accident (the only availability is the dated `availability` line: refresh its month when you confirm it). Writing rules: the private repo's `docs/writing-entries.md`, "Career"; the shape: [api-contract.md](api-contract.md#the-career-document-career).
+The career page will read ONE document, `content/career/index.md` in the private repo: a header with the roles (most recent first), education, languages, skill groups and links, and below it the profile statement as one paragraph. It is a draft until you set `status: published`, and then it travels like any other content (the publication PR; merging it is the publication). There is no email, phone number or address field on purpose: they cannot be published by accident (the only availability is the dated `availability` line: refresh its month when you confirm it). Writing rules: the private repo's `docs/writing-entries.md`, "Career"; the shape: [api-contract.md](api-contract.md#the-career-document-career).
 
 ```bash
 # [private]
@@ -223,7 +223,7 @@ Risk to keep in mind: this is an unofficial endpoint with your session cookie. I
 
 ## 5. Publish
 
-**What triggers it.** A push to the private `main` touching `editorial/**`, `content/**`, `config/regions.json`, `config/bboxes.json` or `config/publish.json`, or a manual run: Actions, `publish`, Run workflow (or `gh workflow run publish.yml -R BSoDium/Catalyst-content`).
+**What triggers it.** A push to the private `main` touching `editorial/**`, `content/**`, `config/regions.json`, `config/bboxes.json`, `config/population.json` or `config/publish.json`, or a manual run: Actions, `publish`, Run workflow (or `gh workflow run publish.yml -R BSoDium/Catalyst-content`).
 
 **What the workflow does** (`publish.yml`): mints a short-lived token from the GitHub App, checks out the public repo, refreshes `contract/published.schema.json` from it, runs `pnpm validate`, `pnpm export --out public` and `pnpm export --out public --check`, builds the PR body (counts and slugs only), then opens or updates **one rolling PR** from branch `content/publish`, titled "content: publish editorial update", assigned to `PR_ASSIGNEE` (default `BSoDium`). The PR may only contain `packages/published/data/projection.json` and `apps/web/public/media`. Nothing to change means no PR. If validation fails, nothing is opened: read the failed run.
 

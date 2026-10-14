@@ -167,7 +167,8 @@ describe("EntryView", () => {
       expect([...order].sort((a, b) => a - b)).toEqual(order);
       expect(html).toMatch(/<h1[^>]*class="entry-title/);
       // one hairline under the kicker row (the lists' running head); no thick-over-thin pair anywhere
-      expect(html).toMatch(/data-slot="entry-meta"[^>]*class="[^"]*entry-running|class="[^"]*entry-running[^"]*"[^>]*data-slot="entry-meta"/);
+      const meta = html.match(/<[^>]*data-slot="entry-meta"[^>]*>/)?.[0] ?? "";
+      expect(meta).toMatch(/\sclass="(?:[^"]*\s)?entry-running(?:\s[^"]*)?"/);
       expect(html).not.toContain("entry-rule");
       expect(html).toContain("Ljubljana, Zagreb +2");
       // no author is published, so none is written
