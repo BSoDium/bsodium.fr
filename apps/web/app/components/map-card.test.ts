@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MAP_CARD } from "~/lib/map-card";
-import { AttributionButton } from "./attribution-button";
+import { AttributionButton, CompactCreditsLine } from "./attribution-button";
 import { DevContentBadge } from "./dev-content-badge";
 
 const OFM = { primaryUrl: "https://tiles.openfreemap.org/planet", fallbackPmtilesUrl: null };
@@ -84,7 +84,8 @@ describe("compact credits button (below md)", () => {
     expect(b).toContain('aria-label="Map credits"');
     expect(b).toContain('aria-haspopup="dialog"');
     expect(b).toContain('type="button"');
-    expect(b).toMatch(/class="[^"]*\bmd:hidden\b/);
+    const box = /<div[^>]*class="[^"]*\bmd:hidden\b[^"]*"[^>]*>(?=<button[^>]*data-attribution="compact")/.exec(credits());
+    expect(box, "the button's box is md:hidden").not.toBeNull();
     expect(b).toContain("lucide-info");
     expect(b).toContain('aria-hidden="true"');
   });
@@ -101,10 +102,24 @@ describe("compact credits button (below md)", () => {
     expect(b).not.toContain("backdrop-blur");
   });
   it("sits in the card's corner, above the safe area, and above the hero (z 20)", () => {
-    const b = compact();
-    expect(b).toContain("right:0.5rem");
-    expect(b).toContain("env(safe-area-inset-bottom)");
-    expect(b).toContain("z-20");
+    const box = /<div[^>]*[ "]md:hidden[^>]*>/.exec(credits())![0];
+    expect(box).toContain("right:0.5rem");
+    expect(box).toContain("env(safe-area-inset-bottom)");
+    expect(box).toContain("max-width:calc(100% - 1rem)");
+    expect(box).toContain("z-20");
+  });
+  it("is collapsed in the server render (the button alone: the line is shown by an effect, once per session per surface)", () => {
+    expect(credits()).not.toContain("compact-line");
+  });
+  it("the line, when shown, is the licence's wording in solid tones, real text that wraps between credits and is never clipped", () => {
+    const html = renderToStaticMarkup(createElement(CompactCreditsLine, { names: ["© OpenStreetMap contributors", "OpenFreeMap", "Natural Earth"] }));
+    expect(html.replace(/<[^>]+>/g, "")).toBe("© OpenStreetMap contributors· OpenFreeMap· Natural Earth");
+    expect(html).toContain("bg-background");
+    expect(html).not.toMatch(/bg-background\//);
+    expect(html).toContain("flex-wrap");
+    expect(html).not.toContain("overflow-hidden");
+    expect(html).not.toContain("transition");
+    expect(html).not.toMatch(/class="[^"]*\bopacity-/);
   });
   it("opens the same dialog as the card: there is one dialog and both buttons are wired to it", () => {
     const src = readFileSync(new URL("./attribution-button.tsx", import.meta.url), "utf8");
