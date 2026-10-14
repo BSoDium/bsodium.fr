@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildJsonSchema } from "./generate-json-schema";
-import { CAREER_LIMITS, EMPTY_PROJECTION, parsePublishedProjection, publishedCareerSchema, type PublishedCareer } from "./published";
+import { CAREER_LIMITS, CAREER_TEXT, EMPTY_PROJECTION, contactTextProblem, contactUrlProblem, parsePublishedProjection, publishedCareerSchema, type PublishedCareer } from "./published";
 
 const place = { slug: "paris", name: "Paris", coordinates: { lat: 48.85, lon: 2.35 }, labelPriority: 50, body: [], images: [], related: [] };
 
@@ -84,7 +84,7 @@ describe("career (an optional singleton document, additive in schema version 1)"
     };
     walk(JSON.parse(buildJsonSchema()).properties.career);
     expect(names.length).toBeGreaterThan(20);
-    expect(names.filter((n) => /mail|phone|^tel|mobile|street|address|residen|^home|zip|postcode|postal|birth|^age$|nationality|photo|salary/i.test(n))).toEqual([]);
+    expect(names.filter((n) => /mail|phone|^tel|mobile|contact|fax|whatsapp|skype|street|address|residen|^home|zip|postcode|postal|^dob$|birth|^age$|gender|^ssn$|passport|nationality|photo|salary/i.test(n))).toEqual([]);
   });
 
   describe("availability (a dated, optional statement)", () => {
@@ -217,38 +217,182 @@ describe("career (an optional singleton document, additive in schema version 1)"
       bad(career({ links: many(CAREER_LIMITS.links + 1, (i) => ({ label: `L${i}`, url: `https://example.org/${i}` })) }));
     });
     it("bound the length of every text", () => {
-      bad(career({ summary: "x".repeat(1001) }));
-      ok(career({ summary: "x".repeat(1000) }));
-      bad(career({ title: "x".repeat(81) }));
-      bad(career({ roles: [role({ highlights: ["x".repeat(301)] })] }));
-      bad(career({ roles: [role({ employment: "x".repeat(41) })] }));
+      const x = (n: number) => "x".repeat(n);
+      ok(career({ summary: x(CAREER_TEXT.summary) }));
+      bad(career({ summary: x(CAREER_TEXT.summary + 1) }));
+      bad(career({ title: x(CAREER_TEXT.title + 1) }));
+      bad(career({ roles: [role({ highlights: [x(CAREER_TEXT.highlight + 1)] })] }));
+      ok(career({ roles: [role({ highlights: [x(CAREER_TEXT.highlight)] })] }));
+      bad(career({ roles: [role({ employment: x(CAREER_TEXT.employment + 1) })] }));
+      bad(career({ roles: [role({ orgUrl: `https://example.org/${x(CAREER_TEXT.url)}` })] }));
+      bad(career({ roles: [role({ id: x(CAREER_TEXT.id + 1) })] }));
+      bad(career({ availability: { text: x(CAREER_TEXT.availability + 1), asOf: "2026-10" } }));
+      bad(career({ links: [{ label: x(CAREER_TEXT.linkLabel + 1), url: "https://example.org" }] }));
     });
-    it("the largest possible career stays small (well under the entry budget)", () => {
-      const line = (n: number) => "x".repeat(n);
-      const big: PublishedCareer = {
-        title: line(80),
-        summary: line(1000),
+
+    // The TRUE maximum: every list at its limit, every optional field present, every text at its limit and made of a 3-byte
+    // character (the worst UTF-8 width the schema accepts), every URL at its limit. It must stay under about 60 KB: the size of
+    // one entry's body cap, which is what the projection budget ("Payload size and cost") assumes.
+    const WIDE = "\u20ac";
+    const fill = (n: number, tag = "") => `${tag}${WIDE.repeat(Math.max(0, n - tag.length))}`;
+    const trueMaximum = (wide = true): PublishedCareer => {
+      const f = (n: number, tag = "") => (wide ? fill(n, tag) : `${tag}${"x".repeat(Math.max(0, n - tag.length))}`);
+      const url = (tag: string) => `https://example.org/${f(CAREER_TEXT.url - "https://example.org/".length, tag)}`;
+      const n = (count: number) => Array.from({ length: count }, (_, i) => i);
+      return {
+        title: f(CAREER_TEXT.title),
+        summary: f(CAREER_TEXT.summary),
         updated: "2026-10",
-        roles: Array.from({ length: CAREER_LIMITS.roles }, (_, i) => ({
-          id: `role-${i}`,
-          title: line(120),
-          org: line(120),
-          orgUrl: `https://example.org/${line(40)}`,
-          location: line(120),
-          employment: line(40),
-          start: "2000",
-          end: "2001",
-          highlights: Array.from({ length: CAREER_LIMITS.highlights }, () => line(300)),
-          skills: Array.from({ length: CAREER_LIMITS.roleSkills }, (_, j) => `${j}${line(39 - String(j).length)}`),
+        availability: { text: f(CAREER_TEXT.availability), asOf: "2026-10" },
+        roles: n(CAREER_LIMITS.roles).map((i) => ({
+          id: `${"r".repeat(CAREER_TEXT.id - 2)}${String(i).padStart(2, "0")}`,
+          title: f(CAREER_TEXT.roleTitle),
+          org: f(CAREER_TEXT.org),
+          orgUrl: url(`o${i}`),
+          location: f(CAREER_TEXT.location),
+          place: "p".repeat(80),
+          employment: f(CAREER_TEXT.employment),
+          start: "2000-01",
+          end: "2001-12",
+          highlights: n(CAREER_LIMITS.highlights).map((j) => f(CAREER_TEXT.highlight, `h${j}`)),
+          skills: n(CAREER_LIMITS.roleSkills).map((j) => f(CAREER_TEXT.roleSkill, `s${j}`)),
         })),
-        education: [],
-        languages: [],
-        skills: [],
-        links: [],
+        education: n(CAREER_LIMITS.education).map((i) => ({
+          id: `${"e".repeat(CAREER_TEXT.id - 2)}${String(i).padStart(2, "0")}`,
+          institution: f(CAREER_TEXT.institution),
+          programme: f(CAREER_TEXT.programme),
+          level: f(CAREER_TEXT.level),
+          start: "2000-01",
+          end: "2001-12",
+          location: f(CAREER_TEXT.location),
+          place: "p".repeat(80),
+          note: f(CAREER_TEXT.note),
+        })),
+        languages: n(CAREER_LIMITS.languages).map((i) => ({ name: f(CAREER_TEXT.languageName, `l${i}`), level: f(CAREER_TEXT.languageLevel), label: f(CAREER_TEXT.languageLabel) })),
+        skills: n(CAREER_LIMITS.skillGroups).map((i) => ({
+          group: f(CAREER_TEXT.group, `g${i}`),
+          items: n(CAREER_LIMITS.skillItems).map((j) => f(CAREER_TEXT.item, `i${j}`)),
+        })),
+        links: n(CAREER_LIMITS.links).map((i) => ({ label: f(CAREER_TEXT.linkLabel), url: url(`k${i}`) })),
       };
-      expect(publishedCareerSchema.safeParse(big).success).toBe(true);
-      // The theoretical maximum (every list full, every text at its limit) is bounded: about the size of one entry body.
-      expect(JSON.stringify(big).length).toBeLessThan(100_000);
+    };
+    it("the true maximum validates and stays under 60 KB of UTF-8, 3-byte characters everywhere", () => {
+      const max = trueMaximum();
+      const parsed = publishedCareerSchema.safeParse(max);
+      if (!parsed.success) throw new Error(JSON.stringify(parsed.error.issues.slice(0, 3)));
+      const bytes = Buffer.byteLength(JSON.stringify(max));
+      expect(bytes).toBeLessThan(60_000);
+      // and in plain ASCII it is a third of that
+      expect(Buffer.byteLength(JSON.stringify(trueMaximum(false)))).toBeLessThan(25_000);
+    });
+    it("covers every limit: no list or text of the schema is missing from the maximum", () => {
+      const max = trueMaximum();
+      expect(max.roles).toHaveLength(CAREER_LIMITS.roles);
+      expect(max.roles[0]!.highlights).toHaveLength(CAREER_LIMITS.highlights);
+      expect(max.roles[0]!.skills).toHaveLength(CAREER_LIMITS.roleSkills);
+      expect(max.education).toHaveLength(CAREER_LIMITS.education);
+      expect(max.languages).toHaveLength(CAREER_LIMITS.languages);
+      expect(max.skills).toHaveLength(CAREER_LIMITS.skillGroups);
+      expect(max.skills[0]!.items).toHaveLength(CAREER_LIMITS.skillItems);
+      expect(max.links).toHaveLength(CAREER_LIMITS.links);
+      // every optional key of every object is there
+      const shape = (o: object) => Object.keys(o).sort();
+      expect(shape(max.roles[0]!)).toEqual(["end", "employment", "highlights", "id", "location", "org", "orgUrl", "place", "skills", "start", "title"].sort());
+      expect(shape(max.education[0]!)).toEqual(["end", "id", "institution", "level", "location", "note", "place", "programme", "start"].sort());
+      expect(shape(max)).toEqual(["availability", "education", "languages", "links", "roles", "skills", "summary", "title", "updated"]);
+    });
+  });
+
+  describe("contact details are not published (values, not only property names)", () => {
+    const texts: Array<[string, string]> = [
+      ["e-mail", "Reach me at x@y.tld"],
+      ["e-mail, bare", "someone.name+cv@example.org"],
+      ["e-mail, [at]", "name [at] example [dot] org"],
+      ["e-mail, (at)", "name (at) example.org"],
+      ["e-mail, spelled", "name at example dot org"],
+      ["phone, international", "+33 6 12 34 56 78"],
+      ["phone, international, dotted", "+1.415.555.2671"],
+      ["phone, 00 prefix", "0033 6 12 34 56 78"],
+      ["phone, national", "06 12 34 56 78"],
+      ["phone, national, dotted", "06.12.34.56.78"],
+      ["phone, national, plain", "0612345678"],
+      ["phone, 3-3-4", "415 555 2671"],
+      ["phone, 3-3-3", "123-456-789"],
+      ["phone, parenthesised", "(415) 555-2671"],
+      ["phone, local", "call 555-1234"],
+    ];
+    it("rejects them in every free-text field, with a message that names the problem", () => {
+      for (const [what, text] of texts) {
+        const fields: Array<[string, object]> = [
+          ["summary", career({ summary: text })],
+          ["title", career({ title: text })],
+          ["availability", career({ availability: { text, asOf: "2026-10" } })],
+          ["highlight", career({ roles: [role({ highlights: [text] })] })],
+          ["role title", career({ roles: [role({ title: text })] })],
+          ["org", career({ roles: [role({ org: text })] })],
+          ["location", career({ roles: [role({ location: text })] })],
+          ["role skill", career({ roles: [role({ skills: [text] })] })],
+          ["note", career({ education: [{ id: "e", institution: "I", programme: "P", start: "2020", end: "2021", note: text }] })],
+          ["language", career({ languages: [{ name: "French", level: "C2", label: text }] })],
+          ["group", career({ skills: [{ group: text, items: ["a"] }] })],
+          ["item", career({ skills: [{ group: "G", items: [text] }] })],
+          ["link label", career({ links: [{ label: text, url: "https://example.org" }] })],
+        ];
+        for (const [, c] of fields) bad(c, /contact details are never published/, undefined);
+        void what;
+      }
+    });
+    it("rejects contact-channel addresses in links and org URLs", () => {
+      for (const url of [
+        "mailto:a@example.org",
+        "tel:+33612345678",
+        "sms:+33612345678",
+        "skype:live:someone",
+        "https://wa.me/33612345678",
+        "https://api.whatsapp.com/send?phone=33612345678",
+        "https://t.me/someone",
+        "https://signal.me/#p/+33612345678",
+        "https://example.org/contact?mail=a@example.org",
+      ]) {
+        bad(career({ links: [{ label: "L", url }] }));
+        bad(career({ roles: [role({ orgUrl: url })] }));
+      }
+      for (const url of ["https://github.com/BSoDium", "https://linkedin.com/in/bsodium", "https://artstation.com/bsodium", "https://example.org/a-b/12345678901"]) ok(career({ links: [{ label: "L", url }] }));
+    });
+    it("does not mistake dates, ranges, percentages, versions and counts for contact details", () => {
+      for (const text of [
+        "2024-07",
+        "2022 to 2023",
+        "2022-2023",
+        "2019 2020 2021 2022",
+        "2022-06-2023-09",
+        "2022 - 2023 (6 months, 4 people)",
+        "Increased conversion by 20% and traffic by 30%, onboarding time down 70%",
+        "Next.js 14.2.3 and Node 22.11.0",
+        "Handled 12,000 requests per second across 3 regions",
+        "Array<T> and a<b and c>d",
+        "C++17, ES2022, WCAG 2.2, ISO 27001",
+        "Founded in 2019, 120 people, 4 offices",
+      ]) {
+        ok(career({ summary: text, roles: [role({ highlights: [text] })] }));
+      }
+    });
+    it("the real document's texts are not flagged (no false positive)", () => {
+      const real = [
+        "Frontend engineer with an MSc in Computer Graphics & Vision and several years of production experience building React/TypeScript interfaces for geospatial and data-heavy platforms.",
+        "Built the frontend and design of Macrodata Labs' data observability platform, enabling AI teams to process, understand, and scale multimodal datasets",
+        "De facto UI/UX lead: owned frontend architecture, design language, and product experience across the platform",
+        "Engineered geospatial dashboards for carbon monitoring at scale; built a production LLM-powered chat interface with real-time streaming Markdown and full PWA support",
+        "Sole frontend lead: rewrote the entire platform in React/Redux/i18n, delivering significant performance gains",
+        "Containerised backend services using Docker, reducing developer onboarding time by 70%",
+        "Researched and implemented a contrast-aware palette generation algorithm using oklab/oklch colourspaces, significantly improving aesthetics and WCAG compliance",
+        "Redesigned the company website, driving a 30% increase in traffic and 20% increase in conversion",
+        "Automated frontend/backend type synchronisation via RTK Query codegen; led major website overhauls improving navigation and SEO",
+        "ENSEEIHT, INP Toulouse", "Computer Science & Applied Mathematics", "CPGE PCSI/PSI*", "Alpen-Adria-Universität Klagenfurt",
+        "colour science (oklab/oklch)", "GitLab CI/CD", "Agile/Scrum", "Open to opportunities", "Upper-intermediate",
+      ];
+      for (const text of real) expect(contactTextProblem(text), text).toBeNull();
+      for (const url of ["https://github.com/BSoDium", "https://linkedin.com/in/bsodium", "https://artstation.com/bsodium"]) expect(contactUrlProblem(url), url).toBeNull();
     });
   });
 
