@@ -86,6 +86,7 @@ Done: the cream paper and the warm night of the reading surface are gone: entrie
 
 ## Not verified
 
+- **The phone credits button on iOS Safari and real phones** (safe-area inset, the 44 px target by thumb, `<dialog>` modal focus return). Whether a collapsed "i" button, not an always-visible line, satisfies OpenStreetMap's attribution guidelines for an interactive map is the owner's call; the spike's own note says the attribution is "always visible" ([street-zoom-spike.md](street-zoom-spike.md), "Data attribution and licences"). MapLibre's and the common web map libraries' default is the same collapsed "i" on small maps.
 - **Safari and iOS** (including `image-rendering: pixelated` on canvas and the ring's canvas atlas), **real phones** (the frame cost, and what a weak GPU does now that no governor lowers the density: it drops frames, not measured) and real printing of an entry.
 - **Reduced motion** with a real system setting: Chromium emulation only. **A real 120 Hz display and the battery** under the idle rotation.
 - **Vercel's merging of the `vercel.json` headers** with the ones the server sets (the same values are set twice on purpose), HSTS and the `*.vercel.app` robots behaviour on a real deployment, real link previews on social networks.
@@ -97,7 +98,7 @@ Done: the cream paper and the warm night of the reading surface are gone: entrie
 
 - Content model v2: D1 to D5 as recommended (private `docs/content-model-v2.md` section 9).
 - Boxes: dim at rest, hover changes colour only, selected changes colour and switches to a solid line; width never changes. Dashes anchored to one corner per edge; arm and gap scale with the box (kept).
-- Credits follow the tile configuration; the line is monospace with a middle dot before "See more".
+- Credits follow the tile configuration; the line is monospace with a middle dot before "See more". Below 768 px (the `md` line, the same as `useIsMobile`) the card is replaced by a small "i" button ("Map credits", 44 px target) that opens the same dialog (owner, 2026-10-14, branch `fix/mobile-credits`). The licence-required credits stay one tap away, not always visible: to be confirmed by the owner (see "Not verified").
 - Vercel: v1 stays as is; v2 web and API are separate projects from this repo.
 - Bounding boxes: dynamic, OSM-derived, as few manual overrides as possible; routes skipped; GPU budgets accepted.
 - Groups: no peeks (owner, after seeing them: a group and the cities inside it must never be visible together). A group opens early into its most important children that fit and its box and label fade out exactly as they fade in; the rest come in as you zoom. The private design note `lod-importance-design.md` still describes the peeks (section 3, work packages W1 to W4): the client part is superseded by [web-architecture.md](web-architecture.md#opening-a-group-into-its-most-important-children-2026-10-08).

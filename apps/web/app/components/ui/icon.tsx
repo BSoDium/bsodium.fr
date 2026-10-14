@@ -15,6 +15,7 @@ import {
   FileText,
   Hash,
   Image as ImageIcon,
+  Info,
   Link2,
   Maximize2,
   MapPin,
@@ -59,6 +60,7 @@ export const ICONS = {
   search: Search,
   eye: Eye,
   "eye-off": EyeOff,
+  info: Info,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
