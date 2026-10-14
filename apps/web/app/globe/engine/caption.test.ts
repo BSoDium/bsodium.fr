@@ -14,7 +14,6 @@ import {
   seededUnit,
   easeInCubic,
   easeOutExpo,
-  enteringAngle,
   entranceMs,
   entranceStart,
   faceTowardsViewer,
@@ -23,6 +22,7 @@ import {
   lineHidden,
   parallelPoint,
   shellHorizon,
+  occludedAngle,
   planPieces,
   fitScale,
   shellWindowFactor,
@@ -33,15 +33,17 @@ import {
   inBand,
   minScaleFor,
   shellY,
-  swapEnterAngle,
-  swapExitAngle,
-  swapMs,
+  DRIFT,
+  cycleMs,
+  cycleOf,
+  driftVelocity,
+  pendulumX,
+  rowX,
   splitRuns,
   visibleHalfSpan,
   unitBand,
   bandPoint,
   dimPresence,
-  swapEnterAt,
 } from "./caption";
 import { DEG, cameraDistance, lonLatToVec3, viewBasis } from "./geo";
 import { CAPTION, START_VIEW } from "./tuning";
@@ -297,50 +299,143 @@ describe("the rows are on fixed parallels, centred on the equator", () => {
   });
 });
 
-describe("the rows that take turns", () => {
+describe("the rows' trajectory: in, a steady roll through the centre, out", () => {
   const start = 2.6;
+  const Ein = CAPTION.enter.ms;
+  const T = CAPTION.cycle.dwellMs;
+  const Eout = CAPTION.cycle.exitMs;
+  const v = () => driftVelocity();
+  const slope = (f: (t: number) => number, t: number, h = 0.5) => (f(t + h) - f(t - h)) / (2 * h);
 
-  it("sends the outgoing rows round the orbit and behind the planet, each row after the one above, ease-in, to the side it goes towards", () => {
-    expect(swapExitAngle(0, 0, start)).toBe(0);
-    expect(swapExitAngle(CAPTION.cycle.exitMs, 0, start)).toBe(-start);
-    // row 1 starts `exitStaggerMs` later
-    expect(swapExitAngle(CAPTION.cycle.exitStaggerMs - 1, 1, start)).toBe(0);
-    expect(swapExitAngle(CAPTION.cycle.exitStaggerMs + CAPTION.cycle.exitMs, 1, start)).toBe(-start);
-    // slow start, quick end (ease-in)
-    expect(Math.abs(swapExitAngle(CAPTION.cycle.exitMs * 0.3, 0, start))).toBeLessThan(0.1 * start);
-    expect(swapExitAngle(300, 0, -start)).toBeGreaterThan(0); // the other side
+  it("starts hidden behind the planet, rolls from +amp to -amp over the dwell and leaves hidden on the other side", () => {
+    expect(rowX(-100, start)).toBe(start);
+    expect(rowX(0, start)).toBe(start);
+    expect(rowX(Ein, start)).toBeCloseTo(DRIFT.amp, 12);
+    expect(rowX(Ein + T / 2, start)).toBeCloseTo(0, 12);
+    expect(rowX(Ein + T, start)).toBeCloseTo(-DRIFT.amp, 12); // the dwell ends at -amp
+    expect(rowX(Ein + T + Eout, start)).toBeCloseTo(-start, 12);
+    expect(rowX(cycleMs() + 5000, start)).toBe(-start);
+    expect(cycleMs()).toBe(Ein + T + Eout);
   });
 
-  it("brings each incoming row in as its own outgoing row has gone, from their own sides, each `staggerMs` after the one above", () => {
-    const rows = 2;
-    const at = swapEnterAt();
-    expect(at).toBe(CAPTION.cycle.exitMs);
-    // row 0 has left (ease-in: on the face until its very end) exactly when its replacement may start
-    expect(swapExitAngle(at, 0, start)).toBe(-start);
-    expect(swapEnterAngle(0, 0, rows, start)).toBe(start);
-    expect(swapEnterAngle(at - 1, 0, rows, start)).toBe(start);
-    expect(swapEnterAngle(at + 100, 0, rows, start)).toBeLessThan(start);
-    expect(swapEnterAngle(at + 100, 1, rows, start)).toBe(start); // row 2 waits for its stagger
-    expect(swapEnterAngle(at + CAPTION.enter.staggerMs + CAPTION.enter.ms, 1, rows, start)).toBe(0);
-    expect(swapEnterAngle(at + 300, 0, rows, -start)).toBeGreaterThan(-start); // from the west
-    expect(swapMs(rows)).toBe(at + entranceMs(rows));
-    // every row's replacement starts after its own outgoing row has gone (no two words on one parallel)
-    for (let r = 0; r < 4; r++) expect(at + r * CAPTION.enter.staggerMs).toBeGreaterThanOrEqual(r * CAPTION.cycle.exitStaggerMs + CAPTION.cycle.exitMs - 1e-9);
+  it("is one monotone path: a row never turns back", () => {
+    for (const s0 of [1.7, 2.2, 3.0, Math.PI]) {
+      let last = Infinity;
+      for (let t = 0; t <= cycleMs(); t += 7) {
+        const x = rowX(t, s0);
+        expect(x).toBeLessThanOrEqual(last + 1e-12);
+        last = x;
+      }
+    }
   });
 
-  it("scales the shade by how present a row is: none behind the planet, full in place, both sides", () => {
+  it("rolls at a constant speed 2 amp / dwell through the centre", () => {
+    expect(v()).toBeCloseTo((2 * DRIFT.amp) / T, 15);
+    for (const t of [Ein + 1, Ein + T * 0.3, Ein + T * 0.5, Ein + T * 0.9]) expect(slope((u) => rowX(u, start), t)).toBeCloseTo(-v(), 9);
+    // 7 to 9 degrees either side, over 5.5 s: about 3 degrees a second
+    expect((v() * 1000 * 180) / Math.PI).toBeGreaterThan(1.5);
+    expect((v() * 1000 * 180) / Math.PI).toBeLessThan(3.5);
+  });
+
+  it("has no velocity jump at the seams: the entrance lands at the roll's speed and the exit starts at it", () => {
+    for (const s0 of [1.8, 2.6, 3.1]) {
+      const f = (t: number) => rowX(t, s0);
+      // (one-sided slopes, a hair either side of each seam)
+      for (const seam of [Ein, Ein + T]) {
+        const left = (f(seam - 0.001) - f(seam - 0.05)) / 0.049;
+        const right = (f(seam + 0.05) - f(seam + 0.001)) / 0.049;
+        expect(Math.abs(left / -v() - 1)).toBeLessThan(1e-2);
+        expect(Math.abs(right / -v() - 1)).toBeLessThan(1e-2);
+      }
+      // and no jump in position either
+      expect(Math.abs(f(Ein - 1e-6) - f(Ein + 1e-6))).toBeLessThan(1e-9);
+      expect(Math.abs(f(Ein + T - 1e-6) - f(Ein + T + 1e-6))).toBeLessThan(1e-9);
+    }
+  });
+
+  it("never overshoots: the entrance stays outside +amp until it lands on it, the roll stays within +-amp, the exit never comes back", () => {
+    const eps = 1e-9;
+    for (const s0 of [1.8, 2.6, 3.1]) {
+      for (let t = 0; t <= Ein; t += 3) expect(rowX(t, s0)).toBeGreaterThanOrEqual(DRIFT.amp - eps);
+      for (let t = Ein; t <= Ein + T; t += 7) {
+        expect(rowX(t, s0)).toBeLessThanOrEqual(DRIFT.amp + eps);
+        expect(rowX(t, s0)).toBeGreaterThanOrEqual(-DRIFT.amp - eps);
+      }
+      for (let t = Ein + T; t <= Ein + T + Eout; t += 3) expect(rowX(t, s0)).toBeLessThanOrEqual(-DRIFT.amp + eps);
+    }
+    // the entrance takes about a second (the owner's 900 to 1100) and lands at the roll's speed: no stop-then-go
+    expect(Ein).toBeGreaterThanOrEqual(900);
+    expect(Ein).toBeLessThanOrEqual(1100);
+    const last = (rowX(Ein - 1, 2.6) - rowX(Ein, 2.6)) / 1;
+    expect(last / v()).toBeGreaterThan(0.9);
+    expect(last / v()).toBeLessThan(1.5);
+  });
+
+  it("has no kick in the acceleration at the seams either: the quintic eases leave and join the roll at zero acceleration", () => {
+    for (const s0 of [1.8, 2.6, 3.1]) {
+      const f = (t: number) => rowX(t, s0);
+      const second = (t: number, h = 1) => (f(t + h) - 2 * f(t) + f(t - h)) / (h * h);
+      const scale = (s0 - DRIFT.amp) / (Ein * Ein);
+      for (const seam of [Ein, Ein + T]) {
+        for (const off of [-4, -2, 2, 4]) expect(Math.abs(second(seam + off))).toBeLessThan(0.25 * scale);
+      }
+      // inside the entrance and the exit the acceleration is real (the ease), and the roll's is nil
+      expect(Math.abs(second(Ein / 2))).toBeGreaterThan(0.2 * scale);
+      expect(Math.abs(second(Ein + T / 2))).toBeLessThan(1e-12);
+    }
+  });
+
+  it("enters fast (most of the way in the first third), and leaves accelerating (ease-in)", () => {
+    expect((start - rowX(Ein / 3, start)) / (start - DRIFT.amp)).toBeGreaterThan(0.6);
+    // the exit's speed grows to the end
+    const sp = (t: number) => Math.abs(slope((u) => rowX(u, start), t));
+    const e0 = Ein + T;
+    expect(sp(e0 + Eout * 0.5)).toBeGreaterThan(sp(e0 + 5));
+    expect(sp(e0 + Eout * 0.95)).toBeGreaterThan(sp(e0 + Eout * 0.5));
+  });
+
+  it("keeps the rows that stay swinging about the centre with the same amplitude, continuously, and never leaves", () => {
+    const f = (t: number) => pendulumX(t, start);
+    expect(f(0)).toBe(start);
+    expect(f(Ein)).toBeCloseTo(0, 12);
+    // position and velocity continuous at the join
+    const left = (f(Ein - 0.001) - f(Ein - 0.5)) / 0.499;
+    const right = (f(Ein + 0.5) - f(Ein + 0.001)) / 0.499;
+    expect(Math.abs(left / right - 1)).toBeLessThan(1e-2);
+    let hi = -Infinity;
+    let lo = Infinity;
+    for (let t = Ein; t < Ein + 6 * T; t += 11) {
+      hi = Math.max(hi, f(t));
+      lo = Math.min(lo, f(t));
+    }
+    expect(hi).toBeCloseTo(DRIFT.amp, 3);
+    expect(lo).toBeCloseTo(-DRIFT.amp, 3);
+    // the same amplitude as the roll, half its speed's turn-round: it reaches -amp at the end of a dwell like a rolling row
+    expect(f(Ein + T / 2)).toBeCloseTo(-DRIFT.amp, 9);
+  });
+
+  it("counts the cycle a row is in, and how far into it", () => {
+    expect(cycleOf(-1)).toEqual({ n: -1, local: -1 });
+    expect(cycleOf(0)).toEqual({ n: 0, local: 0 });
+    expect(cycleOf(cycleMs() - 1).n).toBe(0);
+    expect(cycleOf(cycleMs())).toEqual({ n: 1, local: 0 });
+    expect(cycleOf(2.5 * cycleMs()).n).toBe(2);
+  });
+
+  it("scales the shade by how present a row is: none behind the planet, full in place and anywhere in the roll, both sides", () => {
     expect(dimPresence(start, start)).toBe(0);
     expect(dimPresence(-start, start)).toBe(0);
     expect(dimPresence(0, start)).toBe(1);
-    expect(dimPresence(start / 2, start)).toBeCloseTo(0.5, 9);
-    expect(dimPresence(-start / 4, start)).toBeCloseTo(0.75, 9);
+    expect(dimPresence(DRIFT.amp, start)).toBe(1);
+    expect(dimPresence(-DRIFT.amp, start)).toBe(1);
+    expect(dimPresence((start + DRIFT.amp) / 2, start)).toBeCloseTo(0.5, 9);
     expect(dimPresence(1, 0)).toBe(1);
   });
 
-  it("dwells several seconds, and exits and enters within about two", () => {
+  it("dwells several seconds on the roll, and enters and leaves within about a second each", () => {
     expect(CAPTION.cycle.dwellMs).toBeGreaterThanOrEqual(5000);
     expect(CAPTION.cycle.dwellMs).toBeLessThanOrEqual(6500);
-    expect(swapMs(2)).toBeLessThan(2000);
+    expect(CAPTION.enter.ms + CAPTION.cycle.exitMs).toBeLessThan(2000);
   });
 });
 
@@ -354,23 +449,39 @@ describe("what is seen: faces and the horizon", () => {
     expect(faceTowardsViewer(Math.PI, d)).toBe(false);
   });
 
-  it("is before the globe's own horizon: a letter vanishes before the limb, it is never cut by it or seen beyond it", () => {
+  it("is before the globe's own horizon: the strip's face turns away before the limb (it is then seen from behind)", () => {
     expect(shellHorizon(d)).toBeLessThan(Math.acos(1 / d));
   });
 
-  it("hides a line whose nearest edge is past the horizon, on either side, and shows it when any of it is in view", () => {
+  it("goes behind the planet's body at `occludedAngle`: where the shell's projection falls back to the disc's edge, past the poles of the view", () => {
+    for (const dist of [3, 5.8, 13, 30]) {
+      const psi = occludedAngle(dist);
+      expect(psi).toBeGreaterThan(Math.PI / 2);
+      expect(psi).toBeLessThan(Math.PI);
+      // the projection of that point is the planet's disc's tangent radius
+      const x = (CAPTION.radius * Math.sin(psi)) / (dist - CAPTION.radius * Math.cos(psi));
+      expect(x).toBeCloseTo(1 / Math.sqrt(dist * dist - 1), 9);
+      // and between the shell's horizon and there the row is OUTSIDE the disc (seen from behind, curling back), never inside it
+      const mid = (shellHorizon(dist) + psi) / 2;
+      expect((CAPTION.radius * Math.sin(mid)) / (dist - CAPTION.radius * Math.cos(mid))).toBeGreaterThan(1 / Math.sqrt(dist * dist - 1));
+    }
+  });
+
+  it("hides a line only once all of it is behind the planet's body, on either side: past the shell's horizon it is still drawn (from behind)", () => {
     const line = { halfSpan: 0.8, baseLat: 0 };
     const h = shellHorizon(d);
+    const o = occludedAngle(d);
     // on the equator seen from the equator the central angle is the longitude offset itself
-    expect(lineHidden(h + 0.8 + 0.01, line, d, 0)).toBe(true);
-    expect(lineHidden(-(h + 0.8 + 0.01), line, d, 0)).toBe(true);
-    expect(lineHidden(h + 0.8 - 0.05, line, d, 0)).toBe(false);
+    expect(lineHidden(o + 0.8 + 0.01, line, d, 0)).toBe(true);
+    expect(lineHidden(-(o + 0.8 + 0.01), line, d, 0)).toBe(true);
+    expect(lineHidden(o + 0.8 - 0.05, line, d, 0)).toBe(false);
+    expect(lineHidden(h + 0.8 + 0.1, line, d, 0)).toBe(false); // (the old rule hid it here: it vanished in the open, beside the planet)
     expect(lineHidden(0, line, d, 0)).toBe(false);
   });
 
   it("counts the parallel's own latitude: a line high up stays in view longer than its longitude says (it curves round the pole)", () => {
     const line = { halfSpan: 0.4, baseLat: 60 };
-    const theta = shellHorizon(d) + 0.4 + 0.1;
+    const theta = occludedAngle(d) + 0.4 + 0.1;
     expect(lineHidden(theta, { ...line, baseLat: 0 }, d, 0)).toBe(true);
     expect(lineHidden(theta, line, d, 50)).toBe(false);
   });
@@ -383,7 +494,7 @@ describe("what is seen: faces and the horizon", () => {
         expect(start).toBeLessThanOrEqual(Math.PI);
         for (const dist of [cameraDistance(0.5, 900), cameraDistance(2.2, 900), cameraDistance(6.5, 900), 1.2]) {
           // a pole-ward parallel seen over the pole is in view from every side: it cannot be hidden by turning
-          if (visibleHalfSpan(viewLat, l.baseLat, shellHorizon(dist)) >= Math.min(Math.PI, start) - l.halfSpan - 1e-9) continue;
+          if (visibleHalfSpan(viewLat, l.baseLat, occludedAngle(dist)) >= Math.min(Math.PI, start) - l.halfSpan - 1e-9) continue;
           expect(lineHidden(start, l, dist, viewLat)).toBe(true);
         }
       }
@@ -406,41 +517,52 @@ describe("the entrance: fast, then a slow settle, staggered, a function of time"
     }
   });
 
-  it("turns a line from its start to 0 within `enter.ms`, covering most of the way in the first 150 ms (under 40 % left) and settling slowly", () => {
-    expect(enteringAngle(0, 0, start)).toBe(start);
-    expect(enteringAngle(CAPTION.enter.ms, 0, start)).toBe(0);
-    expect(enteringAngle(150, 0, start) / start).toBeLessThan(0.4);
-    expect(enteringAngle(500, 0, start) / start).toBeLessThan(0.04);
-    expect(enteringAngle(500, 0, start)).toBeGreaterThan(0); // still settling
-    expect(CAPTION.enter.ms).toBeGreaterThanOrEqual(900);
-    expect(CAPTION.enter.ms).toBeLessThanOrEqual(1100);
-  });
-
-  it("staggers the lines: line 1 starts `staggerMs` after line 0 and stays behind it all the way", () => {
-    expect(CAPTION.enter.staggerMs).toBeGreaterThanOrEqual(420);
-    expect(CAPTION.enter.staggerMs).toBeLessThanOrEqual(500);
-    const g = CAPTION.enter.staggerMs;
-    for (const t of [0, 100, g - 1]) expect(enteringAngle(t, 1, start)).toBe(start); // it has not started
-    for (const t of [g + 40, g + 200, g + 600]) expect(enteringAngle(t, 1, start)).toBeGreaterThan(enteringAngle(t, 0, start));
-    expect(enteringAngle(CAPTION.enter.staggerMs + CAPTION.enter.ms, 1, start)).toBe(0);
-    expect(entranceMs(2)).toBe(CAPTION.enter.ms + CAPTION.enter.staggerMs);
-  });
-
-  it("is a function of time alone: the same turn at any frame rate", () => {
-    const at = (fps: number, ms: number) => {
-      // a clock that only reads at frames of `fps`: the value at the last frame before `ms` is the function of that frame's time
-      const frame = Math.floor((ms * fps) / 1000) / fps;
-      return enteringAngle(frame * 1000, 0, start);
-    };
+  it("brings a line from its start to its roll within `enter.ms`, covering most of the way in the first third", () => {
     const m = new CaptionMotion();
     m.setStarts([start, start]);
     m.enter(0);
-    for (const ms of [120, 480, 960]) {
-      const exact = m.angle(ms, 0, start);
-      expect(exact).toBeCloseTo(enteringAngle(ms, 0, start), 12);
-      expect(Math.abs(at(30, ms) - exact)).toBeLessThan(0.35);
-      expect(Math.abs(at(144, ms) - exact)).toBeLessThan(Math.abs(at(30, ms) - exact) + 1e-9);
-    }
+    expect(m.angle(0, 0, start)).toBe(start);
+    expect(m.angle(CAPTION.enter.ms, 0, start)).toBeCloseTo(DRIFT.amp, 9);
+    expect((start - m.angle(CAPTION.enter.ms / 3, 0, start)) / (start - DRIFT.amp)).toBeGreaterThan(0.6);
+    expect(CAPTION.enter.ms).toBeGreaterThanOrEqual(800);
+    expect(CAPTION.enter.ms).toBeLessThanOrEqual(1100);
+  });
+
+  it("staggers the lines: line 1 starts `staggerMs` after line 0, goes the same way, and the stagger stays in the roll", () => {
+    expect(CAPTION.enter.staggerMs).toBeGreaterThanOrEqual(420);
+    expect(CAPTION.enter.staggerMs).toBeLessThanOrEqual(500);
+    const g = CAPTION.enter.staggerMs;
+    const m = new CaptionMotion();
+    m.setStarts([start, start]);
+    m.enter(0);
+    for (const t of [0, 100, g - 1]) expect(m.angle(t, 1, start)).toBe(start); // it has not started
+    for (const t of [g + 40, g + 200, g + 600]) expect(m.angle(t, 1, start)).toBeGreaterThan(m.angle(t, 0, start));
+    expect(entranceMs(2)).toBe(CAPTION.enter.ms + CAPTION.enter.staggerMs);
+    // in the roll row 1 is exactly row 0 `staggerMs` behind: the block shears gently
+    for (const t of [3000, 4200, 6000]) expect(m.angle(t, 1, start)).toBeCloseTo(m.angle(t - g, 0, start), 9);
+  });
+
+  it("is a function of time alone: the same turn at any frame rate, a stalled frame moves a row by one capped step", () => {
+    const a = new CaptionMotion();
+    a.setStarts([start]);
+    a.enter(0);
+    const b = new CaptionMotion();
+    b.setStarts([start]);
+    b.enter(0);
+    // 144 fps for 3 s against 20 fps for 3 s: the same clock
+    for (let t = 0; t <= 3000; t += 1000 / 144) a.tick(t);
+    for (let t = 0; t <= 3000; t += 50) b.tick(t);
+    expect(a.angle(3000, 0, start)).toBeCloseTo(b.angle(3000, 0, start), 2);
+    // a stall: one frame 10 s later moves the clock by at most `maxStepMs`
+    const c = new CaptionMotion();
+    c.setStarts([start]);
+    c.enter(0);
+    c.tick(100);
+    const before = c.angle(100, 0, start);
+    c.tick(10100);
+    const after = c.angle(10100, 0, start);
+    expect(after).toBeCloseTo(rowX(2 * CAPTION.drift.maxStepMs, start), 9);
+    expect(Math.abs(after - before)).toBeGreaterThan(0);
   });
 
   it("leaves quickly, on behind the planet the other way, from wherever it was", () => {
@@ -453,7 +575,7 @@ describe("the entrance: fast, then a slow settle, staggered, a function of time"
     m.enter(0);
     m.leave(300, "orbit"); // cut short: where they had got to
     const a0 = m.angle(300, 0, start);
-    expect(a0).toBeCloseTo(enteringAngle(300, 0, start), 9);
+    expect(a0).toBeCloseTo(rowX(300, start), 9);
     const mid = m.angle(300 + CAPTION.leaveMs / 2, 0, start);
     expect(mid).toBeLessThan(a0);
     expect(m.phase).toBe("out");
@@ -471,15 +593,19 @@ describe("the entrance: fast, then a slow settle, staggered, a function of time"
     m.begin(1000, CAPTION.enter.loadDelayMs);
     expect(m.waiting).toBe(false);
     expect(m.angle(1000, 0, start)).toBe(start);
-    expect(m.angle(1000 + CAPTION.enter.loadDelayMs + 300, 0, start)).toBeLessThan(0.15 * start);
+    expect(m.angle(1000 + CAPTION.enter.loadDelayMs + 300, 0, start)).toBeLessThan(0.5 * start);
     m.angle(1000 + CAPTION.enter.loadDelayMs + CAPTION.enter.ms + 10, 0, start);
     expect(m.phase).toBe("rest");
-    expect(m.animating).toBe(false);
+    expect(m.animating).toBe(false); // (the entrance is over: the roll's own capped loop takes it from here)
+    expect(m.drifting).toBe(true);
     const r = new CaptionMotion();
     r.setStarts([start]);
+    r.continuous = false; // reduced motion: still, at the centre
     r.settle(true);
     expect(r.angle(0, 0, start)).toBe(0);
+    expect(r.angle(50000, 0, start)).toBe(0);
     expect(r.animating).toBe(false);
+    expect(r.drifting).toBe(false);
     r.settle(false);
     expect(r.angle(0, 0, start)).toBe(start);
   });
@@ -521,10 +647,11 @@ describe("leaving and entering again, cut short", () => {
     expect(m.angle(520, 0, start)).toBeCloseTo(at[0]!, 9);
     expect(m.angle(520, 1, start)).toBeCloseTo(at[1]!, 9);
     for (let t = 530; t <= 520 + CAPTION.enter.ms; t += 40) {
-      expect(Math.abs(m.angle(t, 0, start))).toBeLessThanOrEqual(Math.abs(at[0]!) + 1e-9);
+      expect(Math.abs(m.angle(t, 0, start))).toBeLessThanOrEqual(Math.max(Math.abs(at[0]!), DRIFT.amp) + 1e-9);
     }
     m.angle(520 + CAPTION.enter.ms + entranceMs(2), 0, start);
-    expect(m.angle(520 + 3000, 0, start)).toBe(0);
+    // (settled into the roll: no stagger for a line that was already on its way)
+    expect(m.angle(520 + CAPTION.enter.ms + 2000, 0, start)).toBeCloseTo(rowX(2 * CAPTION.enter.ms + 2000, start), 9);
     expect(m.phase).toBe("rest");
   });
 
@@ -579,11 +706,16 @@ describe("the sides the lines come in from", () => {
     expect(sides).toEqual(entranceSides(7, 1, 3));
     for (let i = 0; i < 3; i++) {
       const t = 700 + i * CAPTION.enter.staggerMs;
-      expect(m.angle(t, i, start)).toBeCloseTo(sides[i]! * enteringAngle(700 + 0, 0, start), 9);
+      expect(m.angle(t, i, start)).toBeCloseTo(sides[i]! * rowX(700, start), 9);
     }
     m.angle(entranceMs(3) + 5, 0, start);
     expect(m.phase).toBe("rest");
-    for (let i = 0; i < 3; i++) expect(m.angle(entranceMs(3) + 5, i, start)).toBe(0);
+    // in the roll each line is within the amplitude of the centre, and goes the way it came: through it, to the other side
+    for (let i = 0; i < 3; i++) {
+      const a = m.angle(4000, i, start);
+      expect(Math.abs(a)).toBeLessThanOrEqual(DRIFT.amp + 1e-9);
+      expect(Math.sign(m.angle(4000 + 100, i, start) - a)).toBe(-sides[i]!);
+    }
   });
 
   it("draws new sides for each entrance from hidden, but a leaving cut short goes on from where each line is, on its own side", () => {
@@ -666,7 +798,8 @@ describe("leaving: a fade, or the orbit", () => {
     m.leave(5000);
     expect(m.phase).toBe("fade");
     expect(m.animating).toBe(false); // no frames are asked for: the fade is the compositor's
-    for (const t of [5000, 5050, 5100, 5170]) for (let i = 0; i < 3; i++) expect(m.angle(t, i, start)).toBe(0);
+    const frozen = [0, 1, 2].map((i) => m.angle(5000, i, start));
+    for (const t of [5000, 5050, 5100, 5170]) for (let i = 0; i < 3; i++) expect(m.angle(t, i, start)).toBe(frozen[i]); // where the roll was
     m.tick(5000 + CAPTION.fadeMs - 1);
     expect(m.phase).toBe("fade");
     m.tick(5000 + CAPTION.fadeMs);
@@ -737,7 +870,7 @@ describe("faces, styles and colours", () => {
     expect(CAPTION_FALLBACK_STYLE.script).toBe("heavy-italic");
   });
 
-  it("takes its colours from the globe's own palette, greys only: the face a tint of the page, the outline the coast grey pushed to the ink, the side between", () => {
+  it("takes its colours from the globe's own palette, greys only, all solid: the face is exactly the page colour, the outline the coast grey pushed to the ink, the side a calmer tone between", () => {
     const light = { background: [0.984, 0.984, 0.984], ink: [0.039, 0.039, 0.039], coast: [0.56, 0.56, 0.56], outline: [0.9, 0.9, 0.9], grid: [0.8, 0.8, 0.8], ramp: [] } as never;
     const dark = { background: [0.039, 0.039, 0.039], ink: [0.96, 0.96, 0.96], coast: [0.38, 0.38, 0.38], outline: [0.1, 0.1, 0.1], grid: [0.2, 0.2, 0.2], ramp: [] } as never;
     const l = captionColors(light);
@@ -745,17 +878,23 @@ describe("faces, styles and colours", () => {
     // monochrome: every channel the same, and there is no accent
     for (const c of [l.face, l.outline, l.side, d.face, d.outline, d.side]) expect(c[0]).toBeCloseTo(c[1]!, 9);
     expect(Object.keys(l).sort()).toEqual(["face", "outline", "side"]);
-    // never the pure ink or the pure page: quieter than the name
-    expect(l.face[0]).toBeLessThan(0.984);
-    expect(l.face[0]).toBeGreaterThan(0.9);
-    expect(l.outline[0]).toBeLessThan(0.56);
-    expect(l.outline[0]).toBeGreaterThan(0.039);
-    expect(d.face[0]).toBeGreaterThan(0.039);
-    expect(d.face[0]).toBeLessThan(0.35); // dark does not glare
-    // the side is a tone of its own, between the face and the outline, in both schemes
+    // the face IS the page's colour in both schemes (the inside of a letter is a hole in the linework, solid)
+    expect([...l.face]).toEqual([0.984, 0.984, 0.984]);
+    expect([...d.face]).toEqual([0.039, 0.039, 0.039]);
+    // the outline reads against the page (at least 4.5:1) in both
+    const lum = (c: readonly number[]) => {
+      const f = (v: number) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * f(c[0]!) + 0.7152 * f(c[1]!) + 0.0722 * f(c[2]!);
+    };
+    const ratio = (a: readonly number[], b: readonly number[]) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+    expect(ratio(l.outline, l.face)).toBeGreaterThan(4.5);
+    expect(ratio(d.outline, d.face)).toBeGreaterThan(4.5);
+    // the side is a tone of its own, between the face and the outline, in both schemes, and calmer than the outline
     expect(l.side[0]).toBeLessThan(l.face[0]);
     expect(l.side[0]).toBeGreaterThan(l.outline[0]);
     expect(d.side[0]).toBeGreaterThan(d.face[0]);
     expect(d.side[0]).toBeLessThan(d.outline[0]);
+    expect(ratio(l.side, l.face)).toBeLessThan(ratio(l.outline, l.face));
+    expect(ratio(d.side, d.face)).toBeLessThan(ratio(d.outline, d.face));
   });
 });

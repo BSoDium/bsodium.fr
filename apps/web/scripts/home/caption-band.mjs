@@ -26,10 +26,78 @@ const rowsOf = (page) =>
     const k = (a) => a[Math.floor(a.length / 2)];
     return { lat: p.lat, heights: rows.map((r) => Math.abs(k(r.bottom)[1] - k(r.top)[1])), base: rows.map((r) => k(r.base)[1]), zoom: p.zoom };
   });
+/**
+ * The words alone over MAGENTA (the globe's canvases, the ring and the hero hidden, the page painted magenta): every pixel inside a word, face,
+ * outline or thickness, must be exactly its own grey (R = G = B): a thickness that is not fully opaque shows as a magenta tint. Pixels within
+ * `edge` device pixels of the page colour are the antialiased silhouette and are not looked at. Returns { interior, tinted, tintedShare }.
+ */
+async function magentaTest(page, edge = 3) {
+  await page.evaluate(() => {
+    window.__globeDebug.captionDim("none");
+    window.__globeDebug.pinCaption(4000);
+    window.__globeDebug.setView({ lon: 25, lat: 6 });
+    window.__globeDebug.renderNow();
+    for (const c of document.querySelectorAll("[data-globe] canvas")) if (c.style.zIndex !== "15") c.dataset.v = c.style.visibility, (c.style.visibility = "hidden");
+    const h = document.querySelector("[data-slot=landing-hero]");
+    if (h) h.dataset.v = h.style.visibility, (h.style.visibility = "hidden");
+    document.documentElement.dataset.bg = document.documentElement.style.background;
+    document.documentElement.style.background = "#ff00ff";
+    document.body.style.background = "#ff00ff";
+    for (const el of document.querySelectorAll("[data-globe]")) el.style.background = "#ff00ff";
+  });
+  await sleep(200);
+  const rect = await page.evaluate(() => {
+    const b = [...document.querySelectorAll("[data-globe] canvas")].find((c) => c.style.zIndex === "15").getBoundingClientRect();
+    return { x: b.left, y: b.top, width: b.width, height: b.height };
+  });
+  const png = await page.screenshot({ type: "png", clip: rect });
+  await page.evaluate(() => {
+    for (const c of document.querySelectorAll("[data-globe] canvas")) if (c.dataset.v !== undefined) c.style.visibility = c.dataset.v;
+    const h = document.querySelector("[data-slot=landing-hero]");
+    if (h) h.style.visibility = h.dataset.v ?? "";
+    document.documentElement.style.background = document.documentElement.dataset.bg ?? "";
+    document.body.style.background = "";
+    for (const el of document.querySelectorAll("[data-globe]")) el.style.background = "";
+    window.__globeDebug.captionDim(null);
+    window.__globeDebug.pinCaption(null);
+  });
+  return page.evaluate(
+    async ([b64, edge]) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${b64}`;
+      await img.decode();
+      const cv = document.createElement("canvas");
+      cv.width = img.width;
+      cv.height = img.height;
+      const x = cv.getContext("2d");
+      x.drawImage(img, 0, 0);
+      const d = x.getImageData(0, 0, cv.width, cv.height).data;
+      const W = cv.width;
+      const H = cv.height;
+      const mag = (i) => d[i] === 255 && d[i + 1] === 0 && d[i + 2] === 255;
+      let interior = 0;
+      let tinted = 0;
+      for (let y = edge; y < H - edge; y++)
+        for (let xx = edge; xx < W - edge; xx++) {
+          const i = (y * W + xx) * 4;
+          if (mag(i)) continue;
+          let near = false;
+          for (let k = 1; k <= edge && !near; k++)
+            for (const [dx, dy] of [[-k, 0], [k, 0], [0, -k], [0, k], [-k, -k], [k, k], [-k, k], [k, -k]]) if (mag(((y + dy) * W + xx + dx) * 4)) near = true;
+          if (near) continue;
+          interior++;
+          if (Math.abs(d[i] - d[i + 1]) > 6 || Math.abs(d[i + 2] - d[i + 1]) > 6) tinted++;
+        }
+      return { interior, tinted, tintedShare: tinted / Math.max(1, interior) };
+    },
+    [png.toString("base64"), edge],
+  );
+}
+
 const stateOf = (page) => page.evaluate(() => ({ c: window.__globeDebug.caption(), v: window.__globeDebug.view() }));
 
-async function open(options) {
-  const ctx = await browser.newContext({ ...options, colorScheme: "dark" });
+async function open(options, scheme = "dark") {
+  const ctx = await browser.newContext({ ...options, colorScheme: scheme });
   const page = await ctx.newPage();
   const logs = [];
   page.on("pageerror", (e) => logs.push(e.message));
@@ -113,57 +181,200 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
   }
   await page.evaluate(() => window.__globeDebug.pinCaptionAngle(null));
   {
+    // The owner's bug: the globe's lines showed THROUGH the thickness. Three pictures of the same held frame: everything (A), the caption's canvas
+    // over the bare page (B) and over magenta (M). The words are the pixels of M that are not magenta (eroded: the edge's antialiasing blends with
+    // what is behind); inside them A and B must be the same colour, so nothing of the globe shows through a face, an outline or a thickness.
     await page.evaluate(() => {
       window.__globeDebug.captionDim("none");
       window.__globeDebug.setView({ lon: 25, lat: 6 });
+      window.__globeDebug.pinCaption(4000);
       window.__globeDebug.renderNow();
     });
-    await sleep(300);
-    const withGlobe = await page.screenshot({ type: "png" });
-    const hide = (on, caption) =>
-      page.evaluate(([on, caption]) => {
-        for (const c of document.querySelectorAll("[data-globe] canvas")) if ((c.style.zIndex === "15") === caption) c.style.visibility = on ? "hidden" : "";
-      }, [on, caption]);
-    await hide(true, true); // the caption's canvas away: the globe and the page alone
-    const noWords = await page.screenshot({ type: "png" });
-    await hide(false, true);
-    await hide(true, false); // the globe's canvases away: the words over the page's own colour
-    const alone = await page.screenshot({ type: "png" });
-    await hide(false, false);
-    await page.evaluate(() => window.__globeDebug.captionDim(null));
-    // The words' pixels are those that change when the caption's canvas is taken away; each must be the colour it has over the bare page.
-    const cmp = await page.evaluate(async ([a, c, b]) => {
-      const load = async (u) => {
+    await sleep(200);
+    const rect = await page.evaluate(() => {
+      const b = [...document.querySelectorAll("[data-globe] canvas")].find((c) => c.style.zIndex === "15").getBoundingClientRect();
+      return { x: b.left, y: b.top, width: b.width, height: b.height };
+    });
+    const A = await page.screenshot({ type: "png", clip: rect });
+    const hide = (on) =>
+      page.evaluate((on) => {
+        for (const c of document.querySelectorAll("[data-globe] canvas")) if (c.style.zIndex !== "15") c.style.visibility = on ? "hidden" : "";
+        const h = document.querySelector("[data-slot=landing-hero]");
+        if (h) h.style.visibility = on ? "hidden" : "";
+      }, on);
+    await hide(true);
+    const B = await page.screenshot({ type: "png", clip: rect });
+    await page.evaluate(() => {
+      document.documentElement.dataset.bg = document.documentElement.style.background;
+      document.documentElement.style.background = "#ff00ff";
+      document.body.style.background = "#ff00ff";
+      for (const el of document.querySelectorAll("[data-globe]")) el.style.background = "#ff00ff";
+    });
+    await sleep(100);
+    const M = await page.screenshot({ type: "png", clip: rect });
+    await page.evaluate(() => {
+      document.documentElement.style.background = document.documentElement.dataset.bg ?? "";
+      document.body.style.background = "";
+      for (const el of document.querySelectorAll("[data-globe]")) el.style.background = "";
+      window.__globeDebug.captionDim(null);
+      window.__globeDebug.pinCaption(null);
+    });
+    await hide(false);
+    const cmp = await page.evaluate(
+      async ([a, b, m, edge]) => {
+        const load = async (u) => {
+          const img = new Image();
+          img.src = `data:image/png;base64,${u}`;
+          await img.decode();
+          const cv = document.createElement("canvas");
+          cv.width = img.width;
+          cv.height = img.height;
+          const x = cv.getContext("2d");
+          x.drawImage(img, 0, 0);
+          return { d: x.getImageData(0, 0, cv.width, cv.height).data, w: cv.width, h: cv.height };
+        };
+        const [PA, PB, PM] = [await load(a), await load(b), await load(m)];
+        const mag = (i) => PM.d[i] === 255 && PM.d[i + 1] === 0 && PM.d[i + 2] === 255;
+        let interior = 0;
+        let seen = 0;
+        for (let y = edge; y < PM.h - edge; y++)
+          for (let x = edge; x < PM.w - edge; x++) {
+            const i = (y * PM.w + x) * 4;
+            if (mag(i)) continue;
+            let near = false;
+            for (let k = 1; k <= edge && !near; k++)
+              for (const [dx, dy] of [[-k, 0], [k, 0], [0, -k], [0, k], [-k, -k], [k, k], [-k, k], [k, -k]]) if (mag(((y + dy) * PM.w + x + dx) * 4)) near = true;
+            if (near) continue;
+            interior++;
+            if (Math.abs(PA.d[i] - PB.d[i]) + Math.abs(PA.d[i + 1] - PB.d[i + 1]) + Math.abs(PA.d[i + 2] - PB.d[i + 2]) > 9) seen++;
+          }
+        return { interior, seen };
+      },
+      [A.toString("base64"), B.toString("base64"), M.toString("base64"), label === "phone" ? 4 : 3],
+    );
+    ok(cmp.interior > 3000 && cmp.seen / cmp.interior < 0.01, `${label}: the words are opaque: ${cmp.seen} of ${cmp.interior} interior pixels of the words differ with and without the globe under them`);
+  }
+  {
+    const m = await magentaTest(page, label === "phone" ? 6 : 4);
+    // (a phone's strokes are a few device pixels: only the with-and-without comparison above is exact there; the tint share is looked at on a desktop)
+    ok(m.interior > 3000 && (label === "phone" || m.tintedShare < 0.005), `${label}: dark, over magenta, every interior pixel of a word is its own solid grey (${m.tinted} tinted of ${m.interior})`);
+  }
+  // The orbit's ends, by pixels: a row turned from 0 to 180 degrees goes round the planet. Its glyph pixels (the caption's canvas alone, over the
+  // page's own colour) fall away towards the side without a cliff, it is still there past the shell's horizon (seen from behind, curling back
+  // towards the planet), and it ends only when the planet's body hides it. (The first version of the equator layout vanished in the open, beside
+  // the planet, at the shell's horizon: its strips were drawn from the front only.)
+  {
+    await page.evaluate(() => window.__globeDebug.captionDim("none"));
+    await page.evaluate(() => {
+      for (const c of document.querySelectorAll("[data-globe] canvas")) if (c.style.zIndex !== "15") c.dataset.v = c.style.visibility, (c.style.visibility = "hidden");
+      const h = document.querySelector("[data-slot=landing-hero]");
+      if (h) h.dataset.v = h.style.visibility, (h.style.visibility = "hidden");
+    });
+    const rect = await page.evaluate(() => {
+      const b = [...document.querySelectorAll("[data-globe] canvas")].find((c) => c.style.zIndex === "15").getBoundingClientRect();
+      return { x: b.left, y: b.top, width: b.width, height: b.height };
+    });
+    const count = async (deg) => {
+      await page.evaluate((d) => window.__globeDebug.pinCaptionAngle(d), deg);
+      await sleep(60);
+      const png = await page.screenshot({ type: "png", clip: rect });
+      return page.evaluate(async (b64) => {
         const img = new Image();
-        img.src = `data:image/png;base64,${u}`;
+        img.src = `data:image/png;base64,${b64}`;
         await img.decode();
         const cv = document.createElement("canvas");
         cv.width = img.width;
         cv.height = img.height;
         const x = cv.getContext("2d");
         x.drawImage(img, 0, 0);
-        return x.getImageData(0, 0, cv.width, cv.height).data;
-      };
-      const [A, C, B] = [await load(a), await load(c), await load(b)];
-      const W = Math.round(window.innerWidth * window.devicePixelRatio);
-      const n = A.length / 4;
-      const word = new Uint8Array(n);
-      for (let p = 0; p < n; p++) {
-        const i = p * 4;
-        word[p] = Math.abs(A[i] - C[i]) + Math.abs(A[i + 1] - C[i + 1]) + Math.abs(A[i + 2] - C[i + 2]) >= 24 ? 1 : 0;
-      }
-      let ink = 0;
-      let seen = 0;
-      // (the interior of the words: a pixel whose four neighbours, 3 px away, are the words' too: the edges blend with what is under them)
-      for (let p = 3 * W + 3; p < n - 3 * W - 3; p++) {
-        if (!word[p] || !word[p - 3] || !word[p + 3] || !word[p - 3 * W] || !word[p + 3 * W]) continue;
-        ink++;
-        const i = p * 4;
-        if (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2]) > 12) seen++;
-      }
-      return { ink, seen };
-    }, [withGlobe.toString("base64"), noWords.toString("base64"), alone.toString("base64")]);
-    ok(cmp.ink > 1500 && cmp.seen / cmp.ink < 0.1, `${label}: the words are opaque: ${cmp.seen} of ${cmp.ink} interior pixels of the words show the globe under them (${((100 * cmp.seen) / Math.max(1, cmp.ink)).toFixed(2)} %)`);
+        const d = x.getImageData(0, 0, cv.width, cv.height).data;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) if (Math.abs(d[i] - d[0]) + Math.abs(d[i + 1] - d[1]) + Math.abs(d[i + 2] - d[2]) > 14) n++;
+        return n;
+      }, png.toString("base64"));
+    };
+    const angles = [];
+    for (let a = 0; a <= 180; a += 10) angles.push(a);
+    const counts = [];
+    for (const a of angles) counts.push(await count(a));
+    await page.evaluate(() => {
+      for (const c of document.querySelectorAll("[data-globe] canvas")) if (c.dataset.v !== undefined) c.style.visibility = c.dataset.v;
+      const h = document.querySelector("[data-slot=landing-hero]");
+      if (h) h.style.visibility = h.dataset.v ?? "";
+      window.__globeDebug.pinCaptionAngle(null);
+      window.__globeDebug.captionDim(null);
+    });
+    const peak = Math.max(...counts);
+    const at = (a) => counts[angles.indexOf(a)];
+    ok(at(0) > 2000, `${label}: the rows have glyph pixels in place (${at(0)} px)`);
+    ok(at(100) > 0 && at(110) > 0, `${label}: a row is still drawn at 100 and 110 degrees, past the shell's horizon (${at(100)}, ${at(110)} px)`);
+    let cliff = null;
+    for (let i = 1; i < angles.length; i++) if (counts[i - 1] > 0.1 * peak && counts[i] < 0.05 * counts[i - 1]) cliff = `${angles[i - 1]} -> ${angles[i]}: ${counts[i - 1]} -> ${counts[i]}`;
+    ok(cliff === null, `${label}: no cliff in the glyph pixels (${counts.join(", ")}${cliff ? "; cliff " + cliff : ""})`);
+    let last = peak;
+    let mono = true;
+    for (let i = angles.indexOf(60); i < angles.length; i++) {
+      if (counts[i] > last * 1.25 + 50) mono = false;
+      last = Math.min(last, counts[i]);
+    }
+    ok(mono, `${label}: the pixels fall away towards the side from 60 degrees (monotone within 25 %)`);
+    ok(at(180) < 0.02 * peak, `${label}: and the row ends behind the planet's body (${at(180)} px at 180 degrees)`);
+  }
+  // The roll (round 8): one continuous path per row. Sampled by holding the caption's clock (`pinCaption(ms)`): the first row's turn at the seams
+  // (entrance -> roll at `enter.ms`, roll -> exit at `enter.ms + dwell`) has the same speed on both sides, the roll goes from +amp to -amp over the
+  // dwell, and the rows are staggered in it.
+  {
+    const turnAt = async (ms) => {
+      await page.evaluate((ms) => window.__globeDebug.pinCaption(ms), ms);
+      await sleep(30);
+      return page.evaluate(() => {
+        const c = window.__globeDebug.caption();
+        return c.lines.filter((l) => l.parent < 2).map((l) => ({ row: l.parent, theta: (l.theta * 180) / Math.PI, side: l.side }));
+      });
+    };
+    const Ein = 900;
+    const T = 5500;
+    const th = async (ms, row = 0) => (await turnAt(ms)).find((l) => l.row === row).theta;
+    const speed = async (a, b) => ((await th(b)) - (await th(a))) / (b - a); // degrees a ms
+    const mid = await speed(Ein + 1000, Ein + 1100);
+    const vIn = await speed(Ein - 12, Ein - 2);
+    const vRoll = await speed(Ein + 2, Ein + 12);
+    const vRollEnd = await speed(Ein + T - 12, Ein + T - 2);
+    const vOut = await speed(Ein + T + 2, Ein + T + 12);
+    const close = (a, b) => Math.abs(a - b) <= 0.12 * Math.abs(b); // (a hair either side of a seam: the acceleration is zero AT it and grows from there)
+    ok(close(vIn, mid) && close(vRoll, mid), `${label}: no speed jump entering the roll (${(vIn * 1000).toFixed(2)} / ${(vRoll * 1000).toFixed(2)} against ${(mid * 1000).toFixed(2)} deg/s)`);
+    ok(close(vRollEnd, mid) && close(vOut, mid), `${label}: no speed jump leaving the roll (${(vRollEnd * 1000).toFixed(2)} / ${(vOut * 1000).toFixed(2)} against ${(mid * 1000).toFixed(2)} deg/s)`);
+    const a0 = await th(Ein);
+    const a1 = await th(Ein + T);
+    ok(Math.abs(a0 + a1) < 0.2 && Math.abs(a0) > 4 && Math.abs(a0) < 12, `${label}: the roll goes from ${a0.toFixed(2)} to ${a1.toFixed(2)} degrees over the dwell (+amp to -amp)`);
+    const r0 = await th(4000, 0);
+    const r1 = await th(4000 + 450, 1);
+    ok(Math.abs(Math.abs(r0) - Math.abs(r1)) < 0.3, `${label}: the stagger goes on in the roll: row 2 at +450 ms is where row 1 was (${Math.abs(r0).toFixed(2)} / ${Math.abs(r1).toFixed(2)} degrees)`);
+    await page.evaluate(() => window.__globeDebug.pinCaption(null));
+    await sleep(200);
+  }
+  // At rest the roll is the caption's own loop: about 30 drawn frames a second, none of them a full frame of the globe; and nothing at all when the
+  // caption is hidden (a gesture's fade has run its course).
+  {
+    const snap = () => page.evaluate(() => ({ c: window.__globeDebug.caption(), frames: window.__globeDebug.frames() }));
+    await page.evaluate(() => window.__globeDebug.showcase(false));
+    await sleep(500);
+    await page.evaluate(() => window.__globeDebug.showcase(true));
+    await page.waitForFunction(() => window.__globeDebug.caption().phase === "rest", null, { timeout: 15000 });
+    await sleep(300);
+    const s0 = await snap();
+    await sleep(3000);
+    const s1 = await snap();
+    const per = (s1.c.captionFrames - s0.c.captionFrames) / 3;
+    ok(s1.c.drifting && per > 20 && per < 36 && s1.frames - s0.frames <= 2, `${label}: at rest the roll draws ${per.toFixed(1)} caption frames a second and ${s1.frames - s0.frames} full frames in 3 s (JS ${(((s1.c.captionMs - s0.c.captionMs) / Math.max(1, s1.c.captionFrames - s0.c.captionFrames))).toFixed(2)} ms a frame)`);
+    await page.evaluate(() => window.__globeDebug.showcase(false));
+    await sleep(700);
+    const h0 = await snap();
+    await sleep(1500);
+    const h1 = await snap();
+    ok(h1.c.phase === "hidden" && h1.c.captionFrames === h0.c.captionFrames && h1.frames === h0.frames, `${label}: hidden, nothing runs (caption frames ${h0.c.captionFrames} -> ${h1.c.captionFrames}, full frames ${h0.frames} -> ${h1.frames})`);
+    await page.evaluate(() => window.__globeDebug.showcase(true));
+    await page.waitForFunction(() => window.__globeDebug.caption().phase === "rest", null, { timeout: 15000 });
   }
   // a gesture during the glide cancels it and the entrance, cleanly
   await page.evaluate(() => window.__globeDebug.showcase(false));
@@ -184,6 +395,13 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
   ok(!cut.c.band.snapping && !cut.c.band.shown && cut.c.phase === "hidden" && !cut.c.showcase, `${label}: a press during the glide ends it and the showcase: no caption, no fighting the pointer`);
   await page.screenshot({ path: `${OUT_DIR}/band-${label}.png` });
   ok(logs.length === 0, `${label}: no page error${logs.length ? `: ${logs[0]}` : ""}`);
+  await ctx.close();
+}
+{
+  const { ctx, page, logs } = await open(DESKTOP, "light");
+  const m = await magentaTest(page, 4);
+  ok(m.interior > 3000 && m.tintedShare < 0.005, `light, over magenta, every interior pixel of a word is its own solid grey (${m.tinted} tinted of ${m.interior})`);
+  ok(logs.length === 0, "light: no page error");
   await ctx.close();
 }
 await browser.close();

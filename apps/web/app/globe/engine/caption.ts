@@ -12,7 +12,7 @@
  *   P(a, L) = r (cos L sin a, sin L, cos L cos a)          a: longitude from the central meridian, L: latitude
  *
  * and the mesh is turned about the earth's axis (y) by the view's longitude plus the entrance's turn. Geometry is built once per layout;
- * nothing is laid out per frame. The lines are on the globe's scene: depth-tested against the planet, back faces culled, so a letter past the
+ * nothing is laid out per frame. The lines are on the globe's scene: depth-tested against the planet and drawn from both sides (a ring of type seen from behind), so a letter past the
  * horizon is not there (it can never be seen from behind, mirrored).
  */
 import { CAPTION, START_VIEW } from "./tuning";
@@ -93,7 +93,8 @@ export function captionColors(theme: GlobeTheme): {
   const lum = (c: readonly number[]) => 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
   const dark = lum(theme.background) < 0.5;
   const mix = (a: readonly number[], b: readonly number[], t: number): [number, number, number] => [a[0]! + (b[0]! - a[0]!) * t, a[1]! + (b[1]! - a[1]!) * t, a[2]! + (b[2]! - a[2]!) * t];
-  const face = mix(theme.background, theme.ink, dark ? CAPTION.colors.faceMix.dark : CAPTION.colors.faceMix.light);
+  // The face is the PAGE's own colour in both schemes (solid): the letters are an outline and a thickness round a hole in the globe's linework.
+  const face: [number, number, number] = [theme.background[0], theme.background[1], theme.background[2]];
   const outline = mix(theme.coast, theme.ink, dark ? CAPTION.colors.outlineMix.dark : CAPTION.colors.outlineMix.light);
   return { face, outline, side: mix(face, outline, dark ? CAPTION.colors.sideMix.dark : CAPTION.colors.sideMix.light) };
 }
@@ -376,7 +377,8 @@ export function fitScale(pieces: readonly CaptionPiece[], d: number, minScale: n
     const pl = placeRows(pieces, d, k);
     return pl.every((p) => {
       const room = Math.min(hard, visibleHalfSpan(CAPTION.band.deg, p.baseLat, psi), visibleHalfSpan(-CAPTION.band.deg, p.baseLat, psi));
-      if (p.halfSpan > room + 1e-9) return false;
+      // (the roll carries the row `DRIFT.amp` either way: its chord must hold at the end of it)
+      if (p.halfSpan + DRIFT.amp > room + 1e-9) return false;
       // ...and inside the planet's disc on the screen (`maxHalfWidth` of its silhouette's radius): a row that overhangs the limb lands on the
       // page's own text beside it, whatever its chord is
       const limit = CAPTION.maxHalfWidth / Math.sqrt(Math.max(1.0001, d * d - 1));
@@ -548,6 +550,19 @@ export const shellHorizon = (d: number, r: number = CAPTION.radius): number => M
  */
 export const shellWindowFactor = (d: number, r: number = CAPTION.radius): number => (r * Math.sqrt(Math.max(1e-6, d * d - 1))) / Math.sqrt(Math.max(1e-6, d * d - r * r));
 
+/**
+ * The central angle from the view axis, radians, from which a point of the shell is BEHIND THE PLANET'S BODY for any camera at distance `d`: its
+ * projection is inside the planet's disc and it is on the far side, so the depth buffer hides it. Between the shell's horizon (`shellHorizon`:
+ * where the strip's face turns away) and this angle a row is seen from behind, curling back towards the planet over the page, which is how it
+ * goes round: `r sin(psi) / (d - r cos(psi))` falls back to the disc's tangent radius `1 / sqrt(d^2 - 1)` at this angle.
+ */
+export function occludedAngle(d: number, r: number = CAPTION.radius): number {
+  const t = 1 / Math.sqrt(Math.max(1.0001, d * d - 1));
+  const phi = Math.atan(t);
+  const arg = (t * d) / (r * Math.sqrt(1 + t * t));
+  return Math.PI - phi - Math.asin(clamp(arg, -1, 1));
+}
+
 /** Whether a point at central angle `psi` from the view axis is on a front face. */
 export const faceTowardsViewer = (psi: number, d: number, r: number = CAPTION.radius): boolean => psi < shellHorizon(d, r);
 
@@ -562,7 +577,8 @@ export function lineHidden(theta: number, line: Pick<CaptionLine, "halfSpan" | "
   const L = line.baseLat * DEG;
   // (the band stands above its baseline: take the latitude nearest the view's own, so a band that straddles the limb counts as seen)
   const cos = Math.sin(vl) * Math.sin(L) + Math.cos(vl) * Math.cos(L) * Math.cos(Math.min(off, Math.PI));
-  return !faceTowardsViewer(Math.acos(clamp(cos, -1, 1)), d);
+  // (hidden only once all of it is behind the planet's body: past the horizon of the strip's face a row is seen from behind, and goes round)
+  return Math.acos(clamp(cos, -1, 1)) >= occludedAngle(d);
 }
 
 /* ------------------------------------------------------------------ the entrance */
@@ -585,22 +601,13 @@ export function entranceStart(line: Pick<CaptionLine, "halfSpan" | "baseLat">, v
   const vl = viewLat * DEG;
   const L = line.baseLat * DEG;
   const denom = Math.cos(vl) * Math.cos(L);
-  const need = denom > 1e-6 ? (CAPTION.radius / dMax - Math.sin(vl) * Math.sin(L)) / denom : -1;
+  const need = denom > 1e-6 ? (Math.cos(occludedAngle(dMax)) - Math.sin(vl) * Math.sin(L)) / denom : -1;
   const hidden = Math.acos(clamp(need, -1, 1));
   return Math.min(Math.PI, Math.max(CAPTION.enter.fromDeg * DEG, hidden + line.halfSpan + 4 * DEG));
 }
 
 /** The camera distance the entrance's start is computed for when none is given: beyond the farthest the page has (the lowest zoom of a narrow phone is about 13). */
 const START_D = 16;
-
-/**
- * The turn of line `i` `t` ms after the entrance began, radians: the start angle until the line's own start (`i` times `staggerMs`), then
- * `start (1 - easeOutExpo)` over `ms`. A function of time only, so it is the same at 30 and at 144 frames a second.
- */
-export function enteringAngle(t: number, i: number, start: number): number {
-  const p = (t - i * CAPTION.enter.staggerMs) / CAPTION.enter.ms;
-  return start * (1 - easeOutExpo(p));
-}
 
 /** Time the whole entrance takes: the last line's start and its duration. */
 export const entranceMs = (lines: number): number => CAPTION.enter.ms + Math.max(0, lines - 1) * CAPTION.enter.staggerMs;
@@ -610,44 +617,91 @@ export function leavingAngle(t: number, from: number, start: number, ms: number 
   return from + (-start - from) * easeInCubic(t / ms);
 }
 
-/* ------------------------------------------------------------------ the rows that take turns */
-
-/** Time the outgoing rows of a swap take: the last one starts `exitStaggerMs` after the one above it. */
-export const swapExitMs = (rows: number): number => CAPTION.cycle.exitMs + Math.max(0, rows - 1) * CAPTION.cycle.exitStaggerMs;
+/* ------------------------------------------------------------------ the rows' trajectory: in, roll through the centre, out */
 
 /**
- * When the first incoming row starts, ms after the swap began: as the first outgoing row has left (`exitMs`; its ease-in keeps it on the face
- * until the very end), not once the last one has. Row i comes in `staggerMs` after row i - 1, so it is never before its own outgoing row has gone.
+ * ONE continuous trajectory per row, in the direction of its travel: `x` is the turn of the row along its parallel measured so that it
+ * DECREASES, from `start` (hidden behind the planet on the side it came from) through `+amp` to `-amp` and on to `-start` (hidden on the other side).
+ * The row's turn is `side * x` (the side it came in from: +1 east). Three pieces, joined with matching positions, velocities AND accelerations (no kink and no kick at a seam):
+ *
+ *   in     `enter.ms`: quintic Hermite from `start` to `+amp`, fast to begin with and landing at the drift's own velocity (an ease-out that does not
+ *          come to rest: it flows into the roll);
+ *   roll   `cycle.dwellMs`: constant velocity `2 amp / dwellMs`, from `+amp` to `-amp` (a gentle rolling through the central meridian);
+ *   out    `cycle.exitMs`: quintic Hermite from `-amp` at the drift's velocity to `-start`, accelerating (an ease-in), hidden at its end.
+ *
+ * The rows that stay (the call to action) cannot leave: they land at the centre and swing about it as a pendulum with the roll's period doubled
+ * and the same amplitude (`pendulumX`): position and velocity continuous with their entrance, forever, never leaving.
  */
-export const swapEnterAt = (): number => CAPTION.cycle.exitMs;
+export const DRIFT = {
+  /** Half the roll, radians. */
+  amp: (CAPTION.drift.ampDeg * Math.PI) / 180,
+  /** The slope an ease starts (in) or ends (out) with, in distances over the piece's duration (a quintic with zero end accelerations stays monotone up to about 2.5). */
+  ease: 2.2,
+} as const;
 
-/** Time a whole swap takes: the rows go (the orbit exit), the next ones come in from `swapEnterAt` (`entranceMs`, the entrance's own stagger). */
-export const swapMs = (rows: number): number => Math.max(swapExitMs(rows), swapEnterAt() + entranceMs(rows));
+/** The roll's velocity, radians per ms (constant). */
+export const driftVelocity = (): number => (2 * DRIFT.amp) / CAPTION.cycle.dwellMs;
+
+/** Time one row takes from its entrance to the start of its next one: in, the roll, out. */
+export const cycleMs = (): number => CAPTION.enter.ms + CAPTION.cycle.dwellMs + CAPTION.cycle.exitMs;
 
 /**
- * The turn of the OUTGOING row `row` `t` ms after the swap began: from its place on round the orbit, behind the planet, to `-start` (`start`
- * signed: the side it goes towards), each row `exitStaggerMs` after the one above it, ease-in; it stays there (and is not drawn).
+ * Quintic Hermite on p in [0, 1]: values `x0`, `x1`, slopes `m0`, `m1` per unit p, and ZERO acceleration at both ends (so the join with a
+ * constant-speed roll, or with a pendulum, has no kick in its acceleration either: position, velocity and acceleration are continuous).
  */
-export function swapExitAngle(t: number, row: number, start: number): number {
-  const p = (t - row * CAPTION.cycle.exitStaggerMs) / CAPTION.cycle.exitMs;
-  return p <= 0 ? 0 : p >= 1 ? -start : -start * easeInCubic(p);
+function hermite(p: number, x0: number, x1: number, m0: number, m1: number): number {
+  const p2 = p * p;
+  const p3 = p2 * p;
+  const p4 = p3 * p;
+  const p5 = p4 * p;
+  return (1 - 10 * p3 + 15 * p4 - 6 * p5) * x0 + (p - 6 * p3 + 8 * p4 - 3 * p5) * m0 + (10 * p3 - 15 * p4 + 6 * p5) * x1 + (-4 * p3 + 7 * p4 - 3 * p5) * m1;
 }
 
 /**
- * The turn of the INCOMING row `row` `t` ms after the swap began: behind the planet at `start` (signed: the side it comes from) until
- * `swapEnterAt`, then each row `staggerMs` after the one above it, the entrance's own curve (`easeOutExpo`).
+ * Where a row is, `tau` ms after ITS entrance began (negative: not begun, hidden at `start`): `x` of the trajectory above, `start` the
+ * magnitude of the angle it comes in from. A function of time only.
  */
-export function swapEnterAngle(t: number, row: number, _rows: number, start: number): number {
-  return enteringAngle(t - swapEnterAt(), row, start);
+export function rowX(tau: number, start: number, amp: number = DRIFT.amp): number {
+  const Ein = CAPTION.enter.ms;
+  const T = CAPTION.cycle.dwellMs;
+  const Eout = CAPTION.cycle.exitMs;
+  const v = (2 * amp) / T;
+  const D = Math.max(1e-6, start - amp);
+  if (tau <= 0) return start;
+  if (tau < Ein) return hermite(tau / Ein, start, amp, -DRIFT.ease * D, -v * Ein);
+  if (tau < Ein + T) return amp - v * (tau - Ein);
+  if (tau < Ein + T + Eout) return hermite((tau - Ein - T) / Eout, -amp, -start, -v * Eout, -DRIFT.ease * D);
+  return -start;
 }
 
 /**
- * How present a row is, 0 (behind the planet at its start) to 1 (in its place): what the dimming behind it is scaled by, so the shade comes and
- * goes with the words (an entrance, a swap) and not before them. A function of the row's turn only.
+ * The rows that stay: the entrance lands at the centre with the pendulum's own speed, then `-amp sin(pi (tau - Ein) / dwellMs)` (period twice the
+ * roll's). Continuous in position and velocity, and never leaves.
  */
-export function dimPresence(theta: number, start: number): number {
-  if (!(start > 1e-9)) return 1;
-  return clamp(1 - Math.abs(theta) / start, 0, 1);
+export function pendulumX(tau: number, start: number, amp: number = DRIFT.amp): number {
+  const Ein = CAPTION.enter.ms;
+  const T = CAPTION.cycle.dwellMs;
+  if (tau <= 0) return start;
+  const w = Math.PI / T;
+  if (tau < Ein) return hermite(tau / Ein, start, 0, -DRIFT.ease * start, -amp * w * Ein);
+  return -amp * Math.sin(w * (tau - Ein));
+}
+
+/** The turn of the row `tau` ms into its `n`th cycle (that is `rowX` of `tau - n * cycleMs()`); the cycle's own index for the sets. */
+export function cycleOf(tau: number): { n: number; local: number } {
+  if (tau < 0) return { n: -1, local: tau };
+  const P = cycleMs();
+  const n = Math.floor(tau / P);
+  return { n, local: tau - n * P };
+}
+
+/**
+ * How present a row is, 0 (behind the planet at its start) to 1 (in its place, and anywhere within the roll's `amp`): what the dimming behind it
+ * is scaled by, so the shade comes and goes with the words (an entrance, an exit) and not before them. A function of the row's turn only.
+ */
+export function dimPresence(theta: number, start: number, amp: number = DRIFT.amp): number {
+  if (!(start > amp + 1e-9)) return 1;
+  return clamp(1 - Math.max(0, Math.abs(theta) - amp) / (start - amp), 0, 1);
 }
 
 export type CaptionPhase = "hidden" | "in" | "out" | "fade" | "rest";
@@ -712,12 +766,29 @@ export class CaptionMotion {
   }
 
   private t0 = 0;
+  /**
+   * The caption's own clock, ms since its entrance began (negative while the page's fade-in goes first): advanced by `tick` with a capped step, so
+   * it stands still while nothing is drawn (a hidden tab, the street map, a fade) and a stall cannot make the rows jump. Before the first `tick`
+   * (the pure tests) time is read from `now` and `t0`.
+   */
+  private clock = 0;
+  private lastNow = -1;
+  private ticked = false;
+  /** Rows from this index on stay (the call to action): they swing about the centre and never leave. */
+  private fixedFrom = Infinity;
+  /** The roll goes on at rest (false under reduced motion: the final composition, still). */
+  continuous = true;
   private starts: number[] = [];
   /** An `in` that waits for the first frame (the time starts when something is there to see). */
   private pending = false;
 
   /** The turn in the stagger of each line: a wrapped line's pieces come in together (its logical line's index); by default, the line's own. */
   private order: number[] = [];
+
+  /** The rows from `row` on are the ones that stay (they swing about the centre; the earlier ones roll through it and leave). */
+  setFixedFrom(row: number): void {
+    this.fixedFrom = row;
+  }
 
   /** Where each line starts (radians), and its place in the stagger, set once the lines are laid out. */
   setStarts(starts: readonly number[], order?: readonly number[]): void {
@@ -744,7 +815,17 @@ export class CaptionMotion {
     this.phase = "in";
     this.pending = now === null;
     this.t0 = now ?? 0;
+    // (a leaving cut short: the lines are on the face, so the entrance is skipped, they blend into the roll over `enter.ms` and there is no stagger)
+    this.staggerOn = this.enterFrom === null;
+    this.offset = this.enterFrom === null ? 0 : CAPTION.enter.ms;
+    this.clock = this.offset;
+    this.lastNow = now ?? -1;
+    this.ticked = false;
   }
+
+  /** Whether the lines are staggered (not for an entrance that cut a leaving short) and where the clock starts (the entrance skipped, then). */
+  private staggerOn = true;
+  private offset = 0;
 
   /** Where each line was when an entrance cut a leaving short (null: from behind the planet). */
   private enterFrom: number[] | null = null;
@@ -758,6 +839,8 @@ export class CaptionMotion {
   begin(now: number, delayMs = 0): void {
     if (this.waiting) {
       this.t0 = now + delayMs;
+      this.clock = this.offset - delayMs;
+      this.lastNow = now;
       this.pending = false;
     }
   }
@@ -775,9 +858,43 @@ export class CaptionMotion {
     this.t0 = now;
   }
 
-  /** The fade is over: the caption is hidden (call once per frame; nothing else moves in a fade). */
+  /**
+   * Once per frame: advance the clock (a step of at most `CAPTION.drift.maxStepMs`: the roll stands still while nothing is drawn) and end a fade
+   * that has run its course (nothing else moves in a fade).
+   */
   tick(now: number): void {
     if (this.phase === "fade" && now - this.t0 >= CAPTION.fadeMs) this.phase = "hidden";
+    if (this.lastNow >= 0 && (this.phase === "in" || this.phase === "rest") && !this.pending) {
+      this.clock += Math.min(Math.max(now - this.lastNow, 0), CAPTION.drift.maxStepMs);
+      this.ticked = true;
+    }
+    this.lastNow = now;
+  }
+
+  /** The clock now, ms since the entrance began (the first row's). */
+  private time(now: number): number {
+    return this.ticked ? this.clock : now - this.t0 + this.offset;
+  }
+
+  /** Checks and captures: move the clock (ms since the entrance began) to `ms`. */
+  seek(ms: number): void {
+    this.clock = ms;
+    this.ticked = true;
+  }
+
+  /** The side line `i` comes in from in its `n`th cycle (the first is the entrance's own draw; later ones are drawn from the session's seed). */
+  sideAt(n: number, i: number): 1 | -1 {
+    if (n <= 0) return this.side(i);
+    if (this.seed === null) return 1;
+    const turns = this.turns();
+    return entranceSides((this.seed ^ 0x5bd1e995) | 0, n, turns)[this.order[i] ?? i] ?? 1;
+  }
+
+  /** Which cycle line `i` is in now and how far into it (ms): the layer picks the phrase set by it. `n` is -1 before the line's own start. */
+  cycle(now: number, i: number): { n: number; local: number } {
+    const k = this.order[i] ?? i;
+    const t = this.pinned !== null ? this.pinned : this.time(now);
+    return cycleOf(t - (this.staggerOn ? k * CAPTION.enter.staggerMs : 0));
   }
 
   /** Per line: it was still at its start when the leaving began. */
@@ -795,27 +912,42 @@ export class CaptionMotion {
   /** Checks and captures only: hold every line at this turn, radians (the limb close-ups: a line half past the horizon, on either side). */
   pinnedAngle: number | null = null;
 
+  /** The turn of a line in its trajectory at clock `t` (ms since the entrance began), radians (positive: east of its place). */
+  private timelineAngle(t: number, i: number, magnitude: number): number {
+    const k = this.order[i] ?? i;
+    const tau = t - (this.staggerOn ? k * CAPTION.enter.staggerMs : 0);
+    const c = cycleOf(tau);
+    const fixed = i >= this.fixedFrom;
+    const n2 = fixed ? Math.min(c.n, 0) : c.n;
+    const local2 = fixed ? tau : c.local;
+    const side = this.sideAt(Math.max(0, n2), i);
+    if (!this.continuous) return 0;
+    const x = fixed ? pendulumX(local2, magnitude) : rowX(local2, magnitude);
+    return side * x;
+  }
+
   /** The turn of line `i` now, radians (positive: east of its place); `magnitude` is how far behind the planet it starts, the side is the line's. */
   angle(now: number, i: number, magnitude: number): number {
     if (this.pinnedAngle !== null) return this.pinnedAngle;
-    const k = this.order[i] ?? i;
     const start = magnitude * this.side(i);
-    if (this.pinned !== null) return enteringAngle(this.pinned, k, start);
+    if (this.pinned !== null) return this.timelineAngle(this.pinned, i, magnitude);
     switch (this.phase) {
       case "hidden":
         return start;
       case "rest":
-        return 0;
+        return this.timelineAngle(this.time(now), i, magnitude);
       case "in": {
         if (this.pending) return this.enterFrom?.[i] ?? start;
-        const t = now - this.t0;
+        const t = this.time(now);
+        if (t >= (this.staggerOn ? entranceMs(this.turns()) : 2 * CAPTION.enter.ms)) this.phase = "rest";
         const from = this.enterFrom?.[i];
-        const a = from === undefined ? enteringAngle(t, k, start) : from * (1 - easeOutExpo(t / CAPTION.enter.ms));
-        if (t >= entranceMs(this.turns())) {
-          this.phase = "rest";
-          return 0;
-        }
-        return a;
+        const tl = this.timelineAngle(Math.max(t, 0), i, magnitude);
+        if (from === undefined) return t <= 0 ? start : tl;
+        // an entrance that cut a leaving short: from where the line was, blended into the roll over the entrance's time (the blend's slope is
+        // zero at both ends, so the join has the roll's own velocity)
+        const p = clamp((t - this.offset) / CAPTION.enter.ms, 0, 1);
+        const e = p * p * (3 - 2 * p);
+        return from * (1 - e) + tl * e;
       }
       case "fade":
         // the lines stay on their own turn (the camera still moves them on the screen) and the canvas fades
@@ -836,6 +968,11 @@ export class CaptionMotion {
   get animating(): boolean {
     // (a pending entrance is not a frame loop: nothing moves until the first frame has given it a clock)
     return this.pinned === null && this.pinnedAngle === null && ((this.phase === "in" && !this.pending) || this.phase === "out");
+  }
+
+  /** The steady roll is on: the rows are in and moving (a slower, capped frame loop of the caption's own: `CAPTION.drift.frameMs`). */
+  get drifting(): boolean {
+    return this.pinned === null && this.pinnedAngle === null && this.phase === "rest" && this.continuous;
   }
 }
 

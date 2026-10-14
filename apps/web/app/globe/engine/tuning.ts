@@ -158,11 +158,12 @@ export const CAPTION = {
    */
   capR: 0.084,
   /**
-   * The words are set in capitals (the caption's drawing only: the page's text and the accessible text are as the app wrote them) and tracked:
+   * The words are set in capitals (the caption's drawing only: the page's text and the accessible text are as the app wrote them; the script face
+   * is exempt and keeps its case) and tracked:
    * `tracking` is added to each face's own letter spacing (ems of the face). Capitals set tight read as a block; a little air reads as a line.
    */
   upper: true,
-  tracking: { serif: 0.05, mono: 0.03, script: 0.02 },
+  tracking: { serif: 0.05, mono: 0.03, script: 0 },
   /**
    * Where the rows sit (engine/caption.ts `rowLatitudes`): on FIXED parallels, centred on the equator and uniformly spaced, `stepCaps` cap heights
    * from one baseline to the next; nothing recomputes them per camera tilt. A row spans at most `hardSpanDeg` of its parallel and no farther than
@@ -187,12 +188,20 @@ export const CAPTION = {
    */
   band: { deg: 10, snapMs: 800, hysteresisDeg: 1.5, snapTo: "edge" as "edge" | "equator" },
   /**
-   * The rows that take turns: a phrase set stays `dwellMs`, then goes (each row round the orbit and behind the limb in `exitMs`, `exitStaggerMs`
-   * after the row above) and the next one comes in from random sides, row by row `enter.staggerMs` apart. The first incoming row starts as the
-   * first outgoing one has left (`exitMs`: the ease-in keeps a row on the face until its very end), not once the LAST has gone: the rows above
-   * are never both empty at once.
+   * The rows that take turns, and what a row does between entering and leaving (engine/caption.ts `rowX`): it enters (`enter`), then ROLLS through
+   * the central meridian at a constant speed for `dwellMs`, from `drift.ampDeg` before it to as much after it (2 amp over the dwell: 2.9 degrees a
+   * second at 8 and 5.5 s), then accelerates and leaves round the orbit in `exitMs` (an ease-in that starts at the roll's speed), and the next
+   * phrase set comes in the same way. The direction is the side the row came in from; every row has its own, drawn at random per cycle; the stagger
+   * of the entrances (`enter.staggerMs`) goes on for ever, so the block shears gently. A row that stays (the call to action) swings about the
+   * centre with the same amplitude and twice the period instead of leaving. Reduced motion: still, at the centre.
    */
-  cycle: { dwellMs: 5500, exitMs: 480, exitStaggerMs: 140 },
+  cycle: { dwellMs: 5500, exitMs: 480 },
+  /**
+   * The roll's amplitude (half of it, degrees of longitude along the row's parallel), the least time between two drawn frames of the caption's own
+   * loop while only the roll moves (30 a second, like the ring's; a full frame, which draws the globe too, is never asked for by the roll) and the
+   * largest step of its clock (a stalled frame must not make a row jump).
+   */
+  drift: { ampDeg: 8, frameMs: 32, maxStepMs: 64 },
   /** The thickness of the letters, in planet radii (towards the planet from the front face), and the number of slices stacked to make it. */
   depth: 0.016,
   slices: 28,
@@ -213,11 +222,11 @@ export const CAPTION = {
   /** The outline's width, in cap heights: drawn OUTSIDE the glyph, so the face keeps its whole area (the inside is the face's colour). */
   outline: 0.04,
   /**
-   * Colours, from the globe's own palette (engine/colors.ts): the face is the page colour tinted towards the ink (`faceMix`, per scheme: a dark
-   * page needs more of the ink for the face to read), the outline the coastline's tone pushed `outlineMix` of the way to the ink, the extrusion
-   * `sideMix` of the way from the face to the outline (a tone of its own, between the two). Greys only.
+   * Colours, from the globe's own palette (engine/colors.ts), all solid (alpha 1): the face is the page colour itself in both schemes (a hole in
+   * the globe's linework, read by its outline), the outline the coastline's tone pushed `outlineMix` of the way to the ink, the extrusion
+   * `sideMix` of the way from the face to the outline (a calmer tone of its own, between the two). Greys only.
    */
-  colors: { faceMix: { light: 0.03, dark: 0.26 }, outlineMix: { light: 0.6, dark: 0.45 }, sideMix: { light: 0.3, dark: 0.7 } },
+  colors: { outlineMix: { light: 0.6, dark: 0.45 }, sideMix: { light: 0.3, dark: 0.5 } },
   /** Sampling: the shader looks `lodBias` levels sharper than the screen asks (negative: sharper). Texture: texels in a cap height. */
   lodBias: -0.5,
   texCap: 96,

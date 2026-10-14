@@ -52,6 +52,8 @@ const VIEWPORTS = FIT_SIZES.map(([width, height]) => {
 });
 /** The name is stacked (the family name under the given name) under 48 rem, except on a phone on its side (480 px and up, 34 rem tall at most). */
 const isStacked = (width, height) => width < 768 && !(width >= 480 && height <= 544);
+/** The roll's half amplitude, radians (`CAPTION.drift.ampDeg`): rows at rest are within it of the centre. */
+const AMP = (8 * Math.PI) / 180;
 const IDLE_QUERY = "?globe-debug&hero-idle=1500";
 const PATHS = ["/software", "/articles", "/artworks", "/poetry"];
 /** The rows' names: the poems' section is "Poetry". */
@@ -721,7 +723,7 @@ for (const [label, options, scheme] of SHAPES) {
   const nums = await page.evaluate(() => ({ fit: window.__globeDebug.fitZoom(), floor: window.__globeDebug.floorZoom() }));
   ok(Math.abs(v.zoom - nums.floor) < 1e-6 && nums.floor < nums.fit - 0.3, `${label}: the page opens fully zoomed out (zoom ${v.zoom.toFixed(2)}, the fit is ${nums.fit.toFixed(2)})`);
   ok(ring.shown && ring.alpha > 0, `${label}: the flat ring of type is shown (the ring is main's, unchanged)`);
-  ok(c.built && c.showcase && c.overlayHidden && c.lines.length >= 3 && c.lines.every((l) => l.visible && Math.abs(l.theta) < 1e-3), `${label}: the caption is built and in place (crisp, ${c.lines.map((l) => l.text).join(" / ")})`);
+  ok(c.built && c.showcase && c.overlayHidden && c.lines.length >= 3 && c.lines.every((l) => l.visible && Math.abs(l.theta) <= AMP + 0.003), `${label}: the caption is built and rolling within +-8 degrees of the centre (crisp, ${c.lines.map((l) => l.text).join(" / ")})`);
   {
     const said = c.lines.map((l) => l.text).join(" ").replace(/\s+/g, " ");
     ok(c.lines.length === 4 && /A personal archive, organised around places\./i.test(said) && /Drag to explore\. Pick a place\./i.test(said) && said === said.toUpperCase(), `${label}: four rows: the first phrase set (what the site is) over the call to action (${said}: in capitals)`);
@@ -822,9 +824,9 @@ for (const [label, options, scheme] of SHAPES) {
   const f600 = await at(600);
   ok(turn(f600, 0).every((l) => l.visible) && turn(f600, 1).every((l) => l.visible) && turn(f600, 2).every((l) => !l.visible) && turn(f600, 1)[0].theta > turn(f600, 0)[0].theta, "entrance: at 600 ms lines 1 and 2 are in view (line 2 behind line 1), line 3 is waiting for its turn (450 ms stagger)");
   const f1000 = await at(1000);
-  ok(turn(f1000, 0)[0].theta < 0.1 && turn(f1000, 1)[0].theta > turn(f1000, 0)[0].theta && turn(f1000, 2)[0].theta > turn(f1000, 1)[0].theta, "entrance: at 1000 ms line 1 is almost there (fast), the others settling in order");
+  ok(turn(f1000, 0)[0].theta < AMP + 0.003 && turn(f1000, 1)[0].theta > turn(f1000, 0)[0].theta && turn(f1000, 2)[0].theta > turn(f1000, 1)[0].theta, "entrance: at 1000 ms line 1 is almost there (fast), the others settling in order");
   const fEnd = await at(900 + 3 * 450 + 300);
-  ok(fEnd.every((l) => Math.abs(l.theta) < 0.01), "entrance: once the last line's turn has run every line is in place (the ease has 0.1 % of the way left)");
+  ok(fEnd.every((l) => Math.abs(l.theta) <= AMP + 0.003), "entrance: once the last line's turn has run every line is in its roll (within +-8 degrees of the centre)");
   // random sides: over a few seeds each line comes from the west and from the east, a seed gives the same sides again, and the angle's sign is the side
   const sides = async (seed) => {
     await page.evaluate((s) => window.__globeDebug.captionSeed(s), seed);
@@ -890,7 +892,9 @@ async function fadeCase(name, options, start) {
   let mono = true;
   for (let i = 1; i < frames.length; i++) if (frames[i].opacity > frames[i - 1].opacity + 1e-6) mono = false;
   ok(mono, `${name}: the opacity only goes down`);
-  ok(fade.every((f) => f.thetas.every((t) => Math.abs(t) < 1e-6)), `${name}: no orbit travel: every line stays at its turn 0 for the whole fade`);
+  // (the roll stands still in a fade: every line keeps the turn it had, within the amplitude, for the whole fade)
+  const turn0 = fade[0]?.thetas ?? [];
+  ok(fade.every((f) => f.thetas.every((t, i) => Math.abs(t) <= AMP + 0.003 && Math.abs(t - turn0[i]) < 1e-6)), `${name}: no orbit travel: every line keeps its turn for the whole fade`);
   // locked to the globe: at the middle of the fade the words are as wide as the planet's growth says
   const mid = fade.filter((f) => f.opacity > 0.15 && f.opacity < 0.85 && f.width !== null);
   ok(mid.length > 0, `${name}: frames in the middle of the fade (${mid.length}) still have their words in view`);

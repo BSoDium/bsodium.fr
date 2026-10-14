@@ -9,8 +9,8 @@
  * earth's axis (the view's longitude and the entrance's turn).
  *
  * Drawn crisp: by a second `WebGLRenderer` onto a canvas of its own at the device's resolution, over the globe's (same camera, same rectangle, same
- * edge mask), with the planet in it as a depth-only sphere so the planet still hides what is behind it. Depth-tested and back-face culled: a letter
- * past the horizon is gone, nothing is ever seen mirrored.
+ * edge mask), with the planet in it as a depth-only sphere so the planet still hides what is behind it. Depth-tested and drawn from both sides: a letter
+ * past the shell's horizon is seen from behind (mirrored, as a ring of type round a planet is), curls back and goes behind the planet's body.
  *
  * Nothing runs while the lines are hidden, and at rest the frame loop is asked for nothing: only an entrance or a departure animates.
  */
@@ -18,6 +18,7 @@ import {
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
+  AddEquation,
   CustomBlending,
   DoubleSide,
   FrontSide,
@@ -26,6 +27,7 @@ import {
   Matrix4,
   MaxEquation,
   OneFactor,
+  OneMinusSrcAlphaFactor,
   Mesh,
   MeshBasicMaterial,
   type PerspectiveCamera,
@@ -44,7 +46,6 @@ import {
   captionColors,
   captionFont,
   dimPresence,
-  entranceSides,
   entranceStart,
   lineHidden,
   lineOf,
@@ -57,9 +58,7 @@ import {
   planPieces,
   runsText,
   spanOf,
-  swapEnterAngle,
-  swapExitAngle,
-  swapMs,
+  cycleMs,
   unitBand,
   type CaptionContent,
   type CaptionExit,
@@ -101,8 +100,8 @@ const VERT = /* glsl */ `
 `;
 
 /**
- * The texture holds the glyph's inside in its green channel and its outline in the red one; coverage is its alpha (the edge's: alpha to coverage on
- * a multisampled canvas keeps it smooth). The front face is the face colour inside and the outline colour on the outline; every slice behind it is
+ * The texture holds the glyph's inside in its green channel and its outline in the red one; coverage is its alpha (the edge's). Output is
+ * premultiplied and blended over (the material): the inside's alpha is exactly 1. The front face is the face colour inside and the outline colour on the outline; every slice behind it is
  * the side colour (the letters' thickness).
  */
 const FRAG = /* glsl */ `
@@ -119,9 +118,9 @@ const FRAG = /* glsl */ `
     bool front = vLayer > 0.999;
     // the inside is green, the outline red
     vec3 col = front ? (t.g > t.r ? uFace : uOutline) : uSide;
-    // The canvas is premultiplied and alpha-to-coverage turns the alpha into a coverage mask whose samples are averaged on resolve: written as
-    // (col * A, A) with A = sqrt(a), a resolved pixel holds (a * col, a), which is consistent (straight (col, a) left a bright fringe).
-    float a = sqrt(smoothstep(0.1, 0.9, t.a));
+    // Premultiplied output, blended "over" (see the material): the glyph's inside is exactly 1, so an interior pixel is exactly opaque whatever
+    // stacks behind it; only an edge is partly transparent (and then properly premultiplied: no bright fringe).
+    float a = smoothstep(0.1, 0.9, t.a);
     gl_FragColor = vec4(col * a, a);
   }
 `;
@@ -217,18 +216,6 @@ interface Built {
   key: string;
 }
 
-/** A swap of the phrase set in progress: the rows of `from` go round the orbit, then those of `to` come in. */
-interface Swap {
-  from: number;
-  to: number;
-  t0: number;
-  /** The clock reading the swap was frozen at (a fade began): it stays there while the canvas fades. */
-  frozen: number | null;
-  /** The side each row goes towards (out) and comes from (in): +1 east, -1 west. */
-  out: number[];
-  in: number[];
-}
-
 export interface CaptionState {
   built: boolean;
   phase: string;
@@ -242,7 +229,10 @@ export interface CaptionState {
   capCells: number;
   seed: number | null;
   lines: { text: string; parent: number; theta: number; visible: boolean; halfSpanDeg: number; baseLat: number; capR: number; side: number; styles: string[] }[];
-  /** The phrase sets that take turns: how many, which one is shown, whether a swap is on, and whether a timer is waiting for the next. */
+  /**
+   * The phrase sets that take turns: how many, which one the first row shows, whether any row is on its way in or out of its set (a swap is on),
+   * the first row's cycle count, the side each row came in from (`lastIn`) and goes out by (`lastOut`) in its current cycle.
+   */
   cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number; lastOut: number[]; lastIn: number[] };
   /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
   baselines: number[];
@@ -487,13 +477,9 @@ export class CaptionLayer {
   private radius: number | null = null;
   /** The key of the build in flight (a frame that sees the layout out of date must not start the same build again). */
   private building: string | null = null;
-  /** The phrase set shown (of those that take turns), the swap in progress, and the timer that starts the next one. */
-  private cur = 0;
-  private swap: Swap | null = null;
-  private swaps = 0;
-  private lastOut: number[] = [];
-  private lastIn: number[] = [];
-  private timer = 0;
+  /** The phrase set each row shows now (of those that take turns): the cycle it is in, modulo the sets; refreshed every frame. */
+  private rowSet: number[] = [];
+  private rowCycle: number[] = [];
   private paused = false;
 
   /** Throws when the second WebGL canvas cannot be had: the page then has no caption (the hero's how-to line shows). */
@@ -511,6 +497,7 @@ export class CaptionLayer {
     },
   ) {
     this.reduced = opts.reduced;
+    this.motion.continuous = !opts.reduced;
     this.crisp = new CrispCanvas(opts.host, () => opts.onChange());
     // Each entrance draws the sides the lines come in from at random, from a seed of the session.
     this.motion.seed = (Math.random() * 0x7fffffff) | 0;
@@ -533,11 +520,19 @@ export class CaptionLayer {
         uR: { value: radius },
         uDepth: { value: CAPTION.depth },
       },
-      side: FrontSide,
+      // Both sides: past the shell's horizon a row is seen from behind (its glyphs mirrored, as a ring of type round a planet is), curls back
+      // towards the planet and goes behind its body (the occluder in the depth buffer); it never vanishes in the open.
+      side: DoubleSide,
       depthTest: true,
       depthWrite: true,
+      // NOT alpha-to-coverage: it wrote each sample's own partial alpha (the frontmost slice's edge texel), which left the thickness translucent
+      // (the owner saw the globe's linework through it). The slices are drawn back to front and blended over one another, premultiplied: where
+      // anything opaque is behind, the result is opaque, and only the silhouette's edge is partial.
       transparent: false,
-      alphaToCoverage: true,
+      blending: CustomBlending,
+      blendEquation: AddEquation,
+      blendSrc: OneFactor,
+      blendDst: OneMinusSrcAlphaFactor,
     });
   }
 
@@ -605,33 +600,25 @@ export class CaptionLayer {
 
   setReduced(on: boolean): void {
     this.reduced = on;
-    if (on) {
-      this.motion.settle(this.want);
-      this.cancelCycle();
-      this.finishSwap();
-      this.cur = 0;
-    } else this.maybeSchedule();
+    // (still, at the centre, the first phrase set: no roll, no turns)
+    this.motion.continuous = !on;
+    if (on) this.motion.settle(this.want);
+    this.opts.onChange();
   }
 
   /**
-   * The page cannot be looked at (the tab is hidden, the globe is not drawn, the context is lost): the phrase sets do not turn, and no timer
-   * waits. They begin again from the set shown when it can be.
+   * The page cannot be looked at (the tab is hidden, the globe is not drawn, the context is lost): the roll and the phrase sets stand still (the
+   * clock advances only when a frame is drawn, by at most `drift.maxStepMs`) and they go on from where they were when it can be.
    */
   setPaused(on: boolean): void {
-    if (on === this.paused) return;
     this.paused = on;
-    if (on) this.cancelCycle();
-    else this.maybeSchedule();
   }
 
   /** The showcase begins (`now`: the clock reading) or, before the first frame exists, `null`: the entrance then starts with the first frame. */
   show(now: number | null): void {
     this.want = true;
     this.crisp.restore();
-    // every showing begins with the first phrase set, whole
-    this.swap = null;
-    this.cur = 0;
-    this.cancelCycle();
+    // every showing begins with the first phrase set, whole (the entrance restarts the clock)
     if (this.reduced) this.motion.settle(true);
     else this.motion.enter(now);
   }
@@ -640,30 +627,26 @@ export class CaptionLayer {
    * The showcase ends. By default the caption FADES (an interaction's exit: only the canvas's opacity changes, the lines keep following the
    * camera); `"orbit"` sends the lines on round behind the planet instead (kept for a caption that cycles its words). Reduced motion: gone at once.
    * Once the fade is over nothing of the caption runs: no placement (the parallels are solved again by the first frame of the next showing, when
-   * the camera's tilt has changed meanwhile), no render call, no depth pass. A swap in progress is frozen where it is for the fade and settled
-   * when it is over, so the next showing is consistent.
+   * the camera's tilt has changed meanwhile), no render call, no depth pass. The roll is frozen where it is for the fade (the clock stands still
+   * in a fade), so the words fade where they were.
    */
   hide(now: number, exit: CaptionExit = "fade"): void {
     this.want = false;
-    this.cancelCycle();
     if (this.reduced) {
       this.motion.settle(false);
-      this.finishSwap();
       this.crisp.hide();
       return;
     }
-    if (this.swap) this.swap.frozen = now;
     this.motion.leave(now, exit);
     if (exit === "fade" && this.motion.phase === "fade") this.crisp.fadeOut(CAPTION.fadeMs);
   }
 
   /**
    * The globe is not drawn for a while (the street map owns the view): every timed thing runs to its end now, so nothing of the caption asks for a
-   * frame (`animating` is false): a swap is finished, an entrance is in place (or the caption is gone, when the showcase is off), the parallels
-   * have arrived.
+   * frame (`animating` and `drifting` are false while it lasts): an entrance is in place (or the caption is gone, when the showcase is off). The
+   * roll's clock goes on from where it was when the globe is drawn again.
    */
   settle(): void {
-    this.finishSwap();
     this.motion.settle(this.want);
   }
 
@@ -677,62 +660,31 @@ export class CaptionLayer {
     this.motion.pinnedAngle = deg === null ? null : (deg * Math.PI) / 180;
   }
 
-  /** Something is moving: the frame loop must keep going. */
+  /** The entrance or the orbit exit is under way: full frames (the globe's own loop) are wanted. */
   get animating(): boolean {
-    return this.built !== null && !this.failed && (this.motion.animating || this.swap !== null);
+    return this.built !== null && !this.failed && this.motion.animating;
+  }
+
+  /** The rows are in and rolling (or turning over to the next phrase set): the caption's own capped loop draws it, nothing else. */
+  get drifting(): boolean {
+    return this.built !== null && !this.failed && !this.disposed && this.motion.drifting && this.visible;
   }
 
   get isBuilt(): boolean {
     return this.built !== null;
   }
 
-  /** Begin the next swap now (checks and captures; the timer does it on the page). Returns whether one began. */
+  /**
+   * Checks and captures: carry on at the start of the first row's exit now (the rows then leave, one `staggerMs` after another, and the next
+   * phrase set comes in). Returns whether there is a next set to come in.
+   */
   swapNow(now: number): boolean {
-    return this.startSwap(now, true);
-  }
-
-  /* ------------------------------ the phrase sets' turns ------------------------------ */
-
-  private eligible(): boolean {
     const b = this.built;
-    return !!b && !this.failed && !this.disposed && !this.reduced && !this.paused && this.want && b.slotRows > 0 && this.opts.content.sets.length > 1 && this.motion.phase === "rest" && this.swap === null;
-  }
-
-  private cancelCycle(): void {
-    if (this.timer) window.clearTimeout(this.timer);
-    this.timer = 0;
-  }
-
-  /** Wait `dwellMs` for the next swap, when the caption is at rest and nothing forbids it. At rest no frame is asked for meanwhile. */
-  private maybeSchedule(): void {
-    if (this.timer || !this.eligible()) return;
-    this.timer = window.setTimeout(() => {
-      this.timer = 0;
-      if (this.startSwap(performance.now(), false)) this.opts.onChange();
-    }, CAPTION.cycle.dwellMs);
-  }
-
-  private startSwap(now: number, force: boolean): boolean {
-    const b = this.built;
-    if (!b || this.swap || (!force && !this.eligible())) return false;
-    const n = this.opts.content.sets.length;
-    if (n < 2 || b.slotRows < 1) return false;
-    const from = this.cur;
-    const to = (from + 1) % n;
-    const rows = b.slotRows;
-    this.swaps++;
-    const sides = entranceSides((this.motion.seed ?? 0) ^ 0x5bd1e995, this.swaps, rows * 2);
-    this.swap = { from, to, t0: now, frozen: null, out: sides.slice(0, rows), in: sides.slice(rows) };
-    this.lastOut = this.swap.out;
-    this.lastIn = this.swap.in;
+    if (!b || b.slotRows < 1 || this.opts.content.sets.length < 2 || this.reduced || !this.want) return false;
+    const { n } = this.motion.cycle(now, 0);
+    this.motion.seek(Math.max(0, n) * cycleMs() + CAPTION.enter.ms + CAPTION.cycle.dwellMs);
+    this.opts.onChange();
     return true;
-  }
-
-  /** The swap's end (or its abandonment): the incoming set is the one shown. */
-  private finishSwap(): void {
-    if (!this.swap) return;
-    this.cur = this.swap.to;
-    this.swap = null;
   }
 
   /* ------------------------------ per frame ------------------------------ */
@@ -752,7 +704,6 @@ export class CaptionLayer {
     // (zoom, drag, tilt: the same uniforms and one render a frame the globe draws anyway), and when it is over the caption is hidden.
     this.motion.tick(now);
     const hiddenNow = this.motion.phase === "hidden" && this.motion.pinned === null && this.motion.pinnedAngle === null;
-    if (hiddenNow && this.swap) this.finishSwap();
     // Hidden (the showcase is off and the lines have gone): every mesh is hidden once, and then there is nothing to do, whatever the camera does.
     if (hiddenNow) {
       if (!this.allHidden) {
@@ -766,16 +717,19 @@ export class CaptionLayer {
       return;
     }
     this.allHidden = false;
-    // a swap that has run its course
-    if (this.swap && (this.swap.frozen ?? now) - this.swap.t0 >= swapMs(b.slotRows)) {
-      this.finishSwap();
-      this.maybeSchedule();
-    }
     const rows = b.pieces.length;
     const rowTheta = this.lastThetas;
     rowTheta.length = rows;
-    for (let r = 0; r < rows; r++) rowTheta[r] = this.motion.angle(now, r, this.rowStart(r));
-    const tSwap = this.swap ? (this.swap.frozen ?? now) - this.swap.t0 : 0;
+    this.rowSet.length = rows;
+    this.rowCycle.length = rows;
+    const nSets = Math.max(1, this.opts.content.sets.length);
+    for (let r = 0; r < rows; r++) {
+      rowTheta[r] = this.motion.angle(now, r, this.rowStart(r));
+      // the phrase set a row shows is the cycle it is in (modulo the sets): the row leaves, and the next set comes in on the same parallel
+      const n = this.motion.continuous && r < b.slotRows ? this.motion.cycle(now, r).n : 0;
+      this.rowCycle[r] = Math.max(0, n);
+      this.rowSet[r] = Math.max(0, n) % nSets;
+    }
     let any = false;
     const bands = this.dimMode === "bands" && this.dimAlpha > 0;
     let presence = 0;
@@ -787,17 +741,7 @@ export class CaptionLayer {
         theta = rowTheta[v.row]!;
         start = this.rowStart(v.row);
         on = true;
-      } else if (this.swap) {
-        const sw = this.swap;
-        start = this.startFor(v);
-        if (v.set === sw.from) {
-          theta = swapExitAngle(tSwap, v.row, sw.out[v.row]! * start);
-          on = true;
-        } else if (v.set === sw.to) {
-          theta = swapEnterAngle(tSwap, v.row, b.slotRows, sw.in[v.row]! * start);
-          on = true;
-        }
-      } else if (v.set === this.cur) {
+      } else if (v.set === this.rowSet[v.row]) {
         theta = rowTheta[v.row]!;
         start = this.rowStart(v.row);
         on = true;
@@ -829,7 +773,6 @@ export class CaptionLayer {
       this.ellipseU.uDisc.value = 1 / Math.sqrt(Math.max(1.0001, d * d - 1));
     }
     this.anyVisible = any;
-    this.maybeSchedule();
   }
 
   /** How far behind the planet row `r` (its widest variant) starts, for its parallel now. */
@@ -837,10 +780,6 @@ export class CaptionLayer {
     const b = this.built!;
     const pl = b.places[r]!;
     return entranceStart({ baseLat: pl.baseLat, halfSpan: pl.halfSpan }, this.viewLat, this.sizing?.d ?? 16);
-  }
-
-  private startFor(v: Variant): number {
-    return entranceStart(v.line, this.viewLat, this.sizing?.d ?? 16);
   }
 
   /**
@@ -973,7 +912,17 @@ export class CaptionLayer {
 
   state(): CaptionState {
     const b = this.built;
-    const shown = (b?.variants ?? []).filter((v) => v.set < 0 || v.set === (this.swap ? this.swap.to : this.cur));
+    const shown = (b?.variants ?? []).filter((v) => v.set < 0 || v.set === (this.rowSet[v.row] ?? 0));
+    const slot = b?.slotRows ?? 0;
+    const inSides: number[] = [];
+    const outSides: number[] = [];
+    for (let r = 0; r < slot; r++) {
+      const side = this.motion.sideAt(this.rowCycle[r] ?? 0, r);
+      inSides.push(side);
+      outSides.push(-side);
+    }
+    const phases = [...Array(slot).keys()].map((r) => this.motion.cycle(0, r).local);
+    const swapping = this.motion.continuous && phases.some((l, r) => (this.rowCycle[r] ?? 0) > 0 && l < CAPTION.enter.ms + 1e-9) || phases.some((l) => l > CAPTION.enter.ms + CAPTION.cycle.dwellMs);
     return {
       built: b !== null,
       phase: this.motion.phase,
@@ -995,7 +944,7 @@ export class CaptionLayer {
         side: this.motion.side(v.row),
         styles: [...new Set(v.line.runs.map((r) => r.style ?? "plain"))],
       })),
-      cycle: { sets: this.opts.content.sets.length, current: this.cur, swapping: this.swap !== null, waiting: this.timer !== 0, paused: this.paused, swaps: this.swaps, lastOut: this.lastOut, lastIn: this.lastIn },
+      cycle: { sets: this.opts.content.sets.length, current: this.rowSet[0] ?? 0, swapping, waiting: false, paused: this.paused, swaps: this.rowCycle[0] ?? 0, lastOut: outSides, lastIn: inSides },
       baselines: shown.map((v) => v.line.baseLat),
       texture: this.texSizes,
       colors: { face: this.face.value, outline: this.outline.value, side: this.side.value },
@@ -1006,7 +955,6 @@ export class CaptionLayer {
     if (this.disposed) return;
     this.disposed = true;
     this.token++;
-    this.cancelCycle();
     this.release();
     this.unit?.dispose();
     this.unit = null;
@@ -1077,9 +1025,15 @@ export class CaptionLayer {
     );
     if (this.disposed || token !== this.token) return;
     // (capitals are the caption's drawing: the words the app gave, and the page's text, are as they were)
-    const caps = (t: string) => (CAPTION.upper ? t.toLocaleUpperCase("en") : t);
+    // (the calligraphic script is exempt: its capitals read badly all together, "Poetry" stays as the page spells it; so does its fallback's case)
     const clean = (row: readonly CaptionRun[]): CaptionRun[] =>
-      row.filter((r) => r.text.length > 0).map((r) => ({ text: caps(r.text), style: ok.get(r.style ?? "plain") ?? "plain" }) as CaptionRun);
+      row
+        .filter((r) => r.text.length > 0)
+        .map((r) => {
+          const asked = r.style ?? "plain";
+          const style = ok.get(asked) ?? "plain";
+          return { text: CAPTION.upper && CAPTION_STYLES[asked].face !== "script" ? r.text.toLocaleUpperCase("en") : r.text, style } as CaptionRun;
+        });
     const sets = content.sets.map((set) => set.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0)));
     const fixed = content.fixed.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0));
     const slotRows = sets.reduce((a, s) => Math.max(a, s.length), 0);
@@ -1259,8 +1213,8 @@ export class CaptionLayer {
       this.crisp.scene.add(this.ellipse);
     }
     this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, key };
-    this.cur = Math.min(this.cur, Math.max(0, sets.length - 1));
     this.place();
+    this.motion.setFixedFrom(slotRows);
     this.motion.setStarts(
       plan.pieces.map((_, r) => this.rowStart(r)),
       plan.pieces.map((_, r) => r),

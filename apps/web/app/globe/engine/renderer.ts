@@ -916,6 +916,8 @@ export class GlobeRenderer {
     this.caption?.setPaused(this.hidden || this.lost || this.suspended);
     this.noteActivity();
     if (hidden) {
+      if (this.capRaf) cancelAnimationFrame(this.capRaf);
+      this.capRaf = 0;
       window.clearTimeout(this.spinTimer);
       this.spinTimer = 0;
       this.cancelFrame();
@@ -923,7 +925,7 @@ export class GlobeRenderer {
     } else if (this.dirty) {
       this.dirty = false;
       this.requestRender();
-    }
+    } else this.armCaption();
   }
 
   private onContextLost() {
@@ -1142,6 +1144,47 @@ export class GlobeRenderer {
    * The crisp caption (a canvas of its own over the globe's, same camera): drawn into a window round the planet only (the lines never leave the
    * shell's disc), by the same camera narrowed to that window (`setViewOffset` composed with the lift and the inset's shift). Nothing in pixel mode.
    */
+  /**
+   * The caption's own frame loop, for the steady roll only (`CaptionLayer.drifting`): at most one frame every `CAPTION.drift.frameMs` (30 a second,
+   * like the ring's own clock), and a frame that draws NOTHING but the caption (the globe's canvas keeps its last frame, no labels, no tree): the
+   * camera has not moved or a full frame would have been asked for. It stands down for a full frame that is pending (that one draws the caption
+   * too) and stops entirely while the tab is hidden, the context is lost, the street map owns the view or nothing is drawn.
+   */
+  private capRaf = 0;
+  private capDrawnAt = 0;
+  private capFrames = 0;
+  /** JS ms spent in the caption's own frames (checks). */
+  private capMs = 0;
+  private lastBasis: { d: number; lon: number; lat: number } | null = null;
+
+  private armCaption() {
+    const c = this.caption;
+    if (!c || this.capRaf || this.disposed || this.hidden || this.lost || this.suspended || !this.lastBasis) return;
+    if (!c.drifting) return;
+    this.capRaf = requestAnimationFrame(this.captionTick);
+  }
+
+  private captionTick = () => {
+    this.capRaf = 0;
+    const c = this.caption;
+    if (!c || this.disposed || this.hidden || this.lost || this.suspended || !this.sized || !c.drifting) return;
+    if (this.raf) {
+      // (a full frame is pending: it advances and draws the caption itself)
+      this.armCaption();
+      return;
+    }
+    const now = performance.now();
+    if (now - this.capDrawnAt >= CAPTION.drift.frameMs - 2) {
+      this.capDrawnAt = now;
+      const b = this.lastBasis!;
+      c.sync(b.d, b.lon, b.lat, now);
+      this.renderCrispCaption();
+      this.capFrames++;
+      this.capMs += performance.now() - now;
+    }
+    this.armCaption();
+  };
+
   private captionRect = { w: 0, h: 0, left: 0, top: 0, mask: "", full: { w: 0, h: 0 }, at: { x: 0, y: 0 } };
   private renderCrispCaption() {
     const caption = this.caption;
@@ -1215,6 +1258,7 @@ export class GlobeRenderer {
     // Whoever drew this frame (the tick, a resize, a check), the transitions run to their end, and the idle rotation's chain (cancelled above) goes on.
     if (this.lod.animating || this.globe.animating || (this.caption?.animating ?? false) || this.opts.labelsAnimating?.()) this.keepGoing(false);
     else if (this.spin.spinning) this.chainSpin();
+    this.armCaption();
   }
 
   /**
@@ -1362,7 +1406,7 @@ export class GlobeRenderer {
   captionState() {
     const c = this.caption;
     if (!c) return null;
-    return { ...c.state(), showcase: this.showcaseOn, band: { shown: this.captionOn, snapping: this.latSnap !== null, deg: CAPTION.band.deg }, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
+    return { ...c.state(), showcase: this.showcaseOn, captionFrames: this.capFrames, captionMs: this.capMs, drifting: c.drifting, band: { shown: this.captionOn, snapping: this.latSnap !== null, deg: CAPTION.band.deg }, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
   }
 
   /* ------------------------------ showcase ------------------------------ */
@@ -1466,6 +1510,7 @@ export class GlobeRenderer {
     cam.updateMatrixWorld();
     const now = performance.now();
     this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced);
+    this.lastBasis = { d: b.d, lon: v.lon, lat: v.lat };
     this.caption?.sync(b.d, v.lon, v.lat, now);
     this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf, lift: this.liftBuf }, now, this.reduced);
   }
