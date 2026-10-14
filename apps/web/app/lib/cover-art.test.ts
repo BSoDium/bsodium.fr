@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COVER_LEVELS, COVER_LIMITS, COVER_PATTERNS, coverArt, coverPaths, ditherLevel, hashSeed, seededRandom } from "./cover-art";
+import { COVER_LEVELS, COVER_LIMITS, COVER_PALETTES, COVER_PATTERNS, coverArt, coverPaths, ditherLevel, hashSeed, seededRandom } from "./cover-art";
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => `sample-seed-${i}`);
 
@@ -127,6 +127,33 @@ describe("coverPaths", () => {
       }
       expect(area).toBe(art.levels.filter((l) => l > 0).length);
       expect(marks.match(/M/g)?.length).toBe(art.marks.length);
+    }
+  });
+});
+
+describe("the palette of the marks", () => {
+  it("is chosen by the seed, deterministically, and every palette occurs", () => {
+    const seen = new Map<string, number>();
+    for (const seed of SEEDS) {
+      const a = coverArt(seed);
+      expect(coverArt(seed).palette).toBe(a.palette);
+      expect(COVER_PALETTES).toContain(a.palette);
+      seen.set(a.palette, (seen.get(a.palette) ?? 0) + 1);
+    }
+    expect(seen.size).toBe(COVER_PALETTES.length);
+    for (const n of seen.values()) expect(n).toBeGreaterThan(SEEDS.length * 0.15);
+  });
+
+  it("does not change the grid or the marks: forcing a palette gives the very same art", () => {
+    for (const seed of SEEDS.slice(0, 40)) {
+      const base = coverArt(seed);
+      for (const palette of COVER_PALETTES) {
+        const forced = coverArt(seed, { palette });
+        expect(forced.palette).toBe(palette);
+        expect(Array.from(forced.levels)).toEqual(Array.from(base.levels));
+        expect(forced.marks).toEqual(base.marks);
+        expect(forced.pattern).toBe(base.pattern);
+      }
     }
   });
 });

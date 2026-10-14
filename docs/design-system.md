@@ -15,7 +15,7 @@ covers and the one accent (cyan until 2026-10-12, orange until 2026-10-13, BSoD 
 | Few boxes | Spacing and a cover separate things; a hairline box is for the few things that are one (a code block, a link card, the search dialog, an error). A card has no box, a list has no chips, metadata has no inner rules, an empty state is one muted line. No corner brackets anywhere in the UI (the map's detection boxes keep their own corner arms). |
 | Label only when it adds information | No decorative numbering (`01 ENTRIES`, `№ 0042`, `000 entries`), no index codes, no eyebrow that repeats the page's title, no kind on a card in a list of one kind, no "Place" on a place. A date, a place, a count, a tag say what they are. |
 | Type is the voice | Display type in a very heavy weight against a very thin one, a reading serif for long text, mono for metadata (see "Type"). Interface text (buttons, filters, tags) stays sans at comfortable sizes (16 px or more, secondary 14 px), sentence case; the tracked uppercase mono micro-label is the exception, not the language. |
-| One accent, for action and state | The blue `--signal` is the call to action (the primary button's fill, hovered and pressed a step deeper), the link in running text, the focus ring, the selection and the current mark of a navigation or a filter; and it marks state: the contents entry being read, the highlighted search result and its field, the active Frame, the error tag, a toggle that is on; and the marks of generated covers. Never decoration (no numerals, no rules, no labels). The text stays black and white: a page is ink on its own colour with one blue signal (2026-10-14, owner: "rather black and white" editorial and LCD-adjacent, no cream). |
+| One accent, for action and state | The blue `--signal` is the call to action (the primary button's fill, hovered and pressed a step deeper), the link in running text, the focus ring, the selection and the current mark of a navigation or a filter; and it marks state: the contents entry being read, the highlighted search result and its field, the active Frame, the error tag, a toggle that is on; and the marks of generated covers (blue, or one of the other three palettes by seed: "Palettes" below). Never decoration (no numerals, no rules, no labels). The text stays black and white: a page is ink on its own colour with one blue signal (2026-10-14, owner: "rather black and white" editorial and LCD-adjacent, no cream). |
 | Generative art | Entries without an image get a **seeded procedural cover**: a small dithered grid in the palette plus one signal mark. Deterministic, subtle, never carrying information. |
 | Clean grid | 4 px base grid; 12-column panel grid with 16 px gutters; 24 px panel padding. |
 
@@ -44,6 +44,31 @@ The accent is for the call to action, for links, for focus and for state, and fo
 ### Kind coding
 
 Each kind has an **icon** from the icon set (article: a page of text; project: a terminal prompt; artwork: an image; poem: a feather; place: a map pin; "Icons" below) AND its word (the `project` kind's word is "Software": the contract's kind id and the section's name are separate, `lib/sections.ts`). `KindTag` draws the icon plain beside the word (no box, no tint) and is used only where kinds are mixed: the search results (glyph; the group heading says the word) and the related entries of an entry. A list of one kind, a place's entries (already grouped under "Articles", "Software") and an entry's own header do not repeat it as a tag (the entry says it once, in plain words, in its meta line). The kind hues only tint the lightest tone of a generated cover. Text is never set in a kind hue.
+
+### Palettes
+
+Four hues, added 2026-10-14 at the owner's request; the values, the ladder, the contrast and colour-vision numbers are in [design-tokens.md](design-tokens.md), "Palettes". The interface is still black and white with one blue: the palettes are for **graphics** (generated covers, charts and chart-like elements, marks, tags and badges, route and mode styling later, the globe's marker kinds if the owner wants it) and used sparingly in the chrome.
+
+| Palette | Token prefix | Meant for |
+| --- | --- | --- |
+| **BSoD Blue** (the owner's handle) | `--palette-blue-*`, `--signal` | The default and the only one in the chrome: everything interactive or primary (the call to action, links, focus, selection, state) is this family, through the existing `--signal*` and `--primary*` tokens, which are its 500, 600 and 700. Software and tools if kinds are given hues |
+| **Rainforest Green** (the Amazon trips) | `--palette-green-*` | Nature, travel, the outdoors: trips, routes, expeditions, field notes |
+| **Desert Ocre** (the Sahara, the Atacama) | `--palette-ocre-*` | Land and places, deserts, warm highlights: a place's mark, a region, a "warm" accent in a graphic |
+| **Violet Purple** (Toulouse's flower) | `--palette-violet-*` | Poetry, the personal, the creative, Toulouse and what is from there |
+
+**Rules.**
+- **Blue first.** Anything in the chrome that needs a colour takes blue. Green, ocre and violet do not appear on a button, a link, a focus ring, a selection or the navigation; they are not a second or third call to action.
+- **Sparing.** At most one non-blue palette per view in the interface chrome (a tag, a badge, a rule or a plate), and a graphic has at most two palettes. A list of entries is not coloured by kind.
+- **Never as text on text.** Colour is a plate, a mark or a fill; running text stays ink. A palette as text is for one short label (`--palette-<hue>-text`, 4.5:1 or more on the page, the surface, the hover grey and its tint), never body text, and never a coloured word on a tint of another hue.
+- **Roles, not steps.** A component takes `--palette-<hue>` (the fill), `-on` (its text), `-text` (the hue as text) or `-tint` (a solid plate behind ink text); the raw steps are for graphics that need a ramp (a chart's sequential scale, a pattern). 50 to 500 are filled with the near-black `--palette-black`, 600 to 900 with `--palette-white`.
+- **Solid colours.** Tones are solid mixes (a tint is a mix of the fill into the page colour), never opacity; opacity stays for fades and see-through.
+- **Hue is redundant.** Same rule as the kind hues: a glyph, a word, a position or a pattern says what a colour says. Where two of green / ocre or blue / violet meet, space them on the ladder (design-tokens.md, "Palettes", pairing rules).
+- **Dark.** Not an inversion: the fill is the same 600, the text tone is the bright 500 (light: the deep 700), a tint is a stronger solid mix (16 %, light 10 %). Check both schemes on `/dev/design`, section 15.
+- **Print.** Palettes are not rebound: a colour that carries meaning in print must also have its word or pattern (hue is redundant, above).
+
+**Recommended mapping (the owner's call).** The brief asks for the palettes, not for a mapping; nothing below is implemented outside the covers. A suggestion if kinds are to get a hue (as a graphic mark only, always beside the glyph and the word): software blue (the tool, the default), articles green or ocre (the long travel writing), artworks violet (the personal and creative), poetry violet or ocre (to be decided: violet is the one with a story, but artworks and poetry then share it; ocre for poetry would split them), places: ocre for land and desert places, green for forest and jungle places, blue for the rest (a place type needs a `type` field the contract does not have: place kinds would be a content decision as well as a design one). Today the four kinds' own faint hues (`--kind-*`, the tint on a cover's lightest tone) are unchanged.
+
+**In use.** The generated cover's marks: the seed picks one of the four palettes (below). Nothing else yet; the first applications to consider are tags and badges, then a chart-like element, then the globe's marker kinds (the globe's ramp is a monochrome tonal system with the ink for markers, so a hue there needs its own readability pass).
 
 ### Type
 
@@ -113,7 +138,7 @@ All in `app/components/ui/`, importable from `~/components/ui` (barrel) or by fi
 | `Toggle` | `Button` with `aria-pressed`; pressed = the accent's fill, white text (a ghost toggle: the hover grey) | name never changes with state |
 | `ExpandToggle` | ghost `Toggle` of the panel / full-screen switch; icon swaps outward / inward diagonals | `expanded`, `showLabel`, size |
 | `SegmentedControl` | group of `Toggle`s sharing 1 px lines (wraps on phones) | one value; the scheme choice in the styleguide |
-| `CoverArt` | inline SVG of a dithered grid; `aria-hidden`; box takes the grid's aspect ratio | `seed`, `kind` (tint), `cols`, `rows`, `pattern` (field, bars, rings, stream, lattice; default: the seed picks) |
+| `CoverArt` | inline SVG of a dithered grid; `aria-hidden`; box takes the grid's aspect ratio | `seed`, `kind` (tint), `cols`, `rows`, `pattern` (field, bars, rings, stream, lattice; default: the seed picks), `palette` (blue, green, ocre, violet; default: the seed picks) |
 | `MetadataStrip` | `dl` of plain lines (date, place); the keys are for assistive technology only | one line each, truncated |
 | `SectionHeader` | the heading in sans 18 px, a muted count after it; no number, no rule | `as` h2, h3, h4; `meta` |
 | `TagList` | `ul` of muted text separated by middle dots (CSS) | static or links (44 px hit area on phones via `::before`) |
@@ -129,7 +154,7 @@ All in `app/components/ui/`, importable from `~/components/ui` (barrel) or by fi
 
 ### Generative cover art
 
-`lib/cover-art.ts`: `coverArt(seed, { cols, rows, pattern })` is a pure function of the seed (FNV-1a hash, mulberry32 generator, 4x4 Bayer dither): a `Uint8Array` of tonal levels 0 to 3, plus one or two signal marks, all within the grid; sizes clamp to 4..96 cells. `coverPaths` merges horizontal runs into one SVG path per level. Same seed gives the same art on the server and in the browser (no hydration mismatch, nothing stored). Level 1 is the kind's hue at 22 %, levels 2 and 3 are the ink at 20 % and 42 %, the marks are `--signal`. Use the entry's slug or id as the seed (stable across edits).
+`lib/cover-art.ts`: `coverArt(seed, { cols, rows, pattern })` is a pure function of the seed (FNV-1a hash, mulberry32 generator, 4x4 Bayer dither): a `Uint8Array` of tonal levels 0 to 3, plus one or two signal marks, all within the grid; sizes clamp to 4..96 cells. `coverPaths` merges horizontal runs into one SVG path per level. Same seed gives the same art on the server and in the browser (no hydration mismatch, nothing stored). Level 1 is the kind's hue at 22 %, levels 2 and 3 are the ink at 20 % and 42 %, the marks are the 600 fill of one of the four palettes (`coverArt(...).palette`: drawn by the seed AFTER the grid and the marks, so the grid and the marks of a seed are what they were before palettes; `palette` forces one, `blue` is `--signal`; the same seed gives the same palette on the server and in the browser). `data-palette` on the SVG selects the fill in `app.css`. Use the entry's slug or id as the seed (stable across edits).
 
 ### Entry view (the panel and the full-screen view)
 

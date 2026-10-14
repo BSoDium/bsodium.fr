@@ -9,6 +9,10 @@
 export const COVER_PATTERNS = ["field", "bars", "rings", "stream", "lattice"] as const;
 export type CoverPattern = (typeof COVER_PATTERNS)[number];
 
+/** The palettes a cover's marks can be drawn in (`--palette-<name>`, the 600 step; docs/design-tokens.md, "Palettes"). */
+export const COVER_PALETTES = ["blue", "green", "ocre", "violet"] as const;
+export type CoverPalette = (typeof COVER_PALETTES)[number];
+
 /** Number of tonal levels (0 .. COVER_LEVELS - 1). */
 export const COVER_LEVELS = 4;
 
@@ -21,8 +25,10 @@ export interface CoverArt {
   rows: number;
   /** Row-major, `rows * cols` entries, each in `0 .. COVER_LEVELS - 1`. */
   levels: Uint8Array;
-  /** One or two accent cells (drawn in the signal colour), inside the grid. */
+  /** One or two accent cells, inside the grid. */
   marks: readonly { x: number; y: number }[];
+  /** The palette the marks are drawn in: chosen by the seed (drawn after everything else, so the grid is the same as before palettes existed) unless forced. */
+  palette: CoverPalette;
 }
 
 export interface CoverArtOptions {
@@ -30,6 +36,8 @@ export interface CoverArtOptions {
   rows?: number;
   /** Force a pattern; by default the seed picks one. */
   pattern?: CoverPattern;
+  /** Force a palette for the marks; by default the seed picks one. */
+  palette?: CoverPalette;
 }
 
 /** 32-bit FNV-1a with a final avalanche, so near-identical seeds ("a1", "a2") spread. */
@@ -187,7 +195,10 @@ export function coverArt(seed: string, options: CoverArtOptions = {}): CoverArt 
 
   const markCount = 1 + Math.floor(rng() * 2);
   const marks = Array.from({ length: markCount }, () => ({ x: Math.floor(rng() * cols), y: Math.floor(rng() * rows) }));
-  return { seed, pattern, cols, rows, levels, marks };
+  // Drawn last and always consumed: the grid and the marks above are exactly what they were before the palettes (and a forced palette changes nothing else).
+  const paletteRoll = rng();
+  const palette = options.palette ?? COVER_PALETTES[Math.floor(paletteRoll * COVER_PALETTES.length)]!;
+  return { seed, pattern, cols, rows, levels, marks, palette };
 }
 
 /**

@@ -72,6 +72,75 @@
   --kind-poem: oklch(0.58 0.1 340);
   --kind-place: var(--muted-foreground);
 
+  /*
+   * Palettes (docs/design-tokens.md, "Palettes"; usage: docs/design-system.md, "Palettes"). Four hues on ONE OKLCH lightness ladder
+   * (50 .975, 100 .95, 200 .905, 300 .84, 400 .755, 500 .656, 600 .563, 700 .51, 800 .43, 900 .35), chroma tuned per hue to stay in sRGB:
+   * the same step is the same lightness in every hue, so a hue can be swapped for another without re-checking contrast. Blue is the
+   * accent's own family (500 = the dark scheme's accent text, 600 = `--signal`, 700 = its light-scheme text tone). Green's 600 sits
+   * .015 lower than the ladder so white text on it is AA (4.60:1). The scale is the same in both schemes; the roles below pick the
+   * step per scheme. `lib/palette.test.ts` derives each hue's lightness from these hex values and fails on drift.
+   */
+  --palette-blue-50: #f1f8ff;
+  --palette-blue-100: #e3f0ff;
+  --palette-blue-200: #cae2ff;
+  --palette-blue-300: #a4cfff;
+  --palette-blue-400: #70b4ff;
+  --palette-blue-500: #0a93ff;
+  --palette-blue-600: #0076d4;
+  --palette-blue-700: #0067b8;
+  --palette-blue-800: #005093;
+  --palette-blue-900: #073b6b;
+  --palette-green-50: #f1faf2;
+  --palette-green-100: #e2f4e5;
+  --palette-green-200: #c7eacd;
+  --palette-green-300: #a4daae;
+  --palette-green-400: #7ac38a;
+  --palette-green-500: #3ea95e;
+  --palette-green-600: #238644;
+  --palette-green-700: #23793e;
+  --palette-green-800: #1a5f30;
+  --palette-green-900: #154623;
+  --palette-ocre-50: #fbf6ee;
+  --palette-ocre-100: #f8eddd;
+  --palette-ocre-200: #f2dcbd;
+  --palette-ocre-300: #e6c594;
+  --palette-ocre-400: #d2a865;
+  --palette-ocre-500: #bd8514;
+  --palette-ocre-600: #9a6b01;
+  --palette-ocre-700: #875d01;
+  --palette-ocre-800: #6a4801;
+  --palette-ocre-900: #4e3505;
+  --palette-violet-50: #faf4ff;
+  --palette-violet-100: #f6e9ff;
+  --palette-violet-200: #eed4ff;
+  --palette-violet-300: #e2b7fd;
+  --palette-violet-400: #cd94ef;
+  --palette-violet-500: #b769e2;
+  --palette-violet-600: #9651bc;
+  --palette-violet-700: #8346a4;
+  --palette-violet-800: #673682;
+  --palette-violet-900: #4b285f;
+  --palette-white: #ffffff;
+  --palette-black: #0a0a0a;
+  /* Fill roles, the same in both schemes: the 600 step and white text on it (4.6:1 or more for the four; 500 and lighter take --palette-black). */
+  --palette-blue: var(--palette-blue-600);
+  --palette-blue-on: var(--palette-white);
+  --palette-green: var(--palette-green-600);
+  --palette-green-on: var(--palette-white);
+  --palette-ocre: var(--palette-ocre-600);
+  --palette-ocre-on: var(--palette-white);
+  --palette-violet: var(--palette-violet-600);
+  --palette-violet-on: var(--palette-white);
+  /* Palette roles (light): the text tone and a solid tint (the 600 fill mixed 10 % into the page colour, never an alpha). */
+  --palette-blue-text: var(--palette-blue-700);
+  --palette-blue-tint: #e2eef7;
+  --palette-green-text: var(--palette-green-700);
+  --palette-green-tint: #e5efe9;
+  --palette-ocre-text: var(--palette-ocre-700);
+  --palette-ocre-tint: #f1ede2;
+  --palette-violet-text: var(--palette-violet-700);
+  --palette-violet-tint: #f1eaf5;
+
   /* Radii: none. Square edges everywhere; the names stay so shadcn-style classes (`rounded-md`) resolve to 0. */
   --radius-sm: 0;
   --radius-md: 0;
@@ -159,6 +228,15 @@
     --kind-artwork: oklch(0.76 0.1 55);
     --kind-poem: oklch(0.76 0.1 340);
     --kind-place: var(--muted-foreground);
+  /* Palette roles (dark): the text tone and a solid tint (the 600 fill mixed 16 % into the page colour, never an alpha). */
+  --palette-blue-text: var(--palette-blue-500);
+  --palette-blue-tint: #081b2a;
+  --palette-green-text: var(--palette-green-500);
+  --palette-green-tint: #0e1e13;
+  --palette-ocre-text: var(--palette-ocre-500);
+  --palette-ocre-tint: #211a09;
+  --palette-violet-text: var(--palette-violet-500);
+  --palette-violet-tint: #201526;
   }
 }
 
@@ -271,6 +349,22 @@
   --color-kind-artwork: var(--kind-artwork);
   --color-kind-poem: var(--kind-poem);
   --color-kind-place: var(--kind-place);
+  --color-palette-blue: var(--palette-blue);
+  --color-palette-blue-on: var(--palette-blue-on);
+  --color-palette-blue-text: var(--palette-blue-text);
+  --color-palette-blue-tint: var(--palette-blue-tint);
+  --color-palette-green: var(--palette-green);
+  --color-palette-green-on: var(--palette-green-on);
+  --color-palette-green-text: var(--palette-green-text);
+  --color-palette-green-tint: var(--palette-green-tint);
+  --color-palette-ocre: var(--palette-ocre);
+  --color-palette-ocre-on: var(--palette-ocre-on);
+  --color-palette-ocre-text: var(--palette-ocre-text);
+  --color-palette-ocre-tint: var(--palette-ocre-tint);
+  --color-palette-violet: var(--palette-violet);
+  --color-palette-violet-on: var(--palette-violet-on);
+  --color-palette-violet-text: var(--palette-violet-text);
+  --color-palette-violet-tint: var(--palette-violet-tint);
 }
 
 /*
@@ -321,6 +415,15 @@
   --kind-artwork: oklch(0.58 0.1 55);
   --kind-poem: oklch(0.58 0.1 340);
   --kind-place: var(--muted-foreground);
+  /* Palette roles (light): the text tone and a solid tint (the 600 fill mixed 10 % into the page colour, never an alpha). */
+  --palette-blue-text: var(--palette-blue-700);
+  --palette-blue-tint: #e2eef7;
+  --palette-green-text: var(--palette-green-700);
+  --palette-green-tint: #e5efe9;
+  --palette-ocre-text: var(--palette-ocre-700);
+  --palette-ocre-tint: #f1ede2;
+  --palette-violet-text: var(--palette-violet-700);
+  --palette-violet-tint: #f1eaf5;
 }
 
 :root[data-scheme="dark"],
@@ -365,6 +468,15 @@
   --kind-artwork: oklch(0.76 0.1 55);
   --kind-poem: oklch(0.76 0.1 340);
   --kind-place: var(--muted-foreground);
+  /* Palette roles (dark): the text tone and a solid tint (the 600 fill mixed 16 % into the page colour, never an alpha). */
+  --palette-blue-text: var(--palette-blue-500);
+  --palette-blue-tint: #081b2a;
+  --palette-green-text: var(--palette-green-500);
+  --palette-green-tint: #0e1e13;
+  --palette-ocre-text: var(--palette-ocre-500);
+  --palette-ocre-tint: #211a09;
+  --palette-violet-text: var(--palette-violet-500);
+  --palette-violet-tint: #201526;
 }
 
 /*
@@ -1221,6 +1333,23 @@
 
   .ds-cover [data-l="m"] {
     fill: var(--signal);
+  }
+
+  /* The marks take the palette the seed chose (blue is the accent's own fill); a solid colour, 3:1 or more on the cover's ground. */
+  .ds-cover[data-palette="blue"] [data-l="m"] {
+    fill: var(--palette-blue);
+  }
+
+  .ds-cover[data-palette="green"] [data-l="m"] {
+    fill: var(--palette-green);
+  }
+
+  .ds-cover[data-palette="ocre"] [data-l="m"] {
+    fill: var(--palette-ocre);
+  }
+
+  .ds-cover[data-palette="violet"] [data-l="m"] {
+    fill: var(--palette-violet);
   }
 
   /*

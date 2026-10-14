@@ -270,3 +270,48 @@ describe("rules that put the accent where the owner asked for it (2026-10-14)", 
     expect(ruleBody(css, css.indexOf('  .ds-frame[data-variant="active"] {'))).toContain("border-color: var(--signal);");
   });
 });
+
+/**
+ * The four palettes (docs/design-tokens.md, "Palettes"): blue, green, ocre, violet. Same rules as the accent's: the text tone is AA
+ * on the page, the surface, the hover grey and its own tint; the fill and the cover's marks are 3:1 graphics on the page, the surface and
+ * the cover's ground (the hover grey); the on-colour is AA on the fill. A tint is a solid mix, so the ink and muted text are measured on it.
+ */
+describe.each(["light", "dark"] as const)("the four palettes (%s)", (scheme) => {
+  const tokens = context(scheme, null);
+  const HUES = ["blue", "green", "ocre", "violet"] as const;
+  const at = (fg: string, bgName: string, under?: string) => {
+    const bg = colour(tokens, bgName);
+    return contrastRatio(colour(tokens, fg, bg), bg);
+  };
+
+  it.each(HUES)("%s: text tone is AA on the page, the surface, the hover grey and its tint", (hue) => {
+    for (const bg of ["--background", "--surface", "--accent", `--palette-${hue}-tint`]) {
+      expect(at(`--palette-${hue}-text`, bg), `${scheme} ${hue} text on ${bg}`).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+
+  it.each(HUES)("%s: the ink is 7:1 and muted text AA on the tint (body text on a tinted plate)", (hue) => {
+    expect(at("--foreground", `--palette-${hue}-tint`)).toBeGreaterThanOrEqual(BODY);
+    expect(at("--muted-foreground", `--palette-${hue}-tint`)).toBeGreaterThanOrEqual(TEXT);
+  });
+
+  it.each(HUES)("%s: the fill is 3:1 as a graphic on the page, the surface and the cover's ground", (hue) => {
+    for (const bg of ["--background", "--surface", "--accent"]) {
+      expect(at(`--palette-${hue}`, bg), `${scheme} ${hue} fill on ${bg}`).toBeGreaterThanOrEqual(LARGE);
+    }
+  });
+
+  it.each(HUES)("%s: the on-colour is AA on the fill", (hue) => {
+    expect(at(`--palette-${hue}-on`, `--palette-${hue}`)).toBeGreaterThanOrEqual(TEXT);
+  });
+
+  it.each(HUES)("%s: the lighter steps carry the near-black and the darker ones white, AA, wherever a step is a fill", (hue) => {
+    for (const s of [50, 100, 200, 300, 400, 500]) expect(at("--palette-black", `--palette-${hue}-${s}`), `${hue} ${s}`).toBeGreaterThanOrEqual(TEXT);
+    for (const s of [600, 700, 800, 900]) expect(at("--palette-white", `--palette-${hue}-${s}`), `${hue} ${s}`).toBeGreaterThanOrEqual(TEXT);
+  });
+
+  it("blue is the accent: same fill as --signal, the text tone is --signal-text", () => {
+    expect(colour(tokens, "--palette-blue")).toEqual(colour(tokens, "--signal"));
+    expect(colour(tokens, "--palette-blue-text")).toEqual(colour(tokens, "--signal-text"));
+  });
+});
