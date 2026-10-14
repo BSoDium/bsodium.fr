@@ -131,7 +131,7 @@ Measured on a production build served by `react-router-serve` (demo content), he
 
 The texture (one small canvas per line, drawn once per size class) is the only new memory: well under 1 MB (round 3's first version drew it in a pixel face; see round 4 below).
 
-Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 669.7 KB raw / 182.1 KB gzip against the release's 658.8 / 179.6 (+10.9 KB raw, +2.5 KB gzip: `caption.ts`, `caption-layer.ts`, `lift.ts`, the showcase wiring). The two fonts (18.9 kB and 3.9 kB) are fetched only when the page's caption face is that one, by the globe, after the page is up; Jacquard is the default so it is 18.9 kB on the home page, once (immutable cache).
+Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 669.7 KB raw / 182.1 KB gzip against the release's 658.8 / 179.6 (+10.9 KB raw, +2.5 KB gzip: `caption.ts`, `caption-layer.ts`, `lift.ts`, the showcase wiring). The calligraphic face (Imperial Script, 19.7 kB) is fetched by the globe, after the page is up, only when the caption has a word in it (immutable cache); the serif and the mono are the page's own.
 
 **Not measured:** a real phone, a CPU-throttled run, a 120 Hz headed run, battery (30 repaints a second as the resting state of the home page is the thing to watch: the knob is `RING.frameMs`, 32). The perf budgets (`pnpm perf`) were not run in full for this change.
 
@@ -148,7 +148,7 @@ Measured as above (production build, `react-router-serve`, demo content, headles
 | ring repaints | | 150 in 5 s (30 a second), 42 to 55 ms |
 | GL draws | 0 | 0 |
 
-**The resting repaint rate is unchanged: the ring's 30 a second, nothing from the caption.** `caption-enter` (the showcase off and on five times): 640 frames in 15 s (the entrance is longer: 3 logical lines, 260 ms apart), **p50, p95 and max frame interval 16.7 / 16.7 / 16.8 ms, 0 long tasks, 0 GL draws in the rest after the last entrance**; GPU 2.2 ms a frame on average, 4.5 ms at the 95th percentile (the first version's was 0.17 ms: the cost of a second multisampled canvas at 2 x; it is drawn only while a line is in view, into a window round the planet (about a third of the canvas), and only in frames the globe draws anyway). An idle-rotation frame with the caption in view costs the same; at rest nothing is drawn.
+**The resting repaint rate is unchanged: the ring's 30 a second, nothing from the caption.** `caption-enter` (the showcase off and on five times): 640 frames in 15 s (the entrance is longer: since round 7 four rows, 450 ms apart), **p50, p95 and max frame interval 16.7 / 16.7 / 16.8 ms, 0 long tasks, 0 GL draws in the rest after the last entrance**; GPU 2.2 ms a frame on average, 4.5 ms at the 95th percentile (the first version's was 0.17 ms: the cost of a second multisampled canvas at 2 x; it is drawn only while a line is in view, into a window round the planet (about a third of the canvas), and only in frames the globe draws anyway). An idle-rotation frame with the caption in view costs the same; at rest nothing is drawn.
 
 Memory: one small canvas texture per line (about 1300 to 1700 x 170 texels with mipmaps) and a second WebGL context (the pixel mode has none).
 

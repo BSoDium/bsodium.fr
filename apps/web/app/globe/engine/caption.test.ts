@@ -23,23 +23,28 @@ import {
   lineHidden,
   parallelPoint,
   shellHorizon,
-  meridianDelta,
-  meridianY,
   planPieces,
-  solveParallels,
+  fitScale,
+  shellWindowFactor,
+  shellXY,
+  placeRows,
+  rowLatitudes,
+  bandLat,
+  inBand,
   minScaleFor,
   shellY,
   swapEnterAngle,
   swapExitAngle,
   swapMs,
-  swapExitMs,
   splitRuns,
   visibleHalfSpan,
   unitBand,
   bandPoint,
+  dimPresence,
+  swapEnterAt,
 } from "./caption";
 import { DEG, cameraDistance, lonLatToVec3, viewBasis } from "./geo";
-import { CAPTION } from "./tuning";
+import { CAPTION, START_VIEW } from "./tuning";
 
 /** The home screen's four rows (two that take turns, two that stay), with the words picked out as the site does (`siteCaption`). */
 const LINES: CaptionRun[][] = [
@@ -59,7 +64,7 @@ const DESKTOP = 330; // the planet's radius at the lowest zoom, CSS px, at 1440x
 const PHONE = 150; // and at 390x844
 /** The camera's distance at the lowest zoom of a 1440 x 900 window (what the layer is told). */
 const D_REST = 5.8;
-const layout = (rPx = DESKTOP, viewLat = 28) => layoutCaption({ rows: LINES, measure, rPx, viewLat, d: D_REST });
+const layout = (rPx = DESKTOP) => layoutCaption({ rows: LINES, measure, rPx, d: D_REST });
 const d = cameraDistance(2.2, 900);
 /** The screen height (planet radii) of a point of the earth frame seen from a camera over `lat`, longitude 0: the point's component along the view's north. */
 const screenY = (p: readonly number[], lat: number) => {
@@ -155,7 +160,7 @@ describe("real parallels", () => {
   it("is ONE unit strip for every line: the vertex shader's parallel (`bandPoint`) gives the same points as the built mesh", () => {
     const unit = unitBand();
     expect(unit.attributes.length / 3).toBe((64 + 1) * 2 * CAPTION.slices);
-    const line = layout(DESKTOP, -30).lines[3]!;
+    const line = layout(DESKTOP).lines[3]!;
     const m = bandMesh(line, 64, CAPTION.slices, CAPTION.depth);
     const p: [number, number, number] = [0, 0, 0];
     for (const i of [0, 5, 64, 65, 130, 400, unit.attributes.length / 3 - 1]) {
@@ -167,86 +172,99 @@ describe("real parallels", () => {
   });
 });
 
-describe("the parallels are picked for the camera's tilt", () => {
+describe("the rows are on fixed parallels, centred on the equator", () => {
   const pieces = (rPx = DESKTOP) => planPieces({ rows: LINES, measure, rPx }).pieces;
-  const solve = (phi: number, rPx = DESKTOP) => solveParallels(pieces(rPx), phi, D_REST, [], minScaleFor(pieces(rPx), rPx));
-  const PX = 600; // planet radii to px at a 900 px viewport: only for a readable scale
+  const place = (rPx = DESKTOP, d = D_REST) => {
+    const p = pieces(rPx);
+    const k = fitScale(p, d, minScaleFor(p, rPx));
+    return { k, placements: placeRows(p, d, k), p };
+  };
 
-  it("inverts the projection: the screen height of a parallel's point at the central meridian maps back to its offset, and `shellY` is the same projection", () => {
-    for (const delta of [-0.9, -0.3, 0, 0.2, 0.7, 1.1]) {
-      expect(meridianDelta(meridianY(delta, D_REST), D_REST)).toBeCloseTo(delta, 9);
-      expect(shellY(0, 30 + delta / DEG, 30, D_REST)).toBeCloseTo(meridianY(delta, D_REST), 9);
-    }
-    expect(meridianY(0, D_REST)).toBe(0);
-  });
-
-  it("holds the same CLEARANCE between rows, to a few px, from the north (+50), the equator and the south (-50)", () => {
-    const eq = solve(0);
-    for (const phi of [50, -50, 30, -30]) {
-      const s = solve(phi);
-      expect(s.scale).toBeLessThanOrEqual(eq.scale + 1e-9); // (the letters may be smaller where a chord needs it; the clearances are not)
-      s.clearances.forEach((c, i) => expect(Math.abs(c - eq.clearances[i]!) * PX).toBeLessThan(2));
-      // and the same block middle on the screen
-      expect(Math.abs(s.centreY - eq.centreY) * PX).toBeLessThan(3);
-    }
-  });
-
-  it("is symmetric: a tilt and its mirror give the same size, clearances and middle", () => {
-    for (const phi of [20, 40, 50, 62, 75]) {
-      const a = solve(phi);
-      const b = solve(-phi);
-      expect(a.scale).toBeCloseTo(b.scale, 9);
-      a.clearances.forEach((c, i) => expect(c).toBeCloseTo(b.clearances[i]!, 3));
-      expect(a.centreY).toBeCloseTo(b.centreY, 3);
+  it("spaces the baselines uniformly ON THE SCREEN at the load view (within a pixel), top to bottom, the block's capitals centred on the equator", () => {
+    const { placements } = place();
+    expect(placements).toHaveLength(4);
+    const capDeg = placements[0]!.capR / CAPTION.radius / DEG;
+    // the first and last rows are where the nominal step puts them; the middle ones are moved to the equal screen steps
+    const nominal = rowLatitudes(4, placements[0]!.capR);
+    expect(placements[0]!.baseLat).toBeCloseTo(nominal[0]!, 9);
+    expect(placements[3]!.baseLat).toBeCloseTo(nominal[3]!, 9);
+    expect(nominal[0]! + nominal[3]!).toBeCloseTo(-capDeg, 9); // (mean + half a cap = 0)
+    for (let i = 1; i < 4; i++) expect(placements[i]!.baseLat).toBeLessThan(placements[i - 1]!.baseLat);
+    const ys = placements.map((p) => shellY(0, p.baseLat, START_VIEW.lat, D_REST));
+    const gaps = ys.slice(1).map((y, i) => ys[i]! - y);
+    for (const g of gaps) expect(Math.abs(g - gaps[0]!) * 600).toBeLessThan(0.05);
+    // and within a few percent from anywhere in the band
+    for (const cam of [-CAPTION.band.deg, 0, CAPTION.band.deg]) {
+      const yc = placements.map((p) => shellY(0, p.baseLat, cam, D_REST));
+      const gc = yc.slice(1).map((y, i) => yc[i]! - y);
+      for (const g of gc) expect(Math.abs(g / gc[0]! - 1)).toBeLessThan(0.4);
     }
   });
 
-  it("never lets two rows touch, from +70 to -70: every clearance over the width the rows share is positive, and every row keeps its own parallel", () => {
-    for (let phi = 70; phi >= -70; phi -= 10) {
-      const s = solve(phi);
-      s.clearances.forEach((c) => expect(c).toBeGreaterThan(0));
-      for (let i = 1; i < s.placements.length; i++) expect(s.placements[i - 1]!.baseLat - s.placements[i]!.baseLat).toBeGreaterThanOrEqual(CAPTION.minLatGapDeg - 1e-9);
-      for (const p of s.placements) expect(Math.abs(p.baseLat)).toBeLessThanOrEqual(CAPTION.latMax + 1e-9);
+  it("does not depend on the camera: the same placements whatever latitude is asked (there is no latitude in the call)", () => {
+    expect(placeRows(pieces(), D_REST, 1).map((p) => p.baseLat)).toEqual(placeRows(pieces(), D_REST, 1).map((p) => p.baseLat));
+    expect(rowLatitudes(4, 0.084)[0]).toBeGreaterThan(0);
+    expect(rowLatitudes(4, 0.084)[3]).toBeLessThan(0);
+    expect(rowLatitudes(0, 0.084)).toEqual([]);
+  });
+
+  it("fits every row to its chord at BOTH ends of the band, at one static scale: desktop and phone planets", () => {
+    for (const rPx of [DESKTOP, PHONE]) {
+      const { k, placements } = place(rPx);
+      expect(k).toBeGreaterThan(CAPTION.minScale);
+      expect(k).toBeLessThanOrEqual(1);
+      const psi = shellHorizon(D_REST) * CAPTION.visibleFraction;
+      for (const p of placements)
+        for (const cam of [CAPTION.band.deg, -CAPTION.band.deg, 0]) expect(p.halfSpan).toBeLessThanOrEqual(visibleHalfSpan(cam, p.baseLat, psi) + 1e-9);
+    }
+    // the words stay inside the planet's disc on the screen, for every camera of the band
+    for (const rPx of [DESKTOP, PHONE]) {
+      const { placements } = place(rPx);
+      const limit = CAPTION.maxHalfWidth / Math.sqrt(D_REST * D_REST - 1);
+      for (const p of placements) for (const cam of [CAPTION.band.deg, -CAPTION.band.deg, 0]) expect(Math.abs(shellXY(Math.min(p.halfSpan, Math.PI / 2), p.baseLat, cam, D_REST)[0])).toBeLessThanOrEqual(limit + 1e-9);
     }
   });
 
-  it("holds at the extreme tilts too (over a pole): rows stay apart and none passes the limb the camera sees", () => {
-    for (const phi of [90, 85, -85, -90]) {
-      const s = solve(phi);
-      expect(Number.isFinite(s.scale)).toBe(true);
-      s.clearances.forEach((c) => expect(c).toBeGreaterThanOrEqual(0));
+  it("shrinks the whole block together, statically, when a row would not fit even so", () => {
+    const wide = [[{ text: "x".repeat(80) }]];
+    const p = planPieces({ rows: wide, measure: () => 40, rPx: DESKTOP }).pieces;
+    const k = fitScale(p, D_REST, 0.05);
+    expect(k).toBeLessThan(1);
+    expect(placeRows(p, D_REST, k)[0]!.capR / p[0]!.cap).toBeCloseTo(k, 9);
+  });
+
+  it("sizes the crisp canvas's window to the SHELL's silhouette: a point of the shell near the limb is inside it (the owner's vertical cut at 1.15-1.25 radii)", () => {
+    for (const d of [3, 5.8, 13, 30]) {
+      const f = shellWindowFactor(d);
+      expect(f).toBeGreaterThan(CAPTION.radius); // never narrower than the shell's radius in planet radii
+      // the silhouette of the shell in the tangent plane, in units of the planet's: r / sqrt(d^2 - r^2) over 1 / sqrt(d^2 - 1)
+      expect(f).toBeCloseTo((CAPTION.radius / Math.sqrt(d * d - CAPTION.radius ** 2)) / (1 / Math.sqrt(d * d - 1)), 9);
+      // the old window (1.2 planets' radii) cut a shell that floats at 1.25
+      if (CAPTION.radius > 1.2) expect(f).toBeGreaterThan(1.2);
     }
   });
 
-  it("keeps the rows inside their chords: no row is wider than the camera sees it well, and the whole block shrinks together", () => {
-    for (const phi of [70, 50, 28, 0, -28, -50, -70]) {
-      const { placements, scale } = solve(phi);
-      expect(scale).toBeGreaterThan(0.2);
-      expect(scale).toBeLessThanOrEqual(1);
-      for (const p of placements) expect(2 * p.halfSpan).toBeLessThanOrEqual(CAPTION.hardSpanDeg * DEG + 1e-6);
-      // uniform: the size hierarchy of the nominal caps is kept
-      const nominal = pieces();
-      placements.forEach((p, i) => expect(p.capR / nominal[i]!.cap).toBeCloseTo(scale, 6));
-    }
+  it("knows the band: held to its nearest edge, and in it within a slack", () => {
+    expect(bandLat(5)).toBe(5);
+    expect(bandLat(-60)).toBe(-CAPTION.band.deg);
+    expect(bandLat(85)).toBe(CAPTION.band.deg);
+    expect(inBand(CAPTION.band.deg)).toBe(true);
+    expect(inBand(CAPTION.band.deg + 1)).toBe(false);
+    expect(inBand(-CAPTION.band.deg - 1, 1.5)).toBe(true);
+    expect(START_VIEW.lat).toBeLessThan(CAPTION.band.deg);
   });
 
-  it("centres the block: its middle is where `centreDeg` puts it at the camera tilts the page has", () => {
-    const target = meridianY(CAPTION.centreDeg * DEG, D_REST);
-    for (const phi of [28, 0, -28, 50, -50]) expect(Math.abs(solve(phi).centreY - target) * PX).toBeLessThan(4);
-  });
-
-  it("puts the call to action under the other rows and makes it the largest", () => {
+  it("makes every row one cap height, the call to action under the others", () => {
     const l = layout().lines;
     expect(l).toHaveLength(4);
-    expect(Math.min(l[2]!.capR, l[3]!.capR)).toBeGreaterThan(Math.max(l[0]!.capR, l[1]!.capR));
+    for (const line of l) expect(line.capR).toBeCloseTo(l[0]!.capR, 9);
     for (let i = 1; i < l.length; i++) expect(l[i]!.baseLat).toBeLessThan(l[i - 1]!.baseLat);
   });
 
-  it("is the same block on a phone planet as on a desktop one, in the planet's own units (up to the smallest letter), and never under three quarters of the least size", () => {
-    const ph = solve(28, PHONE).placements;
+  it("is the same block on a phone planet as on a desktop one, never under three quarters of the least letter size", () => {
+    const ph = place(PHONE).placements;
     ph.forEach((p) => expect(p.capR * PHONE).toBeGreaterThanOrEqual(0.75 * CAPTION.minCapPx - 1e-6));
-    const d = solve(28, DESKTOP).placements;
-    expect(ph.length).toBe(d.length);
+    expect(ph.length).toBe(place(DESKTOP).placements.length);
   });
 
   it("knows how far from the central meridian a parallel is seen well, 0 when not at all and pi over the pole", () => {
@@ -258,8 +276,8 @@ describe("the parallels are picked for the camera's tilt", () => {
   it("is sized by the ink the faces report (an overhanging script is not clipped): the box's width is what the layout gives the strip", () => {
     const wide = (r: CaptionRun) => r.text.length * 0.5;
     const rows = [[{ text: "Poetry", style: "script" as const }]];
-    const a = layoutCaption({ rows, measure: wide, rPx: DESKTOP, viewLat: 0, d: D_REST });
-    const b = layoutCaption({ rows, measure: wide, box: () => ({ widthEm: 3.6, aboveCaps: 1.5, belowCaps: 0.8 }), rPx: DESKTOP, viewLat: 0, d: D_REST });
+    const a = layoutCaption({ rows, measure: wide, rPx: DESKTOP, d: D_REST });
+    const b = layoutCaption({ rows, measure: wide, box: () => ({ widthEm: 3.6, aboveCaps: 1.5, belowCaps: 0.8 }), rPx: DESKTOP, d: D_REST });
     expect(b.lines[0]!.widthEm).toBe(3.6);
     expect(b.lines[0]!.aboveCaps).toBe(1.5);
     expect(b.lines[0]!.belowCaps).toBe(0.8);
@@ -293,22 +311,36 @@ describe("the rows that take turns", () => {
     expect(swapExitAngle(300, 0, -start)).toBeGreaterThan(0); // the other side
   });
 
-  it("brings the incoming rows in only once every outgoing row has gone, from their own sides, each `staggerMs` after the one above", () => {
+  it("brings each incoming row in as its own outgoing row has gone, from their own sides, each `staggerMs` after the one above", () => {
     const rows = 2;
-    const gone = swapExitMs(rows);
+    const at = swapEnterAt();
+    expect(at).toBe(CAPTION.cycle.exitMs);
+    // row 0 has left (ease-in: on the face until its very end) exactly when its replacement may start
+    expect(swapExitAngle(at, 0, start)).toBe(-start);
     expect(swapEnterAngle(0, 0, rows, start)).toBe(start);
-    expect(swapEnterAngle(gone - 1, 0, rows, start)).toBe(start); // leaving room first
-    expect(swapEnterAngle(gone + 100, 0, rows, start)).toBeLessThan(start);
-    expect(swapEnterAngle(gone + 100, 1, rows, start)).toBe(start); // row 2 waits for its stagger
-    expect(swapEnterAngle(gone + CAPTION.enter.staggerMs + CAPTION.enter.ms, 1, rows, start)).toBe(0);
-    expect(swapEnterAngle(gone + 300, 0, rows, -start)).toBeGreaterThan(-start); // from the west
-    expect(swapMs(rows)).toBe(gone + entranceMs(rows));
+    expect(swapEnterAngle(at - 1, 0, rows, start)).toBe(start);
+    expect(swapEnterAngle(at + 100, 0, rows, start)).toBeLessThan(start);
+    expect(swapEnterAngle(at + 100, 1, rows, start)).toBe(start); // row 2 waits for its stagger
+    expect(swapEnterAngle(at + CAPTION.enter.staggerMs + CAPTION.enter.ms, 1, rows, start)).toBe(0);
+    expect(swapEnterAngle(at + 300, 0, rows, -start)).toBeGreaterThan(-start); // from the west
+    expect(swapMs(rows)).toBe(at + entranceMs(rows));
+    // every row's replacement starts after its own outgoing row has gone (no two words on one parallel)
+    for (let r = 0; r < 4; r++) expect(at + r * CAPTION.enter.staggerMs).toBeGreaterThanOrEqual(r * CAPTION.cycle.exitStaggerMs + CAPTION.cycle.exitMs - 1e-9);
+  });
+
+  it("scales the shade by how present a row is: none behind the planet, full in place, both sides", () => {
+    expect(dimPresence(start, start)).toBe(0);
+    expect(dimPresence(-start, start)).toBe(0);
+    expect(dimPresence(0, start)).toBe(1);
+    expect(dimPresence(start / 2, start)).toBeCloseTo(0.5, 9);
+    expect(dimPresence(-start / 4, start)).toBeCloseTo(0.75, 9);
+    expect(dimPresence(1, 0)).toBe(1);
   });
 
   it("dwells several seconds, and exits and enters within about two", () => {
     expect(CAPTION.cycle.dwellMs).toBeGreaterThanOrEqual(5000);
     expect(CAPTION.cycle.dwellMs).toBeLessThanOrEqual(6500);
-    expect(swapMs(2)).toBeLessThan(2500);
+    expect(swapMs(2)).toBeLessThan(2000);
   });
 });
 
@@ -345,7 +377,7 @@ describe("what is seen: faces and the horizon", () => {
 
   it("starts every line hidden: from `entranceStart` the whole line is behind the horizon of any camera the page has, at any view latitude it can have", () => {
     for (const viewLat of [28, 10, -20, 40]) {
-      for (const l of layout(DESKTOP, viewLat).lines) {
+      for (const l of layout(DESKTOP).lines) {
         const start = entranceStart(l, viewLat);
         expect(start).toBeGreaterThanOrEqual(CAPTION.enter.fromDeg * DEG);
         expect(start).toBeLessThanOrEqual(Math.PI);
@@ -385,9 +417,11 @@ describe("the entrance: fast, then a slow settle, staggered, a function of time"
   });
 
   it("staggers the lines: line 1 starts `staggerMs` after line 0 and stays behind it all the way", () => {
-    expect(CAPTION.enter.staggerMs).toBe(260);
-    for (const t of [0, 100, 259]) expect(enteringAngle(t, 1, start)).toBe(start); // it has not started
-    for (const t of [300, 500, 900]) expect(enteringAngle(t, 1, start)).toBeGreaterThan(enteringAngle(t, 0, start));
+    expect(CAPTION.enter.staggerMs).toBeGreaterThanOrEqual(420);
+    expect(CAPTION.enter.staggerMs).toBeLessThanOrEqual(500);
+    const g = CAPTION.enter.staggerMs;
+    for (const t of [0, 100, g - 1]) expect(enteringAngle(t, 1, start)).toBe(start); // it has not started
+    for (const t of [g + 40, g + 200, g + 600]) expect(enteringAngle(t, 1, start)).toBeGreaterThan(enteringAngle(t, 0, start));
     expect(enteringAngle(CAPTION.enter.staggerMs + CAPTION.enter.ms, 1, start)).toBe(0);
     expect(entranceMs(2)).toBe(CAPTION.enter.ms + CAPTION.enter.staggerMs);
   });

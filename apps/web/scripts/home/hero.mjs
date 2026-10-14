@@ -713,7 +713,7 @@ for (const [label, options, scheme] of SHAPES) {
   await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
   await waitGlobe(page);
   await waitDebug(page);
-  await sleep(3400); // (the entrance: three lines, 260 ms apart, a second each, after the page's own fade-in)
+  await sleep(3800); // (the entrance: four rows, 450 ms apart, 0.9 s each, after the page's own fade-in)
   const p = await planetOf(page);
   const c = await captionOf(page);
   const ring = await ringOf(page);
@@ -724,12 +724,12 @@ for (const [label, options, scheme] of SHAPES) {
   ok(c.built && c.showcase && c.overlayHidden && c.lines.length >= 3 && c.lines.every((l) => l.visible && Math.abs(l.theta) < 1e-3), `${label}: the caption is built and in place (crisp, ${c.lines.map((l) => l.text).join(" / ")})`);
   {
     const said = c.lines.map((l) => l.text).join(" ").replace(/\s+/g, " ");
-    ok(c.lines.length === 4 && /A personal archive, organised around places\./.test(said) && /Drag to explore\. Pick a place\./.test(said), `${label}: four rows: the first phrase set (what the site is) over the call to action (${said})`);
+    ok(c.lines.length === 4 && /A personal archive, organised around places\./i.test(said) && /Drag to explore\. Pick a place\./i.test(said) && said === said.toUpperCase(), `${label}: four rows: the first phrase set (what the site is) over the call to action (${said}: in capitals)`);
     ok(c.cycle.sets >= 2 && c.cycle.current === 0, `${label}: the phrase sets take turns (${c.cycle.sets} sets, the first shown)`);
-    // the lines lie on real parallels, top to bottom, the call to action the largest letters
+    // the lines lie on real parallels, top to bottom, every row at one cap height
     const lats = c.lines.map((l) => l.baseLat);
     ok(lats.every((x, i) => i === 0 || x < lats[i - 1]), `${label}: every line is on its own parallel, one under the other (${lats.map((x) => x.toFixed(1)).join(", ")})`);
-    ok(c.lines.at(-1).capR >= Math.max(...c.lines.map((l) => l.capR)) - 1e-9 && c.lines[2].capR > c.lines[0].capR, `${label}: the call to action has the largest letters`);
+    ok(c.lines.every((l) => Math.abs(l.capR - c.lines[0].capR) < 1e-9), `${label}: every row has the same letter size`);
   }
   ok(p.labels === 0, `${label}: every box and label is out`);
   ok(p.lift > 5 && p.cy - p.r >= -0.5, `${label}: the planet is lifted by ${p.lift.toFixed(0)} px (cover ${p.cover}), its top is inside the window (${Math.round(p.cy - p.r)} px)`);
@@ -799,7 +799,7 @@ for (const [label, options, scheme] of SHAPES) {
   await ctx.close();
 }
 
-// The caption's entrance, held at times (pinned): each line starts behind the planet, arrives fast and settles slowly, each line 260 ms after the one before.
+// The caption's entrance, held at times (pinned): each line starts behind the planet, arrives fast and settles slowly, each line 450 ms after the one before.
 {
   const { ctx, page } = await newPage(DESKTOP);
   await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
@@ -813,17 +813,17 @@ for (const [label, options, scheme] of SHAPES) {
   };
   // (the sides the lines come in from are random per entrance: held all from the east here, so the order of the turns can be read off the angles)
   await page.evaluate(() => window.__globeDebug.captionSeed(null));
-  // a logical line's pieces come in together: the turns are the parents, 260 ms apart
+  // a logical line's pieces come in together: the turns are the parents, 450 ms apart
   const turn = (lines, p) => lines.filter((l) => l.parent === p);
   const f0 = await at(0);
   ok(f0.every((l) => !l.visible && l.theta > 1.5), "entrance: at 0 ms every line is behind the planet");
   const f100 = await at(100);
   ok(turn(f100, 0).every((l) => l.visible) && turn(f100, 1).every((l) => !l.visible), "entrance: at 100 ms the first line is arriving and the second has not started");
-  const f400 = await at(400);
-  ok(turn(f400, 0).every((l) => l.visible) && turn(f400, 1).every((l) => l.visible) && turn(f400, 2).every((l) => !l.visible) && turn(f400, 1)[0].theta > turn(f400, 0)[0].theta, "entrance: at 400 ms lines 1 and 2 are in view (line 2 behind line 1), line 3 is waiting for its turn (260 ms stagger)");
-  const f700 = await at(700);
-  ok(turn(f700, 0)[0].theta < 0.1 && turn(f700, 1)[0].theta > turn(f700, 0)[0].theta && turn(f700, 2)[0].theta > turn(f700, 1)[0].theta, "entrance: at 700 ms line 1 is almost there (fast), the others settling in order");
-  const fEnd = await at(1000 + 3 * 260 + 300);
+  const f600 = await at(600);
+  ok(turn(f600, 0).every((l) => l.visible) && turn(f600, 1).every((l) => l.visible) && turn(f600, 2).every((l) => !l.visible) && turn(f600, 1)[0].theta > turn(f600, 0)[0].theta, "entrance: at 600 ms lines 1 and 2 are in view (line 2 behind line 1), line 3 is waiting for its turn (450 ms stagger)");
+  const f1000 = await at(1000);
+  ok(turn(f1000, 0)[0].theta < 0.1 && turn(f1000, 1)[0].theta > turn(f1000, 0)[0].theta && turn(f1000, 2)[0].theta > turn(f1000, 1)[0].theta, "entrance: at 1000 ms line 1 is almost there (fast), the others settling in order");
+  const fEnd = await at(900 + 3 * 450 + 300);
   ok(fEnd.every((l) => Math.abs(l.theta) < 0.01), "entrance: once the last line's turn has run every line is in place (the ease has 0.1 % of the way left)");
   // random sides: over a few seeds each line comes from the west and from the east, a seed gives the same sides again, and the angle's sign is the side
   const sides = async (seed) => {

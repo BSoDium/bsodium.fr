@@ -95,7 +95,7 @@ export function siteCaption(counts?: KindCounts | null): SiteCaption {
   const sets: CaptionRow[][] = [
     [
       [{ text: "A " }, { text: "personal archive", style: "heavy" }, { text: "," }],
-      [{ text: "organised around " }, { text: "places", style: "heavy-italic" }, { text: "." }],
+      [{ text: "organised around " }, { text: "places", style: "heavy" }, { text: "." }],
     ],
     [names(0, 1), names(2, 3)],
   ];

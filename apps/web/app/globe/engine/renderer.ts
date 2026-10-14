@@ -54,11 +54,11 @@ import { liftFor } from "./lift";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
-import { SHOWCASE_STATE, type CaptionContent } from "./caption";
+import { SHOWCASE_STATE, bandLat, inBand, shellWindowFactor, type CaptionContent } from "./caption";
 import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
-import { CAPTION, INSET_EASE, RING, SKY, TUNING } from "./tuning";
+import { CAPTION, INSET_EASE, RING, SKY, START_VIEW, TUNING } from "./tuning";
 import { fromViewState } from "./view";
 import { markerShown } from "./visibility";
 import { perfEnd, perfStart } from "./perf";
@@ -141,7 +141,7 @@ export class GlobeRenderer {
   private gl: WebGLRenderer;
   private globe: GlobeScene;
   private camera = new PerspectiveCamera(FOV_DEG, 1, 0.05, 20);
-  private view: ViewState = { lon: 15, lat: 28, zoom: 0 };
+  private view: ViewState = { lon: START_VIEW.lon, lat: START_VIEW.lat, zoom: 0 };
   private width = 1;
   private height = 1;
   private bufW = 1;
@@ -161,6 +161,9 @@ export class GlobeRenderer {
    * what is wanted now; `showcaseActive` whether this page has a showcase at all (a ring, and not a debug page without `?showcase`).
    */
   private showcaseOn = false;
+  /** Whether the caption is wanted AND shown now (the showcase is on and the camera's latitude is in its band) and the camera's latitude glide towards the band, if any. */
+  private captionOn = false;
+  private latSnap: { from: number; to: number; t0: number } | null = null;
   private showcaseActive = false;
   /** A press began while the showcase was on: its tap is not a click on a box nobody could see (cleared a moment after the press ends). */
   private inertPress = false;
@@ -292,6 +295,7 @@ export class GlobeRenderer {
       // The home screen opens in its showcase: the boxes are out from the first frame (nothing fades), and the caption comes in with the first frame.
       this.showcaseOn = true;
       this.lod.setSuppressed(true, true);
+      this.captionOn = true;
       this.caption?.show(null);
     }
     this.setTheme(opts.theme);
@@ -477,10 +481,12 @@ export class GlobeRenderer {
     const s = this.start;
     // The home screen opens fully zoomed OUT (the lowest zoom: the fit when there is no ring): the ring and the caption are there from the first frame.
     // The world view is the whole-globe fit on a page without the showcase, as before it.
-    if (!s) return { lon: 15, lat: 28, zoom: this.showcaseActive ? this.minZoom : this.fit };
+    // (a showcase at the start holds the latitude inside the caption's band: the caption is there from the first frame, nothing glides)
+    if (!s) return { lon: START_VIEW.lon, lat: START_VIEW.lat, zoom: this.showcaseActive ? this.minZoom : this.fit };
     if (s.fitRadiusKm !== undefined) return { lon: s.lon, lat: s.lat, zoom: Math.max(this.fit, this.fitZoomFor(s.fitRadiusKm)) };
     if (s.zoom01 === null) return { lon: s.lon, lat: s.lat, zoom: TUNING.selectZoom };
-    return fromViewState({ lon: s.lon, lat: s.lat, zoom: s.zoom01, street: s.street }, this.fit, TUNING.maxZoom);
+    const v = fromViewState({ lon: s.lon, lat: s.lat, zoom: s.zoom01, street: s.street }, this.fit, TUNING.maxZoom);
+    return this.showcaseOn ? { ...v, lat: bandLat(v.lat) } : v;
   }
 
   /** The animated inset now (CSS px). */
@@ -560,6 +566,8 @@ export class GlobeRenderer {
     if (on === this.suspended) return;
     this.suspended = on;
     this.caption?.setPaused(this.hidden || this.lost || this.suspended);
+    // Nothing of the caption may keep the frame loop alive while the street map owns the view: its timed things run to their end now.
+    if (on) this.caption?.settle();
     this.noteActivity();
     // A suspended canvas keeps its last frame, which is stale as soon as the camera moves: it must not show through the
     // street map's dissolving edge (the inset fade) or anywhere else. Made transparent here (NOT `visibility: hidden`: the
@@ -582,6 +590,7 @@ export class GlobeRenderer {
   setView(v: Partial<ViewState>) {
     this.noteActivity();
     this.flight = null;
+    this.latSnap = null;
     this.velocity = STILL;
     this.view = this.clampView({ ...this.view, ...v });
     this.requestRender();
@@ -592,6 +601,7 @@ export class GlobeRenderer {
     this.noteChange();
     const beyond = o?.beyondLimit === true;
     const to = this.clampView({ ...this.view, ...v }, beyond);
+    this.latSnap = null;
     if (this.reduced) {
       this.flight = null;
       this.velocity = STILL;
@@ -919,6 +929,8 @@ export class GlobeRenderer {
   private onContextLost() {
     this.lost = true;
     this.caption?.setPaused(true);
+    // (the second canvas must not sit over the context-lost notice with its last frame)
+    this.caption?.hideCrisp();
     this.noteActivity();
     this.cancelFrame();
     this.dirty = true;
@@ -981,6 +993,16 @@ export class GlobeRenderer {
       this.velocity = step.velocity;
       if (!isStill(this.velocity)) more = true;
     }
+    if (this.latSnap) {
+      const a = this.latSnap;
+      const t = clamp((now - a.t0) / CAPTION.band.snapMs, 0, 1);
+      const e = 1 - (1 - t) ** 3;
+      this.view = this.clampView({ ...this.view, lat: a.from + (a.to - a.from) * e });
+      if (t >= 1) this.latSnap = null;
+      else more = true;
+    }
+    if (this.showcaseOn) this.guardCaption(now);
+    if (this.latSnap) more = true;
     if (this.globe.routes.advance(now, zoomToRadiusPx(this.view.zoom))) more = true;
     return more;
   }
@@ -1101,7 +1123,7 @@ export class GlobeRenderer {
     this.lastTickAt = now;
     const flying = this.flight !== null;
     const moving = this.advance(now);
-    const fading = this.caption?.animating ?? false;
+    const fading = !this.suspended && (this.caption?.animating ?? false);
     if (moving) this.spin.settle(now); // a flight, inertia or the inset slide is camera motion: not idle (a turning globe coasts to rest)
     // The flight has just landed exactly on its target: whatever is left of the coasting is dropped, so the camera stays on it.
     if (flying && this.flight === null) this.spin.activity(now);
@@ -1120,13 +1142,22 @@ export class GlobeRenderer {
    * The crisp caption (a canvas of its own over the globe's, same camera): drawn into a window round the planet only (the lines never leave the
    * shell's disc), by the same camera narrowed to that window (`setViewOffset` composed with the lift and the inset's shift). Nothing in pixel mode.
    */
+  private captionRect = { w: 0, h: 0, left: 0, top: 0, mask: "", full: { w: 0, h: 0 }, at: { x: 0, y: 0 } };
   private renderCrispCaption() {
     const caption = this.caption;
     if (!caption) return;
+    // Hidden, or nothing in view: no window, no view offset, no projection update (the canvas is hidden once and left alone).
+    if (!caption.visible) {
+      caption.hideCrisp();
+      return;
+    }
     const P = this.pixel;
     const cw = this.bufW * P;
     const ch = this.bufH * P;
-    const R = silhouetteRadiusPx(this.drawView().zoom, ch) * 1.2 + 4;
+    // The window covers the SHELL's silhouette, not a fixed share of the planet's (the shell is above the surface: a row near the limb is
+    // farther from the centre than the planet is wide; a window cut through it shows as a vertical edge on the letters).
+    const dist = cameraDistance(this.drawView().zoom, ch);
+    const R = silhouetteRadiusPx(this.drawView().zoom, ch) * shellWindowFactor(dist) * 1.03 + 4;
     const cx = cw / 2 - this.shiftBuf * P;
     const cy = ch / 2 - this.liftBuf * P;
     const x0 = Math.max(0, Math.floor(cx - R));
@@ -1137,11 +1168,17 @@ export class GlobeRenderer {
     const cam = this.camera;
     cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf + x0 / P, this.liftBuf + y0 / P, (x1 - x0) / P, (y1 - y0) / P);
     cam.updateProjectionMatrix();
-    caption.renderCrisp(
-      cam,
-      { w: x1 - x0, h: y1 - y0, left: this.canvasLeft + x0, top: this.canvasTop + y0, mask: this.canvas.style.maskImage, full: { w: cw, h: ch }, at: { x: x0, y: y0 } },
-      window.devicePixelRatio || 1,
-    );
+    const rect = this.captionRect;
+    rect.w = x1 - x0;
+    rect.h = y1 - y0;
+    rect.left = this.canvasLeft + x0;
+    rect.top = this.canvasTop + y0;
+    rect.mask = this.canvas.style.maskImage;
+    rect.full.w = cw;
+    rect.full.h = ch;
+    rect.at.x = x0;
+    rect.at.y = y0;
+    caption.renderCrisp(cam, rect, window.devicePixelRatio || 1);
     if (this.shiftBuf || this.liftBuf) cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf, this.liftBuf, this.bufW, this.bufH);
     else cam.clearViewOffset();
     cam.updateProjectionMatrix();
@@ -1246,7 +1283,7 @@ export class GlobeRenderer {
     };
     const ch = this.bufH * P;
     return {
-      rows: c.edges().map((e) => ({ row: e.row, top: e.top.map(toPx), bottom: e.bottom.map(toPx) })),
+      rows: c.edges().map((e) => ({ row: e.row, top: e.top.map(toPx), bottom: e.bottom.map(toPx), base: e.base.map(toPx) })),
       centre: [(this.bufW * P) / 2 - this.shiftBuf * P + this.canvasLeft, ch / 2 - this.liftBuf * P + this.canvasTop],
       radius: silhouetteRadiusPx(this.drawView().zoom, ch),
       zoom: this.view.zoom,
@@ -1298,6 +1335,12 @@ export class GlobeRenderer {
     return began;
   }
 
+  /** Checks and captures: the dimming behind the words ("ellipse", "bands", "none"; null: the tuned one). */
+  setCaptionDim(mode: "ellipse" | "bands" | "none" | null) {
+    this.caption?.setDimMode(mode);
+    this.requestRender();
+  }
+
   /** Checks and captures: the seed of the sides the caption's lines come in from (null: all from the east); drawn again at once. */
   setCaptionSeed(seed: number | null) {
     this.caption?.setSeed(seed);
@@ -1319,7 +1362,7 @@ export class GlobeRenderer {
   captionState() {
     const c = this.caption;
     if (!c) return null;
-    return { ...c.state(), showcase: this.showcaseOn, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
+    return { ...c.state(), showcase: this.showcaseOn, band: { shown: this.captionOn, snapping: this.latSnap !== null, deg: CAPTION.band.deg }, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
   }
 
   /* ------------------------------ showcase ------------------------------ */
@@ -1348,8 +1391,56 @@ export class GlobeRenderer {
   private applyShowcase() {
     this.lod.setSuppressed(this.showcaseOn);
     const now = performance.now();
-    if (this.showcaseOn) this.caption?.show(now);
-    else this.caption?.hide(now, this.captionExit);
+    if (this.showcaseOn) this.guardCaption(now);
+    else {
+      this.latSnap = null;
+      this.captionOn = false;
+      this.caption?.hide(now, this.captionExit);
+    }
+    if (this.suspended) this.caption?.settle();
+    this.requestRender();
+  }
+
+  /** Where a camera outside the band glides to: its nearest edge, or the equator (`CAPTION.band.snapTo`). */
+  private snapTarget(lat: number): number {
+    return CAPTION.band.snapTo === "equator" ? 0 : bandLat(lat);
+  }
+
+  /**
+   * The caption needs the camera inside its latitude band (`CAPTION.band`: the rows are fixed parallels about the equator). While the showcase is
+   * on: a camera outside the band glides its latitude (only: never the longitude, the zoom is the page's) to the band's nearest edge, ease-out,
+   * and the entrance starts when it has landed (`show` is not called before); a camera that leaves the band under a caption (a flight) fades
+   * it, and it comes back, entering again, once the camera is in the band. A gesture ends the showcase (`dropShowcase`), which drops the glide.
+   * Runs every frame (a few comparisons) and when the showcase changes.
+   */
+  private guardCaption(now: number) {
+    const caption = this.caption;
+    if (!caption || !this.showcaseOn) return;
+    const lat = this.view.lat;
+    if (this.captionOn) {
+      if (!inBand(lat, CAPTION.band.hysteresisDeg)) {
+        this.captionOn = false;
+        caption.hide(now, "fade");
+      }
+      return;
+    }
+    if (this.latSnap || this.flight !== null) return; // (the glide, or somebody else's flight, is under way: wait for it)
+    if (inBand(lat)) {
+      this.captionOn = true;
+      caption.show(now);
+      this.requestRender();
+      return;
+    }
+    if (this.reduced) {
+      this.view = this.clampView({ ...this.view, lat: this.snapTarget(lat) });
+      this.captionOn = true;
+      caption.show(now);
+      this.requestRender();
+      return;
+    }
+    this.noteChange();
+    this.velocity = STILL;
+    this.latSnap = { from: lat, to: this.snapTarget(lat), t0: now };
     this.requestRender();
   }
 

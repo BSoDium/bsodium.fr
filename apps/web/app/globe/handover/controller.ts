@@ -71,7 +71,6 @@ export interface HandoverOptions {
   ringText?: string;
   /** The lines of the caption that wraps the planet (`GlobeProps.captionPhrases`), the cover and the showcase at start: handed to the globe unchanged. */
   captionPhrases?: import("../types").GlobeCaption;
-  captionPixel?: boolean;
   coverBottom?: number;
   showcase?: boolean;
   /** Testing and tuning: street engine options (pinned source, timings ...). */
@@ -225,7 +224,6 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     zoomLimit: restoring ? Infinity : GLOBE_MAX_ZOOM,
     ringText: opts.ringText,
     captionPhrases: opts.captionPhrases,
-    captionPixel: opts.captionPixel,
     coverBottom: opts.coverBottom,
     showcase: opts.showcase,
     onSelect: opts.onSelect,

@@ -15,7 +15,7 @@
  * nothing is laid out per frame. The lines are on the globe's scene: depth-tested against the planet, back faces culled, so a letter past the
  * horizon is not there (it can never be seen from behind, mirrored).
  */
-import { CAPTION } from "./tuning";
+import { CAPTION, START_VIEW } from "./tuning";
 import type { GlobeTheme } from "./colors";
 import { clamp, DEG } from "./geo";
 
@@ -53,17 +53,18 @@ export const CAPTION_STYLES: Readonly<Record<CaptionStyleKey, { face: CaptionFac
 /**
  * Per face: the CSS family (the page's own faces are declared in app.css and already in the page; the handwriting is added by the layer with the
  * `FontFace` API only when a caption has a word in it), the stack behind it, the size it is drawn at relative to the serif (so the caps agree: the
- * mono's capitals are taller than the serif's at one em, the handwriting's much smaller), a baseline drop in ems and the tracking in ems.
+ * mono's capitals are taller than the serif's at one em, the handwriting's much smaller), a baseline drop in ems and the tracking in ems (the
+ * face's own plus `CAPTION.tracking`: the caption is set in capitals, which want a little air).
  */
 export const CAPTION_FACES = {
-  serif: { family: '"Newsreader Variable"', fallback: 'Georgia, "Times New Roman", serif', scale: 1, dy: 0, tracking: 0.005, embolden: 0, url: null },
-  mono: { family: '"JetBrains Mono Variable"', fallback: 'ui-monospace, Menlo, Consolas, monospace', scale: 0.88, dy: 0, tracking: 0, embolden: 0, url: null },
+  serif: { family: '"Newsreader Variable"', fallback: 'Georgia, "Times New Roman", serif', scale: 1, dy: 0, tracking: 0.005 + CAPTION.tracking.serif, embolden: 0, url: null },
+  mono: { family: '"JetBrains Mono Variable"', fallback: 'ui-monospace, Menlo, Consolas, monospace', scale: 0.88, dy: 0, tracking: CAPTION.tracking.mono, embolden: 0, url: null },
   script: {
     family: '"Caption Script"',
     fallback: '"Snell Roundhand", "Apple Chancery", "Segoe Script", cursive',
     scale: 1.0,
     dy: 0,
-    tracking: 0.004,
+    tracking: 0.004 + CAPTION.tracking.script,
     /** A formal script's hairlines would vanish under a thin outline: its letters are thickened by this many caps (a stroke in the face colour). */
     embolden: 0.05,
     url: "/fonts/imperial-script-1.010-latin-400.woff2",
@@ -94,7 +95,7 @@ export function captionColors(theme: GlobeTheme): {
   const mix = (a: readonly number[], b: readonly number[], t: number): [number, number, number] => [a[0]! + (b[0]! - a[0]!) * t, a[1]! + (b[1]! - a[1]!) * t, a[2]! + (b[2]! - a[2]!) * t];
   const face = mix(theme.background, theme.ink, dark ? CAPTION.colors.faceMix.dark : CAPTION.colors.faceMix.light);
   const outline = mix(theme.coast, theme.ink, dark ? CAPTION.colors.outlineMix.dark : CAPTION.colors.outlineMix.light);
-  return { face, outline, side: mix(face, outline, CAPTION.colors.sideMix) };
+  return { face, outline, side: mix(face, outline, dark ? CAPTION.colors.sideMix.dark : CAPTION.colors.sideMix.light) };
 }
 
 /** The face asked of the system when a face could not be had: the handwriting is the one that can fail (its file), and the heavy italic serif stands in for it. */
@@ -161,7 +162,7 @@ export interface CaptionLayout {
 export interface LayoutInput {
   /** The rows, top to bottom, each a list of styled runs. */
   rows: readonly (readonly CaptionRun[])[];
-  /** The cap height of each row, planet radii (default: `CAPTION.capR.slot` for the rows but the last two, `.fixed` for those). */
+  /** The cap height of each row, planet radii (default: `CAPTION.capR`, one size for every row). */
   caps?: readonly number[];
   /** A run's advance in ems (of the serif: measured from the face the run is set in). */
   measure(run: CaptionRun): number;
@@ -172,9 +173,7 @@ export interface LayoutInput {
   box?(runs: readonly CaptionRun[]): PieceBox;
   /** The planet's radius at the lowest zoom, CSS px (the least size a letter may have is in CSS px). */
   rPx: number;
-  /** The view's latitude, degrees: the parallels are picked for it (`solveParallels`). */
-  viewLat: number;
-  /** The camera's distance at the lowest zoom (planet radii): the projection the parallels are picked in. */
+  /** The camera's distance at the lowest zoom (planet radii): the chords the block is fitted to. */
   d: number;
 }
 
@@ -249,17 +248,16 @@ export function splitRuns(runs: readonly CaptionRun[], measure: (run: CaptionRun
 export const spanOf = (widthEm: number, capR: number, lat: number): number => (widthEm * capR) / CAPTION_FACE.capEm / (CAPTION.radius * Math.cos(clamp(lat, -85, 85) * DEG));
 
 /**
- * The rows of the caption as pieces: each at its own cap height (the call to action, the last rows, is the biggest) and never under `minCapPx`
+ * The rows of the caption as pieces: each at the caption's one cap height and never under `minCapPx`
  * CSS px. The rows are what the app gave (it wraps its own phrases, so each row is one line of type); nothing here depends on the camera: the same
- * pieces serve every tilt, and `solveParallels` gives them their parallels.
+ * pieces serve every camera, and `placeRows` gives them their fixed parallels.
  */
 export function planPieces(input: Pick<LayoutInput, "rows" | "caps" | "measure" | "box" | "rPx">): { pieces: CaptionPiece[] } {
   const floorCap = CAPTION.minCapPx / input.rPx;
   const boxOf = (rs: readonly CaptionRun[]): PieceBox =>
     input.box?.(rs) ?? { widthEm: rs.reduce((a, r) => a + input.measure(r), 0), aboveCaps: CAPTION_FACE.above, belowCaps: CAPTION_FACE.below };
-  const n = input.rows.length;
   const pieces = input.rows.map((runs, i): CaptionPiece => {
-    const nominal = input.caps?.[i] ?? (i >= n - 2 ? CAPTION.capR.fixed : CAPTION.capR.slot);
+    const nominal = input.caps?.[i] ?? CAPTION.capR;
     return { runs: [...runs], text: runsText(runs), parent: i, cap: Math.max(nominal, floorCap), box: boxOf(runs) };
   });
   return { pieces };
@@ -278,17 +276,6 @@ export function visibleHalfSpan(viewLat: number, lat: number, psi: number): numb
   const x = (Math.cos(psi) - Math.sin(vl) * Math.sin(L)) / den;
   return x >= 1 ? 0 : x <= -1 ? Math.PI : Math.acos(x);
 }
-
-/** Screen height (planet radii, at the camera's focal length) of the point of the shell `delta` radians along the central meridian from the view's centre. */
-export const meridianY = (delta: number, d: number, r: number = CAPTION.radius): number => (r * Math.sin(delta)) / (d - r * Math.cos(delta));
-
-/** The inverse of `meridianY`: the offset along the meridian, radians, that lands at screen height `y`. */
-export function meridianDelta(y: number, d: number, r: number = CAPTION.radius): number {
-  return Math.asin(clamp((y * d) / (r * Math.sqrt(1 + y * y)), -1, 1)) - Math.atan(y);
-}
-
-/** Screen height per unit of arc length along the central meridian at offset `delta` (the local scale of the projection). */
-const meridianScale = (delta: number, d: number, r: number): number => (d * Math.cos(delta) - r) / ((d - r * Math.cos(delta)) ** 2);
 
 /**
  * The screen height (planet radii, at the camera's focal length) of the point at longitude `a` from the view's central meridian on the parallel
@@ -321,230 +308,97 @@ export interface Placement {
   /** Cap height after shrinking, planet radii of arc. */
   capR: number;
   halfSpan: number;
-  /** Screen height of the baseline at the central meridian (the solver's own coordinate; tests read it). */
+  /** Screen height of the baseline at the central meridian (tests read it). */
   y: number;
 }
 
-/** What a placement solved: the placements, the block's scale and its clearances (screen units, the least over the lines' width, between neighbours). */
-/** What a solve leaves for the next one of a camera that moved a little (a drag): where the search starts, which makes it a few steps instead of many. */
-export interface SolveHint {
-  scale: number;
-  mirrorScale: number;
-  top: number;
-}
 
-export interface Solved {
-  placements: Placement[];
-  scale: number;
-  hint: SolveHint;
-  /** The least vertical clearance between the ink of row i and row i + 1 over the width both have (planet radii at the focal length). */
-  clearances: number[];
-  /** The block's middle on the screen (the mean of its top and bottom edges at the central meridian). */
-  centreY: number;
-}
+/* ------------------------------------------------------------------ the rows on the equator */
 
 /**
- * Pick the parallel of every row for a camera looking at latitude `viewLat` from distance `d`, so that the rows are CLEAR OF ONE ANOTHER BY THE
- * SAME DISTANCE ON THE SCREEN and the block is centred on the disc, whatever the tilt.
- *
- * Why not fixed latitudes, nor even steps at the central meridian (measured, docs/web-architecture.md): a parallel's projection bends the more
- * the nearer the pole, so two adjacent lines of different latitude are not parallel on the screen: equal gaps at the middle of the strip became
- * unequal gaps at its ends (from the north the top rows, nearest the pole, converge at their ends and touch while the middle looks fine; from
- * the south the poleward rows are the big call to action, and the same happens there). So the clearance that is held is the LEAST ONE over the
- * strips' width: the top edge of row i + 1 against the bottom edge of row i, both parallels, sampled along the longitude both rows cover. Every
- * row stays on a real parallel; the solution is the lowest latitude for each row that holds the clearance (a bisection, rows from the top), and
- * the block's top is moved until its middle is where `centreDeg` puts it.
- *
- * The block's scale `k` is the largest (up to 1) at which every row fits the chord of its parallel (`visibleHalfSpan`, `hardSpanDeg`) and the
- * block the disc; it is the SMALLER of the one for the camera and the one for its mirror image, so a tilt and its opposite give the same size,
- * the same clearances and the same centre. Limits: the viewing latitude is taken within +-`tiltMax`, a line stays inside +-`latMax`.
+ * The baseline latitudes of `n` rows of cap height `capR`: FIXED parallels centred on the equator (the middle of the block's capitals is on
+ * latitude 0), `CAPTION.rows.stepCaps` cap heights from one baseline to the next on average, and, when the camera's distance `d` is given,
+ * spaced UNIFORMLY ON THE SCREEN for the load view (`START_VIEW`): equal steps in latitude are unequal on the screen the moment the
+ * equator is not at the middle of the view (the farther from the view's centre, the more a degree is foreshortened), so the middle rows are
+ * moved to the equal steps between the first and the last. Independent of the camera at run time: nothing about the tilt moves a row.
  */
-export function solveParallels(
-  pieces: readonly CaptionPiece[],
-  viewLat: number,
-  d: number,
-  out: Placement[] = [],
-  minScale: number = CAPTION.minScale,
-  hint?: SolveHint | null,
-): Solved {
-  const r = CAPTION.radius;
-  const n = pieces.length;
-  const phi = clamp(viewLat, -CAPTION.tiltMax, CAPTION.tiltMax);
-  const horizon = shellHorizon(d, r);
-  const yMax = meridianY(horizon * CAPTION.blockDiscFraction, d, r);
-  const dc = CAPTION.centreDeg * DEG;
-  const yc = meridianY(dc, d, r);
-  const sc = meridianScale(dc, d, r);
-  const ink = CAPTION.inkFraction;
-  const room = (lat: number, camera: number) => Math.min((CAPTION.hardSpanDeg * DEG) / 2, visibleHalfSpan(camera, lat, horizon * CAPTION.visibleFraction));
-
-  /** Solve the block for scale `k` seen from `camera`; fills `into` and says whether it is within the chords and the disc. */
-  const block = (k: number, camera: number, into: Placement[], topHint?: number): { ok: boolean; clearances: number[]; centreY: number; top: number } => {
-    const caps = pieces.map((p) => p.cap * k);
-    const aboveDeg = pieces.map((p, i) => (ink * caps[i]! * p.box.aboveCaps) / r / DEG);
-    const belowDeg = pieces.map((p, i) => (ink * caps[i]! * p.box.belowCaps) / r / DEG);
-    const half = (i: number, lat: number) => spanOf(pieces[i]!.box.widthEm, caps[i]!, lat) / 2;
-    // (the gap is NOT scaled with the block: the clearance between rows is the same from every tilt, whatever size the letters are)
-    const gap = CAPTION.gapDeg * DEG * r * sc;
-    const lat = new Array<number>(n).fill(0);
-    const clear = new Array<number>(Math.max(0, n - 1)).fill(0);
-    const K = 8;
-    const px = new Float64Array(K + 1);
-    const py = new Float64Array(K + 1);
-    const cx = new Float64Array(K + 1);
-    const cy = new Float64Array(K + 1);
-    const tmp: [number, number] = [0, 0];
-    /**
-     * The clearance between the bottom edge of row i - 1 at `prevLat` and the top edge of row i at `lat`: the least VERTICAL distance on the screen
-     * at the same x (a curve of one row against the curve of the next, as the eye sees them; not at the same longitude: two parallels are not
-     * parallel on the screen, and the steeper they are the more that differs).
-     */
-    const clearance = (i: number, prevLat: number, here: number): number => {
-      const hp = Math.min(half(i - 1, prevLat), Math.PI / 2);
-      const hc = Math.min(half(i, here), Math.PI / 2);
-      for (let s = 0; s <= K; s++) {
-        shellXY(-hp + (2 * hp * s) / K, Math.max(-89.5, prevLat - belowDeg[i - 1]!), camera, d, r, tmp);
-        px[s] = tmp[0];
-        py[s] = tmp[1];
-        shellXY(-hc + (2 * hc * s) / K, Math.min(89.5, here + aboveDeg[i]!), camera, d, r, tmp);
-        cx[s] = tmp[0];
-        cy[s] = tmp[1];
-      }
-      let m = Infinity;
-      for (let s = 0; s <= K; s++) {
-        // the top edge of row i at x = px[s] (its curve is monotone in x on the half of the parallel facing the camera)
-        const x = px[s]!;
-        let y = NaN;
-        for (let t = 1; t <= K; t++) {
-          const x0 = cx[t - 1]!;
-          const x1 = cx[t]!;
-          if ((x0 - x) * (x1 - x) <= 0 && x0 !== x1) {
-            y = cy[t - 1]! + ((cy[t]! - cy[t - 1]!) * (x - x0)) / (x1 - x0);
-            break;
-          }
-        }
-        if (!Number.isNaN(y)) m = Math.min(m, py[s]! - y);
-      }
-      // (no common x at all: the rows do not meet on the screen; judged at the middle)
-      return m === Infinity ? shellY(0, Math.max(-89.5, prevLat - belowDeg[i - 1]!), camera, d, r) - shellY(0, Math.min(89.5, here + aboveDeg[i]!), camera, d, r) : m;
-    };
-    const stackOnce = (top: number) => {
-      lat[0] = top;
-      for (let i = 1; i < n; i++) {
-        const hi = lat[i - 1]! - CAPTION.minLatGapDeg;
-        const lo = lat[i - 1]! - 70;
-        if (clearance(i, lat[i - 1]!, hi) >= gap) lat[i] = hi;
-        else {
-          let a = lo;
-          let b = hi;
-          for (let it = 0; it < 11; it++) {
-            const mid = (a + b) / 2;
-            if (clearance(i, lat[i - 1]!, mid) >= gap) a = mid;
-            else b = mid;
-          }
-          lat[i] = a;
-        }
-      }
-    };
-    /** The rows from `top` down; when they would run past the far pole's floor the whole stack is lifted by what it lacks (it keeps its clearances). */
-    const stack = (top: number) => {
-      let t = top;
-      for (let it = 0; it < 3; it++) {
-        stackOnce(t);
-        const lacks = -CAPTION.latMax - lat[n - 1]!;
-        if (lacks <= 1e-6) break;
-        t += lacks;
-      }
-    };
-    /** The block's top and bottom on the screen: the highest point of the first row's top edge and the lowest of the last row's bottom edge. */
-    const extent = (): [number, number] => {
-      let top = -Infinity;
-      let bot = Infinity;
-      const h0 = Math.min(half(0, lat[0]!), Math.PI / 2);
-      const h1 = Math.min(half(n - 1, lat[n - 1]!), Math.PI / 2);
-      for (let s = 0; s <= 8; s++) {
-        top = Math.max(top, shellY(-h0 + (2 * h0 * s) / 8, Math.min(89.5, lat[0]! + aboveDeg[0]!), camera, d, r));
-        bot = Math.min(bot, shellY(-h1 + (2 * h1 * s) / 8, Math.max(-89.5, lat[n - 1]! - belowDeg[n - 1]!), camera, d, r));
-      }
-      return [top, bot];
-    };
-    const centre = () => {
-      const [t, b] = extent();
-      return (t + b) / 2;
-    };
-    // the top parallel, moved until the block's middle is on `yc` (a secant search: the middle rises with the top parallel, but not linearly near a pole)
-    const at = (t: number): number => {
-      stack(clamp(t, -CAPTION.latMax, CAPTION.latMax));
-      return centre() - yc;
-    };
-    let t0 = topHint ?? camera + CAPTION.centreDeg + 12;
-    let e0 = at(t0);
-    let t1 = t0 + (e0 > 0 ? -3 : 3);
-    let e1 = at(t1);
-    for (let it = 0; it < 5 && Math.abs(e1) > 2e-4; it++) {
-      const denom = e1 - e0;
-      const next = Math.abs(denom) < 1e-12 ? t1 : t1 - (e1 * (t1 - t0)) / denom;
-      t0 = t1;
-      e0 = e1;
-      t1 = clamp(next, -CAPTION.latMax, CAPTION.latMax);
-      e1 = at(t1);
-    }
-    stack(clamp(t1, -CAPTION.latMax, CAPTION.latMax));
-    // never past the pole's side, never on one parallel
-    for (let i = 0; i < n; i++) lat[i] = clamp(lat[i]!, -CAPTION.latMax, CAPTION.latMax);
-    for (let i = 1; i < n; i++) lat[i] = Math.min(lat[i]!, lat[i - 1]! - CAPTION.minLatGapDeg);
-    for (let i = n - 1; i >= 0; i--) lat[i] = Math.max(lat[i]!, -CAPTION.latMax + (n - 1 - i) * CAPTION.minLatGapDeg);
-    let ok = true;
-    for (let i = 0; i < n; i++) {
-      into[i] = { baseLat: lat[i]!, capR: caps[i]!, halfSpan: half(i, lat[i]!), y: shellY(0, lat[i]!, camera, d, r) };
-      if (into[i]!.halfSpan > room(lat[i]!, camera) + 1e-9) ok = false;
-    }
-    const [yTop, yBot] = extent();
-    if (yTop > yMax || yBot < -yMax) ok = false;
-    for (let i = 1; i < n; i++) clear[i - 1] = clearance(i, lat[i - 1]!, lat[i]!);
-    return { ok, clearances: clear, centreY: (yTop + yBot) / 2, top: lat[0]! };
-  };
-
-  /** The block's scale for a camera: the largest that fits (a window round the last one when a hint says where it was, else the whole range). */
-  const scaleFor = (camera: number, last: number | undefined, topHint: number | undefined): number => {
-    const scratch: Placement[] = [];
-    if (last !== undefined) {
-      const hi = Math.min(1, last * 1.1);
-      const lo = Math.max(minScale, last * 0.9);
-      if (block(hi, camera, scratch, topHint).ok) return hi;
-      if (block(lo, camera, scratch, topHint).ok) {
-        let a = lo;
-        let b = hi;
-        for (let it = 0; it < 4; it++) {
-          const mid = (a + b) / 2;
-          if (block(mid, camera, scratch, topHint).ok) a = mid;
-          else b = mid;
-        }
-        return a;
-      }
-    }
-    if (block(1, camera, scratch, topHint).ok) return 1;
-    let lo = minScale;
-    let hi = 1;
-    for (let it = 0; it < 9; it++) {
+export function rowLatitudes(n: number, capR: number, d?: number): number[] {
+  const capDeg = capR / CAPTION.radius / DEG;
+  const step = CAPTION.rows.stepCaps * capDeg;
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) out.push(((n - 1) / 2 - i) * step - capDeg / 2);
+  if (d === undefined || n < 3) return out;
+  const cam = START_VIEW.lat;
+  const y0 = shellY(0, out[0]!, cam, d);
+  const y1 = shellY(0, out[n - 1]!, cam, d);
+  for (let i = 1; i < n - 1; i++) {
+    const y = y0 + ((y1 - y0) * i) / (n - 1);
+    let lo = out[n - 1]! - 1;
+    let hi = out[0]! + 1;
+    for (let it = 0; it < 40; it++) {
       const mid = (lo + hi) / 2;
-      if (block(mid, camera, scratch, topHint).ok) lo = mid;
+      if (shellY(0, mid, cam, d) < y) lo = mid;
       else hi = mid;
     }
-    return lo;
-  };
-  if (n === 0) {
-    out.length = 0;
-    return { placements: out, scale: 1, hint: { scale: 1, mirrorScale: 1, top: 0 }, clearances: [], centreY: 0 };
+    out[i] = (lo + hi) / 2;
   }
-  // the larger tilt of the two mirror images decides: a tilt and its opposite are laid out alike
-  const own = scaleFor(phi, hint?.scale, hint?.top);
-  const mirror = scaleFor(-phi, hint?.mirrorScale, hint ? -hint.top : undefined);
-  const k = Math.min(own, mirror);
-  const solved = block(k, phi, out, hint?.top);
-  out.length = n;
-  return { placements: out, scale: k, hint: { scale: own, mirrorScale: mirror, top: solved.top }, clearances: solved.clearances, centreY: solved.centreY };
+  return out;
 }
+
+/** The pieces on their fixed parallels at scale `scale` of their cap heights (1: as planned): the placements `lineOf` turns into strips. */
+export function placeRows(pieces: readonly CaptionPiece[], d: number, scale = 1, out: Placement[] = []): Placement[] {
+  const n = pieces.length;
+  const caps = pieces.map((p) => p.cap * scale);
+  const lats = rowLatitudes(n, caps.reduce((a, c) => Math.max(a, c), 0), d);
+  for (let i = 0; i < n; i++) {
+    out[i] = { baseLat: lats[i]!, capR: caps[i]!, halfSpan: spanOf(pieces[i]!.box.widthEm, caps[i]!, lats[i]!) / 2, y: shellY(0, lats[i]!, 0, d) };
+  }
+  out.length = n;
+  return out;
+}
+
+/** The camera latitude the caption may be shown at: `lat` held to the band (`CAPTION.band.deg`), the nearest edge when it is outside. */
+export const bandLat = (lat: number): number => clamp(lat, -CAPTION.band.deg, CAPTION.band.deg);
+
+/** Whether `lat` is inside the band, within `slackDeg`. */
+export const inBand = (lat: number, slackDeg = 0): boolean => Math.abs(lat) <= CAPTION.band.deg + slackDeg + 1e-9;
+
+/**
+ * The scale (up to 1) the whole block is drawn at so that every row fits the chord of its parallel for ANY camera inside the band: the worst of
+ * the two ends of the band (`visibleHalfSpan`, `hardSpanDeg`) and the planet's disc (`maxHalfWidth`). Static: it depends on the planet's size and the camera's distance only, never on
+ * where the camera looks, so a tilt cannot make the letters change size. Never under `minScale`.
+ */
+export function fitScale(pieces: readonly CaptionPiece[], d: number, minScale: number = CAPTION.minScale): number {
+  if (pieces.length === 0) return 1;
+  const psi = shellHorizon(d) * CAPTION.visibleFraction;
+  const hard = (CAPTION.hardSpanDeg * DEG) / 2;
+  const fits = (k: number): boolean => {
+    const pl = placeRows(pieces, d, k);
+    return pl.every((p) => {
+      const room = Math.min(hard, visibleHalfSpan(CAPTION.band.deg, p.baseLat, psi), visibleHalfSpan(-CAPTION.band.deg, p.baseLat, psi));
+      if (p.halfSpan > room + 1e-9) return false;
+      // ...and inside the planet's disc on the screen (`maxHalfWidth` of its silhouette's radius): a row that overhangs the limb lands on the
+      // page's own text beside it, whatever its chord is
+      const limit = CAPTION.maxHalfWidth / Math.sqrt(Math.max(1.0001, d * d - 1));
+      for (const cam of [CAPTION.band.deg, -CAPTION.band.deg, 0]) {
+        const hs = Math.min(p.halfSpan, Math.PI / 2);
+        if (Math.abs(shellXY(hs, p.baseLat, cam, d)[0]) > limit + 1e-9) return false;
+      }
+      return true;
+    });
+  };
+  if (fits(1)) return 1;
+  if (!fits(minScale)) return minScale;
+  let lo = minScale;
+  let hi = 1;
+  for (let it = 0; it < 14; it++) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) lo = mid;
+    else hi = mid;
+  }
+  return lo;
+}
+
 
 /**
  * The least scale the block may be shrunk to on a planet `rPx` CSS px in radius: the smallest letter is never under three quarters of the least
@@ -558,14 +412,16 @@ export function minScaleFor(pieces: readonly CaptionPiece[], rPx: number): numbe
 }
 
 /**
- * Lay the caption out for a camera: the pieces (`planPieces`) and their parallels (`solveParallels`). The layer does the two steps itself (the
- * pieces once, the parallels as the camera tilts); this is the whole of it in one call, for tests and checks.
+ * Lay the caption out: the pieces (`planPieces`) on their fixed parallels (`placeRows`) at the static fit (`fitScale`). The layer does the same
+ * steps itself; this is the whole of it in one call, for tests and checks.
  */
-export function layoutCaption(input: LayoutInput): CaptionLayout & { solved: Solved } {
+export function layoutCaption(input: Pick<LayoutInput, "rows" | "caps" | "measure" | "box" | "rPx" | "d">): CaptionLayout & { placements: Placement[] } {
   const { pieces } = planPieces(input);
-  const solved = solveParallels(pieces, input.viewLat, input.d, [], minScaleFor(pieces, input.rPx));
-  return { lines: pieces.map((p, i) => lineOf(p, solved.placements[i]!)), scale: solved.scale, solved };
+  const scale = fitScale(pieces, input.d, minScaleFor(pieces, input.rPx));
+  const placements = placeRows(pieces, input.d, scale);
+  return { lines: pieces.map((p, i) => lineOf(p, placements[i]!)), scale, placements };
 }
+
 
 /** A piece at its placement, as the line the strip is built from. */
 export function lineOf(p: CaptionPiece, pl: Placement, into?: CaptionLine): CaptionLine {
@@ -685,6 +541,13 @@ export function bandPoint(line: Pick<CaptionLine, "baseLat" | "halfSpan" | "belo
  */
 export const shellHorizon = (d: number, r: number = CAPTION.radius): number => Math.acos(clamp(r / d, -1, 1));
 
+/**
+ * How many silhouette radii of the planet the shell's own silhouette is across, seen from distance `d`: the whole caption (every point of the
+ * shell, hidden or not) projects inside it, so a window of the crisp canvas that is this much larger than the planet's disc never cuts a row.
+ * (`tan` of the half angle of a sphere of radius `s` is `s / sqrt(d^2 - s^2)`.)
+ */
+export const shellWindowFactor = (d: number, r: number = CAPTION.radius): number => (r * Math.sqrt(Math.max(1e-6, d * d - 1))) / Math.sqrt(Math.max(1e-6, d * d - r * r));
+
 /** Whether a point at central angle `psi` from the view axis is on a front face. */
 export const faceTowardsViewer = (psi: number, d: number, r: number = CAPTION.radius): boolean => psi < shellHorizon(d, r);
 
@@ -752,8 +615,14 @@ export function leavingAngle(t: number, from: number, start: number, ms: number 
 /** Time the outgoing rows of a swap take: the last one starts `exitStaggerMs` after the one above it. */
 export const swapExitMs = (rows: number): number => CAPTION.cycle.exitMs + Math.max(0, rows - 1) * CAPTION.cycle.exitStaggerMs;
 
-/** Time a whole swap takes: the rows go (the orbit exit), then the next ones come in (`entranceMs`, the entrance's own stagger). */
-export const swapMs = (rows: number): number => swapExitMs(rows) + entranceMs(rows);
+/**
+ * When the first incoming row starts, ms after the swap began: as the first outgoing row has left (`exitMs`; its ease-in keeps it on the face
+ * until the very end), not once the last one has. Row i comes in `staggerMs` after row i - 1, so it is never before its own outgoing row has gone.
+ */
+export const swapEnterAt = (): number => CAPTION.cycle.exitMs;
+
+/** Time a whole swap takes: the rows go (the orbit exit), the next ones come in from `swapEnterAt` (`entranceMs`, the entrance's own stagger). */
+export const swapMs = (rows: number): number => Math.max(swapExitMs(rows), swapEnterAt() + entranceMs(rows));
 
 /**
  * The turn of the OUTGOING row `row` `t` ms after the swap began: from its place on round the orbit, behind the planet, to `-start` (`start`
@@ -765,11 +634,20 @@ export function swapExitAngle(t: number, row: number, start: number): number {
 }
 
 /**
- * The turn of the INCOMING row `row` `t` ms after the swap began: behind the planet at `start` (signed: the side it comes from) until the
- * outgoing rows have all gone, then each row `staggerMs` after the one above it, the entrance's own curve (`easeOutExpo`).
+ * The turn of the INCOMING row `row` `t` ms after the swap began: behind the planet at `start` (signed: the side it comes from) until
+ * `swapEnterAt`, then each row `staggerMs` after the one above it, the entrance's own curve (`easeOutExpo`).
  */
-export function swapEnterAngle(t: number, row: number, rows: number, start: number): number {
-  return enteringAngle(t - swapExitMs(rows), row, start);
+export function swapEnterAngle(t: number, row: number, _rows: number, start: number): number {
+  return enteringAngle(t - swapEnterAt(), row, start);
+}
+
+/**
+ * How present a row is, 0 (behind the planet at its start) to 1 (in its place): what the dimming behind it is scaled by, so the shade comes and
+ * goes with the words (an entrance, a swap) and not before them. A function of the row's turn only.
+ */
+export function dimPresence(theta: number, start: number): number {
+  if (!(start > 1e-9)) return 1;
+  return clamp(1 - Math.abs(theta) / start, 0, 1);
 }
 
 export type CaptionPhase = "hidden" | "in" | "out" | "fade" | "rest";

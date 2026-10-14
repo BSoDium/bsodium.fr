@@ -18,10 +18,14 @@ import {
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
+  CustomBlending,
+  DoubleSide,
   FrontSide,
   LinearFilter,
   LinearMipmapLinearFilter,
   Matrix4,
+  MaxEquation,
+  OneFactor,
   Mesh,
   MeshBasicMaterial,
   type PerspectiveCamera,
@@ -39,15 +43,19 @@ import {
   CaptionMotion,
   captionColors,
   captionFont,
+  dimPresence,
   entranceSides,
   entranceStart,
   lineHidden,
   lineOf,
+  shellXY,
+  shellY,
+  fitScale,
   minScaleFor,
   parallelPoint,
+  placeRows,
   planPieces,
   runsText,
-  solveParallels,
   spanOf,
   swapEnterAngle,
   swapExitAngle,
@@ -60,10 +68,11 @@ import {
   type CaptionRun,
   type CaptionStyleKey,
   type Placement,
-  type SolveHint,
 } from "./caption";
 import { OCCLUDER_RADIUS } from "./materials";
 import { CAPTION } from "./tuning";
+
+const DEG_ = Math.PI / 180;
 
 /**
  * One unit strip serves every line (`unitBand`: `position` is `(u, v, layer)`), and the line's parallel is a handful of uniforms: where the strip
@@ -110,7 +119,73 @@ const FRAG = /* glsl */ `
     bool front = vLayer > 0.999;
     // the inside is green, the outline red
     vec3 col = front ? (t.g > t.r ? uFace : uOutline) : uSide;
-    gl_FragColor = vec4(col, smoothstep(0.1, 0.9, t.a));
+    // The canvas is premultiplied and alpha-to-coverage turns the alpha into a coverage mask whose samples are averaged on resolve: written as
+    // (col * A, A) with A = sqrt(a), a resolved pixel holds (a * col, a), which is consistent (straight (col, a) left a bright fringe).
+    float a = sqrt(smoothstep(0.1, 0.9, t.a));
+    gl_FragColor = vec4(col * a, a);
+  }
+`;
+
+/**
+ * The dimming of the whole block: one quad in the screen's own tangent space (the camera on the planet's axis: a point's `(x, y) / -z`), sized to
+ * the ellipse's box, drawn BEFORE the letters in the caption's canvas. Clipped to the planet's disc (so never over the ring, the labels or the
+ * page), a smooth falloff to zero at the ellipse's edge, in the page's colour, premultiplied.
+ */
+const DIM_VERT = /* glsl */ `
+  uniform vec2 uCentre;
+  uniform vec2 uRadii;
+  varying vec2 vT;
+  void main() {
+    vT = uCentre + position.xy * uRadii;
+    // ndc = P00 t - P02 (the projection may carry a view offset)
+    gl_Position = vec4(projectionMatrix[0][0] * vT.x - projectionMatrix[2][0], projectionMatrix[1][1] * vT.y - projectionMatrix[2][1], 0.0, 1.0);
+  }
+`;
+const DIM_FRAG = /* glsl */ `
+  precision highp float;
+  uniform vec2 uCentre;
+  uniform vec2 uRadii;
+  uniform float uDisc;
+  uniform float uAlpha;
+  uniform vec3 uColor;
+  varying vec2 vT;
+  void main() {
+    vec2 q = (vT - uCentre) / uRadii;
+    float e = 1.0 - smoothstep(0.0, 1.0, length(q));
+    float inside = 1.0 - smoothstep(uDisc * 0.985, uDisc, length(vT));
+    float a = uAlpha * e * e * inside;
+    if (a < 0.004) discard;
+    gl_FragColor = vec4(uColor * a, a);
+  }
+`;
+/** The per-row band: on the row's parallel at the planet's surface, the strip widened, a falloff across and along it. */
+const BAND_VERT = /* glsl */ `
+  uniform float uBaseLat;
+  uniform float uBelow;
+  uniform float uAbove;
+  uniform float uHalfSpan;
+  uniform float uR;
+  varying vec2 vUv;
+  void main() {
+    vUv = position.xy;
+    float lat = uBaseLat - uBelow + position.y * (uBelow + uAbove);
+    float a = (position.x * 2.0 - 1.0) * uHalfSpan;
+    float cl = cos(lat);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(uR * vec3(cl * sin(a), sin(lat), cl * cos(a)), 1.0);
+  }
+`;
+const BAND_FRAG = /* glsl */ `
+  precision highp float;
+  uniform float uAlpha;
+  uniform vec3 uColor;
+  uniform float uEndFrac;
+  varying vec2 vUv;
+  void main() {
+    float across = 1.0 - smoothstep(0.0, 1.0, abs(vUv.y * 2.0 - 1.0));
+    float along = smoothstep(0.0, uEndFrac, min(vUv.x, 1.0 - vUv.x));
+    float a = uAlpha * across * across * along;
+    if (a < 0.004) discard;
+    gl_FragColor = vec4(uColor * a, a);
   }
 `;
 
@@ -123,20 +198,22 @@ interface Variant {
   line: CaptionLine;
   mesh: Mesh;
   material: ShaderMaterial;
+  /** The dimming band of the row (mode `bands`): turned with the row. */
+  band: Mesh;
+  bandMaterial: ShaderMaterial;
 }
 
 interface Built {
   /** The solver's piece of each row: the widest variant's box (so the row's chord is the worst case of the sets). */
   pieces: CaptionPiece[];
+  /** The cap height each row is meant to have before the CSS-px floor (it follows the planet's size: `replan`). */
+  nominal: number[];
   places: Placement[];
   variants: Variant[];
   /** How many rows take turns (the first ones); the rest are fixed. */
   slotRows: number;
+  /** The static fit of the block (`fitScale`: 1 unless a row would not fit its chord inside the band). */
   scale: number;
-  clearances: number[];
-  centreY: number;
-  /** Where the last solve left off (`SolveHint`): the next, for a camera that moved a little, starts there. */
-  hint: SolveHint | null;
   key: string;
 }
 
@@ -160,18 +237,17 @@ export interface CaptionState {
   wrapped: boolean;
   scale: number;
   viewLat: number;
+  /** The latitude the rows' parallels are centred on: always the equator (0): they are fixed, whatever the camera does. */
   parallelsFor: number;
   capCells: number;
   seed: number | null;
   lines: { text: string; parent: number; theta: number; visible: boolean; halfSpanDeg: number; baseLat: number; capR: number; side: number; styles: string[] }[];
   /** The phrase sets that take turns: how many, which one is shown, whether a swap is on, and whether a timer is waiting for the next. */
   cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number; lastOut: number[]; lastIn: number[] };
-  clearances: number[];
-  centreY: number;
+  /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
+  baselines: number[];
   texture: { width: number; height: number }[];
   colors: { face: number[]; outline: number[]; side: number[] };
-  /** What the parallels' solver costs: the last run, the worst, how many runs. */
-  solver: { lastMs: number; maxMs: number; runs: number };
 }
 
 /**
@@ -195,8 +271,10 @@ class CrispCanvas {
   private renderer: WebGLRenderer;
   private lost = false;
   private shown = false;
+  /** What was last written to the canvas and its style: a frame writes only what changed (a size change clears the buffer and re-runs layout). */
+  private last = { w: -1, h: -1, dpr: -1, left: NaN, top: NaN, mask: "", pos: "", size: "" };
 
-  constructor(host: HTMLElement) {
+  constructor(host: HTMLElement, onRestore: () => void) {
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
     this.renderer.setClearColor(0x000000, 0);
     const el = this.renderer.domElement;
@@ -210,7 +288,14 @@ class CrispCanvas {
       this.lost = true;
       this.hide();
     });
-    el.addEventListener("webglcontextrestored", () => (this.lost = false));
+    el.addEventListener("webglcontextrestored", () => {
+      // Three re-creates its GL state and re-uploads textures, geometry and programs lazily on the next render; the clear colour is part of
+      // what it drops, and the size is kept by the canvas itself. A frame is asked for: nothing else would draw the lines again.
+      this.renderer.setClearColor(0x000000, 0);
+      this.last.w = -1;
+      this.lost = false;
+      onRestore();
+    });
     // The planet, in the depth buffer only: what is behind it is not drawn.
     const globe = new Mesh(new SphereGeometry(OCCLUDER_RADIUS, 96, 48), new MeshBasicMaterial({ colorWrite: false }));
     globe.renderOrder = -1;
@@ -221,16 +306,37 @@ class CrispCanvas {
     if (this.lost) return;
     const r = this.renderer;
     const el = r.domElement;
-    r.setPixelRatio(dpr);
+    const L = this.last;
     const w = Math.round(rect.w);
     const h = Math.round(rect.h);
-    if (el.width !== Math.round(w * dpr) || el.height !== Math.round(h * dpr)) r.setSize(w, h, false);
-    Object.assign(el.style, { width: `${w}px`, height: `${h}px`, left: `${rect.left}px`, top: `${rect.top}px` });
+    if (w !== L.w || h !== L.h || dpr !== L.dpr) {
+      // (setPixelRatio re-runs setSize: only when something changed; the drawing buffer is floor(size * ratio) and nothing here compares otherwise)
+      r.setPixelRatio(dpr);
+      r.setSize(w, h, false);
+      L.w = w;
+      L.h = h;
+      L.dpr = dpr;
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+    }
+    if (rect.left !== L.left) {
+      el.style.left = `${rect.left}px`;
+      L.left = rect.left;
+    }
+    if (rect.top !== L.top) {
+      el.style.top = `${rect.top}px`;
+      L.top = rect.top;
+    }
     const pos = `${-rect.at.x}px ${-rect.at.y}px`;
     const size = `${rect.full.w}px ${rect.full.h}px`;
-    for (const [k, v] of [["mask-image", rect.mask], ["mask-position", pos], ["mask-size", size], ["mask-repeat", "no-repeat"]] as const) {
-      el.style.setProperty(k, v);
-      el.style.setProperty(`-webkit-${k}`, v);
+    if (rect.mask !== L.mask || pos !== L.pos || size !== L.size) {
+      for (const [k, v] of [["mask-image", rect.mask], ["mask-position", pos], ["mask-size", size], ["mask-repeat", "no-repeat"]] as const) {
+        el.style.setProperty(k, v);
+        el.style.setProperty(`-webkit-${k}`, v);
+      }
+      L.mask = rect.mask;
+      L.pos = pos;
+      L.size = size;
     }
     r.render(this.scene, camera);
     if (!this.shown) {
@@ -285,35 +391,59 @@ class CrispCanvas {
 }
 
 /**
- * One load per style of the page, for the page's life (`document.fonts` keeps what is added: a rebuild for another size must not add the same
- * file again). The promise says whether the face is usable; a style whose face is not falls back (`CAPTION_FALLBACK_STYLE`) so the texture is
- * never drawn in a stand-in that then changes.
+ * One load per style, shared by the builds (`document.fonts` keeps what is added: a retry must not add the same file again). The promise says
+ * whether the face is usable within `FONT_WAIT_MS`; a style whose face is not falls back (`CAPTION_FALLBACK_STYLE`) so the texture is never drawn
+ * in a stand-in that then changes. A NEGATIVE answer is never kept: the next build asks again (and the layer asks once more after a build that
+ * used a fallback, `buildLines`), so a slow network costs the face a late arrival and not the page's life.
  */
 const STYLE_LOADS = new Map<CaptionStyleKey, Promise<boolean>>();
+const ADDED_FACES = new Map<CaptionStyleKey, FontFace>();
+const FONT_WAIT_MS = 3000;
 
 const SAMPLE = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz .,;:!?'·-";
+
+async function tryLoadStyle(style: CaptionStyleKey): Promise<boolean> {
+  const st = CAPTION_STYLES[style];
+  const face = CAPTION_FACES[st.face];
+  try {
+    if (typeof document === "undefined" || !document.fonts) return false;
+    if (face.url) {
+      let added = ADDED_FACES.get(style);
+      if (!added) {
+        added = new FontFace(face.family.replace(/"/g, ""), `url(${face.url})`, { weight: String(st.weight), style: st.italic ? "italic" : "normal", display: "block" });
+        ADDED_FACES.set(style, added);
+        document.fonts.add(added);
+      }
+      try {
+        await added.load();
+        return true;
+      } catch {
+        // (a face that failed is taken out, so the retry makes a new one)
+        document.fonts.delete(added);
+        ADDED_FACES.delete(style);
+        return false;
+      }
+    }
+    const font = captionFont(style, 64);
+    await document.fonts.load(font, SAMPLE);
+    return document.fonts.check(font, SAMPLE);
+  } catch {
+    return false;
+  }
+}
 
 function loadStyle(style: CaptionStyleKey): Promise<boolean> {
   let p = STYLE_LOADS.get(style);
   if (!p) {
-    p = (async () => {
-      const st = CAPTION_STYLES[style];
-      const face = CAPTION_FACES[st.face];
-      try {
-        if (typeof document === "undefined" || !document.fonts) return false;
-        if (face.url) {
-          const added = new FontFace(face.family.replace(/"/g, ""), `url(${face.url})`, { weight: String(st.weight), style: st.italic ? "italic" : "normal", display: "block" });
-          document.fonts.add(added);
-          await added.load();
-          return true;
-        }
-        const font = captionFont(style, 64);
-        await document.fonts.load(font, SAMPLE);
-        return document.fonts.check(font, SAMPLE);
-      } catch {
-        return false;
-      }
-    })();
+    let timer = 0;
+    const timeout = new Promise<boolean>((resolve) => {
+      timer = window.setTimeout(() => resolve(false), FONT_WAIT_MS);
+    });
+    p = Promise.race([tryLoadStyle(style), timeout]).then((ok) => {
+      window.clearTimeout(timer);
+      if (!ok) STYLE_LOADS.delete(style);
+      return ok;
+    });
     STYLE_LOADS.set(style, p);
   }
   return p;
@@ -328,6 +458,15 @@ export class CaptionLayer {
   private face = { value: [1, 1, 1] as number[] };
   private outline = { value: [0, 0, 0] as number[] };
   private side = { value: [0, 0, 0] as number[] };
+  /** The dimming's colour (the page's), its strength for the scheme, and the mode (`CAPTION.dim.mode`; a check may change it). */
+  private dimColor = { value: [1, 1, 1] as number[] };
+  private dimAlpha = 0;
+  private dimMode: "ellipse" | "bands" | "none" = CAPTION.dim.mode;
+  /** The block's ellipse (one quad, mode `ellipse`) and its uniforms. */
+  private ellipse: Mesh | null = null;
+  private ellipseU = { uCentre: { value: [0, 0] as number[] }, uRadii: { value: [1, 1] as number[] }, uDisc: { value: 0.1 }, uAlpha: { value: 0 }, uColor: this.dimColor };
+  /** Whether a build that used a fallback face has asked once more for the real one. */
+  private retried = false;
   /** A build that threw (a canvas context refused, ...): the caption is not there and asks for no frames. */
   private failed = false;
   private disposed = false;
@@ -342,11 +481,6 @@ export class CaptionLayer {
   /** The art cell, the planet's radius at the lowest zoom (CSS px) and the camera's distance there: what decides the cap heights and where an entrance starts. */
   private sizing: { cell: number; r: number; d: number } | null = null;
   private viewLat = 28;
-  /** The latitude the parallels were last picked for (it glides towards the camera's), the clock reading of the last frame and whether it is still gliding. */
-  private phi: number | null = null;
-  private placedPhi: number | null = null;
-  private lastAt = 0;
-  private gliding = false;
   /** The strip every line shares (`unitBand`). */
   private unit: BufferGeometry | null = null;
   /** Checks only: the shell's radius, in place of `CAPTION.radius` (1.001 puts the caption on the surface, over the graticule's own parallels). */
@@ -361,10 +495,6 @@ export class CaptionLayer {
   private lastIn: number[] = [];
   private timer = 0;
   private paused = false;
-  /** What the parallels' solver costs (checks): the last, the worst and how many times it ran. */
-  private placeMs = 0;
-  private placeMax = 0;
-  private places = 0;
 
   /** Throws when the second WebGL canvas cannot be had: the page then has no caption (the hero's how-to line shows). */
   constructor(
@@ -381,7 +511,7 @@ export class CaptionLayer {
     },
   ) {
     this.reduced = opts.reduced;
-    this.crisp = new CrispCanvas(opts.host);
+    this.crisp = new CrispCanvas(opts.host, () => opts.onChange());
     // Each entrance draws the sides the lines come in from at random, from a seed of the session.
     this.motion.seed = (Math.random() * 0x7fffffff) | 0;
     this.setTheme(opts.theme);
@@ -417,14 +547,39 @@ export class CaptionLayer {
    */
   setSizing(cell: number, r: number, d: number): void {
     if (this.disposed || !(cell > 0) || !(r > 0) || !(d > 1)) return;
+    const prev = this.sizing;
     this.sizing = { cell, r, d };
-    void this.build();
+    if (!this.built) {
+      void this.build();
+      return;
+    }
+    // (the texture does not depend on the size: only the parallels and the floor of the letters' size do)
+    if (!prev || prev.r !== r || prev.d !== d || prev.cell !== cell) this.replan();
+  }
+
+  /** The planet's size or the camera's distance changed: the letters' floor and the parallels are worked out again; no texture is made again. */
+  private replan(): void {
+    const b = this.built;
+    const sizing = this.sizing;
+    if (!b || !sizing) return;
+    const floorCap = CAPTION.minCapPx / sizing.r;
+    b.pieces.forEach((p, i) => {
+      p.cap = Math.max(b.nominal[i]!, floorCap);
+    });
+    for (const v of b.variants) v.piece.cap = b.pieces[v.row]!.cap;
+    this.place();
+    this.motion.setStarts(
+      b.pieces.map((_, r) => this.rowStart(r)),
+      b.pieces.map((_, r) => r),
+    );
+    this.opts.onChange();
   }
 
   /** Checks only: lay the lines on a shell of this radius (null: the tuned one); the lines are built again. */
   setRadius(r: number | null): void {
     this.radius = r;
-    void this.build();
+    if (this.built) this.replan();
+    else void this.build();
   }
 
   /** Checks and captures: the seed of the sides the lines come in from (null: all from the east), drawn again at once. */
@@ -437,6 +592,15 @@ export class CaptionLayer {
     this.face.value = [...c.face];
     this.outline.value = [...c.outline];
     this.side.value = [...c.side];
+    this.dimColor.value = [...theme.background];
+    const dark = 0.2126 * theme.background[0] + 0.7152 * theme.background[1] + 0.0722 * theme.background[2] < 0.5;
+    this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
+  }
+
+  /** Checks and captures: the dimming's mode (null: the tuned one). The strips are made for every mode, so it is a switch and no rebuild. */
+  setDimMode(mode: "ellipse" | "bands" | "none" | null): void {
+    this.dimMode = mode ?? CAPTION.dim.mode;
+    this.opts.onChange();
   }
 
   setReduced(on: boolean): void {
@@ -475,8 +639,9 @@ export class CaptionLayer {
   /**
    * The showcase ends. By default the caption FADES (an interaction's exit: only the canvas's opacity changes, the lines keep following the
    * camera); `"orbit"` sends the lines on round behind the planet instead (kept for a caption that cycles its words). Reduced motion: gone at once.
-   * Once the fade is over nothing of the caption runs: no placement, no render call, no depth pass. A swap in progress is frozen where it is for
-   * the fade and settled when it is over, so the next showing is consistent.
+   * Once the fade is over nothing of the caption runs: no placement (the parallels are solved again by the first frame of the next showing, when
+   * the camera's tilt has changed meanwhile), no render call, no depth pass. A swap in progress is frozen where it is for the fade and settled
+   * when it is over, so the next showing is consistent.
    */
   hide(now: number, exit: CaptionExit = "fade"): void {
     this.want = false;
@@ -492,6 +657,16 @@ export class CaptionLayer {
     if (exit === "fade" && this.motion.phase === "fade") this.crisp.fadeOut(CAPTION.fadeMs);
   }
 
+  /**
+   * The globe is not drawn for a while (the street map owns the view): every timed thing runs to its end now, so nothing of the caption asks for a
+   * frame (`animating` is false): a swap is finished, an entrance is in place (or the caption is gone, when the showcase is off), the parallels
+   * have arrived.
+   */
+  settle(): void {
+    this.finishSwap();
+    this.motion.settle(this.want);
+  }
+
   /** Checks and captures: hold the entrance at `ms` after its start; null lets it run (or rest) again. */
   pin(ms: number | null): void {
     this.motion.pinned = ms;
@@ -504,7 +679,7 @@ export class CaptionLayer {
 
   /** Something is moving: the frame loop must keep going. */
   get animating(): boolean {
-    return this.built !== null && !this.failed && (this.motion.animating || this.gliding || this.swap !== null);
+    return this.built !== null && !this.failed && (this.motion.animating || this.swap !== null);
   }
 
   get isBuilt(): boolean {
@@ -563,40 +738,26 @@ export class CaptionLayer {
   /* ------------------------------ per frame ------------------------------ */
 
   /**
-   * Per frame, after the camera is current: put every line on its parallel for the camera's tilt and turn it to where the clock has it. `lon`
-   * and `lat` are the view's longitude and latitude (degrees: the lines are centred on the view's meridian; the parallels they are on are picked
-   * for the latitude, `solveParallels`, which glides there over `CAPTION.glideMs`), `d` the camera's distance, `now` the clock the entrance runs
-   * on (the same one `show` and `hide` were given).
+   * Per frame, after the camera is current: turn every line to where the clock has it. `lon` and `lat` are the view's longitude and latitude
+   * (degrees: the lines are centred on the view's meridian; their parallels are FIXED, on the equator's side, and never move for the camera's
+   * tilt: `lat` is only the camera's, for what is hidden and for where the dimming sits), `d` the camera's distance, `now` the clock the
+   * entrance runs on (the same one `show` and `hide` were given).
    */
   sync(d: number, lon: number, lat: number, now: number): void {
     this.viewLat = lat;
     const b = this.built;
     if (!b || this.failed) return;
-    if (this.sizing && b.key !== this.keyFor()) void this.build();
     if (this.motion.waiting) this.motion.begin(now, CAPTION.enter.loadDelayMs);
     // A fade changes the canvas's opacity only (a CSS transition, run by the compositor): the lines go on following the camera exactly as at rest
     // (zoom, drag, tilt: the same uniforms and one render a frame the globe draws anyway), and when it is over the caption is hidden.
     this.motion.tick(now);
-    // the parallels glide to the camera's tilt (at once under reduced motion, on the first frame, and when hidden: nobody sees it)
-    const dt = Math.min(Math.max(now - this.lastAt, 0), 64);
-    this.lastAt = now;
     const hiddenNow = this.motion.phase === "hidden" && this.motion.pinned === null && this.motion.pinnedAngle === null;
     if (hiddenNow && this.swap) this.finishSwap();
-    if (this.motion.phase === "fade") {
-      // In a fade the rows stay on the parallels they were on: they are part of the earth, which turns and tilts under the camera, and nothing is
-      // solved again (no work for a caption that is leaving).
-      this.gliding = false;
-    } else {
-      if (this.phi === null || this.reduced || hiddenNow) this.phi = lat;
-      else this.phi += (lat - this.phi) * (1 - Math.exp(-dt / CAPTION.glideMs));
-      this.gliding = Math.abs(lat - this.phi) > 0.02;
-      if (!this.gliding) this.phi = lat;
-      if (this.placedPhi !== this.phi) this.place(this.phi);
-    }
     // Hidden (the showcase is off and the lines have gone): every mesh is hidden once, and then there is nothing to do, whatever the camera does.
     if (hiddenNow) {
       if (!this.allHidden) {
-        for (const v of b.variants) v.mesh.visible = false;
+        for (const v of b.variants) v.mesh.visible = v.band.visible = false;
+        if (this.ellipse) this.ellipse.visible = false;
         this.allHidden = true;
         this.anyVisible = false;
         this.lastThetas.length = b.pieces.length;
@@ -611,41 +772,61 @@ export class CaptionLayer {
       this.maybeSchedule();
     }
     const rows = b.pieces.length;
-    this.lastThetas.length = rows;
-    const rowTheta: number[] = [];
-    for (let r = 0; r < rows; r++) {
-      rowTheta.push(this.motion.angle(now, r, this.rowStart(r)));
-      this.lastThetas[r] = rowTheta[r]!;
-    }
+    const rowTheta = this.lastThetas;
+    rowTheta.length = rows;
+    for (let r = 0; r < rows; r++) rowTheta[r] = this.motion.angle(now, r, this.rowStart(r));
     const tSwap = this.swap ? (this.swap.frozen ?? now) - this.swap.t0 : 0;
     let any = false;
+    const bands = this.dimMode === "bands" && this.dimAlpha > 0;
+    let presence = 0;
     for (const v of b.variants) {
       let theta = 0;
       let on = false;
+      let start = 0;
       if (v.set < 0) {
         theta = rowTheta[v.row]!;
+        start = this.rowStart(v.row);
         on = true;
       } else if (this.swap) {
         const sw = this.swap;
+        start = this.startFor(v);
         if (v.set === sw.from) {
-          theta = swapExitAngle(tSwap, v.row, sw.out[v.row]! * this.startFor(v));
+          theta = swapExitAngle(tSwap, v.row, sw.out[v.row]! * start);
           on = true;
         } else if (v.set === sw.to) {
-          theta = swapEnterAngle(tSwap, v.row, b.slotRows, sw.in[v.row]! * this.startFor(v));
+          theta = swapEnterAngle(tSwap, v.row, b.slotRows, sw.in[v.row]! * start);
           on = true;
         }
       } else if (v.set === this.cur) {
         theta = rowTheta[v.row]!;
+        start = this.rowStart(v.row);
         on = true;
       }
       const hidden = !on || lineHidden(theta, v.line, d, lat);
       v.mesh.visible = !hidden;
+      v.band.visible = false;
       if (hidden) continue;
       any = true;
+      const p = dimPresence(theta, start);
+      presence += p;
       // The earth's axis is y: a line's own meridian is the view's (`lon`), turned by the entrance's `theta` (east positive, west negative).
       this.tmp.makeRotationY((lon * Math.PI) / 180 + theta);
       v.mesh.matrix.copy(this.tmp);
       v.mesh.matrixWorldNeedsUpdate = true;
+      if (bands && p > 0.01) {
+        v.band.visible = true;
+        v.band.matrix.copy(this.tmp);
+        v.band.matrixWorldNeedsUpdate = true;
+        v.bandMaterial.uniforms.uAlpha!.value = this.dimAlpha * p;
+      }
+    }
+    // The block's ellipse: its strength is the mean presence of the rows (a row that is on its way in or out is half of one).
+    if (this.ellipse) {
+      const e = this.dimMode === "ellipse" && this.dimAlpha > 0 ? presence / Math.max(1, b.pieces.length) : 0;
+      this.ellipse.visible = e > 0.01;
+      if (this.ellipse.visible) this.updateEllipse(lat);
+      this.ellipseU.uAlpha.value = this.dimAlpha * Math.min(1, e);
+      this.ellipseU.uDisc.value = 1 / Math.sqrt(Math.max(1.0001, d * d - 1));
     }
     this.anyVisible = any;
     this.maybeSchedule();
@@ -662,20 +843,16 @@ export class CaptionLayer {
     return entranceStart(v.line, this.viewLat, this.sizing?.d ?? 16);
   }
 
-  /** Put the rows on the parallels picked for a camera looking at latitude `phi`, and hand every strip its uniforms. */
-  private place(phi: number): void {
+  /**
+   * Put the rows on their fixed parallels (`placeRows`, at the static fit `fitScale`) and hand every strip its uniforms. Runs when the strips are
+   * built and when the planet's size or the camera's distance changes: never for the camera's tilt.
+   */
+  private place(): void {
     const b = this.built;
     const sizing = this.sizing;
     if (!b || !sizing) return;
-    const t0 = performance.now();
-    const solved = solveParallels(b.pieces, phi, sizing.d, b.places, minScaleFor(b.pieces, sizing.r), b.hint);
-    this.placeMs = performance.now() - t0;
-    this.placeMax = Math.max(this.placeMax, this.placeMs);
-    this.places++;
-    b.hint = solved.hint;
-    b.scale = solved.scale;
-    b.clearances = solved.clearances;
-    b.centreY = solved.centreY;
+    b.scale = fitScale(b.pieces, sizing.d, minScaleFor(b.pieces, sizing.r));
+    placeRows(b.pieces, sizing.d, b.scale, b.places);
     const r = this.radius ?? CAPTION.radius;
     for (const v of b.variants) {
       const pl = b.places[v.row]!;
@@ -687,8 +864,51 @@ export class CaptionLayer {
       u.uAbove!.value = v.line.above;
       u.uHalfSpan!.value = v.line.halfSpan;
       u.uR!.value = r;
+      // the band: the row's strip, widened (the falloff reaches `bandReach` half heights across, a little beyond the words along)
+      const bu = v.bandMaterial.uniforms;
+      const mid = (v.line.above - v.line.below) / 2;
+      const half = ((v.line.above + v.line.below) / 2) * CAPTION.dim.bandReach;
+      bu.uBaseLat!.value = u.uBaseLat!.value + mid;
+      bu.uBelow!.value = half;
+      bu.uAbove!.value = half;
+      bu.uHalfSpan!.value = v.line.halfSpan * 1.12 + half;
     }
-    this.placedPhi = phi;
+    this.updateEllipse(this.viewLat);
+  }
+
+  /**
+   * The ellipse's centre and radii (tangent space of a camera on the axis: what `shellXY` and `shellY` return) from the block's ink: the widest
+   * row's ends and the top and bottom edges over the middle, for the camera at latitude `lat` (the fixed parallels move on the screen with the
+   * camera's tilt; the ellipse follows them: four rows of trigonometry a frame, only while it is drawn).
+   */
+  private updateEllipse(lat: number): void {
+    const b = this.built;
+    const sizing = this.sizing;
+    if (!b || !sizing || b.pieces.length === 0) return;
+    const r = this.radius ?? CAPTION.radius;
+    const n = b.pieces.length;
+    let halfW = 0;
+    const xy: [number, number] = [0, 0];
+    for (let i = 0; i < n; i++) {
+      const pl = b.places[i]!;
+      halfW = Math.max(halfW, Math.abs(shellXY(Math.min(pl.halfSpan, Math.PI / 2), pl.baseLat, lat, sizing.d, r, xy)[0]));
+    }
+    const f = b.pieces[0]!;
+    const l = b.pieces[n - 1]!;
+    const topLat = b.places[0]!.baseLat + (b.places[0]!.capR * f.box.aboveCaps) / r / DEG_;
+    const botLat = b.places[n - 1]!.baseLat - (b.places[n - 1]!.capR * l.box.belowCaps) / r / DEG_;
+    const top = shellY(0, Math.min(89.5, topLat), lat, sizing.d, r);
+    const bottom = shellY(0, Math.max(-89.5, botLat), lat, sizing.d, r);
+    const hh = Math.max(1e-4, (top - bottom) / 2);
+    const hw = Math.max(1e-4, halfW);
+    const k = Math.SQRT2 * (1 + CAPTION.dim.reach);
+    this.ellipseU.uCentre.value = [0, (top + bottom) / 2];
+    this.ellipseU.uRadii.value = [hw * k, hh * k];
+  }
+
+  /** Whether any line is in view now (as of the last `sync`): the renderer draws the second canvas only then (one flag, no work at rest or hidden). */
+  get visible(): boolean {
+    return this.anyVisible && this.built !== null && !this.failed;
   }
 
   /** Draw the caption over the globe's frame. */
@@ -723,10 +943,10 @@ export class CaptionLayer {
    * The edges of every strip in view, in the globe's frame as drawn (the top edge and the bottom edge of the ink box, `samples` + 1 points each):
    * for the checks that measure the caption's real layout on the screen (clearances between rows, where the block sits).
    */
-  edges(samples = 16): { row: number; top: [number, number, number][]; bottom: [number, number, number][] }[] {
+  edges(samples = 16): { row: number; top: [number, number, number][]; bottom: [number, number, number][]; base: [number, number, number][] }[] {
     const b = this.built;
     if (!b) return [];
-    const out: { row: number; top: [number, number, number][]; bottom: [number, number, number][] }[] = [];
+    const out: { row: number; top: [number, number, number][]; bottom: [number, number, number][]; base: [number, number, number][] }[] = [];
     for (const v of b.variants) {
       if (!v.mesh.visible) continue;
       const m = v.mesh.matrix.elements;
@@ -734,12 +954,14 @@ export class CaptionLayer {
       const turn = (p: [number, number, number]): [number, number, number] => [m[0]! * p[0] + m[4]! * p[1] + m[8]! * p[2], m[1]! * p[0] + m[5]! * p[1] + m[9]! * p[2], m[2]! * p[0] + m[6]! * p[1] + m[10]! * p[2]];
       const top: [number, number, number][] = [];
       const bottom: [number, number, number][] = [];
+      const base: [number, number, number][] = [];
       for (let k = 0; k <= samples; k++) {
         const a = (-1 + (2 * k) / samples) * v.line.halfSpan;
         top.push(turn(parallelPoint(a, v.line.baseLat + (v.line.above * 180) / Math.PI, r)));
         bottom.push(turn(parallelPoint(a, v.line.baseLat - (v.line.below * 180) / Math.PI, r)));
+        base.push(turn(parallelPoint(a, v.line.baseLat, r)));
       }
-      out.push({ row: v.row, top, bottom });
+      out.push({ row: v.row, top, bottom, base });
     }
     return out;
   }
@@ -759,8 +981,8 @@ export class CaptionLayer {
       wrapped: false,
       scale: b?.scale ?? 1,
       viewLat: this.viewLat,
-      parallelsFor: this.phi ?? this.viewLat,
-      capCells: this.sizing ? (CAPTION.capR.slot * this.sizing.r) / this.sizing.cell : 0,
+      parallelsFor: 0,
+      capCells: this.sizing ? (CAPTION.capR * this.sizing.r) / this.sizing.cell : 0,
       seed: this.motion.seed,
       lines: shown.map((v) => ({
         text: v.line.text,
@@ -774,9 +996,7 @@ export class CaptionLayer {
         styles: [...new Set(v.line.runs.map((r) => r.style ?? "plain"))],
       })),
       cycle: { sets: this.opts.content.sets.length, current: this.cur, swapping: this.swap !== null, waiting: this.timer !== 0, paused: this.paused, swaps: this.swaps, lastOut: this.lastOut, lastIn: this.lastIn },
-      clearances: b?.clearances ?? [],
-      centreY: b?.centreY ?? 0,
-      solver: { lastMs: this.placeMs, maxMs: this.placeMax, runs: this.places },
+      baselines: shown.map((v) => v.line.baseLat),
       texture: this.texSizes,
       colors: { face: this.face.value, outline: this.outline.value, side: this.side.value },
     };
@@ -790,6 +1010,9 @@ export class CaptionLayer {
     this.release();
     this.unit?.dispose();
     this.unit = null;
+    this.ellipse?.geometry.dispose();
+    (this.ellipse?.material as ShaderMaterial | undefined)?.dispose();
+    this.ellipse = null;
     this.crisp.dispose();
     this.built = null;
   }
@@ -798,7 +1021,9 @@ export class CaptionLayer {
   private release(): void {
     for (const v of this.built?.variants ?? []) {
       this.crisp.scene.remove(v.mesh);
+      this.crisp.scene.remove(v.band);
       v.material.dispose();
+      v.bandMaterial.dispose();
     }
     for (const t of this.textures) t.dispose();
     this.textures = [];
@@ -810,8 +1035,9 @@ export class CaptionLayer {
   /* ------------------------------ building ------------------------------ */
 
   private keyFor(): string {
-    const s = this.sizing;
-    return `${s ? Math.round(s.r) : 0}|${s ? s.cell : 0}|${s ? Math.round(s.d * 10) : 0}|${this.radius ?? 0}`;
+    // The texture depends on the words and the faces only (a size class of its own, `texCap`): never on the planet's size, the cell, the camera's
+    // distance or the shell's radius (a window resize used to rebuild every texture at each whole pixel of the radius).
+    return "texture";
   }
 
   private async build(): Promise<void> {
@@ -850,8 +1076,10 @@ export class CaptionLayer {
       }),
     );
     if (this.disposed || token !== this.token) return;
+    // (capitals are the caption's drawing: the words the app gave, and the page's text, are as they were)
+    const caps = (t: string) => (CAPTION.upper ? t.toLocaleUpperCase("en") : t);
     const clean = (row: readonly CaptionRun[]): CaptionRun[] =>
-      row.filter((r) => r.text.length > 0).map((r) => ({ text: r.text, style: ok.get(r.style ?? "plain") ?? "plain" }) as CaptionRun);
+      row.filter((r) => r.text.length > 0).map((r) => ({ text: caps(r.text), style: ok.get(r.style ?? "plain") ?? "plain" }) as CaptionRun);
     const sets = content.sets.map((set) => set.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0)));
     const fixed = content.fixed.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0));
     const slotRows = sets.reduce((a, s) => Math.max(a, s.length), 0);
@@ -915,8 +1143,8 @@ export class CaptionLayer {
       const cands = rowsOf.filter((x) => x.row === r);
       reps.push(cands.reduce((best, c) => (boxOf(c.runs).widthEm > boxOf(best.runs).widthEm ? c : best)).runs);
     }
-    const caps = reps.map((_, r) => (r < slotRows ? CAPTION.capR.slot : CAPTION.capR.fixed));
-    const plan = planPieces({ rows: reps, caps, measure, box: boxOf, rPx: this.sizing.r });
+    const nominal = reps.map(() => CAPTION.capR);
+    const plan = planPieces({ rows: reps, caps: nominal, measure, box: boxOf, rPx: this.sizing.r });
     // the representative boxes take the largest extent over the variants of the row (the solver's clearance must hold for any of them)
     plan.pieces.forEach((p, r) => {
       for (const c of rowsOf.filter((x) => x.row === r)) {
@@ -989,17 +1217,66 @@ export class CaptionLayer {
       mesh.renderOrder = 7;
       this.crisp.scene.add(mesh);
       const piece: CaptionPiece = { runs: x.runs, text: runsText(x.runs), parent: x.row, cap: plan.pieces[x.row]!.cap, box };
-      return { row: x.row, set: x.set, piece, line: {} as CaptionLine, mesh, material };
+      // the row's dimming band (mode `bands`): the same strip, on the planet's surface, widened; max-blended so overlapping bands never add
+      const bandMaterial = new ShaderMaterial({
+        vertexShader: BAND_VERT,
+        fragmentShader: BAND_FRAG,
+        uniforms: {
+          uBaseLat: { value: 0 },
+          uBelow: { value: 0 },
+          uAbove: { value: 0 },
+          uHalfSpan: { value: 0 },
+          uR: { value: OCCLUDER_RADIUS + 0.004 },
+          uAlpha: { value: 0 },
+          uColor: this.dimColor,
+          uEndFrac: { value: 0.35 },
+        },
+        side: FrontSide,
+        depthTest: true,
+        depthWrite: false,
+        transparent: false,
+        blending: CustomBlending,
+        blendEquation: MaxEquation,
+        blendSrc: OneFactor,
+        blendDst: OneFactor,
+      });
+      const band = new Mesh(this.unit!, bandMaterial);
+      band.matrixAutoUpdate = false;
+      band.frustumCulled = false;
+      band.visible = false;
+      band.renderOrder = -0.5;
+      this.crisp.scene.add(band);
+      return { row: x.row, set: x.set, piece, line: {} as CaptionLine, mesh, material, band, bandMaterial };
     });
-    this.built = { pieces: plan.pieces, places: [], variants, slotRows, scale: 1, clearances: [], centreY: 0, hint: null, key };
-    this.placedPhi = null;
+    if (!this.ellipse) {
+      const quad = new BufferGeometry();
+      quad.setAttribute("position", new BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
+      const m = new ShaderMaterial({ vertexShader: DIM_VERT, fragmentShader: DIM_FRAG, uniforms: this.ellipseU, depthTest: false, depthWrite: false, transparent: false, side: DoubleSide });
+      this.ellipse = new Mesh(quad, m);
+      this.ellipse.frustumCulled = false;
+      this.ellipse.renderOrder = -0.5;
+      this.ellipse.visible = false;
+      this.crisp.scene.add(this.ellipse);
+    }
+    this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, key };
     this.cur = Math.min(this.cur, Math.max(0, sets.length - 1));
-    this.place(this.phi ?? this.viewLat);
+    this.place();
     this.motion.setStarts(
       plan.pieces.map((_, r) => this.rowStart(r)),
       plan.pieces.map((_, r) => r),
     );
     if (this.want && this.reduced) this.motion.settle(true);
     this.opts.onChange();
+    // A face that did not arrive in time is drawn in its fallback now; it is asked for once more, and the strips are made again when it comes.
+    const missing = [...ok].filter(([style, used]) => style !== used).map(([style]) => style);
+    if (missing.length && !this.retried) {
+      this.retried = true;
+      void Promise.all(missing.map(loadStyle)).then((all) => {
+        if (all.every(Boolean) && !this.disposed && this.built) {
+          this.built.key = "stale";
+          void this.build();
+        }
+      });
+    }
   }
 }

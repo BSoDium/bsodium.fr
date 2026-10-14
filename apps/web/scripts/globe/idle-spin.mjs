@@ -469,7 +469,8 @@ try {
     const free = await page.evaluate(() => {
       const bad = (x, y) => {
         const e = document.elementFromPoint(x, y);
-        return !e || e.tagName !== "CANVAS" || !!e.closest("a, button, [role=link]");
+        // (and no place under it: the start view is lon 0, lat 0, where a tap near a marker selects it and the camera flies there)
+        return !e || e.tagName !== "CANVAS" || !!e.closest("a, button, [role=link]") || !!window.__globeDebug?.pick?.(x, y, "touch");
       };
       for (let y = 600; y > 120; y -= 20)
         for (let x = 40; x < 360; x += 20) {

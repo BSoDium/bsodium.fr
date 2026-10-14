@@ -133,6 +133,9 @@ export const SKY = {
  */
 export const LIFT = { gapPx: 14, marginPx: 14 } as const;
 
+/** Where the camera starts when the page gives no view: no tilt, centred on the point (lon 0, lat 0). Inside the caption's band by construction. */
+export const START_VIEW = { lon: 0, lat: 0 } as const;
+
 /** `cubic-bezier` control points of the app's standard easing (`--ease-standard`). */
 export const INSET_EASE = [0.2, 0, 0, 1] as const;
 
@@ -147,51 +150,59 @@ export const INSET_EASE = [0.2, 0, 0, 1] as const;
  */
 export const CAPTION = {
   /** The shell the letters' FRONT face is on: floating, clearly above the surface (the orbit). The extrusion goes down towards the planet from it. */
-  radius: 1.15,
+  radius: 1.25,
   /**
-   * Cap height of the rows, in planet radii: the rows that take turns (`slot`) and the call to action under them (`fixed`, the biggest). Four
-   * rows are in view at once; a row too wide for its parallel shrinks with the whole block (`solveParallels`).
+   * Cap height of EVERY row, in planet radii: one size for the rows that take turns and for the call to action (the hierarchy is the weight and
+   * the face, not the size). Four rows are in view at once; the whole block shrinks together when a row would not fit the chord of its parallel
+   * (`fitScale`).
    */
-  capR: { slot: 0.1, fixed: 0.145 },
+  capR: 0.084,
   /**
-   * Where the block sits (engine/caption.ts `solveParallels`): its middle is `centreDeg` of the shell's arc above the view's centre, on the screen,
-   * whatever the tilt; the rows are `gapDeg` of arc clear of one another (the ink of one against the ink of the next, the LEAST over their width:
-   * parallels near a pole bend towards one another). The viewing latitude is taken within +-`tiltMax`, a row never goes past `latMax` (and no two
-   * share a parallel closer than `minLatGapDeg`), the block fills at most `blockDiscFraction` of the way to the horizon, and a row spans at most
-   * `hardSpanDeg` of its parallel and no farther than `visibleFraction` of the shell's horizon from the view's axis (the whole block shrinks
-   * together when one would).
+   * The words are set in capitals (the caption's drawing only: the page's text and the accessible text are as the app wrote them) and tracked:
+   * `tracking` is added to each face's own letter spacing (ems of the face). Capitals set tight read as a block; a little air reads as a line.
    */
-  centreDeg: 0,
-  gapDeg: 2.2,
-  /** The share of a line's ink box (ascenders above the baseline, descenders below, outline room included) the clearance is measured from. */
-  inkFraction: 0.9,
-  tiltMax: 90,
-  latMax: 86,
-  minLatGapDeg: 0.5,
-  blockDiscFraction: 0.82,
+  upper: true,
+  tracking: { serif: 0.05, mono: 0.03, script: 0.02 },
+  /**
+   * Where the rows sit (engine/caption.ts `rowLatitudes`): on FIXED parallels, centred on the equator and uniformly spaced, `stepCaps` cap heights
+   * from one baseline to the next; nothing recomputes them per camera tilt. A row spans at most `hardSpanDeg` of its parallel and no farther than
+   * `visibleFraction` of the shell's horizon from the view's axis for any camera inside the band (the whole block is shrunk, statically, when
+   * one would not fit: `fitScale`; the shell's radius is what is raised first).
+   */
+  rows: { stepCaps: 1.7 },
+  /** A row's half width on the screen is at most this share of the planet's silhouette radius: the words stay over the planet, off the page's own text. */
+  maxHalfWidth: 1.04,
   hardSpanDeg: 160,
   visibleFraction: 0.85,
-  /** The least scale the whole block is shrunk to (a camera over a pole: the parallels are small circles). */
+  /** The least scale the whole block is shrunk to. */
   minScale: 0.2,
   /** The smallest cap height a letter may have, CSS px. */
   minCapPx: 12,
-  /** How fast the parallels follow a change of the camera's tilt (the time constant, ms): they glide, they do not jump. */
-  glideMs: 110,
+  /**
+   * The camera latitude the caption needs: it is shown only while |latitude| is inside `deg` of the equator. Before it comes back (the idle
+   * delay, a return to rest) a camera outside the band glides its LATITUDE ONLY (never the longitude, the zoom is the page's) to the nearest
+   * edge in `snapMs`, ease-out, and only then does the entrance start; a camera that leaves the band under the caption (a flight) fades it,
+   * and the caption is back `hysteresisDeg` inside. `snapTo`: the nearest edge of the band (`edge`) or the equator (`equator`). The page opens
+   * at `START_VIEW` (no tilt, centred on lon 0, lat 0: the equator is a horizontal line through the disc's middle).
+   */
+  band: { deg: 10, snapMs: 800, hysteresisDeg: 1.5, snapTo: "edge" as "edge" | "equator" },
   /**
    * The rows that take turns: a phrase set stays `dwellMs`, then goes (each row round the orbit and behind the limb in `exitMs`, `exitStaggerMs`
-   * after the row above) and the next one comes in from random sides, row by row `enter.staggerMs` apart, once the last one has gone.
+   * after the row above) and the next one comes in from random sides, row by row `enter.staggerMs` apart. The first incoming row starts as the
+   * first outgoing one has left (`exitMs`: the ease-in keeps a row on the face until its very end), not once the LAST has gone: the rows above
+   * are never both empty at once.
    */
-  cycle: { dwellMs: 5500, exitMs: 520, exitStaggerMs: 90 },
+  cycle: { dwellMs: 5500, exitMs: 480, exitStaggerMs: 140 },
   /** The thickness of the letters, in planet radii (towards the planet from the front face), and the number of slices stacked to make it. */
   depth: 0.016,
-  slices: 6,
+  slices: 28,
   /**
    * The entrance: each line starts hidden behind the planet (`fromDeg` of longitude from the central meridian at least, and as far as its parallel
    * needs to be hidden), on a side of its own drawn at random per entrance (west or east along its parallel), travels round the sphere to its
    * place with `easeOutExpo`, `ms` in all, line i starting `staggerMs` after line i - 1 (on load, `loadDelayMs` later still: the page's own
    * fade-in goes first). Leaving is quick: it goes on behind the planet the same way in `leaveMs`.
    */
-  enter: { fromDeg: 100, ms: 1000, staggerMs: 260, loadDelayMs: 350 },
+  enter: { fromDeg: 100, ms: 900, staggerMs: 450, loadDelayMs: 250 },
   /**
    * Leaving. The interaction's exit is a FADE of the caption's canvas (`fadeMs`, a CSS opacity transition on the compositor: no geometry and
    * no texture while it runs, the lines keep following the camera); the orbit exit (the lines go on round behind the planet the same way,
@@ -206,10 +217,24 @@ export const CAPTION = {
    * page needs more of the ink for the face to read), the outline the coastline's tone pushed `outlineMix` of the way to the ink, the extrusion
    * `sideMix` of the way from the face to the outline (a tone of its own, between the two). Greys only.
    */
-  colors: { faceMix: { light: 0.03, dark: 0.26 }, outlineMix: { light: 0.6, dark: 0.45 }, sideMix: 0.55 },
+  colors: { faceMix: { light: 0.03, dark: 0.26 }, outlineMix: { light: 0.6, dark: 0.45 }, sideMix: { light: 0.3, dark: 0.7 } },
   /** Sampling: the shader looks `lodBias` levels sharper than the screen asks (negative: sharper). Texture: texels in a cap height. */
   lodBias: -0.5,
   texCap: 96,
+  /**
+   * The dimming behind the words: a faint "reverse shadow" in the PAGE's colour that lowers the globe's own linework (coastlines, graticule,
+   * borders) where the words sit, drawn in the caption's canvas between the planet and the letters (so only over the planet: the ring, the labels
+   * and the page are never touched) and gone with the words (it follows their entrance, swap and fade). `mode`: `ellipse` one soft ellipse
+   * about the whole block (a screen-space falloff, one quad), `bands` one soft band per row on its own parallel (it follows the row round the
+   * orbit), `none`. `alpha` is the strength at the middle (per scheme: a dark page's linework is dimmer to start with), `reach` how far past the
+   * block's ink the falloff goes to zero (a fraction of the block's half size), `bandReach` the same for a band, in the row's own half height.
+   */
+  dim: {
+    mode: "ellipse" as "ellipse" | "bands" | "none",
+    alpha: { light: 0.55, dark: 0.55 },
+    reach: 0.55,
+    bandReach: 1.9,
+  },
 } as const;
 
 /**

@@ -55,7 +55,6 @@ interface GlobeOptions {
   ringText?: string;
   /** The lines of the caption that floats over the planet (see `RendererOptions.captionPhrases`). */
   captionPhrases?: GlobeCaption;
-  captionPixel?: boolean;
   /** See `GlobeProps.coverBottom` and `GlobeProps.showcase`: read at creation. */
   coverBottom?: number;
   showcase?: boolean;
@@ -130,6 +129,8 @@ export interface GlobeDebug {
   captionExit(exit: "fade" | "orbit"): void;
   /** Where the caption's widest line is on the screen and the planet's radius there (checks: the words are locked to the globe, in a fade as at rest). */
   captionExtent(): ReturnType<GlobeRenderer["captionExtent"]>;
+  /** The dimming behind the caption's words: "ellipse", "bands", "none" (null: the tuned `CAPTION.dim.mode`): the comparison captures. */
+  captionDim(mode: "ellipse" | "bands" | "none" | null): void;
   /** Turn the showcase (the caption in, the boxes out) on or off as the app's hero would (checks and the perf scenarios). */
   showcase(on: boolean): void;
   /** Set the earth rotation angle in degrees (moves the sky against the earth) and draw. */
@@ -371,6 +372,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       captionSwap: () => renderer.swapCaption(),
       captionProbe: () => renderer.captionProbe(),
       captionExit: (exit) => renderer.setCaptionExit(exit),
+      captionDim: (mode) => renderer.setCaptionDim(mode),
       captionExtent: () => renderer.captionExtent(),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),
