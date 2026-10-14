@@ -9,6 +9,11 @@ describe("sitemapUrls", () => {
   it("lists the home page and the four lists, even for an empty projection", () => {
     expect(sitemapUrls(EMPTY_PROJECTION, ORIGIN).map((u) => u.loc)).toEqual([`${ORIGIN}/`, `${ORIGIN}/articles`, `${ORIGIN}/software`, `${ORIGIN}/artworks`, `${ORIGIN}/poetry`]);
   });
+  it("lists /career only when the projection has a career document, dated by the month it was reviewed", () => {
+    expect(sitemapUrls(EMPTY_PROJECTION, ORIGIN).map((u) => u.loc)).not.toContain(`${ORIGIN}/career`);
+    const withCareer = loadDemoProjection();
+    expect(sitemapUrls(withCareer, ORIGIN)).toContainEqual({ loc: `${ORIGIN}/career`, lastmod: withCareer.career!.updated });
+  });
   it("lists the projects' section and entries under /software, and nothing under the old /projects", () => {
     const projection = { ...EMPTY_PROJECTION, projects: [{ slug: "s", title: "S", placeSlugs: [] }] } as PublishedProjection;
     const locs = sitemapUrls(projection, ORIGIN).map((u) => u.loc);
@@ -44,7 +49,7 @@ describe("sitemapUrls", () => {
   });
   it("covers the whole demo projection", () => {
     const projection = loadDemoProjection();
-    const total = 5 + projection.places.length + projection.articles.length + projection.projects.length + projection.artworks.length + projection.poems.length;
+    const total = 5 + projection.places.length + projection.articles.length + projection.projects.length + projection.artworks.length + projection.poems.length + (projection.career ? 1 : 0);
     expect(sitemapUrls(projection, ORIGIN)).toHaveLength(total);
   });
   it("percent-encodes a slug in the URL and escapes XML in the document", () => {

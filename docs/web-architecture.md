@@ -404,6 +404,8 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   client-side navigation.
 - **Browser check:** `apps/web/scripts/entries/check.mjs` (demo content; see the file header). Run against `pnpm dev:demo`; with `BASE_URL_EMPTY` set to a server on the empty published content it also checks the empty home and list. Sections 8 and 9 cover the reading aids, the filter, related entries, print, the empty home and the quick search.
 
+**The career page** (`/career`, outside the shell like the lists) is a singleton of the projection, not a section: it exists only while `projection.career` does, and the header link, the hero's fifth row and the search row follow the root loader's `hasCareer`. Everything about it is in [career-page.md](career-page.md).
+
 ## Globe seam (`app/globe/`)
 
 `types.ts` defines `GlobeViewState`, `GlobePlace`, `GlobeRoute`, `GlobeTiles` and `GlobeProps` (renderer-agnostic).

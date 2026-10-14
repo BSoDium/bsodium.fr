@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+import { loadDemoProjection } from "@catalyst/published";
+import type { PublishedCareer } from "@catalyst/schemas";
+import { asOfText, careerJsonLd, careerPeriod, formatCareerMonth, isCurrent, languageDetail, safeLinks, safePortrait } from "./career";
+import { SITE } from "./site";
+
+const demo = loadDemoProjection().career!;
+
+describe("formatCareerMonth", () => {
+  it("names the month in fixed English, a year alone stays a year", () => {
+    expect(formatCareerMonth("2026-09")).toBe("September 2026");
+    expect(formatCareerMonth("2026-09", "short")).toBe("Sep 2026");
+    expect(formatCareerMonth("2021")).toBe("2021");
+    expect(formatCareerMonth("2021", "short")).toBe("2021");
+  });
+  it("refuses what is not a career date", () => {
+    for (const bad of ["", "2026-13", "2026-9", "26-09", "2026-09-01", "present", "soon"]) expect(formatCareerMonth(bad), bad).toBeNull();
+  });
+});
+
+describe("asOfText", () => {
+  it('words the availability date as "as of Month YYYY"', () => {
+    expect(asOfText("2026-10")).toBe("as of October 2026");
+    expect(asOfText("nonsense")).toBe("");
+  });
+});
+
+describe("careerPeriod", () => {
+  it("shows a closed range with both ends as dates", () => {
+    const p = careerPeriod("2023-04", "2025-08");
+    expect(p.text).toBe("Apr 2023 – Aug 2025");
+    expect(p.start).toEqual({ text: "Apr 2023", dateTime: "2023-04" });
+    expect(p.end).toEqual({ text: "Aug 2025", dateTime: "2025-08" });
+    expect(p.spoken).toBe("April 2023 to August 2025");
+  });
+  it('shows "present" as the word Present, with no date time', () => {
+    const p = careerPeriod("2025-09", "present");
+    expect(p.text).toBe("Sep 2025 – Present");
+    expect(p.end).toEqual({ text: "Present" });
+    expect(p.spoken).toBe("September 2025 to present");
+  });
+  it("shows the start alone when the document says nothing about the end", () => {
+    const p = careerPeriod("2021", undefined);
+    expect(p.text).toBe("2021");
+    expect(p.end).toBeUndefined();
+    expect(p.spoken).toBe("from 2021");
+  });
+  it("does not repeat a range that starts and ends in the same year-only text", () => {
+    expect(careerPeriod("2019", "2019").text).toBe("2019");
+    expect(careerPeriod("2016", "2021").text).toBe("2016 – 2021");
+  });
+});
+
+describe("isCurrent, languageDetail", () => {
+  it("only `present` is current", () => {
+    expect(isCurrent({ end: "present" })).toBe(true);
+    expect(isCurrent({ end: "2025" })).toBe(false);
+    expect(isCurrent({})).toBe(false);
+  });
+  it("joins the label and the level, never the same word twice", () => {
+    expect(languageDetail({ name: "English", level: "C2", label: "Native" })).toBe("Native, C2");
+    expect(languageDetail({ name: "Portuguese", level: "A2" })).toBe("A2");
+    expect(languageDetail({ name: "French", level: "Native", label: "native" })).toBe("native");
+  });
+});
+
+describe("safePortrait, safeLinks", () => {
+  it("returns the portrait only on a safe /media/ path", () => {
+    expect(safePortrait(demo)).toMatchObject({ src: "/media/demo/portrait-example.svg" });
+    const { portrait: _p, ...none } = demo;
+    expect(safePortrait(none as PublishedCareer)).toBeNull();
+    expect(safePortrait({ ...demo, portrait: { src: "https://evil.example/x.png", alt: "x", width: 1, height: 1 } })).toBeNull();
+    expect(safePortrait({ ...demo, portrait: { src: "/media/../x.png", alt: "x", width: 1, height: 1 } })).toBeNull();
+  });
+  it("keeps only https links without credentials", () => {
+    const links = [
+      { label: "ok", url: "https://example.org/a" },
+      { label: "http", url: "http://example.org/b" },
+      { label: "cred", url: "https://user:pw@example.org/c" },
+    ];
+    expect(safeLinks({ ...demo, links })).toEqual([{ label: "ok", url: "https://example.org/a" }]);
+  });
+});
+
+describe("careerJsonLd", () => {
+  const ld = careerJsonLd(demo, "https://v2.bsodium.fr");
+  it("is a ProfilePage about a Person, with the site's own name and role", () => {
+    expect(ld["@type"]).toBe("ProfilePage");
+    expect(ld.url).toBe("https://v2.bsodium.fr/career");
+    expect(ld.dateModified).toBe(demo.updated);
+    expect(ld.mainEntity).toMatchObject({ "@type": "Person", name: SITE.name, jobTitle: SITE.role });
+  });
+  it("lists the profile links as sameAs and nothing else about the person", () => {
+    const person = ld.mainEntity as Record<string, unknown>;
+    expect(person.sameAs).toEqual(demo.links.map((l) => l.url));
+    expect(Object.keys(person).sort()).toEqual(["@type", "jobTitle", "name", "sameAs", "url"]);
+  });
+  it("carries no employer, portrait, place or contact detail", () => {
+    const text = JSON.stringify(ld);
+    for (const org of demo.roles.map((r) => r.org)) expect(text).not.toContain(org);
+    expect(text).not.toMatch(/portrait|worksFor|address|email|telephone|image/i);
+  });
+  it("has no sameAs when there is no link", () => {
+    expect((careerJsonLd({ ...demo, links: [] }, "https://x.test").mainEntity as Record<string, unknown>).sameAs).toBeUndefined();
+  });
+});

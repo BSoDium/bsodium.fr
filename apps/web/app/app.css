@@ -2528,6 +2528,49 @@ h1[tabindex="-1"]:focus-visible {
   }
 
   /*
+   * With a career document the row has one more word ("Career": seven items). The same tiers, one step tighter so that the row holds
+   * its width (measured: 390, 430, 768 and 1440 px, with and without the panel); under 24 rem of row (a phone narrower than 384 px) the career link
+   * is left out of the header, where the home page's list and the search have it.
+   */
+  [data-slot="site-header"][data-career] .nav-link {
+    letter-spacing: 0;
+  }
+
+  @container (max-width: 23.99rem) {
+    [data-slot="site-header"] [data-nav-item="career"] {
+      display: none;
+    }
+  }
+
+  @container (min-width: 23rem) {
+    [data-slot="site-header"][data-career] .nav-link {
+      letter-spacing: 0.02em;
+      padding-inline: 0.1875rem;
+    }
+  }
+
+  @container (min-width: 28rem) {
+    [data-slot="site-header"][data-career] .nav-link {
+      letter-spacing: 0.02em;
+      padding-inline: 0.3125rem;
+    }
+  }
+
+  @container (min-width: 32rem) {
+    [data-slot="site-header"][data-career] .nav-link {
+      letter-spacing: 0.06em;
+      padding-inline: 0.5rem;
+    }
+  }
+
+  @container (min-width: 44rem) {
+    [data-slot="site-header"][data-career] .nav-link {
+      letter-spacing: 0.1em;
+      padding-inline: 1.125rem;
+    }
+  }
+
+  /*
    * The hero. `position: absolute` in the shell's `main`, over the globe (z 10: above the labels, below the credits line at 20, the
    * navigation at 40 and the detail panel at 30), bottom-anchored, and `pointer-events: none`: only the search line and the rows take
    * the pointer, so the globe is draggable and zoomable beneath all the rest. Three states in `data-hero`:
@@ -2576,13 +2619,19 @@ h1[tabindex="-1"]:focus-visible {
         min(
           calc((100vw - 2 * var(--hero-gutter)) / var(--hero-fit)),
           24vh,
-          calc((100dvh - var(--hero-fixed) - var(--hero-clear) - env(safe-area-inset-bottom, 0px) - 1rem) / 1.9)
+          calc((100dvh - var(--hero-fixed) - var(--hero-extra, 0rem) - var(--hero-clear) - env(safe-area-inset-bottom, 0px) - 1rem) / 1.9)
         )
       );
     }
 
     body:has([data-dev-content-badge]) .landing-hero {
       --hero-clear: 4.75rem;
+    }
+
+    /* A fifth row (the career page: `data-rows="5"`) is one more 44 px target and its hairline, which the name gives up. The stacked
+       tiers below hold the row in two columns too: five rows are three lines there, which is also one more line. */
+    .landing-hero[data-rows="5"] {
+      --hero-extra: 2.8125rem;
     }
   }
 
@@ -3163,5 +3212,399 @@ h1[tabindex="-1"]:focus-visible {
 @media not all and (hover: hover) and (pointer: fine) {
   .ds-kbd {
     display: none !important;
+  }
+}
+
+/* ==================================================================================================================================
+ * The career page (`/career`, components/career-page.tsx, docs/career-page.md). The head is the lists' head (`.list-head`); everything
+ * below it is local to this block. Solid colours of the page's own tokens only (no opacity to lighten or darken); no motion at all.
+ * ================================================================================================================================== */
+
+@layer components {
+  /* The name block and the portrait: beside each other at every width (the portrait is optional; without it the text takes the room). */
+  .career-id {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem 2rem;
+    align-items: start;
+  }
+
+  .career-id[data-portrait="true"] {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .career-name {
+    --list-title: clamp(2.25rem, 6cqi, 5rem);
+  }
+
+  .career-id-text {
+    min-width: 0;
+  }
+
+  /* The portrait: 4:5, the top of the picture first (a face is never cut off at the head), a hairline frame in the strong border. */
+  .career-portrait {
+    margin: clamp(2rem, 4.4cqi, 4rem) 0 0;
+    width: clamp(5.5rem, 22cqi, 12rem);
+  }
+
+  .career-portrait img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    object-position: 50% 0;
+    background: var(--surface);
+    border: var(--hairline) solid var(--border-strong);
+  }
+
+  /* The headline statement: the reading face, one paragraph, a comfortable measure. */
+  .career-summary {
+    margin: 1.5rem 0 0;
+    max-width: 40rem;
+    font-family: var(--font-reading);
+    font-size: var(--text-reading);
+    line-height: 1.55;
+    color: var(--foreground);
+    text-wrap: pretty;
+  }
+
+  .career-availability {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    margin: 1.25rem 0 0;
+    color: var(--muted-foreground);
+  }
+
+  /* A solid square, the foreground: a mark, not a status light (nothing here says "online"). */
+  .career-dot {
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--foreground);
+    transform: translateY(-0.05em);
+  }
+
+  .career-asof {
+    white-space: nowrap;
+  }
+
+  /* Languages: ONE compact line under the head, between two hairlines of the page; wraps on a phone. */
+  .career-languages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 2rem;
+    margin-top: 2.5rem;
+    padding-block: 0.875rem;
+    border-block: var(--hairline) solid var(--border);
+  }
+
+  .career-languages-label {
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+
+  .career-languages ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .career-language-name {
+    font-family: var(--font-reading);
+    font-weight: var(--weight-medium);
+  }
+
+  .career-language-detail {
+    margin-left: 0.5rem;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    font-feature-settings: "calt" 0;
+  }
+
+  /* A block: its heading at the left from 48 rem, above its content below it; a hairline closes every block's top. */
+  .career-block {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem 2rem;
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: var(--hairline) solid var(--border-strong);
+  }
+
+  .career-block-title {
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+
+  .career-block-body {
+    min-width: 0;
+    max-width: 52rem;
+  }
+
+  @media (min-width: 48rem) {
+    .career-block {
+      grid-template-columns: 12rem minmax(0, 1fr);
+    }
+  }
+
+  /* The timeline: an ordered list with ONE vertical hairline at its left and a solid square on it for every item. */
+  .career-timeline {
+    margin: 0;
+    padding: 0 0 0 1.75rem;
+    list-style: none;
+    border-left: var(--hairline) solid var(--border-strong);
+  }
+
+  .career-item {
+    position: relative;
+    padding-bottom: 2.75rem;
+    break-inside: avoid;
+  }
+
+  .career-item:last-child {
+    padding-bottom: 0;
+  }
+
+  .career-item::before {
+    content: "";
+    position: absolute;
+    left: calc(-1.75rem - var(--hairline) / 2 - 0.1875rem);
+    top: 0.5rem;
+    width: 0.375rem;
+    height: 0.375rem;
+    background: var(--muted-foreground);
+  }
+
+  /* The role in progress: its square is the foreground, the others muted. */
+  .career-item[data-current="true"]::before {
+    background: var(--foreground);
+  }
+
+  .career-period {
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+
+  .career-org {
+    margin: 0.375rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: var(--weight-heavy);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+
+  .career-org-link,
+  .career-place,
+  .career-link {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: var(--border-strong);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.25em;
+  }
+
+  .career-org-link:hover,
+  .career-org-link:focus-visible,
+  .career-place:hover,
+  .career-place:focus-visible,
+  .career-link:hover,
+  .career-link:focus-visible {
+    color: var(--signal-text);
+    text-decoration-color: currentColor;
+  }
+
+  .career-role {
+    margin: 0.125rem 0 0;
+    font-family: var(--font-reading);
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  .career-level {
+    color: var(--muted-foreground);
+  }
+
+  .career-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1rem;
+    margin: 0.375rem 0 0;
+    color: var(--muted-foreground);
+  }
+
+  .career-highlights {
+    margin: 0.875rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-reading);
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .career-highlights li {
+    position: relative;
+    padding-left: 1.125rem;
+    text-wrap: pretty;
+  }
+
+  .career-highlights li + li {
+    margin-top: 0.5rem;
+  }
+
+  .career-highlights li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 0.5rem;
+    border-top: var(--hairline) solid var(--muted-foreground);
+  }
+
+  .career-stack {
+    margin: 0.875rem 0 0;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: var(--muted-foreground);
+    font-feature-settings: "calt" 0;
+  }
+
+  .career-skills {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1.25rem 2rem;
+    margin: 0;
+  }
+
+  .career-skills dt {
+    color: var(--muted-foreground);
+  }
+
+  .career-skills dd {
+    margin: 0.25rem 0 0;
+    font-family: var(--font-reading);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .career-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem 2rem;
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: var(--hairline) solid var(--border-strong);
+  }
+
+  @media (min-width: 48rem) {
+    .career-footer {
+      grid-template-columns: 12rem minmax(0, 1fr);
+    }
+  }
+
+  .career-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .career-links li {
+    display: flex;
+  }
+
+  .career-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.75rem;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+  }
+}
+
+@media print {
+  /* One clean column on paper: the timeline's hairline and squares stay (ink), the blocks stack, an item is never split, the portrait is
+     small, the links print their address. The page's own chrome (header, skip links, scrim) is already hidden by the print block above. */
+  .career {
+    --list-title: 28pt;
+  }
+
+  .career-name {
+    --list-title: 28pt;
+    margin-top: 1rem;
+  }
+
+  .career-block,
+  .career-footer {
+    display: block;
+    margin-top: 1.25rem;
+    border-top-color: #000;
+  }
+
+  .career-block-title {
+    margin-bottom: 0.5rem;
+    break-after: avoid;
+  }
+
+  .career-portrait {
+    width: 3cm;
+    margin-top: 1rem;
+  }
+
+  .career-summary,
+  .career-highlights,
+  .career-skills dd,
+  .career-role {
+    font-size: 10.5pt;
+  }
+
+  .career-org {
+    font-size: 12pt;
+  }
+
+  .career-item {
+    padding-bottom: 1rem;
+    break-inside: avoid;
+  }
+
+  .career-languages {
+    margin-top: 1rem;
+    border-color: #000;
+  }
+
+  .career-timeline {
+    border-left-color: #000;
+  }
+
+  .career-item::before,
+  .career-item[data-current="true"]::before,
+  .career-dot {
+    background: #000;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .career-link::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-meta);
+    font-size: 0.7em;
+    word-break: break-all;
+  }
+
+  .career-org-link::after {
+    content: none;
   }
 }
