@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createStaticHandler, createStaticRouter, StaticRouterProvider, type StaticHandlerContext } from "react-router";
 import { describe, expect, it } from "vitest";
 import { SITE_NAME } from "~/lib/site";
-import { Navbar } from "./navbar";
+import { GESTURE_GUARD_MS, Navbar } from "./navbar";
 
 /** The navbar server-rendered at `url`; `shell` stands for the route that owns the globe (`routes/shell`). */
 async function render(url: string, { shell = true, heroResting }: { shell?: boolean; heroResting?: boolean } = {}): Promise<string> {
@@ -18,13 +18,13 @@ async function render(url: string, { shell = true, heroResting }: { shell?: bool
 describe("Navbar", () => {
   it("has no logo: the first item is \"Globe\" as plain text, a link home; then the four sections, in order, then the search", async () => {
     const html = await render("/articles", { shell: false });
-    // the only drawing in the header is the search icon, after the links: no mark, no icon in front of the name
+    // the only drawing in the header is the search icon (before its word), after the links: no mark, no icon in front of the name
     expect(html.indexOf("<svg")).toBeGreaterThan(html.indexOf('href="/poetry"'));
     expect(html.match(/<svg/g)).toHaveLength(1);
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
     expect(links).toEqual([
       ["/", "Globe"],
-      ["/projects", "Projects"],
+      ["/software", "Software"],
       ["/articles", "Articles"],
       ["/artworks", "Artworks"],
       ["/poetry", "Poetry"],
@@ -50,7 +50,7 @@ describe("Navbar", () => {
   it("on the home page, once the hero has stepped back (its rows are hidden), brings the sections back", async () => {
     const html = await render("/", { heroResting: false });
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => m[1]);
-    expect(links).toEqual(["/", "/projects", "/articles", "/artworks", "/poetry"]);
+    expect(links).toEqual(["/", "/software", "/articles", "/artworks", "/poetry"]);
     expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
     // the key hint is plain muted text: the command key's name in a kbd with no box, no border, no background
     const kbd = html.slice(html.indexOf("<kbd"), html.indexOf("</kbd>"));
@@ -61,34 +61,42 @@ describe("Navbar", () => {
   it("is unchanged on every other route, whatever the hero's state (it is not on the page there)", async () => {
     for (const url of ["/articles", "/poetry", "/locations/x", "/articles/x"]) {
       const html = await render(url, { shell: url.startsWith("/locations") || url.startsWith("/articles/"), heroResting: true });
-      expect([...html.matchAll(/<a [^>]*href="([^"]*)"/g)].map((m) => m[1]), url).toEqual(["/", "/projects", "/articles", "/artworks", "/poetry"]);
+      expect([...html.matchAll(/<a [^>]*href="([^"]*)"/g)].map((m) => m[1]), url).toEqual(["/", "/software", "/articles", "/artworks", "/poetry"]);
       expect(html, url).toContain('aria-label="Primary"');
     }
   });
 
-  it("offers the search as one word where the icon trigger is not shown (a phone), after the links, with no drawing", async () => {
+  it("offers the search as one control at every width: the icon, the word \"Search\" and the key hint, in the type of the other items, after the links", async () => {
     const html = await render("/articles", { shell: false });
-    const compact = html.indexOf('data-slot="search-trigger-compact"');
-    expect(compact).toBeGreaterThan(html.indexOf('href="/poetry"'));
-    expect(html.slice(compact, html.indexOf("</button>", compact))).toMatch(/>Search$/);
-    expect(html.slice(compact, html.indexOf("</button>", compact))).not.toContain("<svg");
-    expect(html.slice(compact, html.indexOf("</button>", compact))).toContain("@md:hidden");
+    const at = html.indexOf('data-slot="search-trigger"');
+    expect(at).toBeGreaterThan(html.indexOf('href="/poetry"'));
+    expect(html.match(/data-slot="search-trigger/g)).toHaveLength(1);
+    const button = html.slice(at, html.indexOf("</button>", at));
+    // the icon, then the word, then the hint (empty until hydrated: its place is held), as one run of the nav type
+    expect(button.indexOf("<svg")).toBeGreaterThan(-1);
+    expect(button.indexOf("<svg")).toBeLessThan(button.indexOf("<span>Search</span>"));
+    expect(button.indexOf("<span>Search</span>")).toBeLessThan(button.indexOf("<kbd"));
+    // the glyph is an inline icon (1.1 em of the nav type), like the command key it sits beside: one size, not 20 px against 14 px
+    expect(button).toContain('data-size="inline"');
+    expect(button).not.toContain('data-size="control"');
+    const opening = html.slice(html.lastIndexOf("<button", at), at + 400);
+    expect(opening).toMatch(/class="nav-link nav-search[^"]*min-h-11 min-w-11/);
+    expect(opening).toContain('aria-keyshortcuts="Control+K Meta+K"');
   });
 
-  it("marks the search triggers as needing a script (not drawn without one: a dead control), keeps the links, and gives every item a 44 px target", async () => {
+  it("marks the search trigger as needing a script (not drawn without one: a dead control), keeps the links, and gives every item a 44 px target", async () => {
     const html = await render("/articles", { shell: false });
-    expect(html.match(/data-needs-script=""/g)).toHaveLength(2);
-    expect(html).toMatch(/data-slot="search-trigger-compact"[^>]*data-needs-script=""/);
+    expect(html.match(/data-needs-script=""/g)).toHaveLength(1);
     expect(html).toMatch(/data-slot="search-trigger"[^>]*data-needs-script=""/);
-    // the shortest word ("Globe") is as wide as it is tall at the smallest phone
-    expect(html.match(/class="nav-link[^"]*min-h-11 min-w-11[^"]*"/g)?.length).toBeGreaterThanOrEqual(5);
+    // the shortest word ("Globe") is as wide as it is tall at the smallest phone, and the trigger is the same height as the links
+    expect(html.match(/class="nav-link[^"]*min-h-11 min-w-11[^"]*"/g)?.length).toBeGreaterThanOrEqual(6);
   });
 
   it("marks the current page with aria-current on the name (when it is shown) or the section", async () => {
     expect(await render("/", { heroResting: false })).toMatch(/<a [^>]*aria-current="page"[^>]*href="\/"|<a [^>]*href="\/"[^>]*aria-current="page"/);
     const articles = await render("/articles", { shell: false });
     expect(articles).toMatch(/<a [^>]*aria-current="page"[^>]*>Articles<\/a>/);
-    expect(articles).not.toMatch(/<a [^>]*aria-current="page"[^>]*>Projects<\/a>/);
+    expect(articles).not.toMatch(/<a [^>]*aria-current="page"[^>]*>Software<\/a>/);
   });
 
   it("is centred over the whole viewport, except beside the place and entry panels where it is centred over the map", async () => {
@@ -96,7 +104,7 @@ describe("Navbar", () => {
       expect(await render(url), url).not.toContain("md:right-1/2");
     }
     // (a place has no full-screen view: `?view=full` on a place is still the side panel)
-    for (const url of ["/locations/x", "/locations/x?view=full", "/articles/x", "/projects/x?view=panel", "/poetry/x?tag=y"]) {
+    for (const url of ["/locations/x", "/locations/x?view=full", "/articles/x", "/software/x?view=panel", "/poetry/x?tag=y"]) {
       expect(await render(url), url).toContain("md:right-1/2");
     }
   });
@@ -150,5 +158,26 @@ describe(".nav-fade (app.css)", () => {
     expect(css).toMatch(/forced-colors: active\)[\s\S]*\.nav-fade \{[^}]*Canvas/);
     // a solid band (forced colours drop gradients and the mask would hide it), as tall as the row
     expect(css).toMatch(/forced-colors: active\)\s*\{[^@]*\.nav-fade \{[^}]*height: var\(--navbar-height\);[^}]*background: Canvas;[^}]*background-image: none;[^}]*mask-image: none;/);
+  });
+});
+
+describe("the header that a gesture brings", () => {
+  const css = readFileSync(new URL("../app.css", import.meta.url), "utf8");
+
+  it("ignores the pointer while guarded (the tap's click must not reach a link that was not there when the finger went down), and only the pointer", () => {
+    const at = css.indexOf('[data-slot="site-header"][data-guard]');
+    expect(at).toBeGreaterThan(0);
+    const rule = css.slice(at, css.indexOf("}", at));
+    expect(rule).toContain('[data-slot="site-header"][data-guard] *');
+    expect(rule).toMatch(/pointer-events: none !important;/);
+    // visible and readable throughout: the guard changes nothing else
+    expect(rule).not.toMatch(/opacity|visibility|display|inert/);
+  });
+
+  it("is a short guard, not rendered on the server (a server page has no gesture)", async () => {
+    expect(GESTURE_GUARD_MS).toBeGreaterThanOrEqual(250);
+    expect(GESTURE_GUARD_MS).toBeLessThanOrEqual(500);
+    expect(await render("/articles", { shell: false })).not.toContain("data-guard");
+    expect(await render("/", { heroResting: false })).not.toContain("data-guard");
   });
 });

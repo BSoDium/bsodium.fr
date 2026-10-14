@@ -20,13 +20,13 @@
   --muted-foreground: #595959;
   /* Quieter than muted text, still AA against the page (4.9:1): the map credits line. Dimmer by colour, never by opacity. */
   --subtle-foreground: #6f6f6f;
-  /* The share of the page colour in a map label's plate (engine/label-plate.ts: the least that keeps the 11 px second line AA, 4.5:1, over the loudest map tone). */
-  --label-plate-alpha: 0.7;
+  /* The share of the page colour in a map label's plate (engine/label-plate.ts): a chosen value, well above the least that keeps the 11 px second line AA (4.5:1) over the loudest map tone (0.70 light, 0.62 dark), so the plate reads as a ground. */
+  --label-plate-alpha: 0.86;
   --border: rgb(0 0 0 / 0.14);
-  --border-strong: rgb(0 0 0 / 0.4);
-  --ring: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #fbfbfb;
+  --border-strong: rgb(0 0 0 / 0.44);
+  --ring: #0067b8;
+  --primary: #0076d4;
+  --primary-foreground: #ffffff;
   --accent: #ececec;
   --accent-foreground: #0a0a0a;
   --globe-grid: rgb(0 0 0 / 0.12);
@@ -41,17 +41,21 @@
    * (24 px, or 18.66 px bold, and up), non-text marks (a tick, a rule, a cover's mark, an underline) and fills: 3:1 or more on the page,
    * the surface and the paper in both schemes. Text of any smaller size takes `--signal-text`: the same hue, deeper in the light scheme
    * and lighter in the dark one, AA (4.5:1) on the page, the surface and the hover grey. Text on a signal fill is `--signal-foreground`,
-   * white. The whole accent is these five lines (times the four copies of the list).
+   * white. The primary button is the accent's fill (`--primary` / `--primary-foreground`), `--signal-hover` and `--signal-active` its two deeper
+   * steps (lightness 38 % and 35 % against the fill's 42 %: white text stays AA on both and each is still 3:1 or more against the dark page, which a deeper step would not be), `--ring` the accent's text tone. The whole accent is these lines
+   * (times the four copies of the list).
    */
   --signal: #0076d4;
   --signal-text: #0067b8;
   --signal-foreground: #ffffff;
   --signal-wash: rgb(0 118 212 / 0.08);
-  /* Reading surface of the entries and their lists (docs/design-tokens.md, "Reading surface"): paper in the light scheme, night in the dark. */
-  --paper: #efeadf;
-  --paper-foreground: #16130f;
-  --paper-muted: #6b665b;
-  --paper-hover: #ebe7dc;
+  --signal-hover: #006cc2;
+  --signal-active: #0064b2;
+  /* Reading surface of the entries and their lists (docs/design-tokens.md, "Reading surface"): the page's own colours since 2026-10-14 (no cream), kept as tokens so it can differ again. */
+  --paper: #fbfbfb;
+  --paper-foreground: #0a0a0a;
+  --paper-muted: #595959;
+  --paper-hover: #ececec;
   --paper-signal: #0076d4;
   --paper-signal-text: #0067b8;
   /* The opposite scheme's page tokens: what an inverted frame rebinds the tokens to (a cycle-free swap). */
@@ -119,12 +123,12 @@
     --foreground: #f5f5f5;
     --muted-foreground: #a3a3a3;
     --subtle-foreground: #8a8a8a;
-    --label-plate-alpha: 0.62;
+    --label-plate-alpha: 0.8;
     --border: rgb(255 255 255 / 0.16);
     --border-strong: rgb(255 255 255 / 0.45);
-    --ring: #f5f5f5;
-    --primary: #f5f5f5;
-    --primary-foreground: #0a0a0a;
+    --ring: #0a93ff;
+    --primary: #0076d4;
+    --primary-foreground: #ffffff;
     --accent: #1f1f1f;
     --accent-foreground: #f5f5f5;
     --globe-grid: rgb(255 255 255 / 0.14);
@@ -136,10 +140,12 @@
     --signal-text: #0a93ff;
     --signal-foreground: #ffffff;
     --signal-wash: rgb(0 118 212 / 0.12);
-    --paper: #0b0c0f;
-    --paper-foreground: #ece8df;
-    --paper-muted: #8d8a82;
-    --paper-hover: #17181b;
+    --signal-hover: #006cc2;
+    --signal-active: #0064b2;
+    --paper: #0a0a0a;
+    --paper-foreground: #f5f5f5;
+    --paper-muted: #a3a3a3;
+    --paper-hover: #1f1f1f;
     --paper-signal: #0076d4;
     --paper-signal-text: #0a93ff;
     --inverse-background: #f5f5f5;
@@ -279,13 +285,13 @@
   --foreground: #0a0a0a;
   --muted-foreground: #595959;
   --subtle-foreground: #6f6f6f;
-  /* The share of the page colour in a map label's plate (engine/label-plate.ts: the least that keeps the 11 px second line AA, 4.5:1, over the loudest map tone). */
-  --label-plate-alpha: 0.7;
+  /* The share of the page colour in a map label's plate (engine/label-plate.ts): a chosen value, well above the least that keeps the 11 px second line AA (4.5:1) over the loudest map tone (0.70 light, 0.62 dark), so the plate reads as a ground. */
+  --label-plate-alpha: 0.86;
   --border: rgb(0 0 0 / 0.14);
-  --border-strong: rgb(0 0 0 / 0.4);
-  --ring: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #fbfbfb;
+  --border-strong: rgb(0 0 0 / 0.44);
+  --ring: #0067b8;
+  --primary: #0076d4;
+  --primary-foreground: #ffffff;
   --accent: #ececec;
   --accent-foreground: #0a0a0a;
   --globe-grid: rgb(0 0 0 / 0.12);
@@ -296,10 +302,12 @@
   --signal-text: #0067b8;
   --signal-foreground: #ffffff;
   --signal-wash: rgb(0 118 212 / 0.08);
-  --paper: #efeadf;
-  --paper-foreground: #16130f;
-  --paper-muted: #6b665b;
-  --paper-hover: #ebe7dc;
+  --signal-hover: #006cc2;
+  --signal-active: #0064b2;
+  --paper: #fbfbfb;
+  --paper-foreground: #0a0a0a;
+  --paper-muted: #595959;
+  --paper-hover: #ececec;
   --paper-signal: #0076d4;
   --paper-signal-text: #0067b8;
   --inverse-background: #0a0a0a;
@@ -322,12 +330,12 @@
   --foreground: #f5f5f5;
   --muted-foreground: #a3a3a3;
   --subtle-foreground: #8a8a8a;
-  --label-plate-alpha: 0.62;
+  --label-plate-alpha: 0.8;
   --border: rgb(255 255 255 / 0.16);
   --border-strong: rgb(255 255 255 / 0.45);
-  --ring: #f5f5f5;
-  --primary: #f5f5f5;
-  --primary-foreground: #0a0a0a;
+  --ring: #0a93ff;
+  --primary: #0076d4;
+  --primary-foreground: #ffffff;
   --accent: #1f1f1f;
   --accent-foreground: #f5f5f5;
   --globe-grid: rgb(255 255 255 / 0.14);
@@ -338,10 +346,12 @@
   --signal-text: #0a93ff;
   --signal-foreground: #ffffff;
   --signal-wash: rgb(0 118 212 / 0.12);
-  --paper: #0b0c0f;
-  --paper-foreground: #ece8df;
-  --paper-muted: #8d8a82;
-  --paper-hover: #17181b;
+  --signal-hover: #006cc2;
+  --signal-active: #0064b2;
+  --paper: #0a0a0a;
+  --paper-foreground: #f5f5f5;
+  --paper-muted: #a3a3a3;
+  --paper-hover: #1f1f1f;
   --paper-signal: #0076d4;
   --paper-signal-text: #0a93ff;
   --inverse-background: #f5f5f5;
@@ -487,13 +497,26 @@
     border-radius: var(--radius-sm);
   }
 
+  /*
+   * A moat of the page colour round the ring (5 px: the 2 px offset, the 2 px ring and a 1 px margin), so that the ring is 3:1 or more
+   * against what is drawn under it and never against what happens to be there (a cover image, the globe's lines, the scrim over a
+   * picture). Over the plain page it cannot be seen. Inputs keep the outline they were given (the palette's field draws its own rule).
+   */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    box-shadow: 0 0 0 5px var(--background);
+  }
+
   :target {
     scroll-margin-top: calc(var(--navbar-height) + 1.5rem);
   }
 
   ::selection {
-    background: var(--foreground);
-    color: var(--background);
+    background: var(--signal);
+    color: var(--signal-foreground);
   }
 }
 
@@ -586,11 +609,11 @@
     text-transform: uppercase;
   }
 
-  /* A link in running text: the text keeps its colour, the underline is the accent (a mark, 3:1 or more) and thickens under the pointer. */
+  /* A link in running text: the accent's text tone (4.5:1 or more on the page, the surface and the hover grey) with an underline that thickens under the pointer. */
   .type-link {
-    color: inherit;
+    color: var(--signal-text);
     text-decoration-line: underline;
-    text-decoration-color: var(--signal);
+    text-decoration-color: currentColor;
     text-decoration-thickness: 0.08em;
     text-underline-offset: 0.2em;
     transition: text-decoration-thickness var(--duration-fast) var(--ease-standard);
@@ -601,26 +624,63 @@
   }
 
   /*
-   * Drop cap: the first letter of the first paragraph, in the reading face at 700 and the ink (the "Article on paper" board), a
-   * float five lines of the body tall. A float and not `initial-letter` on purpose: the board's letter sits on the third line of the
-   * body, and `initial-letter` sinks differently in each engine. A narrow column (a phone, the half panel) takes a smaller letter.
+   * Drop cap (docs/design-system.md, "Entry pages", "Drop cap"): the first letter of the first paragraph, in the reading face at 700
+   * and the ink, spanning EXACTLY `--dc-n` lines of the body: its cap height starts at the cap height of the first line and its
+   * baseline sits on the baseline of line `--dc-n`, so the line after it starts flush under the letter, with no air below it.
+   *
+   * The sizes are the font's own (Newsreader 5.3.0, 2000 units; `scripts/entries/dropcap.mjs` measures them again in the browser):
+   *   ascent 0.735 em, descent 0.265 em, no line gap (the content area of a line is 1 em);
+   *   cap height of the body (wght 400, opsz 18 to 21): 0.672 em;
+   *   cap height of the letter (wght 700, opsz 72, pinned below so that it does not drift with the size): 0.715 em.
+   * The letter is `--dc-k` body ems: (N - 1) line pitches plus the body's cap height, over the letter's cap height. Its box is a float
+   * exactly N lines tall (`line-height`), the glyph put on the right baseline by the padding above it; nothing sits below. The
+   * paragraph contains the float (`flow-root`): a short paragraph never lets the letter run into the next block.
+   *
+   * `::first-letter` takes a mark that touches the letter ("L'" would be a wedge as tall as the cap). `dropCapKind`
+   * (lib/entry-typography.ts) keeps out what does not fit: an opening quote, Q and Ç (tails under the baseline), a lowercase start, a
+   * mark after the capital. A column narrower than 30 rem takes two lines instead of three.
+   *
+   * Not `initial-letter`: measured in Chrome it sizes the letter from the font's default cap height (0.67 em) and not the bold,
+   * optical-size 72 instance's (0.715 em), so the letter stands 4 to 5 px above the first line at a 21 px body; engines differ and
+   * Firefox has none. The float below is the same on every engine and is measured (`scripts/entries/dropcap.mjs`).
    */
+  .drop-cap {
+    --dc-n: 3;
+    --dc-lh: var(--reading-lh, 1.65);
+    --dc-cap: 0.715;
+    --dc-body-cap: 0.672;
+    --dc-ascent: 0.735;
+    --dc-k: calc(((var(--dc-n) - 1) * var(--dc-lh) + var(--dc-body-cap)) / var(--dc-cap));
+    /* The air above the glyph's line box, in ems of the letter: the baseline of line N minus what a box N lines tall gives it. */
+    --dc-pad: calc(((var(--dc-n) - 1) * var(--dc-lh) + 2 * (var(--dc-ascent) - 0.5) * (1 - var(--dc-k))) / var(--dc-k));
+    display: flow-root;
+    line-height: var(--dc-lh);
+  }
+
   .drop-cap::first-letter {
     float: left;
-    padding: 0.07em 0.13em 0 0;
+    /* The right gap: a tenth of the letter's em beyond its advance. The 1 px under it keeps line N + 1 out of the float whatever the
+       rounding of a fractional line height (a float a hair taller than N lines pushes that line right). */
+    margin: 0 0.1em -1px 0;
+    padding: calc(var(--dc-pad) * 1em) 0 0;
     font-family: var(--font-reading);
     font-weight: 700;
-    font-size: 5.33em;
-    line-height: 0.8;
-    letter-spacing: 0;
-    font-optical-sizing: auto;
+    font-size: calc(var(--dc-k) * 1em);
+    line-height: calc(var(--dc-n) * var(--dc-lh) / var(--dc-k) - var(--dc-pad));
+    font-variation-settings: "opsz" 72;
     font-synthesis: none;
+    letter-spacing: 0;
     color: var(--foreground);
   }
 
-  @container (max-width: 40rem) {
-    .drop-cap::first-letter {
-      font-size: 4.2em;
+  /* A mark above the capital (É, À): the paragraph makes room for it, so it never meets the block or the rule above. */
+  .drop-cap[data-drop-cap="accent"] {
+    padding-top: calc((0.235 * var(--dc-k) - (var(--dc-lh) - 1) / 2 - (var(--dc-ascent) - var(--dc-body-cap))) * 1em);
+  }
+
+  @container (max-width: 30rem) {
+    .drop-cap {
+      --dc-n: 2;
     }
   }
 
@@ -727,7 +787,7 @@
   }
 
   .ds-frame[data-variant="active"] {
-    border-color: var(--border-strong);
+    border-color: var(--signal);
     background: linear-gradient(var(--signal-wash), var(--signal-wash)), var(--surface);
   }
 
@@ -738,22 +798,22 @@
     --subtle-foreground: var(--inverse-muted);
     --border: var(--inverse-border);
     --border-strong: var(--inverse-border);
-    --ring: var(--inverse-foreground);
+    --ring: var(--inverse-signal-text);
     --signal: var(--inverse-signal);
     --signal-text: var(--inverse-signal-text);
     --surface: var(--inverse-background);
     --accent: color-mix(in srgb, var(--inverse-foreground) 14%, var(--inverse-background));
     --accent-foreground: var(--inverse-foreground);
-    --primary: var(--inverse-foreground);
-    --primary-foreground: var(--inverse-background);
+    --primary: var(--inverse-signal);
+    --primary-foreground: var(--signal-foreground);
     background: var(--inverse-background);
     border-color: var(--inverse-background);
   }
 
   .ds-frame[data-variant="inverted"]::selection,
   .ds-frame[data-variant="inverted"] ::selection {
-    background: var(--inverse-foreground);
-    color: var(--inverse-background);
+    background: var(--inverse-signal);
+    color: var(--signal-foreground);
   }
 
   /* Interactive frames (a link card): the line answers the pointer and the keyboard focus, no movement. */
@@ -783,7 +843,8 @@
 
   .ds-card:hover [data-slot="entry-card-title"] a {
     text-decoration: underline;
-    text-decoration-thickness: 1px;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 2px;
     text-underline-offset: 0.2em;
   }
 
@@ -867,7 +928,7 @@
   }
 
   .ds-tags a:hover {
-    color: var(--foreground);
+    color: var(--signal-text);
     text-decoration: underline;
     text-underline-offset: 0.2em;
   }
@@ -1006,8 +1067,19 @@
     --ds-button-line: var(--primary);
   }
 
+  /* The call to action is the accent's fill: hovered a step deeper, pressed another (white text stays AA on both). Its ring is the ink. */
   .ds-button[data-variant="primary"]:hover {
-    --ds-button-bg: color-mix(in srgb, var(--primary) 82%, var(--background));
+    --ds-button-bg: var(--signal-hover);
+    --ds-button-line: var(--signal-hover);
+  }
+
+  .ds-button[data-variant="primary"]:active {
+    --ds-button-bg: var(--signal-active);
+    --ds-button-line: var(--signal-active);
+  }
+
+  .ds-button[data-variant="primary"]:focus-visible {
+    outline-color: var(--foreground);
   }
 
   .ds-button[data-variant="secondary"]:hover,
@@ -1024,6 +1096,7 @@
   }
 
   .ds-button[data-variant="link"] {
+    --ds-button-fg: var(--signal-text);
     --ds-button-line: transparent;
     padding-inline: 0.25rem;
     text-decoration: underline;
@@ -1034,14 +1107,16 @@
     text-decoration: none;
   }
 
+  /* Pressed (a toggle that is on): the accent's fill, as the chosen filter has the accent's rule. */
   .ds-button[data-pressed="true"] {
-    --ds-button-bg: var(--foreground);
-    --ds-button-fg: var(--background);
-    --ds-button-line: var(--foreground);
+    --ds-button-bg: var(--signal);
+    --ds-button-fg: var(--signal-foreground);
+    --ds-button-line: var(--signal);
   }
 
   .ds-button[data-pressed="true"]:hover {
-    --ds-button-bg: color-mix(in srgb, var(--foreground) 82%, var(--background));
+    --ds-button-bg: var(--signal-hover);
+    --ds-button-line: var(--signal-hover);
   }
 
   /* A ghost toggle (the panel's full-screen switch) shows its state quietly: the hover grey stays on, the glyph has already swapped. */
@@ -1079,6 +1154,12 @@
 
   .ds-segmented > .ds-button {
     margin: 0 calc(var(--hairline) * -1) calc(var(--hairline) * -1) 0;
+  }
+
+  /* The focused one is above its neighbours (they overlap by a hairline and would paint over its ring). */
+  .ds-segmented > .ds-button:focus-visible {
+    position: relative;
+    z-index: 1;
   }
 
   /* Decorative textures: faint, behind content, never carrying information. */
@@ -1292,17 +1373,17 @@
     pointer-events: none;
     background: linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--background) 96%, transparent) 0%,
-      color-mix(in srgb, var(--background) 95%, transparent) 8%,
-      color-mix(in srgb, var(--background) 91%, transparent) 16%,
-      color-mix(in srgb, var(--background) 85%, transparent) 24%,
-      color-mix(in srgb, var(--background) 77%, transparent) 32%,
-      color-mix(in srgb, var(--background) 67%, transparent) 40%,
-      color-mix(in srgb, var(--background) 56%, transparent) 48%,
-      color-mix(in srgb, var(--background) 45%, transparent) 56%,
-      color-mix(in srgb, var(--background) 34%, transparent) 64%,
-      color-mix(in srgb, var(--background) 23%, transparent) 72%,
-      color-mix(in srgb, var(--background) 14%, transparent) 80%,
+      color-mix(in srgb, var(--background) 97%, transparent) 0%,
+      color-mix(in srgb, var(--background) 96%, transparent) 8%,
+      color-mix(in srgb, var(--background) 95%, transparent) 16%,
+      color-mix(in srgb, var(--background) 94%, transparent) 24%,
+      color-mix(in srgb, var(--background) 92%, transparent) 32%,
+      color-mix(in srgb, var(--background) 85%, transparent) 40%,
+      color-mix(in srgb, var(--background) 72%, transparent) 48%,
+      color-mix(in srgb, var(--background) 57%, transparent) 56%,
+      color-mix(in srgb, var(--background) 41%, transparent) 64%,
+      color-mix(in srgb, var(--background) 27%, transparent) 72%,
+      color-mix(in srgb, var(--background) 15%, transparent) 80%,
       color-mix(in srgb, var(--background) 7%, transparent) 88%,
       color-mix(in srgb, var(--background) 2%, transparent) 95%,
       transparent 100%
@@ -1440,7 +1521,8 @@
     font-optical-sizing: auto;
     font-kerning: normal;
     font-size: var(--text-reading);
-    line-height: var(--text-reading--line-height);
+    --reading-lh: var(--text-reading--line-height);
+    line-height: var(--reading-lh);
     font-weight: var(--weight-reading);
     font-variant-numeric: proportional-nums;
   }
@@ -1507,11 +1589,16 @@
 
   .ds-prose p a,
   .ds-prose li a {
-    color: inherit;
+    color: var(--signal-text);
     text-decoration-line: underline;
-    text-decoration-color: var(--signal);
+    text-decoration-color: currentColor;
     text-decoration-thickness: 0.08em;
     text-underline-offset: 0.2em;
+  }
+
+  .ds-prose p a:hover,
+  .ds-prose li a:hover {
+    text-decoration-thickness: 0.16em;
   }
 
   .ds-prose [data-slot="verse"] {
@@ -1566,9 +1653,10 @@
     color: var(--foreground);
   }
 
+  /* Always drawn where there is no hover: at 75 % the muted glyph keeps 3:1 or more against the page in both schemes (it was 55 %: 2.4:1). */
   @media (hover: none) {
     .ds-anchor {
-      opacity: 0.55;
+      opacity: 0.75;
     }
   }
 
@@ -1602,7 +1690,7 @@
   }
 
   /*
-   * Entry pages (docs/design-system.md, "Entry pages"): the "Article on paper" and "Poem at night" boards of the owner's canvas.
+   * Entry pages (docs/design-system.md, "Entry pages"): the article and poem boards of the owner's canvas.
    * The entry is a container (`cqi`): the headline, the body and the poem scale with the width of the column they sit in, so the half
    * panel and the full screen are the same design at two widths. From 1024 px of a full screen the page is a 12-column grid with
    * 28 px gutters: marginalia in 1-3, the text in 4-9, the figures in 10-12 (an article, a project); an artwork's image and a poem's
@@ -1632,16 +1720,6 @@
     gap: 2rem;
   }
 
-  /* The newspaper's double rule under the masthead: 3 px, a 3 px gap, 1 px. */
-  .entry-rule {
-    box-sizing: content-box;
-    height: 3px;
-    margin: 0;
-    border: 0;
-    border-top: 3px solid var(--foreground);
-    border-bottom: 1px solid var(--foreground);
-  }
-
   /* The headline: the reading face at 700, balanced, tight (the board: 132 px, 0.92, -0.03em, optical size 72 by `auto`). */
   .entry-title {
     /* The measure follows the role's size (`--entry-title`), not the title's own: a long title is set smaller by `--title-scale`, and
@@ -1665,7 +1743,7 @@
     font-weight: 300;
   }
 
-  /* A poem's title: thin italic, much larger than the lines (the night board: 128 px, 200, 0.95). */
+  /* A poem's title: thin italic, much larger than the lines (the poem board: 128 px, 200, 0.95). */
   .entry-title[data-poem] {
     max-width: none;
     font-size: var(--poem-title);
@@ -1713,7 +1791,7 @@
     margin: 0;
   }
 
-  .entry-margin a,
+  .entry-margin a:not(.ds-button),
   .entry-dateline a {
     color: inherit;
     text-decoration-line: underline;
@@ -1723,9 +1801,10 @@
     transition: color var(--duration-fast) var(--ease-standard);
   }
 
-  .entry-margin a:hover,
+  .entry-margin a:not(.ds-button):hover,
   .entry-dateline a:hover {
-    color: var(--foreground);
+    color: var(--signal-text);
+    text-decoration-color: currentColor;
   }
 
   /*
@@ -1759,7 +1838,8 @@
   /* The body: the board's 21 px / 1.55 at full width, the reading role's size in the half panel and on a phone. */
   .entry-text .ds-prose {
     font-size: var(--entry-body);
-    line-height: 1.55;
+    --reading-lh: 1.55;
+    line-height: var(--reading-lh);
   }
 
   .entry-text .ds-prose h2,
@@ -1773,7 +1853,7 @@
     padding-top: 0.75rem;
   }
 
-  /* A poem: the lines are the page's type (the night board: roman 300, 36 px / 1.38 at full width, one block per authored line). */
+  /* A poem: the lines are the page's type (the poem board: roman 300, 36 px / 1.38 at full width, one block per authored line). */
   .entry[data-kind="poem"] .ds-prose [data-slot="verse"] {
     font-size: var(--poem-size);
     font-weight: var(--weight-light);
@@ -1886,7 +1966,7 @@
   }
 
   .ds-filter:hover {
-    color: var(--foreground);
+    color: var(--signal-text);
   }
 
   .ds-filter[aria-current="true"] {
@@ -1895,7 +1975,7 @@
   }
 
   .ds-filter[aria-current="true"] > span {
-    border-bottom-color: var(--foreground);
+    border-bottom-color: var(--signal);
   }
 
   /* The toggles: one row that scrolls sideways on a phone (it bleeds to the screen edges), wrapped from md. */
@@ -1930,13 +2010,59 @@
     align-items: baseline;
     gap: 0.75rem;
   }
+
+  /*
+   * The head of a list page, set as the contents page of a journal (docs/design-system.md, "Entry pages", "Lists"). ONE hairline, under
+   * the running head, in the strong border (not the ink: nothing here is a masthead); the title is the reading face at a regular-to-medium
+   * weight with air above it. The page is an `.entry` container: `cqi` is its width.
+   */
+  .list-head {
+    --list-title: clamp(2.5rem, 6.4cqi, 5.75rem);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The running head: the journal's name at the left, the folio at the right, mono 12 px muted; a hairline under it. An entry's kicker row
+     (kind and places left, status or reading time right) is the same head: `.entry-running`. */
+  .list-running,
+  .entry-running {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1.5rem;
+    margin: 0;
+    padding-bottom: 0.75rem;
+    border-bottom: var(--hairline) solid var(--border-strong);
+    color: var(--muted-foreground);
+  }
+
+  .list-title {
+    margin: clamp(2rem, 4.4cqi, 4rem) 0 0;
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    font-synthesis: none;
+    font-size: var(--list-title);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+
+  /* The tag filter: plain space under the title, a little more than the title's descender (the rows' own hairline closes the head below). */
+  .list-filter {
+    margin-top: 2rem;
+  }
 }
 
 /*
- * Reading surface: an entry (in the panel or full screen) and the four lists sit on paper in the light scheme and on night in the
- * dark (`--paper*`, design-tokens.md). UNLAYERED on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The page tokens are rebound for the subtree, so every component of it (rules, muted text, hover,
+ * Reading surface: an entry (in the panel or full screen) and the four lists sit on the page's own near-white and near-black: the
+ * `--paper*` tokens are a near-identity rebind of the page's (same values, design-tokens.md); only the borders differ (the foreground
+ * mixed at 18 % and 55 %). UNLAYERED on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The page tokens are rebound for the subtree, so every component of it (rules, muted text, hover,
  * focus ring, the accent) follows without naming a colour. The entry's panel is the element that is rebound, so its own `bg-background`
- * (and the navigation scrim inside it) takes the paper; the list pages rebind the root, since the page is their surface; `data-reading-surface`
+ * (and the navigation scrim inside it) takes the surface; the list pages rebind the root, since the page is their surface; `data-reading-surface`
  * does it for one element (the styleguide's specimens). Contrast is
  * tested for the pairs that are used (`design-system.test.ts`, "reading surface").
  */
@@ -1951,11 +2077,43 @@
   --accent: var(--paper-hover);
   --border: color-mix(in srgb, var(--paper-foreground) 18%, transparent);
   --border-strong: color-mix(in srgb, var(--paper-foreground) 55%, transparent);
-  --ring: var(--paper-foreground);
+  --ring: var(--paper-signal-text);
   --signal: var(--paper-signal);
   --signal-text: var(--paper-signal-text);
-  --primary: var(--paper-foreground);
-  --primary-foreground: var(--paper);
+  --primary: var(--paper-signal);
+  --primary-foreground: var(--signal-foreground);
+}
+
+/*
+ * Accent states that have to beat Tailwind utilities (a `text-muted-foreground` on the element is in a later layer than the component's own
+ * `:hover`, so these are unlayered): the header's items turn to the accent under the pointer and the keyboard, the current one is underlined in
+ * it (2 px), the search triggers too, and the palette's field says it is the active one with the accent's rule under it (the caret is the
+ * accent as well).
+ */
+.nav-link:hover,
+.nav-link:focus-visible,
+[data-slot^="search-trigger"]:hover {
+  color: var(--signal-text);
+}
+
+.nav-link[aria-current="page"] {
+  text-decoration-color: var(--signal);
+  text-decoration-thickness: 2px;
+}
+
+/* The hero's rows over the globe: the accent text is 3:1 or more on a plate, not on whatever line of the map crosses the letters. */
+.hero-row:hover,
+.hero-row:focus-visible {
+  background: color-mix(in srgb, var(--background) 90%, transparent);
+}
+
+[data-slot="search-palette"] input[role="combobox"] {
+  caret-color: var(--signal);
+}
+
+[data-slot="search-palette"] :has(> input[role="combobox"]:focus-visible) {
+  border-bottom-color: var(--signal);
+  box-shadow: 0 1px 0 var(--signal);
 }
 
 /* Entry headings are focus targets by script, not controls: no ring on them (the panel announces the change). */
@@ -1968,16 +2126,16 @@ h1[tabindex="-1"]:focus-visible {
  * Map labels: the names of the detection boxes, HTML text in the app's monospace stack (`--font-mono`, the credits line's and the dev badge's) (engine/label-dom.ts creates and positions the
  * elements; sizes, weights and tracking come from LABEL_TYPE in engine/label-text.ts because the planner measures with the same numbers).
  * Two lines: the name (line 1, 14 px, weight 500) and a second line (11 px, regular: the country or number of places, and the linked entries by kind).
- * EVERY label sits on a TRANSLUCENT plate of the page colour, `--label-plate-alpha` of it (0.7 light, 0.62 dark: the least that keeps the 11 px
- * second line AA, 4.5:1, over the loudest tone of the map, a box's outline at rest; computed from these tokens in engine/label-plate.ts and
- * pinned by readability.test.ts), so the map shows through, dimmed, instead of being wiped out under the text. Its edge is a feather of 1 to
+ * EVERY label sits on a TRANSLUCENT plate of the page colour, `--label-plate-alpha` of it (0.86 light, 0.8 dark: clearly above the 0.70 / 0.62 that
+ * keep the 11 px second line AA, 4.5:1, over the loudest tone of the map, a box's outline at rest; the floor is computed from these tokens in
+ * engine/label-plate.ts and pinned by readability.test.ts), so the map still shows through, dimmed, instead of being wiped out under the text. Its edge is a feather of 1 to
  * 2 px (engine/label-dom.ts `featherShadow`, LABEL_TYPE.feather, a shadow of the plate's own colour) so it is not a hard sticker and dims
  * nothing around the text. The text is the foreground (names, 19:1) and the muted foreground (second line, AA on the plate in both
  * schemes: tests in globe/engine/readability.test.ts); there is no underline and no text-shadow. Hovered or focused: the plate and text do not
  * change (the box's own colour logic does), only the stacking order so that the label is not covered by a neighbour. Selected: INVERTED, the
  * foreground as the plate and the page colour as the text, OPAQUE with no feather (high contrast already; the second line is the page colour mixed 28 %
  * toward the foreground, still AA on it). A label drawn over other labels (the last resort of the plan) is opaque too: a translucent plate would
- * show the text under it. A label has no CSS transition: it moves by `transform` only, smoothly (to the sub-pixel while it moves, a whole device pixel at rest), and the
+ * show the text under it. A label moves by `transform` only, smoothly (to the sub-pixel while it moves, a whole device pixel at rest); its one CSS transition is the selected card's `translate` (a compositor transition, no layout), and the
  * motion (the eased glide to a new slot) is computed per frame in engine/label-track.ts, so a label is always on its way to its place and never snaps; reduced motion
  * (the host's own flag) makes it instant. Reduced transparency: the plate is opaque.
  */
@@ -2014,6 +2172,16 @@ h1[tabindex="-1"]:focus-visible {
   background: var(--foreground);
   color: var(--background);
   z-index: 3;
+  /* The card: at rest the plate's padding hangs outside its box so that the TEXT is flush with the box's edge; selected, the plate is flush with the
+     box (the padding is inside the card) and the whole label moves by what hung out (engine/label-dom.ts writes --map-label-dx / -dy from
+     `selectedShift`). `translate` composes with the `transform` that positions the label and runs on the compositor: no layout, no paint. */
+  translate: var(--map-label-dx, 0px) var(--map-label-dy, 0px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .map-label {
+    transition: translate var(--duration-fast) var(--ease-standard);
+  }
 }
 
 .map-label[data-mode="selected"] .map-label-sub {
@@ -2156,8 +2324,11 @@ h1[tabindex="-1"]:focus-visible {
     --border-strong: rgb(0 0 0 / 0.6);
     --signal: #000;
     --signal-text: #000;
+    --primary: #000;
+    --primary-foreground: #fff;
+    --ring: #000;
     /* The reading surface rebinds the page tokens from these (`:root:has(main[data-surface="reading"])`, more specific than this
-       block): in the dark scheme they would be night and ivory on paper. Ink on white, whatever the scheme. */
+       block): in the dark scheme they would be near-white on near-black. Ink on white, whatever the scheme. */
     --paper: #fff;
     --paper-foreground: #000;
     --paper-muted: #404040;
@@ -2290,6 +2461,44 @@ h1[tabindex="-1"]:focus-visible {
     color: var(--signal-text);
   }
 
+  /*
+   * The search trigger is one run of this type: [icon] SEARCH [command K]. The icon and the command key are `inline` icons (1.1 em) of
+   * the SAME font size, so they are the same size (13 px at 12 px type: the hint's own 13 px is not used here); the row centres them on
+   * the middle of the capitals. The icon is dropped under 22 rem of header (the smallest phones keep the word).
+   */
+  .nav-search {
+    gap: 0.5em;
+  }
+
+  .nav-search .ui-icon {
+    display: none;
+  }
+
+  .nav-search .ds-kbd {
+    justify-content: flex-start;
+    margin-inline-start: 0.5em;
+    font-size: inherit;
+    letter-spacing: inherit;
+  }
+
+  @container (min-width: 22rem) {
+    .nav-search .ui-icon {
+      display: inline-block;
+      vertical-align: baseline;
+    }
+  }
+
+  /*
+   * A header that has just appeared because of a gesture (the hero stepping back on the home page) ignores the pointer until the gesture's
+   * pointer sequence has ended and a short guard has passed (components/navbar.tsx `useGestureGuard`): the tap's click is fired where the
+   * finger is, and must not activate a link that was not there when the finger went down. Visible, focusable and readable throughout.
+   * `!important`: the links carry the `pointer-events-auto` utility, which is in a later layer.
+   */
+  [data-slot="site-header"][data-guard],
+  [data-slot="site-header"][data-guard] * {
+    pointer-events: none !important;
+  }
+
   @container (min-width: 23rem) {
     .nav-link {
       letter-spacing: 0.06em;
@@ -2410,6 +2619,14 @@ h1[tabindex="-1"]:focus-visible {
     row-gap: 2.125rem;
   }
 
+  /* The name's two halves are boxes a transform can move: they shrink into the small line and back (landing-hero.tsx `travelName`). Origin: the
+     top-left corner of the box, which the script's arithmetic assumes. */
+  .hero-given,
+  .hero-family {
+    display: inline-block;
+    transform-origin: 0 0;
+  }
+
   /* Under 48 rem the hero stacks: name, intro and search, the rows (the search line's hairline is the first rule of the list). */
   @media (max-width: 47.99rem) {
     .hero-block {
@@ -2460,7 +2677,6 @@ h1[tabindex="-1"]:focus-visible {
     margin-inline-start: -0.035em;
     white-space: nowrap;
     text-wrap: nowrap;
-    transform-origin: left bottom;
   }
 
   /* The given name is the heavy half: at 800 and the name's -0.055em the three l, l, i of "Elliot" touch, so it is set looser (the thin
@@ -2543,17 +2759,11 @@ h1[tabindex="-1"]:focus-visible {
     white-space: nowrap;
   }
 
-  /* Filled in after hydration (the command key or "Ctrl", then K); the box holds its place, and a touch screen has no use for it. */
+  /* Filled in after hydration (the command key or "Ctrl", then K); the box holds its place, and where there is no keyboard to plausibly press it (see the end of this file) it is not drawn. */
   .hero-kbd {
     min-width: 4.25em;
     font-size: 0.875rem;
     justify-content: flex-end;
-  }
-
-  @media (hover: none) {
-    .hero-kbd {
-      display: none;
-    }
   }
 
   .hero-list {
@@ -2729,7 +2939,7 @@ h1[tabindex="-1"]:focus-visible {
 
     .hero-given,
     .hero-family {
-      display: inline;
+      display: inline-block;
     }
 
     .hero-lead {
@@ -2771,7 +2981,7 @@ h1[tabindex="-1"]:focus-visible {
     row-gap: 0.25rem;
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--hero-fade), visibility 0s linear var(--duration-base);
+    transition: opacity 60ms linear, visibility 0s linear 60ms;
   }
 
   @media (max-width: 47.99rem) {
@@ -2792,15 +3002,28 @@ h1[tabindex="-1"]:focus-visible {
     }
   }
 
+  /*
+   * The collapsed name's place, not a second copy of it: this line is the GHOST the two halves of the real name (`.hero-given`, `.hero-family`)
+   * travel to and stay on (landing-hero.tsx `travelName`: it measures these boxes, never paints them). It is set like the big name (the same face, weights,
+   * tracking, and the optical size pinned at the big name's 96, so it is the same drawing at another size) at `--hero-mini-size`: 44 px on a wide
+   * screen, 9.5 vw down to 28 px on a phone, so that it clears the credits line, the dev badge and the hint beside it from 320 px.
+   */
   .hero-mini-name {
+    --hero-mini-size: clamp(1.75rem, 9.5vw, 2.75rem);
+    visibility: hidden;
     font-family: var(--font-display);
-    font-optical-sizing: auto;
+    font-variation-settings: "opsz" 96;
     font-synthesis: none;
-    font-size: 1.875rem;
+    font-size: var(--hero-mini-size);
     line-height: 1;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.055em;
+    margin-inline-start: -0.035em;
     font-weight: var(--weight-heavy);
-    color: var(--foreground);
+    white-space: nowrap;
+  }
+
+  .hero-mini-given {
+    letter-spacing: -0.02em;
   }
 
   .hero-mini-hint {
@@ -2818,7 +3041,6 @@ h1[tabindex="-1"]:focus-visible {
   }
 
   /* ---- States: every moving part is opacity and transform; visibility follows the fade so that hidden controls leave the tab order. ---- */
-  .hero-name,
   .hero-intro,
   .hero-hint,
   .hero-search,
@@ -2835,14 +3057,24 @@ h1[tabindex="-1"]:focus-visible {
     transition-timing-function: var(--ease-standard), var(--ease-standard), linear, var(--ease-standard);
   }
 
-  .landing-hero[data-hero="collapsed"] .hero-name,
   .landing-hero[data-hero="collapsed"] .hero-intro,
   .landing-hero[data-hero="collapsed"] .hero-hint {
     opacity: 0;
     transform: translateY(0.5rem);
   }
 
-  /* The name stays in the accessibility tree (it is the page's h1): opacity only. The controls are removed from the tab order. */
+  /*
+   * The name does not fade like the rest and is not handed over to another element: its two halves shrink and travel to the ghost line's boxes
+   * (landing-hero.tsx, a transform animation of `--hero-travel`, the compositor's, an ease with a fast start and a soft landing) and STAY there as
+   * the collapsed name (the final transform is kept as their own style); coming back is the same motion reversed from where they are. The h1 stays in
+   * the accessibility tree and on screen throughout; the rest of the block fades as before.
+   */
+  .landing-hero {
+    --hero-travel: 320ms;
+    --hero-travel-ease: cubic-bezier(0.2, 0.9, 0.1, 1);
+  }
+
+  /* The controls are removed from the tab order. */
   .landing-hero[data-hero="collapsed"] .hero-search,
   .landing-hero[data-hero="collapsed"] .hero-list {
     opacity: 0;
@@ -2858,7 +3090,26 @@ h1[tabindex="-1"]:focus-visible {
   .landing-hero[data-hero="collapsed"] .hero-mini {
     opacity: 1;
     visibility: visible;
-    transition: opacity var(--hero-fade) 80ms, visibility 0s;
+    transition: opacity 90ms linear calc(var(--hero-travel) - 90ms), visibility 0s;
+  }
+
+  /*
+   * The how-to line is said by the caption while the globe has one (`data-orbit`: "pending" until the globe is up, "true" with the caption,
+   * "false" without it, on the empty archive, or when the globe cannot start). Then it is for assistive technology only: visually hidden, in the
+   * accessibility tree, out of the layout. With scripts off (`scripting: none`) nothing says it but this line, and it stays.
+   */
+  @media (scripting: enabled) {
+    .landing-hero:is([data-orbit="pending"], [data-orbit="true"]) .hero-hint {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
   }
 
   /* Away: a place or an entry is open. Instant: the panel is arriving, the hero is not the page. */
@@ -2900,6 +3151,17 @@ h1[tabindex="-1"]:focus-visible {
  */
 @media (scripting: none) {
   [data-needs-script] {
+    display: none !important;
+  }
+}
+
+/*
+ * The shortcut hint is drawn only where a keyboard is plausible: a fine, hovering primary pointer (a mouse or a trackpad). Touch phones
+ * and tablets, whatever their width, have no use for "Ctrl K". Unlayered and `!important` to beat the utilities that place the hint
+ * (`hidden @xl:inline-flex`); decided in CSS so the server and the first client render stay identical (no hydration difference).
+ */
+@media not all and (hover: hover) and (pointer: fine) {
+  .ds-kbd {
     display: none !important;
   }
 }

@@ -36,6 +36,16 @@ export function isWorldView(view: Pick<GlobeViewState, "zoom" | "street"> | null
 
 export type HeroState = "rest" | "collapsed";
 
+/**
+ * What the globe is told about the home screen (`GlobeProps.showcase`): the showcase (the caption in, the boxes and labels out, the planet
+ * lifted clear of the name) is ON while the full hero is at rest AT the world view, and only then; `coverBottom` is the height the name covers at
+ * the bottom of the page then (0 when the showcase is off: the planet comes back down). Pure.
+ */
+export function showcaseOf(snapshot: { state: HeroState; world: boolean }, coverPx: number): { on: boolean; coverBottom: number } {
+  const on = snapshot.state === "rest" && snapshot.world;
+  return { on, coverBottom: on ? Math.max(0, coverPx) : 0 };
+}
+
 /** What a renderer of the hero reads. Replaced (never mutated) on every change, so it is a valid external-store snapshot. */
 export interface HeroSnapshot {
   readonly state: HeroState;

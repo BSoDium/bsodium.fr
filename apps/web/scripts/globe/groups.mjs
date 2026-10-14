@@ -252,13 +252,11 @@ try {
               const r1 = Math.round((n.box.y1 - (rect.top - rootRect.top)) / P);
               const opaque = (x, y) => x >= 0 && y >= 0 && x < canvas.width && y < canvas.height && img.data[(y * canvas.width + x) * 4 + 3] === 255;
               // The outline at rest: the four corner arms solid, the rest of each edge dashed (2 on, then a gap, from the arm's end, anchored to the edge's own corner); the arm
-              // and the gap grow with the box's smaller side (`dashingFor`, engine/pixel-labels.ts: arm 10 % in 3..14 cells, gap 3.5 % in 2..9), a box
+              // and the gap grow with the box's smaller side (`dashingFor`, engine/pixel-labels.ts: arm 10 % in 3..14 cells, gap 3.5 % in 2..9, the gap 0 at the floor size: a closed rectangle that opens), a box
               // too short for two arms and a gap is solid; the selected box (drawn solid) is one uninterrupted line.
               const solid = !!n.solid;
-              const side = Math.min(c1 - c0, r1 - r0);
-              const clampInt = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.round(v)));
-              const arm = clampInt(side * 0.1, 3, 14);
-              const gap = clampInt(side * 0.035, 2, 9);
+              // (the arm and the gap the scene drew with: a box at its floor size has no gap, a closed rectangle, and opens as it grows: `boxOpenness`)
+              const { arm, gap } = cellInfo.dash;
               // each edge is counted from its anchor: top from its left corner, bottom from its right, left from its top, right from its bottom (`edgeLit`)
               const lit = (i, len) => {
                 if (solid || len < 2 * arm + gap) return true;
@@ -532,8 +530,8 @@ try {
     });
     const lab = tab?.label;
     expect(
-      `the label reads "${tab?.text}" over "${tab?.subWhole}", HTML text above the box's top-left corner (boxGap plus one cell of clear room from the projected box, the plate's left edge on its left edge), the whole label at its first position`,
-      !!tab && !!lab && tab.text === "Crowd" && tab.subWhole === "10 places" && lab.text === "Crowd" && lab.sub === "10 places" && Math.abs(lab.x - tab.boxExact.x0) < 0.01 && Math.abs(lab.y + lab.h + 3 + (tab.box.x1 - tab.box.x0) / (tab.rect.c1 - tab.rect.c0) - tab.boxExact.y0) < 0.01 && !lab.inside && lab.variant === 0 && lab.cand === 0,
+      `the label reads "${tab?.text}" over "${tab?.subWhole}", HTML text above the box's top-left corner (boxGap plus one cell of clear room from the projected box, the text on its left edge: the plate's padding hangs 6 px outside it), the whole label at its first position`,
+      !!tab && !!lab && tab.text === "Crowd" && tab.subWhole === "10 places" && lab.text === "Crowd" && lab.sub === "10 places" && Math.abs(lab.x + 6 - tab.boxExact.x0) < 0.01 && Math.abs(lab.y + lab.h + 3 + (tab.box.x1 - tab.box.x0) / (tab.rect.c1 - tab.rect.c0) - tab.boxExact.y0) < 0.01 && !lab.inside && lab.variant === 0 && lab.cand === 0,
       tab,
     );
     const dom = (await page.evaluate(() => window.__globeDebug.labelsDom())).find((l) => l.slug === "case-crowd");
@@ -615,12 +613,13 @@ try {
               })();
         if (wrong) domBad.push({ slug: c.slug, wrong, el, l });
         else {
-          // the plate's edge is the PROJECTED box's left edge (above its top-left corner), boxGap (3 px) plus one art cell above that edge, so 3 px to
+          // the plate hangs its padding (6 px) outside the PROJECTED box's left edge (above its top-left corner) so the TEXT is on that edge, boxGap (3 px) plus one art cell above it, so 3 px to
           // 3 px + a cell from the drawn outline (which is snapped to cells and lies up to a cell outside it) and never touching it; the text starts
           // after the padding, two lines when there is a second line, and the feather is the plate's own small shadow. At rest the plate is on a
           // whole device pixel (sharp text), within half a device pixel of its exact place.
           const cell = (c.box.x1 - c.box.x0) / (c.rect.c1 - c.rect.c0);
-          const alignedLeft = l.cand === 0 && !l.overlap && Math.abs(l.x - c.boxExact.x0) > 0.01 ? "plate not on the box's left edge" : null;
+          // (a plate against the screen's own edge, x = 0, is held on the screen: the text is then up to 6 px from a box edge that is at the screen's edge)
+          const alignedLeft = l.cand === 0 && !l.overlap && l.x > 0.01 && Math.abs(l.x + 6 - c.boxExact.x0) > 0.01 ? "text not on the box's left edge (plate 6 px outside it)" : null;
           const gap = l.cand === 0 && !l.overlap && Math.abs(l.y + l.h + 3 + cell - c.boxExact.y0) > 0.01 ? `gap above the projected box is not 3 px + one cell (${cell} px)` : null;
           const lattice = l.cand === 0 && !l.overlap && (c.box.y0 - (l.y + l.h) < 3 - 0.01 || c.box.y0 - (l.y + l.h) > 3 + cell + 0.01) ? `clear room to the drawn outline is ${c.box.y0 - (l.y + l.h)}` : null;
           const pad = Math.abs(el.nameRect.x0 - el.rect.x0 - 6) > 0.6 ? "text not 6 px inside the plate" : null;
@@ -628,7 +627,9 @@ try {
           // (a label drawn over others, the last resort, has an opaque plate and no feather)
           const halo = l.overlap ? (el.feather === "none" ? null : `last resort has a feather: ${el.feather}`) : el.feather !== "0 0 2px 1px var(--map-label-plate)" ? `feather is ${el.feather}` : null;
           const size = Math.abs(el.rect.x1 - el.rect.x0 - l.w) > 0.01 || Math.abs(el.rect.y1 - el.rect.y0 - l.h) > 1.01 ? "the plate is not the planned size" : null;
-          const why = lattice || alignedLeft || gap || pad || lines || halo || size;
+          // the TEXT's own left edge (the name's box) is on the box's left edge, whatever the device pixel rounding of the plate (within half a device pixel)
+          const flush = l.cand === 0 && !l.overlap && l.x > 0.01 && Math.abs(el.nameRect.x0 - c.boxExact.x0) > 0.6 ? `the text is ${el.nameRect.x0 - c.boxExact.x0} px from the box's left edge` : null;
+          const why = lattice || alignedLeft || flush || gap || pad || lines || halo || size;
           if (why) layoutBad.push({ slug: c.slug, why, l, el: { rect: el.rect, nameRect: el.nameRect, subRect: el.subRect, feather: el.feather } });
         }
       }
@@ -644,7 +645,7 @@ try {
     }
     expect(`at rest, over ${views.length} views (world, continents, Europe, the Balkans, a city cluster, a lon/lat/zoom sweep) and ${seen} drawn boxes: 100 % have their label (${unlabelled.length} without), none half-faded or dimmed (${shortened} labels shortened, ${overlapped} drawn over another as the last resort, ${nested} nested inside their box)`, seen > 20 && unlabelled.length === 0 && halfState.length === 0, { unlabelled: unlabelled.slice(0, 5), halfState: halfState.slice(0, 5) });
     expect("at rest, no two label plates overlap unless one of them is the last resort", collisions.length === 0, collisions.slice(0, 5));
-    expect(`every label's layout in the real DOM: plate on the projected box's left edge, 3 px + one cell above it (3 to 3 + a cell from the drawn outline), text 6 px inside the plate, second line under the name, the planner's size equal to the element's, the feather the plate's own small shadow (${layoutBad.length} wrong)`, layoutBad.length === 0, layoutBad.slice(0, 5));
+    expect(`every label's layout in the real DOM: plate 6 px outside the projected box's left edge (the text on it), 3 px + one cell above it (3 to 3 + a cell from the drawn outline), text 6 px inside the plate, second line under the name, the planner's size equal to the element's, the feather the plate's own small shadow (${layoutBad.length} wrong)`, layoutBad.length === 0, layoutBad.slice(0, 5));
     // The plate is TRANSLUCENT: the computed background of a label at rest is the page colour at the stylesheet's --label-plate-alpha (the least
     // that keeps the 11 px second line AA over the loudest map tone, engine/label-plate.ts), opaque when selected or drawn over others.
     const plate = await page.evaluate(() => {

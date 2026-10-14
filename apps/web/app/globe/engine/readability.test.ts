@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { MAP_CONTRAST, MAP_CONTRAST_DARK, PALETTE_LEVELS, buildRamp, roleLevel, type Rgb } from "./palette";
-import { AA_TEXT, LABEL_PLATE_ALPHA, composite, labelPlateAlpha, minPlateAlpha, roundPlateAlpha } from "./label-plate";
+import { AA_TEXT, LABEL_PLATE_ALPHA, LABEL_PLATE_FLOOR, LABEL_PLATE_MAX, composite, labelPlateAlpha, minPlateAlpha, roundPlateAlpha } from "./label-plate";
 import { LABEL_TYPE } from "./label-text";
 
 /**
@@ -55,20 +55,21 @@ for (const scheme of ["light", "dark"] as const) {
     it("a selected label (page colour on a solid ink plate) is opaque, so its ratio does not depend on the map", () => {
       expect(contrast(bg, fg)).toBeGreaterThanOrEqual(15);
     });
-    it("the translucent plate: --label-plate-alpha is the LEAST alpha that keeps the name and the second line AA (4.5:1) over the worst tone behind them, rounded up to a percent", () => {
+    it("the translucent plate: --label-plate-alpha is a chosen value ABOVE the least alpha that keeps the name and the second line AA (4.5:1) over the worst tone behind them (the floor, rounded up to a percent), and still translucent", () => {
       const alpha = numberToken(scheme, "--label-plate-alpha");
       // pinned to the named constant (engine/label-plate.ts) and to the stylesheet's forced-scheme copies
       expect(alpha).toBe(LABEL_PLATE_ALPHA[scheme]);
       const text = { foreground: fg, muted };
       const least = labelPlateAlpha(text, bg, peak);
-      expect(alpha).toBe(roundPlateAlpha(least));
+      // the floor is the WCAG minimum computed from the tokens (pinned: a change of a colour moves it and fails here), the token is clearly above it
+      expect(roundPlateAlpha(least)).toBe(LABEL_PLATE_FLOOR[scheme]);
       expect(alpha).toBeGreaterThanOrEqual(least);
-      expect(alpha - least).toBeLessThan(0.01); // minimal: no more than the percent the token is written in
+      expect(alpha - LABEL_PLATE_FLOOR[scheme]).toBeGreaterThanOrEqual(0.12); // owner, 2026-10-13: "not opaque enough": clearly more than the floor
       // recomputed with the blended colours, the way the compositor does it: both lines clear AA over the peak tone, and just under it does not
       const plate = composite(bg, alpha, peak);
       expect(contrast(fg, plate)).toBeGreaterThanOrEqual(AA_TEXT);
       expect(contrast(muted, plate)).toBeGreaterThanOrEqual(AA_TEXT);
-      expect(contrast(muted, composite(bg, alpha - 0.01, peak))).toBeLessThan(AA_TEXT); // one percent less breaks the second line: the binding one
+      expect(contrast(muted, composite(bg, LABEL_PLATE_FLOOR[scheme] - 0.01, peak))).toBeLessThan(AA_TEXT); // one percent under the floor breaks the second line: the binding one
       // every quieter tone of the map is cleaner still: coastlines, borders, roads, the graticule
       for (let k = 0; k < ramp.length - 1; k++) {
         expect(contrast(fg, composite(bg, alpha, ramp[k]!))).toBeGreaterThanOrEqual(AA_TEXT);
@@ -78,7 +79,7 @@ for (const scheme of ["light", "dark"] as const) {
       expect(css).toMatch(/--map-label-plate: color-mix\(in srgb, var\(--background\) calc\(var\(--label-plate-alpha\) \* 100%\), transparent\)/);
       expect(minPlateAlpha(fg, bg, peak)).toBeLessThan(alpha); // the name is never the binding line
       expect(alpha).toBeGreaterThan(0.5); // a plate that says what is behind it still hides most of it: a quarter of the map would not read as a ground
-      expect(alpha).toBeLessThan(1); // translucent: the map shows through
+      expect(alpha).toBeLessThanOrEqual(LABEL_PLATE_MAX); // translucent: the map still shows through (a tenth of it or more)
     });
     it("map labels (app.css `.map-label`): a translucent plate of the page colour in EVERY state, the name in the foreground, the second line in the muted foreground, AA on the plate; selected is inverted and opaque", () => {
       const rules = [...css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/\.map-(?:label|halo)[^{]*\{[^}]*\}/g)].map((m) => m[0]);

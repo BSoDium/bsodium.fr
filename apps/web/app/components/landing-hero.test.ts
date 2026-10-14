@@ -5,10 +5,10 @@ import { createStaticHandler, createStaticRouter, StaticRouterProvider, type Sta
 import { describe, expect, it } from "vitest";
 import { createHeroMachine } from "~/lib/hero-machine";
 import { SITE_FOCUS, SITE_IDENTITY, SITE_NAME, SITE_TAGLINE } from "~/lib/site";
-import { LandingHero } from "./landing-hero";
+import { LandingHero, NAME_TRAVEL_EASE, NAME_TRAVEL_MS } from "./landing-hero";
 
-async function render(props: { away?: boolean; empty?: boolean } = {}, machine = createHeroMachine()): Promise<string> {
-  const routes = [{ id: "routes/shell", path: "*", Component: () => createElement(LandingHero, { machine, away: props.away ?? false, empty: props.empty ?? false }) }];
+async function render(props: { away?: boolean; empty?: boolean; orbit?: boolean | null } = {}, machine = createHeroMachine()): Promise<string> {
+  const routes = [{ id: "routes/shell", path: "*", Component: () => createElement(LandingHero, { machine, away: props.away ?? false, empty: props.empty ?? false, orbit: props.orbit ?? null }) }];
   const handler = createStaticHandler(routes);
   const context = (await handler.query(new Request("http://localhost/"))) as StaticHandlerContext;
   const router = createStaticRouter(handler.dataRoutes, context);
@@ -43,7 +43,7 @@ describe("LandingHero", () => {
     expect(html).toContain(`<p class="hero-intro">${SITE_IDENTITY}<span class="hero-intro-more"> ${SITE_FOCUS}</span></p>`);
     expect(`${SITE_IDENTITY} ${SITE_FOCUS}`).toBe(SITE_TAGLINE);
     expect(SITE_TAGLINE).toBe(
-      "Front-end and UX software engineer based in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.",
+      "Front-end and UX software engineer based in Warsaw. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.",
     );
     // the how-to line: the globe is a script, so the part about it is marked and a no-script variant stands beside it
     expect(html).toContain('<p class="hero-hint"><span data-needs-script="">Pick a point on the globe, or start</span><noscript>Start</noscript> from a list.</p>');
@@ -74,7 +74,7 @@ describe("LandingHero", () => {
     expect(button).toContain('type="button"');
     const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>(?:<span>)?([^<]*)</g)].map((m) => [m[1], m[2]]);
     expect(links).toEqual([
-      ["/projects", "Projects"],
+      ["/software", "Software"],
       ["/articles", "Articles"],
       ["/artworks", "Artworks"],
       ["/poetry", "Poetry"],
@@ -82,7 +82,7 @@ describe("LandingHero", () => {
     // reading order: name, intro, search, the lists
     expect(html.indexOf("hero-name")).toBeLessThan(html.indexOf("hero-intro"));
     expect(html.indexOf("hero-intro")).toBeLessThan(search);
-    expect(search).toBeLessThan(html.indexOf('href="/projects"'));
+    expect(search).toBeLessThan(html.indexOf('href="/software"'));
   });
 
   it("shows no count, no number, no employer and no code name", async () => {
@@ -105,8 +105,64 @@ describe("LandingHero", () => {
     const mini = html.slice(html.indexOf('<p aria-hidden="true" class="hero-mini">'));
     expect(mini).toContain("Drag to explore. Back to start after a moment.");
     // the same weights as the name: the given name heavy (the line's own 800), the family name at the thin end
-    expect(mini).toMatch(/<span class="hero-mini-name">Elliot <span class="type-thin"><span>Négrel<\/span>/);
+    expect(mini).toMatch(/<span class="hero-mini-name"><span class="hero-mini-given">Elliot<\/span> <span class="hero-mini-family type-thin"><span>Négrel<\/span>/);
     expect(html.match(/<h[1-6][ >]/g)).toHaveLength(1);
+  });
+});
+
+describe("the orbiting caption and the hero's how-to line", () => {
+  it("keeps the line in the markup whatever the globe says (visually hidden by CSS while the caption says it): pending on the server, true with the type, false without it", async () => {
+    for (const [orbit, attr] of [
+      [null, "pending"],
+      [true, "true"],
+      [false, "false"],
+    ] as const) {
+      const html = await render({ orbit });
+      expect(html).toContain(`data-orbit="${attr}"`);
+      expect(html).toContain('<p class="hero-hint">');
+    }
+    // the empty archive has no globe to point at: never the caption
+    expect(await render({ empty: true, orbit: true })).toContain('data-orbit="false"');
+  });
+});
+
+describe("the name's travel and the collapsed name (owner, round 3, item 3)", () => {
+  const css = readFileSync(new URL("../app.css", import.meta.url), "utf8");
+  const src = readFileSync(new URL("./landing-hero.tsx", import.meta.url), "utf8");
+
+  it("runs the CSS custom properties' duration and ease: 300 to 360 ms, a fast start and a soft landing", () => {
+    expect(css).toMatch(/--hero-travel:\s*320ms;/);
+    expect(css).toContain("--hero-travel-ease: cubic-bezier(0.2, 0.9, 0.1, 1);");
+    expect(NAME_TRAVEL_MS).toBe(320);
+    expect(NAME_TRAVEL_EASE).toBe("cubic-bezier(0.2, 0.9, 0.1, 1)");
+  });
+
+  it("is a transform animation of the two halves: no font-size, layout or per-frame script", () => {
+    expect(src).toContain("el.animate(");
+    expect(src).not.toMatch(/requestAnimationFrame|setInterval/);
+    // the keyframes: the start and the end, transform only
+    expect([...src.matchAll(/\{ transform(?:: [^}]*)? \}/g)]).toHaveLength(2); // the start and the end of the travel, whichever way it goes (`lib/name-travel.test.ts` tests the choreography)
+    expect(src).not.toContain('direction: "reverse"');
+    expect(css).toMatch(/\.hero-given,\s*\.hero-family \{\s*display: inline-block;\s*transform-origin: 0 0;/);
+  });
+
+  it("has no second copy of the name to hand over to: the ghost line is never painted, and the h1 is not faded out when collapsed", () => {
+    const ghost = css.slice(css.indexOf("  .hero-mini-name {"), css.indexOf("  .hero-mini-hint {"));
+    expect(ghost).toContain("visibility: hidden;");
+    // the pinned optical size: the ghost is the big name's drawing at another size, so a width ratio is a scale
+    expect(ghost).toContain('font-variation-settings: "opsz" 96;');
+    expect(css).not.toMatch(/\.landing-hero\[data-hero="collapsed"\] \.hero-name \{/);
+    // the collapsed name is the halves held at the ghost's boxes
+    expect(src).toContain("holdName(");
+    expect(src).toContain("el.style.transform = transform");
+  });
+
+  it("makes the collapsed name 40 to 48 px on a wide screen, and no smaller than 28 px on a phone", () => {
+    expect(css).toContain("--hero-mini-size: clamp(1.75rem, 9.5vw, 2.75rem);");
+  });
+
+  it("is instant under reduced motion", () => {
+    expect(src).toContain("prefers-reduced-motion: reduce");
   });
 });
 

@@ -141,6 +141,18 @@ export interface GlobeAttributionProps {
   reducedMotion: boolean;
 }
 
+/** What the app tells the globe about the home screen: it is at rest (`on`), and how much of the bottom of the globe's box it covers then. */
+export interface GlobeShowcase {
+  on: boolean;
+  coverBottom: number;
+}
+
+/** A value that changes over time and is read by subscription (the shape of a `useSyncExternalStore` source): the globe follows it without a render. */
+export interface GlobeSignal<T> {
+  get(): T;
+  subscribe(listener: () => void): () => void;
+}
+
 export interface GlobeProps {
   places: GlobePlace[];
   /**
@@ -182,11 +194,28 @@ export interface GlobeProps {
    */
   attribution?: ComponentType<GlobeAttributionProps>;
   /**
-   * The words of the ring of type that circles the planet when it is zoomed out (engine/ring.ts), supplied by the app because they are the
+   * The words of the mono ring of type that circles the planet when it is zoomed out (engine/ring.ts), supplied by the app because they are the
    * site's identity (`ringPhrases` in ring-text.ts builds them from it): capitals, the separator and the closing dot are the engine's.
-   * Read once, when the globe is created. Optional: omitted or empty = no ring.
+   * Read once, when the globe is created. Optional: omitted or empty = no ring (and no showcase, so no caption).
    */
   ringPhrases?: readonly string[];
+  /**
+   * The lines of the caption that wraps the planet in 3D, one under the other: short, what the visitor should do ("Drag to explore", "Pick a
+   * place"). Drawn in the globe's own pixel pass (engine/caption.ts). Read once. Optional: omitted or empty = the ring alone.
+   */
+  captionPhrases?: readonly string[];
+  /**
+   * The home screen's showcase, as a signal the globe follows without the app re-rendering (a gesture starts it, a frame is not wanted from React):
+   * while `on` the boxes and labels are out and the caption is in (the camera comes back to its lowest zoom, where the ring fits), and the
+   * planet is lifted by what clears `coverBottom` px of the globe's bottom edge as far as there is room above (eased like `insetRight`; at once
+   * under `reducedMotion`). Without the ring (`?no-ring`, or a debug page without `?showcase`) none of it applies: the page is the previous one. Optional: omitted = never.
+   */
+  showcase?: GlobeSignal<GlobeShowcase>;
+  /**
+   * Whether the caption exists (the globe was created with a ring and lines, and the page does not switch the showcase off): called once with the answer when the
+   * globe is up, and with false when it could not start. The app takes its own words for the call to action out of the way only while this is true.
+   */
+  onOrbit?(available: boolean): void;
   onSelect(slug: string): void;
   onViewChange(view: GlobeViewState): void;
   /**

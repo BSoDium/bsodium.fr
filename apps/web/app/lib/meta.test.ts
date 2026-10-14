@@ -16,8 +16,8 @@ describe("pageMeta", () => {
   });
   it("has a description, with the site's as the default", () => {
     expect(find(pageMeta({ title: "Demo", description: "About it" }), "name", "description")?.content).toBe("About it");
-    expect(find(pageMeta(), "name", "description")?.content).toBe("Front-end and UX software engineer in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.");
-    expect(find(pageMeta(), "property", "og:description")?.content).toBe("Front-end and UX software engineer in Paris. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.");
+    expect(find(pageMeta(), "name", "description")?.content).toBe("Front-end and UX software engineer in Warsaw. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.");
+    expect(find(pageMeta(), "property", "og:description")?.content).toBe("Front-end and UX software engineer in Warsaw. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics.");
   });
   it("makes the canonical URL and og:url from the origin and the path only (no query, no hash)", () => {
     const tags = pageMeta({ origin: ORIGIN, path: "/articles/a?view=full#x" });

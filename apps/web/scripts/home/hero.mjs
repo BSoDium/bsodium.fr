@@ -53,9 +53,9 @@ const VIEWPORTS = FIT_SIZES.map(([width, height]) => {
 /** The name is stacked (the family name under the given name) under 48 rem, except on a phone on its side (480 px and up, 34 rem tall at most). */
 const isStacked = (width, height) => width < 768 && !(width >= 480 && height <= 544);
 const IDLE_QUERY = "?globe-debug&hero-idle=1500";
-const PATHS = ["/projects", "/articles", "/artworks", "/poetry"];
+const PATHS = ["/software", "/articles", "/artworks", "/poetry"];
 /** The rows' names: the poems' section is "Poetry". */
-const LABELS = ["Projects", "Articles", "Artworks", "Poetry"];
+const LABELS = ["Software", "Articles", "Artworks", "Poetry"];
 
 async function newPage(contextOptions, { colorScheme = "dark", reducedMotion = "no-preference" } = {}) {
   const ctx = await browser.newContext({ ...contextOptions, colorScheme, reducedMotion });
@@ -112,7 +112,9 @@ async function geometry(page) {
       add("search", el(".hero-search"));
       document.querySelectorAll(".hero-row").forEach((a, i) => add(`row${i}`, a));
     } else {
-      add("mini-name", el(".hero-mini-name"), true);
+      // (the collapsed name is the big name's two halves held in the corner; the ghost line `.hero-mini-name` is never painted)
+      add("name-given", el(".hero-given"), true);
+      add("name-family", el(".hero-family"), true);
       add("mini-hint", el(".hero-mini-hint"), true);
     }
     const credits = el("[data-attribution]");
@@ -156,7 +158,7 @@ async function layoutChecks(page, label) {
   ok(/data-slot="landing-hero"[^>]*data-hero="rest"|data-hero="rest"[^>]*data-slot="landing-hero"/.test(html), "SSR: the hero is in the page at rest");
   ok(/<h1[^>]*class="hero-name[^"]*"[^>]*><span class="hero-given">Elliot<\/span> <span class="hero-family type-thin">/.test(html), "SSR: the name is the page's h1, Elliot (heavy) and Négrel-Jerzy (thin)");
   ok(
-    /Front-end and UX software engineer based in Paris\.<span class="hero-intro-more"> Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\.<\/span><\/p>/.test(html),
+    /Front-end and UX software engineer based in Warsaw\.<span class="hero-intro-more"> Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\.<\/span><\/p>/.test(html),
     "SSR: who the owner is is real text (the second sentence is its own span: a very short window drops it)",
   );
   ok(!/catalyst/i.test(html.replace(/CATALYST_[A-Z_]+/g, "")), "SSR: the code name is nowhere in the home page");
@@ -180,7 +182,7 @@ async function layoutChecks(page, label) {
   ok((await page.locator("h1").count()) === 1 && (await page.locator("h1").innerText()) === "Elliot Négrel-Jerzy", "desktop: one h1, the owner's name");
   ok(!/catalyst/i.test(await page.evaluate(() => document.title + " " + document.body.innerText)), "desktop: the code name is nowhere in the title or the text");
   const intro = await page.locator(".hero-intro").innerText();
-  ok(/^Front-end and UX software engineer based in Paris\. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\.$/.test(intro), `desktop: the intro says who the owner is (${intro})`);
+  ok(/^Front-end and UX software engineer based in Warsaw\. Data visualisation, geospatial and cartography interfaces, design systems, computer graphics\.$/.test(intro), `desktop: the intro says who the owner is (${intro})`);
   const hintText = await page.locator(".hero-hint").innerText();
   ok(/^(Pick a point on the globe, or start from a list\.|No place is published yet: start from a list\.)$/.test(hintText), `desktop: then how to use the page (${hintText})`);
   // the name: one line, a share of the width (not the full width), the given name heavy and the family name thin
@@ -245,7 +247,9 @@ async function layoutChecks(page, label) {
   ok((await opacityOf(page, ".hero-intro")) === 0 && (await opacityOf(page, ".hero-list")) === 0 && (await opacityOf(page, ".hero-search")) === 0, "desktop: the text has faded out");
   ok((await opacityOf(page, ".hero-mini")) === 1, "desktop: the small line is shown");
   const mini = await page.locator(".hero-mini").innerText();
-  ok(/Elliot/.test(mini) && /Négrel-Jerzy/.test(mini) && /Drag to explore\. Back to start after a moment\./.test(mini), `desktop: the small line is the name and the hint (${mini.replace(/\n/g, " ")})`);
+  const nameNow = await page.locator(".hero-name").innerText();
+  ok(/Elliot/.test(nameNow) && /Négrel-Jerzy/.test(nameNow) && (await opacityOf(page, ".hero-name")) === 1 && /Drag to explore\. Back to start after a moment\./.test(mini), `desktop: the corner line is the name itself (visible, one copy) and the hint (${nameNow} / ${mini.replace(/\n/g, " ")})`);
+  ok((await page.locator(".hero-mini-name").evaluate((e) => getComputedStyle(e).visibility)) === "hidden", "desktop: the ghost line is never painted");
   // the rows are hidden now: the header takes the sections back, so the visitor is never left without a way to the lists
   const collapsedLinks = await page.locator("header a").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
   ok(JSON.stringify(collapsedLinks) === JSON.stringify(["/", ...PATHS]), `desktop: collapsed, the header shows Globe and the four sections (${collapsedLinks.join(" ")})`);
@@ -253,14 +257,19 @@ async function layoutChecks(page, label) {
   const hdr = await page.evaluate(() => {
     const k = document.querySelector("header [data-slot=search-trigger] kbd");
     const cs = k && getComputedStyle(k);
-    return { icon: document.querySelector("header [data-slot=search-trigger] > svg")?.getBoundingClientRect().width, kbd: k ? { border: cs.borderTopWidth, bg: cs.backgroundColor, text: k.textContent.replace(/\s+/g, " ").trim() } : null };
+    const t = document.querySelector("header [data-slot=search-trigger]");
+    const r = t.getBoundingClientRect();
+    return { icon: t.querySelector(":scope > svg")?.getBoundingClientRect().width, command: k?.querySelector("svg")?.getBoundingClientRect().width ?? null, font: parseFloat(getComputedStyle(t).fontSize), word: t.querySelector(":scope > span")?.textContent, h: r.height, linkH: document.querySelector("header a").getBoundingClientRect().height, kbd: k ? { border: cs.borderTopWidth, bg: cs.backgroundColor, text: k.textContent.replace(/\s+/g, " ").trim() } : null };
   });
-  ok(Math.abs(hdr.icon - 20) < 0.5, `desktop: collapsed, the header's search icon is 20 px (${hdr.icon})`);
+  // [icon] Search [command K]: the two glyphs are one size (1.1 em of the nav type), the word is there, the row is as tall as the links
+  ok(Math.abs(hdr.icon - hdr.font * 1.1) < 0.5 && hdr.icon < 20, `desktop: collapsed, the header's search icon is 1.1 em of the nav type, not the 20 px control size (${hdr.icon} px for ${hdr.font} px type)`);
+  ok(hdr.command === null || Math.abs(hdr.command - hdr.icon) < 0.5, `desktop: collapsed, the command key is the same size as the search icon (${hdr.command} against ${hdr.icon})`);
+  ok(hdr.word === "Search" && Math.abs(hdr.h - hdr.linkH) < 0.5, `desktop: collapsed, the trigger says "Search" and is as tall as the links (${hdr.h} / ${hdr.linkH})`);
   ok(hdr.kbd && hdr.kbd.border === "0px" && /rgba\(0, 0, 0, 0\)|transparent/.test(hdr.kbd.bg) && /^(Ctrl K|K)$/.test(hdr.kbd.text), `desktop: collapsed, the header's key hint is plain text, unboxed (${JSON.stringify(hdr.kbd)})`);
   ok((await page.locator(".hero-row").first().evaluate((a) => getComputedStyle(a).visibility)) === "hidden", "desktop: the hidden rows are out of the tab order (visibility hidden)");
   ok((await page.locator("h1").count()) === 1 && (await page.locator("h1").evaluate((h) => getComputedStyle(h).visibility)) !== "hidden", "desktop: the h1 stays in the accessibility tree");
   const m = await layoutChecks(page, "desktop collapsed");
-  ok(m.inks.length === 2, "desktop collapsed: the name and the hint, nothing else");
+  ok(m.inks.length === 3, "desktop collapsed: the name (two halves) and the hint, nothing else");
   await page.screenshot({ path: `${OUT_DIR}/hero-collapsed-1440-dark.png` });
 
   // the way back: not before the delay, then at rest again (1.5 s here; the real 8 s is checked below)
@@ -386,8 +395,8 @@ for (const width of [320, 360, 390, 430]) {
   const g = await geometry(page);
   ok(g.header !== null && g.nav.l >= 0 && g.nav.r <= g.vw, `${width} px: collapsed, the header row fits (${g.nav ? `${Math.round(g.nav.l)} to ${Math.round(g.nav.r)}` : "missing"})`);
   ok(g.overflowX <= 0, `${width} px: collapsed, no horizontal overflow`);
-  const compact = page.locator("[data-slot=search-trigger-compact]");
-  ok(await compact.isVisible(), `${width} px: the header has a text search button`);
+  const compact = page.locator("[data-slot=search-trigger]");
+  ok(await compact.isVisible() && /^search/i.test((await compact.innerText()).trim()), `${width} px: the header has a search button with the word "Search"`);
   const box = await compact.boundingBox();
   ok(box.height >= 43.5 && box.width >= 43.5, `${width} px: the header search is a 44 px target (${Math.round(box.width)} x ${Math.round(box.height)})`);
   if (width === 390) {
@@ -417,7 +426,7 @@ for (const width of [320, 360, 390, 430]) {
   const at = stops.indexOf("button[hero-search]");
   ok(at > 0, `keyboard: Tab reaches the hero's search line (${stops.slice(0, 12).join(" > ")})`);
   ok(JSON.stringify(stops.slice(at + 1, at + 5)) === JSON.stringify(PATHS.map((p) => `a ${p}`)), `keyboard: then the four lists, in order (${stops.slice(at + 1, at + 5).join(", ")})`);
-  ok(!stops.includes("button[search-trigger]") && !stops.includes("button[search-trigger-compact]"), "keyboard: at rest there is no header search in the order: the hero's search line is the first control after the skip links");
+  ok(!stops.includes("button[search-trigger]"), "keyboard: at rest there is no header search in the order: the hero's search line is the first control after the skip links");
   ok(stops.slice(at + 5).some((s) => s !== "none"), "keyboard: focus moves on past the hero");
 
   await page.evaluate(() => document.activeElement?.blur());
@@ -546,10 +555,10 @@ for (const width of [320, 360, 390, 430]) {
   };
   await collapse();
   // a header link has the focus: the idle delay (1.5 s here) passes twice and the hero stays collapsed, the header and the focus stay
-  await page.locator("header a[href='/projects']").focus();
+  await page.locator("header a[href='/software']").focus();
   await sleep(3200);
   ok((await heroState(page)) === "collapsed", "focus hold: with the focus on a header link the hero does not come back after the idle delay");
-  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/projects" && !!document.activeElement.closest("header")), "focus hold: the focus is still on the header link (the header was not unmounted under it)");
+  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/software" && !!document.activeElement.closest("header")), "focus hold: the focus is still on the header link (the header was not unmounted under it)");
   // leaving the header releases the hold: a whole idle period later, the hero is back
   await page.evaluate(() => document.activeElement?.blur());
   await sleep(500);
@@ -595,8 +604,285 @@ for (const width of [320, 360, 390, 430]) {
   ok(state.rows === 4, `no scripts: the four lists are links that work (${state.rows})`);
   await page.screenshot({ path: `${OUT_DIR}/hero-no-script-1440.png` });
   await page.goto(`${BASE_URL}/articles`);
-  const triggers = await page.evaluate(() => ["search-trigger", "search-trigger-compact"].map((s) => { const e = document.querySelector(`[data-slot=${s}]`); return !!e && getComputedStyle(e).display !== "none"; }));
+  const triggers = await page.evaluate(() => ["search-trigger"].map((s) => { const e = document.querySelector(`[data-slot=${s}]`); return !!e && getComputedStyle(e).display !== "none"; }));
   ok(triggers.every((v) => v === false), "no scripts: the header's search triggers are not drawn either");
+  await ctx.close();
+}
+
+// --- 10. Round 3: the showcase (the ring and the caption, the boxes out, the planet lifted), the name's travel -------------------------------
+// Pages in debug mode have the ring off unless `?ring` and the showcase off unless `?showcase`; `window.__globeDebug.caption()` is the caption's
+// introspection and `.ring()` the ring's (docs/web-architecture.md, "Ring of type", "Caption on the sphere").
+const SHOW_QUERY = "?globe-debug&ring&showcase&no-street&hero-idle=2500";
+const ringOf = (page) => page.evaluate(() => window.__globeDebug.ring());
+const captionOf = (page) => page.evaluate(() => window.__globeDebug.caption());
+const planetOf = (page) =>
+  page.evaluate(() => {
+    const r = window.__globeDebug.ring();
+    const i = window.__globeDebug.inset();
+    const h = innerHeight;
+    return { r: r.silhouettePx, lift: i.lift, cover: i.cover, cy: h / 2 - i.lift, h, w: innerWidth, labels: window.__globeDebug.labelsShown().length };
+  });
+/** Record, on every animation frame, how many copies of each half of the name are visible and where they are, and how many animations run. */
+const startRecording = (page) =>
+  page.evaluate(() => {
+    window.__rec = [];
+    const names = [".hero-given", ".hero-family", ".hero-mini-given", ".hero-mini-family"];
+    const read = () =>
+      names.map((n) => {
+        const e = document.querySelector(n);
+        let op = 1;
+        for (let p = e; p && p !== document.documentElement; p = p.parentElement) op *= Number(getComputedStyle(p).opacity);
+        const vis = getComputedStyle(e).visibility !== "hidden" && op > 0.01;
+        const r = document.createRange();
+        r.selectNodeContents(e);
+        const b = r.getBoundingClientRect();
+        return { n, vis, l: b.left, t: b.top, w: b.width, h: b.height };
+      });
+    const loop = (t) => {
+      window.__rec.push({ t, anims: document.getAnimations().filter((a) => a.playState === "running" && /hero-(given|family)/.test(String(a.effect?.target?.className))).length, items: read() });
+      window.__recId = requestAnimationFrame(loop);
+    };
+    window.__recId = requestAnimationFrame(loop);
+  });
+const stopRecording = (page) => page.evaluate(() => (cancelAnimationFrame(window.__recId), window.__rec));
+/** The checks that the name has ONE copy on screen at every frame, and that the frame the travel ends on is the held state (no jump). */
+function seamless(rec, label) {
+  const frames = rec.filter((f) => f.items.some((i) => i.vis));
+  let worst = 0;
+  for (const f of frames) {
+    const given = f.items.filter((i) => /given/.test(i.n) && i.vis).length;
+    const family = f.items.filter((i) => /family/.test(i.n) && i.vis).length;
+    worst = Math.max(worst, given, family);
+  }
+  ok(frames.length > 5 && worst === 1, `${label}: at no frame are two copies of the name visible (${frames.length} frames, at most ${worst} of each half)`);
+  // the frame the animation stops running on, against the one before: the picture must not move by more than a pixel
+  let at = -1;
+  for (let i = 1; i < rec.length; i++) if (rec[i - 1].anims > 0 && rec[i].anims === 0) at = i;
+  ok(at > 0, `${label}: the travel ended in a frame we saw`);
+  if (at > 0) {
+    const a = rec[at - 1].items.find((i) => i.n === ".hero-given");
+    const b = rec[at].items.find((i) => i.n === ".hero-given");
+    const f1 = rec[at - 1].items.find((i) => i.n === ".hero-family");
+    const f2 = rec[at].items.find((i) => i.n === ".hero-family");
+    const jump = Math.max(Math.abs(a.l - b.l), Math.abs(a.t - b.t), Math.abs(a.w - b.w), Math.abs(f1.l - f2.l), Math.abs(f1.t - f2.t), Math.abs(f1.w - f2.w));
+    ok(jump <= 1, `${label}: the last frame of the travel is the held state (a jump of ${jump.toFixed(2)} px)`);
+    // and nothing moves afterwards
+    const after = rec.slice(at).flatMap((f) => f.items.filter((i) => /given|family/.test(i.n) && i.vis && !/mini/.test(i.n)));
+    const drift = Math.max(...after.map((i) => i.l)) - Math.min(...after.filter((i) => /given/.test(i.n)).map((i) => i.l));
+    ok(Number.isFinite(drift), `${label}: the name is steady after the travel`);
+  }
+}
+
+/** The lift stops where the highest thing, the ring's outer edge (`RING.gap` 0.06 over the planet, a cap and a glyph of room), is 14 px from the top. */
+const roomUsedUp = (p) => p.cy - (p.r * 1.06 + 0.72 * 11 * 1.15 + 11) <= 14 + 1.5;
+
+const SHAPES = [
+  ["1440x900 dark", DESKTOP, "dark"],
+  ["1440x900 light", DESKTOP, "light"],
+  ["390x844 dark", MOBILE, "dark"],
+  ["390x844 light", MOBILE, "light"],
+];
+for (const [label, options, scheme] of SHAPES) {
+  const touch = options.hasTouch === true;
+  const { ctx, page, logs } = await newPage(options, { colorScheme: scheme });
+  await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(1800);
+  const p = await planetOf(page);
+  const c = await captionOf(page);
+  const ring = await ringOf(page);
+  const v = await view(page);
+  const nums = await page.evaluate(() => ({ fit: window.__globeDebug.fitZoom(), floor: window.__globeDebug.floorZoom() }));
+  ok(Math.abs(v.zoom - nums.floor) < 1e-6 && nums.floor < nums.fit - 0.3, `${label}: the page opens fully zoomed out (zoom ${v.zoom.toFixed(2)}, the fit is ${nums.fit.toFixed(2)})`);
+  ok(ring.shown && ring.alpha > 0, `${label}: the flat ring of type is shown (the ring is main's, unchanged)`);
+  ok(c.built && c.showcase && c.overlayHidden && c.lines.length === 2 && c.lines.every((l) => l.visible && Math.abs(l.theta) < 1e-3), `${label}: the caption is built and in place (${c.font}, ${c.lines.map((l) => l.text).join(" / ")})`);
+  ok(p.labels === 0, `${label}: every box and label is out`);
+  ok(p.lift > 5 && p.cy - p.r >= -0.5, `${label}: the planet is lifted by ${p.lift.toFixed(0)} px (cover ${p.cover}), its top is inside the window (${Math.round(p.cy - p.r)} px)`);
+  ok(p.cy + p.r <= p.h - p.cover + 1 || roomUsedUp(p), `${label}: it clears what covers the bottom, or the room above is used up`);
+  const hintBox = await page.locator(".hero-hint").boundingBox();
+  ok(hintBox !== null && hintBox.width <= 1.5 && hintBox.height <= 1.5 && /Pick a point on the globe/.test(await page.locator(".hero-hint").textContent()), `${label}: the how-to line is visually hidden, not removed`);
+  ok((await hero(page).getAttribute("data-orbit")) === "true", `${label}: the hero knows the globe has the caption`);
+  ok((await page.evaluate(() => window.__globeDebug.pick(innerWidth / 2, 330))) === null, `${label}: a hidden box takes no pick`);
+  await page.screenshot({ path: `${OUT_DIR}/hero-showcase-${label.replace(" ", "-")}.png` });
+
+  // The first press ends it; the name travels; one copy at every frame.
+  const path0 = new URL(page.url()).pathname;
+  await startRecording(page);
+  const gx = options.viewport.width / 2;
+  const gy = touch ? 300 : 80;
+  if (touch) await page.touchscreen.tap(gx, gy);
+  else {
+    await page.mouse.move(gx, gy);
+    await page.mouse.down();
+    await page.mouse.up();
+  }
+  await waitState(page, "collapsed", 1500);
+  await sleep(700);
+  const rec = await stopRecording(page);
+  seamless(rec, `${label}, collapsing`);
+  const end = rec.at(-1).items;
+  const ghostRects = ["given", "family"].map((n) => end.find((i) => i.n === `.hero-mini-${n}`));
+  const nameRects = ["given", "family"].map((n) => end.find((i) => i.n === `.hero-${n}`));
+  ok(
+    ghostRects.every((g, k) => Math.abs(g.l - nameRects[k].l) < 0.5 && Math.abs(g.t - nameRects[k].t) < 0.5 && Math.abs(g.w - nameRects[k].w) < 0.5),
+    `${label}: the collapsed name sits on its place to under half a pixel (${nameRects.map((r) => `${r.l.toFixed(1)},${r.t.toFixed(1)} ${r.w.toFixed(1)}`).join(" | ")})`,
+  );
+  const after = await planetOf(page);
+  const cap = await captionOf(page);
+  ok(!cap.showcase && after.lift === 0 && !cap.overlayHidden && after.labels > 0, `${label}: the press ended the showcase (boxes back ${after.labels}, the planet down)`);
+  ok(new URL(page.url()).pathname === path0, `${label}: the press selected nothing`);
+  ok(cap.lines.every((l) => !l.visible), `${label}: the caption's lines are behind the planet`);
+  ok(await page.locator(".hero-given").evaluate((e) => e.getAnimations().length === 0 && getComputedStyle(e).willChange === "auto"), `${label}: nothing is left running or promoted (no will-change)`);
+  const sizePx = await page.evaluate(() => {
+    const g = document.createRange();
+    g.selectNodeContents(document.querySelector(".hero-given"));
+    const gh = g.getBoundingClientRect().height;
+    const m = parseFloat(getComputedStyle(document.querySelector(".hero-mini-name")).fontSize);
+    return { m, gh };
+  });
+  ok(sizePx.m >= 28 && sizePx.m <= 48, `${label}: the collapsed name is ${sizePx.m.toFixed(0)} px (40 to 48 on a wide screen, 28 and over on a phone)`);
+  const geo = await geometry(page);
+  ok(!geo.inks.some((i) => geo.credits && hit(i, geo.credits)) && !(geo.badge && geo.inks.some((i) => hit(i, geo.badge))), `${label}: the collapsed name and its hint clear the credits line and the dev badge`);
+  await page.screenshot({ path: `${OUT_DIR}/hero-collapsed2-${label.replace(" ", "-")}.png` });
+
+  // The way back: the same motion reversed, one copy at every frame.
+  await startRecording(page);
+  await waitState(page, "rest", 6000);
+  await sleep(700);
+  const back = await stopRecording(page);
+  seamless(back, `${label}, coming back`);
+  const full = back.at(-1).items.find((i) => i.n === ".hero-given");
+  ok(full.w > end.find((i) => i.n === ".hero-given").w * 2, `${label}: the name is back at full size (${full.w.toFixed(0)} px)`);
+  const again = await captionOf(page);
+  ok(again.showcase && again.overlayHidden, `${label}: back at rest the showcase is on again, boxes out`);
+  ok(logs.length === 0, `${label}: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// The caption's entrance, held at times (pinned): each line starts behind the planet, arrives fast and settles slowly, line 2 140 ms after line 1.
+{
+  const { ctx, page } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(1500);
+  const at = async (ms) => {
+    await page.evaluate((ms) => window.__globeDebug.pinCaption(ms), ms);
+    await sleep(80);
+    return (await captionOf(page)).lines;
+  };
+  const f0 = await at(0);
+  ok(f0.every((l) => !l.visible && l.theta > 1.5), "entrance: at 0 ms both lines are behind the planet");
+  const f100 = await at(100);
+  ok(f100[0].visible && !f100[1].visible, "entrance: at 100 ms line 1 is arriving and line 2 has not started");
+  const f200 = await at(200);
+  ok(f200[0].visible && f200[1].visible && f200[1].theta > f200[0].theta, "entrance: at 200 ms both are in view, line 2 behind line 1");
+  const f400 = await at(400);
+  ok(f400[0].theta < 0.2 && f400[1].theta > f400[0].theta && f400[1].theta < 0.5, "entrance: at 400 ms line 1 is almost there (fast), line 2 settling");
+  const f1100 = await at(1100);
+  ok(f1100.every((l) => Math.abs(l.theta) < 0.01), "entrance: at 1100 ms both are in place (the ease has 0.1 % of the way left)");
+  await page.evaluate(() => window.__globeDebug.pinCaption(null));
+  // the limb: lines held half past the horizon on either side never mirror: the shell's front faces end before the limb and the planet's depth does the rest
+  for (const deg of [58, 70, -58, -70, 80, -80]) {
+    await page.evaluate((deg) => window.__globeDebug.pinCaptionAngle(deg), deg);
+    await sleep(120);
+  }
+  await page.evaluate(() => window.__globeDebug.pinCaptionAngle(null));
+  await ctx.close();
+}
+
+// Reduced motion: the showcase is there at once (the final composition, no entrance) and the name does not travel.
+{
+  const { ctx, page, logs } = await newPage(DESKTOP, { reducedMotion: "reduce" });
+  await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(900);
+  const c = await captionOf(page);
+  const i = await page.evaluate(() => window.__globeDebug.inset());
+  ok(c.built && c.phase === "rest" && c.lines.every((l) => l.visible && l.theta === 0) && i.lift > 20 && i.lift === i.liftTarget, "reduced motion: the caption is in place and the planet lifted at once");
+  await page.mouse.move(720, 120);
+  await page.mouse.down();
+  await page.mouse.up();
+  await sleep(60);
+  ok((await heroState(page)) === "collapsed" && (await page.locator(".hero-given").evaluate((e) => e.getAnimations().length)) === 0, "reduced motion: the name does not travel (no animation), the hero is collapsed within 60 ms");
+  ok((await page.evaluate(() => window.__globeDebug.inset().lift)) === 0 && (await captionOf(page)).lines.every((l) => !l.visible), "reduced motion: the caption is out and the planet down at once");
+  ok(logs.length === 0, `reduced motion (caption): no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// The planet's top is inside the window and clear of the name, at every shape (from 320 x 480).
+for (const [name, options] of VIEWPORTS) {
+  const { ctx, page, logs } = await newPage(options);
+  await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(900);
+  const p = await planetOf(page);
+  const c = await captionOf(page);
+  ok(c.showcase && p.labels === 0, `${name}: the caption is in and the boxes are out (${c.font})`);
+  ok(p.cy - p.r >= -0.5, `${name}: the lifted planet's top is inside the window (${Math.round(p.cy - p.r)} px, lift ${p.lift.toFixed(0)}, cover ${p.cover})`);
+  ok(p.cy + p.r <= p.h - p.cover + 1 || roomUsedUp(p), `${name}: it clears what covers the bottom, or the room above is used up`);
+  ok(logs.length === 0, `${name}: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// ?no-ring: the previous home page (boxes, hint visible, no ring, no caption, the world view is the fit).
+{
+  const { ctx, page, logs } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/?no-ring`);
+  await waitGlobe(page);
+  await sleep(1200);
+  ok((await page.locator("[data-ring]").count()) === 0, "no-ring: no ring is mounted");
+  ok((await hero(page).getAttribute("data-orbit")) === "false", "no-ring: the hero is told there is no caption");
+  const hint = await page.locator(".hero-hint").boundingBox();
+  ok(hint !== null && hint.width > 100, "no-ring: the how-to line is visible");
+  ok(logs.length === 0, `no-ring: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+
+// --- 11. A header that appears because of a gesture does not receive that gesture's click ------------------------------------------------
+// On a phone a tap on the globe collapses the hero in the same task as the press and the header row appears; the browser then fires the
+// tap's click at what is under the finger NOW. A tap near the top used to land on a header link ("Articles") and navigate. The header's
+// controls ignore the pointer until the pointer sequence has ended plus a short guard (keyboard, focus and assistive technology unaffected).
+{
+  const TOUCH = { ...MOBILE, viewport: { width: 390, height: 844 } };
+  // Where the "Articles" link is once the header is there (two steps: collapse, read the box).
+  const probe = await newPage(TOUCH);
+  await probe.page.goto(`${BASE_URL}/${IDLE_QUERY}`);
+  await waitGlobe(probe.page);
+  await waitDebug(probe.page);
+  await sleep(800);
+  await probe.page.touchscreen.tap(380, 400);
+  await waitState(probe.page, "collapsed", 1500);
+  await sleep(500);
+  const box = await probe.page.locator("header a[href='/articles']").boundingBox();
+  await probe.ctx.close();
+  ok(box !== null && box.y + box.height / 2 < 60, `tap-through: the header's Articles link is in the top strip (${box ? Math.round(box.y + box.height / 2) : "none"} px)`);
+  const tx = box.x + box.width / 2;
+  const ty = box.y + box.height / 2;
+
+  const { ctx, page, logs } = await newPage(TOUCH);
+  await page.goto(`${BASE_URL}/${IDLE_QUERY.replace("hero-idle=1500", "hero-idle=20000")}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(800);
+  ok((await page.locator("header").count()) === 0, "tap-through: no header before the tap");
+  await page.touchscreen.tap(tx, ty);
+  await sleep(700);
+  ok(new URL(page.url()).pathname === "/", `tap-through: the tap's click did not reach the header link that appeared under it (${new URL(page.url()).pathname})`);
+  if (new URL(page.url()).pathname === "/") ok((await heroState(page)) === "collapsed", "tap-through: the tap on the globe collapsed the hero");
+  ok((await page.locator("header a[href='/articles']").count()) === 1 && (await page.locator("header a[href='/articles']").isVisible()), "tap-through: the header is there and visible");
+  ok((await page.locator("header").getAttribute("data-guard")) === null, "tap-through: the guard is off a moment after the tap");
+  // after the guard the link works with a real tap, and keyboard focus was never blocked
+  await page.locator("header a[href='/software']").focus();
+  ok(await page.evaluate(() => document.activeElement?.getAttribute("href") === "/software"), "tap-through: the header's links can be focused at once (keyboard and assistive technology are not guarded)");
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.touchscreen.tap(tx, ty);
+  await page.waitForURL("**/articles", { timeout: 4000 }).catch(() => {});
+  ok(new URL(page.url()).pathname === "/articles", `tap-through: after the guard a tap on the link navigates (${new URL(page.url()).pathname})`);
+  ok(logs.length === 0, `tap-through: no console error or warning${logs.length ? ` (${logs.join(" | ")})` : ""}`);
   await ctx.close();
 }
 

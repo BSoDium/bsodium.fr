@@ -34,7 +34,7 @@ export function ErrorPage({ error, showDetail = import.meta.env.DEV }: { error: 
                 Try again
               </Button>
             )}
-            <Button asChild variant="secondary">
+            <Button asChild variant="primary">
               <Link to="/">
                 <Icon name="arrow-left" size="inline" />
                 Back to the globe

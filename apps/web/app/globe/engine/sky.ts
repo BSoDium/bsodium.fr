@@ -316,11 +316,14 @@ export interface SkyGeometry {
   rhoMax: number;
 }
 
-/** Where the earth's silhouette is in the drawing buffer: a camera at distance `d` (globe radius 1), the picture `bufW` x `bufH`, the projection centre shifted left by `shiftBuf`. */
-export function skyGeometry(d: number, bufW: number, bufH: number, shiftBuf: number): SkyGeometry {
+/**
+ * Where the earth's silhouette is in the drawing buffer: a camera at distance `d` (globe radius 1), the picture `bufW` x `bufH`, the projection
+ * centre shifted left by `shiftBuf` and up by `liftBuf` (buffer px; `cy` is measured from the bottom, like `gl_FragCoord`, so up is more).
+ */
+export function skyGeometry(d: number, bufW: number, bufH: number, shiftBuf: number, liftBuf = 0): SkyGeometry {
   const radius = focalPx(bufH) / Math.sqrt(Math.max(1e-9, d * d - 1));
   const cx = bufW / 2 - shiftBuf;
-  const cy = bufH / 2;
+  const cy = bufH / 2 + liftBuf;
   const far = Math.hypot(Math.max(cx, bufW - cx), Math.max(cy, bufH - cy));
   return { cx, cy, radius, rhoMax: far / radius };
 }

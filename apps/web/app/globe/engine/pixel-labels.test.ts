@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CLEAR, MIXED, PixelBuffer } from "./pixel-buffer";
-import { ALPHA_STEPS, BOX_STYLE, LABEL_PAD, MIN_LABEL_CHARS, SPOT, TEXT_GAP, chipText, dashingFor, drawBox, drawLabel, edgeLit, labelCandidates, labelLayout, labelTones, labelVariants, quantAlpha, snapToLattice, spotAt } from "./pixel-labels";
+import { ALPHA_STEPS, BOX_STYLE, LABEL_PAD, MIN_LABEL_CHARS, SPOT, TEXT_GAP, boxOpenness, chipText, dashingFor, drawBox, drawLabel, edgeLit, labelCandidates, labelLayout, labelTones, labelVariants, holdBleedOnScreen, quantAlpha, selectedShift, selectedShiftAt, snapToLattice, spotAt } from "./pixel-labels";
 import { FONT_CAP, FONT_DESCENT, measureText } from "./pixel-font/pixel-font";
 import { buildRamp, textFloorLevel } from "./palette";
 
@@ -486,5 +486,184 @@ describe("the art-pixel lattice: plates sit on the grid of the box they are anch
     const out = { x: 0, y: 0, inside: false };
     expect(spotAt(SPOT.aboveLeft, { c0: 101, r0: 203.3, c1: 140, r1: 240 }, 80, 24, grid, { gap: 3 }, out)).toBe(true);
     expect(out).toMatchObject({ x: 101, y: 203.3 - 24 - 3 });
+  });
+});
+
+describe("a box opens from a closed rectangle into corners and dashes as it grows (2026-10-13)", () => {
+  const FLOOR = 12.5; // 5 cells at 2.5 px
+  /** The drawn outline of an `n x n` box at openness `open`: the cells that are lit. */
+  const lit = (n: number, open: number) => {
+    const b = new PixelBuffer(n + 2, n + 2);
+    drawBox(b, { c0: 1, r0: 1, c1: n + 1, r1: n + 1 }, T, { alpha: 1, fillAlpha: 0, open });
+    let k = 0;
+    for (let y = 0; y < n + 2; y++) for (let x = 0; x < n + 2; x++) if (b.get(x, y) === PEAK) k++;
+    return { k, b };
+  };
+  it("boxOpenness: 0 at the floor (and under it), 1 from twice the floor, a straight line between, monotone and continuous", () => {
+    expect(boxOpenness(FLOOR, FLOOR)).toBe(0);
+    expect(boxOpenness(FLOOR * 0.4, FLOOR)).toBe(0);
+    expect(boxOpenness(FLOOR * 2, FLOOR)).toBe(1);
+    expect(boxOpenness(FLOOR * 9, FLOOR)).toBe(1);
+    expect(boxOpenness(FLOOR * 1.5, FLOOR)).toBeCloseTo(0.5, 12);
+    let prev = 0;
+    for (let px = 0; px <= 60; px += 0.05) {
+      const o = boxOpenness(px, FLOOR);
+      expect(o).toBeGreaterThanOrEqual(prev);
+      expect(o - prev).toBeLessThan(0.01); // 0.05 px of size: continuous, no jump
+      prev = o;
+    }
+    expect(boxOpenness(NaN, FLOOR)).toBe(1); // (no measure: the full look)
+    expect(boxOpenness(20, 0)).toBe(1);
+  });
+  it("dashingFor: the gap is 0 at openness 0 and non-decreasing in it, whole cells, up to the full look; the full look is what it was", () => {
+    for (let n = 5; n <= 60; n++) {
+      const full = dashingFor(n, n);
+      expect(dashingFor(n, n, 1)).toEqual(full);
+      expect(dashingFor(n, n, 0).gap).toBe(0);
+      let prev = 0;
+      for (let o = 0; o <= 1.0001; o += 0.01) {
+        const d = dashingFor(n, n, o);
+        expect(Number.isInteger(d.gap) && Number.isInteger(d.arm)).toBe(true);
+        expect(d.gap).toBeGreaterThanOrEqual(prev);
+        expect(d.gap - prev).toBeLessThanOrEqual(1); // a cell at a time
+        expect(d.arm).toBe(full.arm);
+        prev = d.gap;
+      }
+      expect(prev).toBe(full.gap);
+    }
+  });
+  it("at openness 0 the outline is a plain closed rectangle: every cell of the ring is lit, at every size, also for a strip", () => {
+    for (const [w, h] of [[5, 5], [6, 5], [9, 9], [30, 5], [5, 30], [14, 14]] as const) {
+      const b = new PixelBuffer(w + 2, h + 2);
+      drawBox(b, { c0: 1, r0: 1, c1: w + 1, r1: h + 1 }, T, { alpha: 1, fillAlpha: 0, open: 0 });
+      let ring = 0;
+      for (let y = 0; y < h + 2; y++) for (let x = 0; x < w + 2; x++) {
+        const onRing = x >= 1 && x <= w && y >= 1 && y <= h && (x === 1 || x === w || y === 1 || y === h);
+        expect(b.get(x, y) === PEAK, `${w}x${h} (${x},${y})`).toBe(onRing);
+        if (onRing) ring++;
+      }
+      expect(ring).toBe(2 * (w + h) - 4);
+    }
+  });
+  it("growing from the floor to the full look takes the outline from the whole ring to corners and dashes, a cell or two at a time, never back: the lit cells only decrease by the notches, and there is no pop", () => {
+    // a box that grows from 5 to 14 cells, openness from its size as the scene does: 5 cells = the floor, 10 = fully open
+    let prevLit = Infinity;
+    let prevGap = 0;
+    const gaps: number[] = [];
+    for (let n = 5; n <= 14; n++) {
+      const o = boxOpenness(n * 2.5, FLOOR);
+      const d = dashingFor(n, n, o);
+      expect(d.gap).toBeGreaterThanOrEqual(prevGap);
+      gaps.push(d.gap);
+      prevGap = d.gap;
+      const ring = 4 * n - 4;
+      const { k } = lit(n, o);
+      expect(k).toBeLessThanOrEqual(ring);
+      // the box is closed at the floor
+      if (n === 5) expect(k).toBe(ring);
+      // fully open from 10 cells: corners and dashes, so some of the ring is dark
+      if (n >= 10) expect(k).toBeLessThan(ring);
+      // no pop: lit cells never increase by more than the cells the growth itself adds (4) once the box is open
+      if (Number.isFinite(prevLit) && n > 5) expect(k - prevLit).toBeLessThanOrEqual(4);
+      prevLit = k;
+    }
+    expect(gaps[0]).toBe(0);
+    expect(gaps[gaps.length - 1]).toBe(dashingFor(14, 14).gap);
+  });
+  it("selected is one solid line at every openness (the card at the floor is a plain rectangle too)", () => {
+    for (const open of [0, 0.3, 1]) {
+      const b = new PixelBuffer(9, 9);
+      drawBox(b, { c0: 1, r0: 1, c1: 8, r1: 8 }, T, { alpha: 1, fillAlpha: 0, solid: true, active: true, open });
+      for (let i = 1; i < 8; i++) for (const [x, y] of [[i, 1], [i, 7], [1, i], [7, i]] as const) expect(b.get(x, y)).toBe(INK);
+    }
+  });
+});
+
+describe("the text is flush with the box's edge when the label is not selected; the selected card is flush with the box (bleed, selectedShift)", () => {
+  const rect = { c0: 100.4, r0: 200.3, c1: 160.9, r1: 240.6 };
+  const W = 84;
+  const H = 38;
+  const grid = { cols: 1000, rows: 800 };
+  const U = { gap: 5.5, bleed: 6, bleedY: 3, quant: 0, inset: 5.5 };
+  const PAD_X = 6;
+  const PAD_Y = 3;
+  const at = (id: number, units = U) => {
+    const o = { x: 0, y: 0, inside: false };
+    expect(spotAt(id, rect, W, H, grid, units, o), `spot ${id}`).toBe(true);
+    return o;
+  };
+  it("above and below, left-aligned: the text's left edge is the box's left edge, whatever the box's position", () => {
+    for (const id of [SPOT.aboveLeft, SPOT.belowLeft]) expect(at(id).x + PAD_X, `${id}`).toBeCloseTo(rect.c0, 9);
+  });
+  it("above and below, right-aligned: the text's right edge is the box's right edge", () => {
+    for (const id of [SPOT.aboveRight, SPOT.belowRight]) expect(at(id).x + W - PAD_X, `${id}`).toBeCloseTo(rect.c1, 9);
+  });
+  it("beside the box the text's top line is on the box's top edge (the plate's padding hangs above it)", () => {
+    for (const id of [SPOT.left, SPOT.right]) expect(at(id).y + PAD_Y, `${id}`).toBeCloseTo(rect.r0, 9);
+  });
+  it("the vertical room to the box is untouched by the alignment: the same gap above and below", () => {
+    expect(rect.r0 - (at(SPOT.aboveLeft).y + H)).toBeCloseTo(U.gap, 9);
+    expect(at(SPOT.belowLeft).y - rect.r1).toBeCloseTo(U.gap, 9);
+  });
+  it("nested and shifted positions have no edge to align with: they do not bleed (nested stays inside the outline)", () => {
+    const big = { c0: 100.4, r0: 200.3, c1: 260.9, r1: 300.6 };
+    const o = { x: 0, y: 0, inside: false };
+    expect(spotAt(SPOT.insideTopLeft, big, W, H, grid, U, o)).toBe(true);
+    expect(o.inside).toBe(true);
+    expect(o.x).toBeCloseTo(big.c0 + U.inset, 9);
+    expect(o.y).toBeCloseTo(big.r0 + U.inset, 9);
+  });
+  it("selectedShift moves the plate to be flush with the box: left-aligned slots right by the bleed, right-aligned left, beside slots down; others stay", () => {
+    for (const id of [SPOT.aboveLeft, SPOT.aboveVisibleLeft, SPOT.belowLeft]) expect(selectedShift(id, 6, 3)).toEqual({ dx: 6, dy: 0 });
+    for (const id of [SPOT.aboveRight, SPOT.aboveVisibleRight, SPOT.belowRight]) expect(selectedShift(id, 6, 3)).toEqual({ dx: -6, dy: 0 });
+    for (const id of [SPOT.left, SPOT.right]) expect(selectedShift(id, 6, 3)).toEqual({ dx: 0, dy: 3 });
+    for (const id of [SPOT.insideTopLeft, SPOT.insideBottomRight, SPOT.aboveShift, SPOT.belowShift + 1]) expect(selectedShift(id, 6, 3)).toEqual({ dx: 0, dy: 0 });
+    // the card: plate edge on the box edge
+    expect(at(SPOT.aboveLeft).x + selectedShift(SPOT.aboveLeft, 6, 3).dx).toBeCloseTo(rect.c0, 9);
+    expect(at(SPOT.aboveRight).x + W + selectedShift(SPOT.aboveRight, 6, 3).dx).toBeCloseTo(rect.c1, 9);
+    expect(at(SPOT.right).y + selectedShift(SPOT.right, 6, 3).dy).toBeCloseTo(rect.r0, 9);
+  });
+  it("a plate whose hanging padding would leave the screen stays on it (a box at the left edge): the text is then up to the bleed from the edge", () => {
+    const edge = { c0: 2, r0: 100, c1: 50, r1: 130 };
+    const o = { x: 0, y: 0, inside: false };
+    expect(spotAt(SPOT.aboveLeft, edge, W, H, grid, U, o)).toBe(true);
+    expect(o.x).toBeGreaterThanOrEqual(0);
+    const right = { c0: 950, r0: 100, c1: 998, r1: 130 };
+    expect(spotAt(SPOT.aboveRight, right, W, H, grid, U, o)).toBe(true);
+    expect(o.x + W).toBeLessThanOrEqual(grid.cols);
+  });
+});
+
+describe("a box at the screen's edge: the bleed is held on the screen, and the card is flush with the box it really is next to", () => {
+  const grid = { cols: 200, rows: 100 };
+  const W = 60;
+  const H = 12;
+
+  it("holdBleedOnScreen is the clamp spotAt applies: left-aligned slots stay at 0 or more, right-aligned at the grid's width less the plate or less", () => {
+    expect(holdBleedOnScreen(SPOT.aboveLeft, -3, W, 200, 6)).toBe(0);
+    expect(holdBleedOnScreen(SPOT.aboveVisibleLeft, 4, W, 200, 6)).toBe(4);
+    expect(holdBleedOnScreen(SPOT.aboveRight, 150, W, 200, 6)).toBe(140);
+    expect(holdBleedOnScreen(SPOT.insideTopLeft, -3, W, 200, 6)).toBe(-3); // no bleed hangs out of a nested plate
+    expect(holdBleedOnScreen(SPOT.aboveLeft, -3, W, 200, 0)).toBe(-3);
+    // and spotAt gives exactly that for a box 3 px from the left edge
+    const rect = { c0: 3, c1: 50, r0: 40, r1: 80 };
+    const at = { x: 0, y: 0, inside: false };
+    expect(spotAt(SPOT.aboveLeft, rect, W, H, grid, { bleed: 6, gap: 3 }, at)).toBe(true);
+    expect(at.x).toBe(holdBleedOnScreen(SPOT.aboveLeft, rect.c0 - 6, W, grid.cols, 6));
+    expect(at.x).toBe(0);
+  });
+
+  it("selectedShiftAt moves the card by what really hangs out: the plate held at 0 by a box at x = 3 moves 3, not the whole bleed", () => {
+    const rect = { c0: 3, c1: 50, r0: 40, r1: 80 };
+    expect(selectedShiftAt(SPOT.aboveLeft, 6, 3, { x: 0, y: 25, w: W }, rect)).toEqual({ dx: 3, dy: 0 });
+    // away from the edge it is the nominal shift
+    expect(selectedShiftAt(SPOT.aboveLeft, 6, 3, { x: 94, y: 25, w: W }, { c0: 100, c1: 150, r0: 40, r1: 80 })).toEqual({ dx: 6, dy: 0 });
+    // right-aligned: the plate held at the right edge
+    expect(selectedShiftAt(SPOT.aboveRight, 6, 3, { x: 140, y: 25, w: W }, { c0: 100, c1: 197, r0: 40, r1: 80 })).toEqual({ dx: -3, dy: 0 });
+    // a slid plate (already flush or past the edge) does not move the wrong way
+    expect(selectedShiftAt(SPOT.aboveLeft, 6, 3, { x: 10, y: 25, w: W }, { c0: 4, c1: 50, r0: 40, r1: 80 })).toEqual({ dx: 0, dy: 0 });
+    // beside the box: down by what hangs above its top edge
+    expect(selectedShiftAt(SPOT.right, 6, 3, { x: 52, y: 38, w: W }, rect)).toEqual({ dx: 0, dy: 2 });
+    expect(selectedShiftAt(SPOT.insideTopLeft, 6, 3, { x: 4, y: 41, w: W }, rect)).toEqual({ dx: 0, dy: 0 });
   });
 });

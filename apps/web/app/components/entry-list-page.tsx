@@ -3,18 +3,20 @@ import { Link, useLocation } from "react-router";
 import type { ContentKind } from "@catalyst/schemas";
 import { EntryRow } from "~/components/entry/entry-list-card";
 import { Button, StatePanel } from "~/components/ui";
-import { KIND_NOUNS, KIND_PLURALS, type EntrySummary } from "~/lib/entries";
+import { KIND_PLURALS, kindCount, type EntrySummary } from "~/lib/entries";
 import { collectTags, filterByTag, groupByYear, parseTagFilter, shouldGroupByYear, tagSearch, type TagCount } from "~/lib/entry-list";
+import { SITE_NAME } from "~/lib/site";
 
 /** Tags shown before "more": the rest sit one press away (the selected tag is always shown). */
 const TAGS_SHOWN = 10;
 
 /**
- * `/projects`, `/articles`, `/artworks`, `/poetry`: the section's front page, set as type (docs/design-system.md, "Entry pages"): the double
- * rule, a mono line with the plain count, the section name at the headline scale, then a rule and the tag filter, then the entries as hairline rows
- * (`EntryRow`: date and places in mono, the title heavy over a thin summary, the image where there is one), grouped by year (newest first)
- * when a year holds more than one. The filter is the URL (`?tag=rail`: a link, a reload, the back button; works without scripts) and each
- * choice is a link. An empty collection is one muted line. Each row keeps the entry's slug as its anchor id (`/articles#slug`).
+ * `/software`, `/articles`, `/artworks`, `/poetry`: the section's front page, set as the contents page of a journal (docs/design-system.md,
+ * "Entry pages", "Lists"): a running head (the journal's name, the owner's, at the left; the folio, the plain count, at the right) over ONE
+ * hairline, the section's name at the headline scale in a lighter weight, the tag filter in plain space, then the entries as hairline rows (`EntryRow`: date and places in
+ * mono, the title heavy over a thin summary, the image where there is one), grouped by year (newest first) when a year holds more than
+ * one. The filter is the URL (`?tag=rail`: a link, a reload, the back button; works without scripts) and each choice is a link. An empty
+ * collection is one muted line. Each row keeps the entry's slug as its anchor id (`/articles#slug`).
  */
 export function EntryListPage({ kind, items }: { kind: ContentKind; items: EntrySummary[] }) {
   const { search } = useLocation();
@@ -26,9 +28,10 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
   const grouped = shouldGroupByYear(byYear);
   const groups = grouped ? byYear : [{ key: "all", year: null, items: byYear.flatMap((g) => g.items) }];
   const cardLevel = grouped ? 3 : 2;
-  // The section's name for labels ("Filter poetry by tag"), the count noun for counts ("4 poems").
+  // The section's name for labels ("Filter poetry by tag"), the count noun for counts ("4 poems", "33 software").
   const section = KIND_PLURALS[kind].toLowerCase();
-  const nouns = KIND_NOUNS[kind];
+  // One implementation of the count noun: `kindCount` ("33 software", "1 poem").
+  const total = kindCount(kind, items.length);
   let seen = 0;
 
   return (
@@ -39,20 +42,22 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
       data-layout="full"
       className="entry mx-auto max-w-[90rem] px-4 pt-[calc(var(--navbar-height)+3rem)] pb-24 outline-none md:px-14"
     >
-      <header className="flex flex-col">
-        <div aria-hidden="true" className="entry-rule" />
-        <p data-slot="list-count" className="type-meta m-0 mt-[1.375rem] text-muted-foreground">
-          {tag ? `${shown.length} of ${items.length}` : items.length} {items.length === 1 ? nouns.one : nouns.many}
+      <header data-slot="list-head" className="list-head">
+        <p className="list-running type-meta">
+          <span>{SITE_NAME}</span>
+          <span data-slot="list-count">
+            {tag ? `${shown.length} of ${total}` : total}
+          </span>
         </p>
-        <h1 className="entry-title mt-[1.625rem]">{KIND_PLURALS[kind]}</h1>
+        <h1 className="list-title">{KIND_PLURALS[kind]}</h1>
       </header>
 
       {tags.length > 0 && items.length > 1 && <TagFilter tags={tags} selected={tag} search={search} label={`Filter ${section} by tag`} />}
       <p role="status" className="sr-only">
-        {tag ? `Showing ${shown.length} of ${items.length} ${nouns.many} tagged ${tag}` : ""}
+        {tag ? `Showing ${shown.length} of ${total} tagged ${tag}` : ""}
       </p>
 
-      <div className="mt-10 flex flex-col gap-14">
+      <div className="mt-8 flex flex-col gap-14">
         {items.length === 0 ? (
           <StatePanel state="empty" headingLevel={2} title="Nothing here yet." />
         ) : (
@@ -102,7 +107,7 @@ function TagFilter({ tags, selected, search, label }: { tags: TagCount[]; select
     </li>
   );
   return (
-    <nav aria-label={label} data-slot="tag-filter" className="mt-9 border-t border-foreground pt-3">
+    <nav aria-label={label} data-slot="tag-filter" className="list-filter">
       <ul className="ds-filter-row flex list-none gap-0">
         {link(null, "All", selected === null, "all")}
         {visible.map((t) => link(t.tag, t.tag, selected === t.tag, t.tag))}

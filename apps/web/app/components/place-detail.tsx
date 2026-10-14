@@ -117,7 +117,7 @@ export function PlaceNotFound({ places }: { places: PlaceSummary[] }) {
           title="Place not found"
           description="There is no place at this address. It may have been renamed or removed."
           action={
-            <Button asChild variant="secondary">
+            <Button asChild variant="primary">
               <Link to="/">
                 <Icon name="arrow-left" size="inline" />
                 See all places

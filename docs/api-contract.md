@@ -8,7 +8,7 @@ There is no import endpoint, no admin or write endpoint, no authentication and n
 
 **The published contract is independent of how content is stored upstream.** In v1 the content is files: a private content repo opens a PR against this repo that updates `packages/published/data/projection.json`. Later it may be database-backed editing. In both cases the projection schema, the endpoints and the response shapes below stay the same. Consumers must not be able to tell which backend produced the data.
 
-- Everything is under `/v1`. Within v1 changes are additive only: new optional fields, new endpoints, and new members of a closed set where the section says so (the entry kinds gained `poem`; clients should treat an unknown kind as "something to list, not to render specially"). Removing or retyping a field, or changing an error code, needs `/v2` (which would run alongside `/v1` for a deprecation period). Clients must ignore fields they do not know; a consumer that validates strictly (JSON Schema with `additionalProperties: false`, zod `.strict()`, such as the web app with `CATALYST_API_URL` or the private repo's contract copy) must update its schema before an entry with `sensitive` is published.
+- Everything is under `/v1`. Within v1 changes are additive only: new optional fields, new endpoints, and new members of a closed set where the section says so (the entry kinds gained `poem`; clients should treat an unknown kind as "something to list, not to render specially"). Removing or retyping a field, or changing an error code, needs `/v2` (which would run alongside `/v1` for a deprecation period). Clients must ignore fields they do not know; a consumer that validates strictly (JSON Schema with `additionalProperties: false`, zod `.strict()`, such as the web app with `CATALYST_API_URL` or the private repo's contract copy) must update its schema before an entry with `sensitive`, or the `career` document, is published (see "Deployment order" in the career section below).
 - `schemaVersion` (currently `1`) is in `/health` and `/v1/projection`.
 - `GET /health` is operational, not part of the content contract. Do not build features on it.
 - Response types are exported from `apps/api/src/contract.ts` as **types only**. The web app may `import type { ... } from "@catalyst/api/contract"`. Never import runtime code from `@catalyst/api` into the client.
@@ -90,13 +90,13 @@ Liveness plus a summary of what is loaded. `200` when content is valid, `503` ot
 
 ### `GET /v1/projection`
 
-The complete validated projection, exactly the shape of `PublishedProjection`: `schemaVersion`, `places` (full objects, authored order), `groups` (the automatic place hierarchy, see below), `routes`, `projects`, `articles`, `artworks`, `poems`. This is what the globe loads. It is always the **complete** projection: entries (`projects`, `articles`, `artworks`, `poems`) are full objects with their `body`, unlike the list endpoints below. With the committed (empty) content:
+The complete validated projection, exactly the shape of `PublishedProjection`: `schemaVersion`, `places` (full objects, authored order), `groups` (the automatic place hierarchy, see below), `routes`, `projects`, `articles`, `artworks`, `poems` and, once the owner has published it, `career` (see "The career document" below). This is what the globe loads. It is always the **complete** projection: entries (`projects`, `articles`, `artworks`, `poems`) are full objects with their `body`, unlike the list endpoints below. With the committed (empty) content:
 
 ```json
 { "schemaVersion": 1, "places": [], "groups": [], "routes": [], "projects": [], "articles": [], "artworks": [], "poems": [] }
 ```
 
-`groups` and `poems` default to `[]` when a projection file omits them (see "Entries"), so the committed file does not have to carry `poems` yet; the response always does.
+`groups` and `poems` default to `[]` when a projection file omits them (see "Entries"), so the committed file does not have to carry `poems` yet; the response always does. `career` is the opposite: it is **absent** (the key is not there, not `null`) unless a document is published.
 
 ### `GET /v1/places`
 
@@ -309,6 +309,72 @@ The projection is **bundled** into the web app and into the API function, and `/
 Each entry costs about 3.5 KB raw in the projection (body 3 KB plus cover, meta and tags) and about 1.3 to 1.6 KB gzipped. The compressed figures come from random dictionary words (about 2.3:1, pessimistic) and are consistent with the ratio of real prose (2.5 to 3:1); source code and verse compress somewhat worse than prose. To budget a whole site, add the places: the owner's preview (146 places, 47 groups) is about 41.5 KB raw and 9 KB gzipped, so **146 places plus 100 entries of 3 KB is about 400 KB raw, 140 to 165 KB gzipped**. The server also pre-serialises every response at startup (the projection, the lists, one detail per entry and per place): that is about 790 KB of strings in memory for the 100-entry case and a module load of a few milliseconds (zod validation of the 100 entries took about 1 ms, building the snapshot about 2 ms), which is negligible next to the 20 ms module load of the bundle itself.
 
 The consequence for the free Vercel quota is in [api-cost-and-abuse.md](api-cost-and-abuse.md) (section 2): `/v1/projection` is the only endpoint whose size grows with the bodies, and a cache-busted client would pull about 400 KB per request from the function. The detail and list endpoints stay small (a few KB). Budget rules that keep the numbers in this table valid: no body above 60,000 characters (enforced), at most 200 blocks (enforced), covers and images are `/media/` files served by the web app, never inlined; if the real content ever approaches 1 MB of projection, split `/v1/projection` (not an incompatible change: a new endpoint) rather than raising a limit.
+
+### The career document (`career`)
+
+A curriculum vitae as data, for the page recruiters read. It is **one optional top-level object of the projection**, not an entry kind: there is no list, no detail and no slug, and **no new endpoint** (it is served inside `GET /v1/projection`, which already carries every top-level key, so the Vercel firewall's path allowlist needs no change). It is **absent** (no key) while the owner has not published the document, and `/health` counts do not mention it.
+
+```json
+{
+  "title": "Career",
+  "summary": "Frontend engineer who builds interfaces for map-heavy and data-heavy products.",
+  "updated": "2026-09",
+  "availability": { "text": "Open to example opportunities", "asOf": "2026-09" },
+  "roles": [
+    {
+      "id": "lead-frontend-example-studio",
+      "title": "Lead Frontend Engineer",
+      "org": "Example Studio",
+      "orgUrl": "https://example.org/studio",
+      "location": "Lisbon, Portugal",
+      "place": "lisbon",
+      "employment": "Permanent",
+      "start": "2025-09",
+      "end": "present",
+      "highlights": ["Led a team of four on a rebuild of the studio's flagship mapping product."],
+      "skills": ["React", "TypeScript", "WebGL"]
+    }
+  ],
+  "education": [{ "id": "institut-exemple", "institution": "Institut Exemple", "programme": "Computer Science and Applied Mathematics", "level": "MEng", "start": "2016", "end": "2021", "location": "Paris, France", "place": "paris" }],
+  "languages": [{ "name": "English", "level": "C2", "label": "Native" }],
+  "skills": [{ "group": "Primary", "items": ["React", "TypeScript"] }],
+  "links": [{ "label": "Code", "url": "https://example.com/demo-profile/code" }]
+}
+```
+
+(The demo fixture's career, shortened: every employer in it is made up.)
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `title` | 1 to 40, one line | "Career". |
+| `summary` | 1 to 500, one line | The profile statement, plain text. |
+| `updated` | `YYYY-MM` | When the owner last reviewed the document. Authored, never the clock of the export. |
+| `availability` | optional `{ text, asOf }` | A dated "open to work" statement: `text` 1 to 120, one line of plain text; `asOf` `YYYY-MM`, authored, when the owner last confirmed it. Shown with its date so it cannot silently go stale; absent = the document says nothing. Nothing else belongs in it (a contact detail is not a field). |
+| `roles` | 1 to 8, **most recent first by `start`** | See below. |
+| `education` | 0 to 4 | See below. Authored order (the main degree before an exchange year, say). |
+| `languages` | 0 to 6 | `name` (1 to 30), `level` (1 to 12: `C2`, `B1`, `Native`), `label?` (1 to 30: `Native`, `Upper-intermediate`). Names unique (case-insensitive). |
+| `skills` | 0 to 6 groups | `group` (1 to 30, unique), `items` (1 to 16 of 1 to 36, unique within the group). |
+| `links` | 0 to 6 | `label` (1 to 30), `url` (https only, at most 100, no credentials, unique, never a contact channel). |
+
+A **role**: `id` (kebab-case slug of at most 40, unique across roles and education: an anchor), `title` (1 to 60), `org` (1 to 50), `orgUrl?` (https, at most 100), `location` (1 to 40, free text such as `Paris, France`: where the work was, never an address), `place?` (the slug of a place **of this projection**: validated to resolve), `employment?` (1 to 30, free text: `Permanent`, `Contract`, `Full-time`, `Freelance`, `Internship`), `start` (`YYYY` or `YYYY-MM`, years 1900 to 2099), `end?` (a date, or `present`, or **absent: the document says nothing about the end**; never before `start`, a year alone is the whole year), `highlights` (0 to 5 lines of 1 to 180), `skills` (0 to 8 of 1 to 30, unique). An **education item**: `id`, `institution` (1 to 60), `programme` (1 to 60), `level?` (1 to 20: `MEng`, `MSc`, `CPGE`), `start`, `end` (a date or `present`), `location?` (1 to 40), `place?`, `note?` (1 to 80).
+
+Rules the JSON Schema cannot express (zod in `packages/schemas`, re-implemented by the private export's second gate): `end` not before `start`; roles most recent first; ids unique across roles and education; unique language names, group names, skills and link addresses; every `place` resolves to a place of the projection.
+
+**What is deliberately not here.** There is no field for an email address, a phone number or a street address, no boolean `openToWork` flag (the only availability is the dated, optional `availability` text above) and no line for where the owner lives; every object is `.strict()`, so none can be served by accident (a test walks the generated JSON Schema and fails on any property named like one). Adding one is a contract decision, not an authoring one. All text is plain text under the entries' rules (no control characters, no bidirectional overrides, trimmed; `<b>` is displayed as written, and the private vault refuses markup-looking text earlier).
+
+**Contact details typed as text are refused too.** Property names are not the only door: every career text and every URL is also checked by value, in the zod schema and again by the private export (so it fails closed before anything is published). An e-mail-like string (`a@b.tld`, `name [at] domain`, `name (at) domain`, `name at domain dot org`), a phone-like number (international `+CC ...`, `00CC ...`, national grouped forms such as `06 12 34 56 78`, `415 555 2671`, `123-456-789`, parenthesised area codes, ten plain digits) and, in `links[].url` and `orgUrl`, a contact-channel address (`mailto:`, `tel:`, `sms:`, `skype:`, `wa.me`, `whatsapp.com`, `t.me`, `signal.me`, an e-mail address in the query) are validation errors that name the field. Dates, year ranges, percentages and version numbers are not mistaken for phone numbers (tests include the owner's real document). This is a heuristic for accidents, not a guarantee: the owner still reviews the publication PR.
+
+**Size.** Bounded by the limits, which a test turns into the true maximum: every list full, every optional field present, every text at its limit and made of 3-byte characters, every URL at its limit. That maximum is 56.5 KB of UTF-8 (22 KB in plain ASCII), under the 60,000-character cap of one entry's body, and the test asserts it stays under 60 KB. The owner's real document is 5.0 KB compact (about 2 KB gzip), the demo's 3.1 KB. It is part of the bundled projection, so it is paid for in the same three places as an entry's body ("Payload size and cost").
+
+**Deployment order.** A strict consumer rejects an unknown top-level key, so the key must be known **before** a projection that carries it is merged, exactly as `sensitive` was:
+
+1. Merge the public change that adds `career` to the schema, the generated JSON Schema and the API's types (this repo). Both Vercel projects redeploy and accept a projection with or without the key (the web app validates the projection through the same schema; it has no page for `career` yet). Nothing visible changes: the committed projection has no `career`.
+2. The private repo's first gate is the public repo's generated schema: the `publish` workflow's "Refresh contract schema" step copies the **public default branch's** `published.schema.json` over `contract/` before validating, so a publication run sees the new key as soon as step 1 is merged. The committed copy in the private repo only matters for local runs and tests (refresh it with `cp`, and `pnpm test` compares it with a public checkout when `CATALYST_PUBLIC_REPO` is set; the private CI checks the public repo out and sets it). Before step 1 is merged, the first gate (ajv, `additionalProperties: false`) fails closed on a document with `status: published`: a publication PR cannot even be opened.
+3. Only then set `status: published` on `content/career/index.md`. The publication PR carries `career` in `projection.json`; merging it is the publication.
+
+Rolling back is setting `status: unpublished` (or `draft`) in the private repo and merging the next publication PR: the key disappears, which every consumer already accepts.
+
+All of this is **additive in schema version 1**: `career` is a new optional top-level key, `schemaVersion` stays `1`, a projection without it is valid and `EMPTY_PROJECTION` does not carry it. `@catalyst/published` has `getCareer(mode)` for code without a projection at hand; the career page, when it exists, will read `projection.career` (no code in `apps/web` references it yet). The types are exported from `apps/api/src/contract.ts` (`PublishedCareer` and its parts).
 
 ## Configuration
 

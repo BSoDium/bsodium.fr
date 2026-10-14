@@ -48,13 +48,16 @@ import {
   type Velocity,
 } from "./motion";
 import { snapBox } from "./group-square";
-import { IdleSpin, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
+import { IdleSpin, SPIN, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
+import { liftFor } from "./lift";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
-import { ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
+import { CaptionLayer } from "./caption-layer";
+import { type CaptionFont, SHOWCASE_STATE } from "./caption";
+import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
-import { INSET_EASE, SKY, TUNING } from "./tuning";
+import { INSET_EASE, RING, SKY, TUNING } from "./tuning";
 import { fromViewState } from "./view";
 import { markerShown } from "./visibility";
 import { perfEnd, perfStart } from "./perf";
@@ -104,6 +107,13 @@ export interface RendererOptions {
    * (`?no-ring`): no ring, and the lowest zoom is the whole-globe fit.
    */
   ringText?: string;
+  /** The lines of the caption that wraps the planet (engine/caption.ts), and the face they are set in; absent or empty: no caption. */
+  captionPhrases?: readonly string[];
+  captionFont?: CaptionFont;
+  /** CSS px of the container's bottom that the app covers at start (`GlobeProps.coverBottom`); the planet is lifted clear of them as far as there is room. */
+  coverBottom?: number;
+  /** The home screen starts at rest: the caption is in and the boxes and labels are out from the first frame (`GlobeProps.showcase`). */
+  showcase?: boolean;
 }
 
 export interface StartView {
@@ -142,8 +152,26 @@ export class GlobeRenderer {
   private minZoom = 1;
   /** The zoom at which the whole globe fits the free area (`TUNING.fitMargin`): the 0 of `GlobeViewState.zoom`, the world view of the idle rotation, the floor of programmatic framing. */
   private fit = 1;
-  /** The ring of type, when there is one (engine/ring-layer.ts). */
+  /** The ring of type, when there is one (engine/ring-layer.ts: a flat circle of text round the disc, unchanged by the showcase). */
   private ring: RingLayer | null = null;
+  /** The caption: lines wrapped on a sphere in the globe's own scene (engine/caption-layer.ts), when the showcase is on this page. */
+  private caption: CaptionLayer | null = null;
+  /**
+   * The showcase: the home screen is at rest, so the boxes and labels are out (`LodTree.setSuppressed`) and the caption is in. `showcaseOn` is
+   * what is wanted now; `showcaseActive` whether this page has a showcase at all (a ring, and not a debug page without `?showcase`).
+   */
+  private showcaseOn = false;
+  private showcaseActive = false;
+  /** A press began while the showcase was on: its tap is not a click on a box nobody could see (cleared a moment after the press ends). */
+  private inertPress = false;
+  /** CSS px of the container's bottom the app covers (the hero), the lift it asks for now, and the animated lift (see `setCover`). */
+  private cover = 0;
+  private liftTarget = 0;
+  private lift = 0;
+  private liftAnim: { from: number; to: number; start: number } | null = null;
+  /** The lift in whole buffer pixels, like `shiftBuf`. */
+  private liftBuf = 0;
+  private liftKey = "";
   /** Highest zoom reachable now (the globe's maximum unless the street map is available); see `setZoomLimit`. */
   private zoomLimit: number = TUNING.maxZoom;
   /** Skip drawing the Three.js scene (the street map covers it); the camera, flights and `onFrame` still run. */
@@ -242,6 +270,24 @@ export class GlobeRenderer {
 
     this.globe = new GlobeScene(opts);
     if (opts.ringText && RING_STATE.enabled) this.ring = new RingLayer(opts.container, opts.ringText, opts.theme, this.reduced);
+    this.showcaseActive = !!this.ring && SHOWCASE_STATE.enabled;
+    this.cover = Math.max(0, opts.coverBottom ?? 0);
+    if (this.showcaseActive && opts.captionPhrases && opts.captionPhrases.length > 0) {
+      this.caption = new CaptionLayer(this.globe.scene, {
+        phrases: opts.captionPhrases,
+        font: opts.captionFont ?? "jacquard",
+        theme: opts.theme,
+        reduced: this.reduced,
+        maxAnisotropy: this.gl.capabilities.getMaxAnisotropy(),
+        onChange: () => this.requestRender(),
+      });
+    }
+    if (opts.showcase && this.showcaseActive) {
+      // The home screen opens in its showcase: the boxes are out from the first frame (nothing fades), and the caption comes in with the first frame.
+      this.showcaseOn = true;
+      this.lod.setSuppressed(true);
+      this.caption?.show(null);
+    }
     this.setTheme(opts.theme);
 
     const ro = new ResizeObserver(() => this.resize(true));
@@ -318,6 +364,13 @@ export class GlobeRenderer {
     this.containerMask = fadeMask(w, inset);
     this.ring?.setMask(this.containerMask);
     this.layoutRing();
+    // The lift follows the viewport and the lowest zoom: a change of those (not of the cover, which animates) applies at once.
+    const key = `${w}x${h}@${this.minZoom.toFixed(4)}`;
+    if (key !== this.liftKey) {
+      this.liftKey = key;
+      this.retargetLift(false);
+    }
+    this.liftBuf = Math.round(this.lift / P);
     const mask = fadeMask(w, inset, this.canvasLeft) ?? "";
     this.canvas.style.maskImage = mask;
     this.canvas.style.setProperty("-webkit-mask-image", mask);
@@ -328,13 +381,55 @@ export class GlobeRenderer {
   private layoutRing() {
     if (!this.ring) return;
     const { width: w, height: h } = this;
-    const key = `${w}x${h}@${this.insetTarget}`;
+    // (the art cell is part of it: a device-pixel-ratio change moves the cell and so which face reads, and a bitmap pixel's size)
+    const key = `${w}x${h}@${this.insetTarget}x${this.pixel}`;
     if (key === this.ringLayoutKey) return;
     this.ringLayoutKey = key;
     const free = freeWidth(w, clampInset(this.insetTarget, w));
     const fit = fitZoom(free, h, TUNING.fitMargin);
     const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h }));
     this.ring.setLayout(silhouetteRadiusPx(floor, h));
+    this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h));
+  }
+
+  /**
+   * How far the planet's centre should be lifted for the cover now (engine/lift.ts): the planet at the lowest zoom (where the home screen
+   * rests) clear of the cover as far as the room above allows, the ring's top included (the flat ring's outer edge, as `ringFloorZoom` has it).
+   */
+  private liftWanted(): number {
+    // The lift belongs to the showcase: on a page without it (`?no-ring`, a debug page) the page is the one of before it.
+    if (!this.showcaseActive || this.cover <= 0 || this.width < 1 || this.height < 1) return 0;
+    const h = this.height;
+    const rPx = silhouetteRadiusPx(this.minZoom, h);
+    const t = RING.type.targetEmPx;
+    const ringTop = rPx * (1 + RING.gap) + CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
+    return liftFor({ cover: this.cover, height: h, planetPx: rPx, reachTopPx: Math.max(rPx, ringTop) });
+  }
+
+  private retargetLift(animate: boolean) {
+    const next = this.liftWanted();
+    if (next === this.liftTarget) return;
+    this.liftTarget = next;
+    if (animate && this.sized && !this.reduced && Math.abs(next - this.lift) > 0.5) {
+      this.liftAnim = { from: this.lift, to: next, start: performance.now() };
+    } else {
+      this.liftAnim = null;
+      this.lift = next;
+      this.liftBuf = Math.round(this.lift / this.pixel);
+    }
+    this.requestRender();
+  }
+
+  /**
+   * UI covers the bottom `px` CSS px of the container (the landing hero at rest): the planet's centre goes up by what clears it, as far as the room
+   * above allows (`liftFor`), eased like the inset (zero <-> non-zero), and back down when it goes. Reduced motion: at once.
+   */
+  setCover(px: number) {
+    const next = Math.max(0, Number.isFinite(px) ? px : 0);
+    if (next === this.cover) return;
+    this.cover = next;
+    this.noteChange();
+    this.retargetLift(true);
   }
 
   /**
@@ -374,8 +469,9 @@ export class GlobeRenderer {
   /** Where the camera starts, once the minimum zoom is known. */
   private startView(): ViewState {
     const s = this.start;
-    // The world view is the whole-globe fit, not the ring's lowest zoom: the ring is found by zooming out.
-    if (!s) return { lon: 15, lat: 28, zoom: this.fit };
+    // The home screen opens fully zoomed OUT (the lowest zoom: the fit when there is no ring): the ring and the caption are there from the first frame.
+    // The world view is the whole-globe fit on a page without the showcase, as before it.
+    if (!s) return { lon: 15, lat: 28, zoom: this.showcaseActive ? this.minZoom : this.fit };
     if (s.fitRadiusKm !== undefined) return { lon: s.lon, lat: s.lat, zoom: Math.max(this.fit, this.fitZoomFor(s.fitRadiusKm)) };
     if (s.zoom01 === null) return { lon: s.lon, lat: s.lat, zoom: TUNING.selectZoom };
     return fromViewState({ lon: s.lon, lat: s.lat, zoom: s.zoom01, street: s.street }, this.fit, TUNING.maxZoom);
@@ -509,6 +605,7 @@ export class GlobeRenderer {
   setReducedMotion(on: boolean) {
     this.reduced = on;
     this.ring?.setReduced(on);
+    this.caption?.setReduced(on);
     this.noteActivity();
     if (on) {
       if (this.flight) this.view = this.clampView(this.flight.to);
@@ -526,6 +623,7 @@ export class GlobeRenderer {
   setTheme(theme: GlobeTheme) {
     this.theme = theme;
     this.ring?.setTheme(theme);
+    this.caption?.setTheme(theme);
     // Tones of the semantic zoom: group squares in map levels per kind (below the ink), a place marker the ink.
     this.lod.setTones(theme.ramp.length);
     this.gl.setClearColor(new Color(...theme.background), 1);
@@ -590,8 +688,9 @@ export class GlobeRenderer {
     const cw = this.bufW * P;
     const ch = this.bufH * P;
     const centreX = cw / 2 - this.shiftBuf * P;
-    const p = projectLonLat(lon, lat, basis, cw, ch, MARKER_RADIUS, centreX);
-    const shown = markerShown(p, basis, centreX, ch / 2, TUNING.markerLimbClearance * P);
+    const centreY = ch / 2 - this.liftBuf * P;
+    const p = projectLonLat(lon, lat, basis, cw, ch, MARKER_RADIUS, centreX, centreY);
+    const shown = markerShown(p, basis, centreX, centreY, TUNING.markerLimbClearance * P);
     return { col: Math.floor(p.x / P), row: Math.floor(p.y / P), shown, facing: p.facing };
   }
 
@@ -600,7 +699,7 @@ export class GlobeRenderer {
     const P = this.pixel;
     const cw = this.bufW * P;
     const ch = this.bufH * P;
-    const p = projectLonLat(lon, lat, viewBasis(this.view, ch), cw, ch, MARKER_RADIUS, cw / 2 - this.shiftBuf * P);
+    const p = projectLonLat(lon, lat, viewBasis(this.view, ch), cw, ch, MARKER_RADIUS, cw / 2 - this.shiftBuf * P, ch / 2 - this.liftBuf * P);
     return { x: p.x + this.canvasLeft, y: p.y + this.canvasTop };
   }
 
@@ -630,7 +729,7 @@ export class GlobeRenderer {
     const P = this.pixel;
     const cw = this.bufW * P;
     const ch = this.bufH * P;
-    setLodCamera(this.lodCam, this.view, { width: cw, height: ch, centreX: cw / 2 - this.shiftBuf * P }, freeWidth(cw, this.inset), P);
+    setLodCamera(this.lodCam, this.view, { width: cw, height: ch, centreX: cw / 2 - this.shiftBuf * P, centreY: ch / 2 - this.liftBuf * P }, freeWidth(cw, this.inset), P);
     return this.lodCam;
   }
 
@@ -660,16 +759,16 @@ export class GlobeRenderer {
     let boxes = 0;
     for (let k = 0; k < lod.count; k++) {
       const i = lod.visible[k]!;
-      const r = snapBox(lod.boxX0[i]!, lod.boxY0[i]!, lod.boxX1[i]!, lod.boxY1[i]!, P);
+      const r = snapBox(lod.drawX0[i]!, lod.drawY0[i]!, lod.drawX1[i]!, lod.drawY1[i]!, P);
       screen.bx0[i] = r.c0 * P + this.canvasLeft;
       screen.by0[i] = r.r0 * P + this.canvasTop;
       screen.bx1[i] = r.c1 * P + this.canvasLeft;
       screen.by1[i] = r.r1 * P + this.canvasTop;
       // the box as projected, for the labels (they move smoothly; the drawn box steps by cells)
-      screen.fx0[i] = lod.boxX0[i]! + this.canvasLeft;
-      screen.fy0[i] = lod.boxY0[i]! + this.canvasTop;
-      screen.fx1[i] = lod.boxX1[i]! + this.canvasLeft;
-      screen.fy1[i] = lod.boxY1[i]! + this.canvasTop;
+      screen.fx0[i] = lod.drawX0[i]! + this.canvasLeft;
+      screen.fy0[i] = lod.drawY0[i]! + this.canvasTop;
+      screen.fx1[i] = lod.drawX1[i]! + this.canvasLeft;
+      screen.fy1[i] = lod.drawY1[i]! + this.canvasTop;
       screen.x[i] = (screen.bx0[i]! + screen.bx1[i]!) / 2;
       screen.y[i] = (screen.by0[i]! + screen.by1[i]!) / 2;
       // Drawn = the node's places passed the visibility rule and its rectangle touches the buffer.
@@ -725,6 +824,7 @@ export class GlobeRenderer {
       zoomBy: (d) => this.setView({ zoom: this.view.zoom + d }),
       fling: (samples, now) => this.fling(samples, now),
       pickAt: (x, y, kind) => {
+        if (this.inertPress || this.showcaseOn) return null;
         const over = this.opts.pickOverride?.(x, y, kind);
         return over !== undefined ? over : this.opts.pickLabel(x, y, kind);
       },
@@ -837,6 +937,14 @@ export class GlobeRenderer {
       if (t >= 1) this.insetAnim = null;
       else more = true;
     }
+    if (this.liftAnim) {
+      const a = this.liftAnim;
+      const t = clamp((now - a.start) / TUNING.insetMs, 0, 1);
+      this.lift = t >= 1 ? a.to : a.from + (a.to - a.from) * easeInset(t);
+      this.liftBuf = Math.round(this.lift / this.pixel);
+      if (t >= 1) this.liftAnim = null;
+      else more = true;
+    }
     if (this.flight) {
       const dt = now - this.flightLast;
       this.flightLast = now;
@@ -880,7 +988,7 @@ export class GlobeRenderer {
     c.inset = this.insetTarget;
     c.zoom = this.view.zoom;
     c.minZoom = this.fit; // the world view is the whole-globe fit; the ring's regime below it is part of it
-    c.busy = this.flight !== null || !isStill(this.velocity) || this.insetAnim !== null || this.pressed.size > 0;
+    c.busy = this.flight !== null || !isStill(this.velocity) || this.insetAnim !== null || this.liftAnim !== null || this.pressed.size > 0;
     return c;
   }
 
@@ -907,6 +1015,15 @@ export class GlobeRenderer {
   }
 
   private onInput = (e: Event) => {
+    // A gesture ON the globe (the hero's own definition: a press or a wheel over the stage) ends the showcase at once: the boxes come back and the
+    // press that began it is no click (nobody could see what was under it).
+    if ((e.type === "pointerdown" || e.type === "wheel") && this.showcaseOn && e.target instanceof Node && this.opts.container.contains(e.target)) {
+      this.inertPress = e.type === "pointerdown";
+      this.dropShowcase();
+    }
+    if (e.type === "pointerup" || e.type === "pointercancel") {
+      if (this.inertPress) window.setTimeout(() => (this.inertPress = false), 0);
+    }
     if (e instanceof PointerEvent) {
       if (e.type === "pointerdown") this.pressed.add(e.pointerId);
       else if (e.type === "pointerup" || e.type === "pointercancel" || (e.pointerType === "mouse" && e.buttons === 0)) this.pressed.delete(e.pointerId);
@@ -972,6 +1089,7 @@ export class GlobeRenderer {
     this.lastTickAt = now;
     const flying = this.flight !== null;
     const moving = this.advance(now);
+    const fading = this.caption?.animating ?? false;
     if (moving) this.spin.settle(now); // a flight, inertia or the inset slide is camera motion: not idle (a turning globe coasts to rest)
     // The flight has just landed exactly on its target: whatever is left of the coasting is dropped, so the camera stays on it.
     if (flying && this.flight === null) this.spin.activity(now);
@@ -980,7 +1098,7 @@ export class GlobeRenderer {
     // A timed transition of the boxes or of the borders (engine/fade.ts) that has not reached its end keeps the loop going, camera or not.
     // While the street map owns the view the globe draws nothing and its transitions are not advanced here (the street engine runs the
     // boxes' own), so they must not keep this loop spinning.
-    const more = moving || (!this.suspended && (this.lod.animating || this.globe.animating || !!this.opts.labelsAnimating?.()));
+    const more = moving || fading || (!this.suspended && (this.lod.animating || this.globe.animating || !!this.opts.labelsAnimating?.()));
     if (more) this.keepGoing(moving);
     else if (this.spin.spinning) this.chainSpin();
     else this.armSpin();
@@ -1013,7 +1131,7 @@ export class GlobeRenderer {
     this.opts.onFrame();
     perfEnd("frame.callbacks", t1);
     // Whoever drew this frame (the tick, a resize, a check), the transitions run to their end, and the idle rotation's chain (cancelled above) goes on.
-    if (this.lod.animating || this.globe.animating || this.opts.labelsAnimating?.()) this.keepGoing(false);
+    if (this.lod.animating || this.globe.animating || (this.caption?.animating ?? false) || this.opts.labelsAnimating?.()) this.keepGoing(false);
     else if (this.spin.spinning) this.chainSpin();
   }
 
@@ -1030,7 +1148,7 @@ export class GlobeRenderer {
     const ch = this.bufH * P;
     ring.update({
       cx: (this.bufW * P) / 2 - this.shiftBuf * P + this.canvasLeft,
-      cy: ch / 2 + this.canvasTop,
+      cy: ch / 2 - this.liftBuf * P + this.canvasTop,
       r: silhouetteRadiusPx(this.view.zoom, ch),
       alpha,
       width: this.width,
@@ -1046,6 +1164,61 @@ export class GlobeRenderer {
     return { ...ring.state(), zoomAlpha: alpha, fit: this.fit, floor: this.minZoom, silhouettePx: silhouetteRadiusPx(this.view.zoom, this.bufH * this.pixel) };
   }
 
+  /** Checks and captures: hold the caption's entrance at `ms` after its start (null releases it) and draw. */
+  pinCaption(ms: number | null) {
+    this.caption?.pin(ms);
+    this.requestRender();
+  }
+
+  /** Checks and captures: hold every caption line at `deg` degrees east of its place (null releases it). */
+  pinCaptionAngle(deg: number | null) {
+    this.caption?.pinAngle(deg);
+    this.requestRender();
+  }
+
+  /** Whether there is a caption (the page has the showcase and the app gave it lines). */
+  hasCaption(): boolean {
+    return this.caption !== null;
+  }
+
+  /** The caption's state and the showcase's (checks): null when there is none. */
+  captionState() {
+    const c = this.caption;
+    if (!c) return null;
+    return { ...c.state(), showcase: this.showcaseOn, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
+  }
+
+  /* ------------------------------ showcase ------------------------------ */
+
+  /**
+   * The home screen is at rest (`GlobeProps.showcase`): every box and label fades out (the tree's targets go off: engine/lod-tree.ts
+   * `setSuppressed`, inert by the pick rules) and the caption comes in, each line round from behind the planet (engine/caption.ts); the camera,
+   * when it is not at the lowest zoom (the home screen's own composition), comes back to it. Off: the other way round, quickly. On a page without
+   * the showcase (`?no-ring`, a debug page) this does nothing: the boxes stay.
+   */
+  setShowcase(on: boolean) {
+    const want = on && this.showcaseActive;
+    if (want === this.showcaseOn) return;
+    this.showcaseOn = want;
+    this.applyShowcase();
+    if (want && this.view.zoom > this.minZoom + 0.02 && this.view.zoom <= this.fit + SPIN.unzoomedSlack && this.flight === null) this.flyTo({ zoom: this.minZoom });
+  }
+
+  /** The showcase ends on its own (a gesture on the globe): the same, without asking the app. */
+  private dropShowcase() {
+    if (!this.showcaseOn) return;
+    this.showcaseOn = false;
+    this.applyShowcase();
+  }
+
+  private applyShowcase() {
+    this.lod.setSuppressed(this.showcaseOn);
+    const now = performance.now();
+    if (this.showcaseOn) this.caption?.show(now);
+    else this.caption?.hide(now);
+    this.requestRender();
+  }
+
   private syncCamera() {
     const v = this.drawView();
     const b = viewBasis(v, this.bufH * this.pixel);
@@ -1059,13 +1232,15 @@ export class GlobeRenderer {
     cam.lookAt(0, 0, 0);
     // Shift the projection centre left by `shiftBuf` pixels: render the window of a same-sized virtual frame
     // that starts `shiftBuf` pixels to the right.
-    if (this.shiftBuf) cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf, 0, this.bufW, this.bufH);
+    // and the same up by `liftBuf` (the window starts that many pixels lower in the virtual frame).
+    if (this.shiftBuf || this.liftBuf) cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf, this.liftBuf, this.bufW, this.bufH);
     else cam.clearViewOffset();
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
     const now = performance.now();
     this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced);
-    this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf }, now, this.reduced);
+    this.caption?.sync(b, now);
+    this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf, lift: this.liftBuf }, now, this.reduced);
   }
 
   /* ------------------------------ diagnostics ------------------------------ */
@@ -1094,7 +1269,7 @@ export class GlobeRenderer {
 
   /** Inset state for checks: current inset and centre shift. */
   insetInfo() {
-    return { inset: this.inset, target: this.insetTarget, shiftBuf: this.shiftBuf, bufW: this.bufW, pixel: this.pixel };
+    return { inset: this.inset, target: this.insetTarget, shiftBuf: this.shiftBuf, bufW: this.bufW, pixel: this.pixel, lift: this.lift, liftTarget: this.liftTarget, liftBuf: this.liftBuf, cover: this.cover };
   }
 
   /** Draw-call and triangle counts of the last frame (WebGLRenderer.info). */
@@ -1122,6 +1297,8 @@ export class GlobeRenderer {
     this.cleanups = [];
     this.ring?.dispose();
     this.ring = null;
+    this.caption?.dispose();
+    this.caption = null;
     this.globe.dispose();
     this.gl.dispose();
     this.gl.forceContextLoss();

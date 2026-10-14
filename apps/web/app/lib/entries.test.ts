@@ -40,7 +40,7 @@ describe("kinds", () => {
     expect(isContentKind("place")).toBe(false);
   });
   it("names the poems' section \"Poetry\" and counts them as poems; the singular stays \"Poem\"", () => {
-    expect(KIND_PLURALS).toEqual({ project: "Projects", article: "Articles", artwork: "Artworks", poem: "Poetry" });
+    expect(KIND_PLURALS).toEqual({ project: "Software", article: "Articles", artwork: "Artworks", poem: "Poetry" });
     expect(KIND_LABELS.poem).toBe("Poem");
     expect(KIND_NOUNS.poem).toEqual({ one: "poem", many: "poems" });
     expect([kindCount("poem", 0), kindCount("poem", 1), kindCount("poem", 4), kindCount("article", 1)]).toEqual(["0 poems", "1 poem", "4 poems", "1 article"]);
@@ -178,7 +178,7 @@ describe("entriesOfPlace", () => {
     const groups = entriesOfPlace(projection, "p1");
     expect(groups.map((g) => [g.kind, g.label, g.entries.map((e) => e.slug)])).toEqual([
       ["article", "Articles", ["a", "c"]],
-      ["project", "Projects", ["pr"]],
+      ["project", "Software", ["pr"]],
       ["poem", "Poetry", ["v"]],
     ]);
   });
@@ -225,11 +225,12 @@ describe("parsePanelPath", () => {
   it("recognises places and the four kinds of entry", () => {
     expect(parsePanelPath("/locations/lisbon")).toEqual({ type: "place", slug: "lisbon" });
     expect(parsePanelPath("/articles/x")).toEqual({ type: "entry", kind: "article", slug: "x" });
-    expect(parsePanelPath("/projects/x")).toEqual({ type: "entry", kind: "project", slug: "x" });
+    expect(parsePanelPath("/software/x")).toEqual({ type: "entry", kind: "project", slug: "x" });
     expect(parsePanelPath("/artworks/x")).toEqual({ type: "entry", kind: "artwork", slug: "x" });
     expect(parsePanelPath("/poetry/demo-poem/")).toEqual({ type: "entry", kind: "poem", slug: "demo-poem" });
-    // the old address is a redirect (lib/legacy-paths.ts), never a panel route
+    // the old addresses are redirects (lib/legacy-paths.ts), never panel routes
     expect(parsePanelPath("/poems/demo-poem")).toBeNull();
+    expect(parsePanelPath("/projects/x")).toBeNull();
   });
   it("is null for the globe, the lists, other pages and malformed paths", () => {
     for (const path of ["/", "", "/articles", "/poetry/", "/dev/design", "/foo/bar", "/articles/a/b", "/articles/%E0%A4%A", "articles/x"]) {

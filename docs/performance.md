@@ -112,6 +112,29 @@ The ring of text that circles the planet's disc below the whole-globe fit (web-a
 - **The backing store**: the ring's bounding square at the device's resolution (1594 x 1594 px at 1440 x 900 @2, 10 MB; drawn at most at DPR 2 and released to 0 x 0 when the ring goes). It is grown in steps and shrunk when twice (1.35 times while it turns) what is needed.
 - **Not measured**: a real phone, a 120 Hz headed run (the ring is capped at 30 a second whatever the display does), a CPU-throttled run, battery. The ring is a continuous animation, which a page at rest otherwise never has: on a laptop on battery it keeps the compositor at 30 Hz for as long as the ring is visible (never at the world view, which is where the page rests).
 
+### Round 3: the home screen rests on the ring, and the caption is part of the globe's own frames (2026-10-14)
+
+The home page now opens at the globe's lowest zoom, where the ring of type (round 2, unchanged: restored exactly after the owner's review) is shown, so **the page at rest is no longer idle**: it repaints 30 times a second for the ring, until a gesture, a zoom in or a place opening (reduced motion: a static ring, no timer). That is the one standing cost, and it is the ring's own, above. **The caption adds nothing at rest**: it is textured geometry in the globe's scene, drawn in frames the globe draws anyway, and the frame loop is asked for frames only while an entrance (1.14 s) or a departure (200 ms) runs.
+
+Measured on a production build served by `react-router-serve` (demo content), headless Chrome for Testing 153 with the GPU, 1440 x 900 @2, 2 repeats, `node apps/web/scripts/perf/run.mjs --scenarios idle,ring-rest,caption-enter`:
+
+| | idle (3.2 s) | `ring-rest` (5.5 s, ring shown) |
+| --- | --- | --- |
+| main thread `RunTask` | 116 ms (36 ms a second) | 324 to 332 ms (about 60 ms a second) |
+| `Commit` | 17.5 ms (181 frames) | 83 to 88 ms (300 frames) |
+| ring repaints, their JS | | 150 in 5 s (30 a second), 43 to 44 ms: 0.29 ms each |
+| GL draws | 0 | 0 |
+
+(The harness's own probe is most of the idle column; the machine was busier than on the 2026-10-13 runs above, which measured +6 ms a second for the same ring: the difference between the columns is what to read, and it is the ring's, which has not changed.)
+
+`caption-enter` (the showcase turned off and on five times, 700 ms and 1.4 s apart: the boxes and labels cross-fade with the caption's entrance and departure): 421 GL frames in 14.3 s, **p50, p95 and max frame interval 16.7 / 16.7 to 16.8 / 16.8 ms, 0 missed against the 60 Hz compositor, 0 long tasks**, GPU 0.17 to 0.18 ms a frame (mean), and **0 GL draws in the 1.5 s of rest after the last entrance**. The two lines are two draw calls over one shared shader; the geometry is built once (a strip of one column per 2 degrees: about 60 columns x 2 rows x 2 lines), each frame of an entrance is a matrix per line.
+
+The texture (one small canvas per line, drawn once per face and size class: about 900 x 150 texels with mipmaps for Jacquard at 64 texels a cap height) is the only new memory: well under 1 MB.
+
+Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 669.7 KB raw / 182.1 KB gzip against the release's 658.8 / 179.6 (+10.9 KB raw, +2.5 KB gzip: `caption.ts`, `caption-layer.ts`, `lift.ts`, the showcase wiring). The two fonts (18.9 kB and 3.9 kB) are fetched only when the page's caption face is that one, by the globe, after the page is up; Jacquard is the default so it is 18.9 kB on the home page, once (immutable cache).
+
+**Not measured:** a real phone, a CPU-throttled run, a 120 Hz headed run, battery (30 repaints a second as the resting state of the home page is the thing to watch: the knob is `RING.frameMs`, 32). The perf budgets (`pnpm perf`) were not run in full for this change.
+
 ## Testing on a phone
 
 The scripts above cannot show a slow GPU (see "Limits"), so the real check is a real phone on the dev server.

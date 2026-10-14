@@ -78,6 +78,17 @@ describe("searchItems", () => {
       expect(found, word).toEqual(expect.arrayContaining(poems));
     }
   });
+  it("finds the software by the section's name and by the words it had before (project, projects)", () => {
+    const software = demo.projects.map((p) => p.title);
+    for (const word of ["software", "project", "projects"]) {
+      const found = searchItems(index, word, 50).filter((i) => i.type === "project").map((i) => i.title);
+      expect(found, word).toEqual(expect.arrayContaining(software));
+    }
+  });
+  it("names the projects' group \"Software\" (and its row \"Software\")", () => {
+    expect([SEARCH_LABELS.project, SEARCH_SINGULAR.project]).toEqual(["Software", "Software"]);
+    expect(index.filter((i) => i.type === "project").every((i) => i.href.startsWith("/software/"))).toBe(true);
+  });
   it("names the poems' group \"Poetry\" and its place group \"Places\"", () => {
     expect([SEARCH_LABELS.place, SEARCH_LABELS.poem, SEARCH_SINGULAR.poem]).toEqual(["Places", "Poetry", "Poem"]);
   });

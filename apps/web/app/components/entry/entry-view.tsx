@@ -43,11 +43,11 @@ function placeNames(places: readonly EntryPlaceLink[]): string | null {
 }
 
 /**
- * One entry (article, project, artwork or poem), typeset after the "Article on paper" and "Poem at night" boards of the owner's canvas
+ * One entry (article, project, artwork or poem), typeset after the article and poem boards of the owner's canvas
  * (docs/design-system.md, "Entry pages"). The SAME component fills the side panel and the full-screen view: only `layout` changes
  * the grid (CSS, app.css `.entry-*`), never the data, the markup or the order.
  *
- * Order: back link, double rule, kicker (kind, place, reading time), the headline, the standfirst (the summary), the dateline (date,
+ * Order: back link, the running head (kicker: kind, place, reading time) over one hairline, the headline, the standfirst (the summary), the dateline (date,
  * "open on the globe", copy link), the marginalia (where, written, linked, the authored facts, tags, the external link, contents), the
  * lead image, the text, the figures (articles and projects: the images set apart from the text), then "keep reading". A poem puts its
  * title and lines in the middle of the page with its marginalia beside the title. Full screen from 1024 px: marginalia in columns 1 to 3,
@@ -173,10 +173,9 @@ function EntryArticle({ entry, layout, backTo, headingId = PANEL_HEADING_ID }: E
               </span>
             </Link>
           )}
-          {!poem && <div aria-hidden="true" className="entry-rule" />}
           <p
             data-slot="entry-meta"
-            className={cn("type-meta m-0 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 text-muted-foreground", !poem && "mt-[1.375rem]")}
+            className={cn("type-meta m-0 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 text-muted-foreground", !poem && "entry-running")}
           >
             <span className="min-w-0">
               <span data-slot="entry-kind">{KIND_LABELS[entry.kind]}</span>
@@ -199,7 +198,7 @@ function EntryArticle({ entry, layout, backTo, headingId = PANEL_HEADING_ID }: E
             tabIndex={-1}
             data-poem={poem ? "" : undefined}
             style={poem ? undefined : ({ "--title-scale": headlineScale(entry.title) } as CSSProperties)}
-            className={cn("entry-title outline-offset-4", poem ? "mt-4" : "mt-[1.625rem]")}>
+            className={cn("entry-title outline-offset-4", poem ? "mt-4" : "mt-8 md:mt-10")}>
             {lead}
             {tail ? <span className="entry-title-tail">{tail}</span> : null}
           </h1>

@@ -41,16 +41,40 @@ export function formatMonthYear(date: string | undefined): string | null {
   return month >= 1 && month <= 12 ? `${MONTHS[month - 1]} ${m[1]}` : null;
 }
 
-/** A paragraph long enough (about four lines of a reading column) and starting with a letter, with an optional opening quote, to carry a drop cap. */
+/** A paragraph long enough (about four lines of a reading column) and starting with a capital letter, to carry a drop cap. */
 export const DROP_CAP_MIN_LENGTH = 200;
-const OPENS_WITH_LETTER = /^["'“‘«(]?\p{L}/u;
 
-/** The index of the block that opens with a drop cap: the first block of the body, when it is a long enough paragraph. -1 otherwise. */
+/**
+ * What the drop cap is allowed to open with: a capital of the Latin set the reading face carries (Basic Latin, Latin-1 and Latin
+ * Extended-A: Ł, Ś, Ż, Ą, Ž, Č, ...), followed by a letter, a digit, a space or the end. Left out, on purpose:
+ *   - an opening quote or bracket (the mark would be drawn five lines tall: skipped, not hung);
+ *   - `Q` and every capital with a cedilla (`Ç`, `Ş`, `Ţ`, `Ģ`, ...), whose tail or cedilla hangs below the baseline and into the first
+ *     letters of the line under the letter (an ogonek, `Ą` and `Ę`, is a short hook and is allowed);
+ *   - a lowercase letter (its ascender or descender breaks the cap-height alignment);
+ *   - a capital followed by a mark: "L'exil", "I'm", "A.", "I," (`::first-letter` takes the mark with the letter and the
+ *     apostrophe would be drawn at the letter's size, a wedge as tall as the cap).
+ */
+const DROP_CAP_LETTER = /^(?=\p{Lu})[A-ZÀ-ÖØ-Þ\u0100-\u017F](?=[\p{L}\p{N}\s]|$)/u;
+/** `Q`, and a capital with a cedilla (U+0327 once decomposed). */
+const DROP_CAP_NEVER = /^Q|^.[\u0327]/su;
+/** A capital that carries a mark above the cap height (É, À, Ô, Ś, Ż, Ž; not Œ, Ł or the ogonek of Ą): the paragraph makes room for it. */
+const ABOVE_MARK = /[\u0300-\u0315]/;
+
+/** `"plain"` or `"accent"` (a mark rises above the letter: the paragraph is given room for it) when the text opens with a letter fit for a drop cap, `null` otherwise. */
+export function dropCapKind(text: string): "plain" | "accent" | null {
+  const t = text.trimStart();
+  if (t.length < DROP_CAP_MIN_LENGTH || !DROP_CAP_LETTER.test(t)) return null;
+  // Decomposed, so that a precomposed capital and a letter plus its combining mark are read the same way.
+  const first = t.slice(0, 1).normalize("NFD");
+  if (DROP_CAP_NEVER.test(first)) return null;
+  return ABOVE_MARK.test(first) ? "accent" : "plain";
+}
+
+/** The index of the block that opens with a drop cap: the first block of the body, when it is a long enough paragraph that opens with a capital letter. -1 otherwise. */
 export function dropCapIndex(blocks: readonly Block[]): number {
   const first = blocks[0];
   if (first?.type !== "paragraph") return -1;
-  const text = first.text.trimStart();
-  return text.length >= DROP_CAP_MIN_LENGTH && OPENS_WITH_LETTER.test(text) ? 0 : -1;
+  return dropCapKind(first.text) === null ? -1 : 0;
 }
 
 /** The body split into what is read and what is looked at: the image blocks (the figures) and everything else, each in its authored order. */

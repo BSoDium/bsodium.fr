@@ -2,7 +2,7 @@
 
 Design note for the private content repo's next export step. It maps a vault document (`content/<kind>/<slug>/index.md`: a typed YAML header plus a Markdown body) onto the **entry** shape of the public contract (`packages/schemas/src/published.ts`, documented in [api-contract.md](api-contract.md), "Entries"). It implements decision D3 of the private `content-model-v2.md` (Markdown reaches the public repo as typed, schema-validated blocks, never as HTML) with the names and limits this repo actually accepts. Where the two differ, **this repo's contract wins**; the private profile is to be narrowed, not the contract widened. Written 2026-10-08.
 
-Kinds: `article`, `project` (a development project), `artwork`, `poem`. `poem` is new on both sides: the private envelope's `type` enum and the editorial content kinds (`EditorialContent`, `kindSets`, `DroppedRecord.kind`, importance links, `contentOf`) need it, and the mapper needs a `poems` collection (published poems only, sorted by slug, like the other three).
+Kinds: `article`, `project` (a development project; the site calls its section **Software**, `/software`, and the kind, the vault `type`, the projection collection `projects` and the API's `/v1/projects` stay `project` / `projects`), `artwork`, `poem`. `poem` is new on both sides: the private envelope's `type` enum and the editorial content kinds (`EditorialContent`, `kindSets`, `DroppedRecord.kind`, importance links, `contentOf`) need it, and the mapper needs a `poems` collection (published poems only, sorted by slug, like the other three).
 
 Conformance sample: `packages/published/fixtures/demo.json` (made-up demo data) has 18 realistic entries (5 articles, 4 projects, 5 artworks, 4 poems; one artwork is `sensitive`) with covers, tags, kind-specific meta and bodies that use **every** block type. A private test can export a vault that reproduces it and compare, and it validates against `packages/schemas/published.schema.json` with ajv in strict mode (checked).
 
@@ -121,3 +121,26 @@ Each would be a new optional field or block type in `/v1`, with this repo's sche
 - entry-to-entry and entry-to-place references inside the text (a typed `ref` span or block);
 - `images` (gallery) on entries, a `references` collection, a table of contents or heading ids;
 - Markdown for place bodies.
+
+## 7. The career document (a singleton, not an entry)
+
+One more vault document maps onto the contract, and it is **not an entry**: `content/career/index.md` (`type: career`), a YAML header plus a Markdown body, exported as the optional top-level `career` object of the projection (shape and limits: [api-contract.md](api-contract.md), "The career document"). It has no slug, no kind and no collection; there is at most one, and it is absent while its `status` is not `published`. The private model is `src/vault/model/career.ts`; the writing guide is the private `docs/writing-entries.md`, "Career".
+
+| Vault header | Contract field | Rule |
+| --- | --- | --- |
+| `title` | `title` | 1 to 40, one line. |
+| the body's one paragraph, or `summary` | `summary` | The profile statement. Not both; one paragraph, no hard break, at most 500 characters. Any other block in the body (heading, list, quote, image, code, link card) is an error. Inline marks are flattened with a warning, as in an entry. |
+| `updated` | `updated` | `YYYY-MM`, authored. A month in the future is an error; a document that mentions a later date is warned about. |
+| `availability: { text, asOf }` | `availability` | Optional. `text` 1 to 120, one line of plain text (no e-mail address or phone number); `asOf` `YYYY-MM`, a month in the future is an error. Both are required when the key is there. |
+| `roles` | `roles` | Most recent first by `start` (an error otherwise). `place: place/<slug>` becomes `place: "<slug>"`. |
+| `education`, `languages`, `skills`, `links` | the same names | Same field names; `orgUrl` and `links[].url` are https without credentials. |
+| `status` | (filter) | Only `published` is exported; the preview (`pnpm export:preview`) includes it whatever its status. |
+| `id`, `notes`, `type`, `schema` | not exported | Private. The singleton's own `id` is not exported (it has no public identity), unlike the `id` of a role or an education item, which is authored and public. |
+
+Rules the private validator adds on top of the contract (errors for a published document, warnings for a draft): no start more than twelve months ahead, no e-mail-like or phone-like text and no messenger or `mailto:`/`tel:` link (the same value checks as the contract's), ids unique across roles and education, no empty `roles`, no skill group without items, no markup-looking text (a real HTML tag such as `<b>`; `Array<T>` and `a<b` are fine), a place reference that exists and, for a published document, is published (otherwise the export would drop it). The second gate (`checkProjectionSemantics`) re-implements the contract's zod-only rules, as for entries (section 5).
+
+**Privacy by construction.** The header is strict and has no key for an email address, a phone number or a street address, in the vault and in the contract alike, so neither can leave the private repo by accident. A role's `location` is a free-text city and country, not an address. The only availability is the dated `availability` text; whether a contact line or a location line should exist is a contract change, to be decided by the owner (not made here).
+
+**Order of deployment** (the contract must know the key before a projection carries it): see [api-contract.md](api-contract.md#the-career-document-career).
+
+**Conformance sample.** `packages/published/fixtures/demo.json` has a made-up `career` (made-up employers: "Example Studio", "Sample Works Ltd", example domains only) that uses every field, so the career page (not built yet; it will read `career` from the projection) can be developed on `pnpm dev:demo`.

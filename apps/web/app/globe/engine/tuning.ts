@@ -126,8 +126,60 @@ export const SKY = {
   onRho: { rho: 1.75, band: 0.05 },
 } as const;
 
+/**
+ * The lift (engine/lift.ts): while the landing hero covers the bottom of the page the planet's centre goes up so that the planet clears it as far as
+ * the room above allows. `gapPx`: air kept between the planet's lowest point and what covers it; `marginPx`: the least room kept above the highest
+ * thing (the planet, or the ring when it is shown). The tween is the inset's (`TUNING.insetMs`, `INSET_EASE`).
+ */
+export const LIFT = { gapPx: 14, marginPx: 14 } as const;
+
 /** `cubic-bezier` control points of the app's standard easing (`--ease-standard`). */
 export const INSET_EASE = [0.2, 0, 0, 1] as const;
+
+/**
+ * The caption (engine/caption.ts, engine/caption-layer.ts; docs/web-architecture.md, "Orbiting type"): the home screen's call to action, lines of
+ * display type that wrap a sphere a little larger than the globe INSIDE the globe's own scene, so they are drawn in the art-pixel pass (the same
+ * cells and palette), depth-tested (the planet hides their far side) and back-face culled (a letter past the horizon vanishes, it never mirrors).
+ * The lines are bands of constant latitude of the VIEW's frame, centred on the central meridian, stacked one under the other.
+ *
+ * Sizes in planet radii (1 = the sphere's radius), angles in degrees. Everything that can be tuned by eye is here.
+ */
+export const CAPTION = {
+  /** The shell, a little above the surface (and above the coastlines and the outline, which are drawn at 1). */
+  radius: 1.022,
+  /** Cap height of the type, in planet radii: the face's own cap-height ratio sets the em from it. */
+  capR: 0.16,
+  /** Distance between the baselines of two lines, in cap heights. */
+  leading: 1.75,
+  /**
+   * The lines' axis leans away from the viewer by this much, which makes them arch (the reference's lines bend down towards the limbs); no roll:
+   * the bands are horizontal at the central meridian. `centreDeg`: the block's centre is this far above the view's centre, as seen on the shell.
+   */
+  leanDeg: -16,
+  centreDeg: 26,
+  /** The most the caption may span round the planet, degrees (a long phrase shrinks to it). */
+  maxSpanDeg: 120,
+  /**
+   * The entrance: each line starts hidden behind the planet (`fromDeg` east of the central meridian, plus the line's own half-width so that all of
+   * it is past the horizon), travels round the sphere to its place with `easeOutExpo`, `ms` in all, line i starting `staggerMs` after line i - 1 (on load, `loadDelayMs`
+   * later still: the page's own fade-in goes first).
+   * Leaving is quick: it goes on behind the planet the other way in `leaveMs` (ease-in).
+   */
+  enter: { fromDeg: 100, ms: 1000, staggerMs: 140, loadDelayMs: 350 },
+  leaveMs: 200,
+  /** The keyline round the letters, in cap heights (page colour: it separates them from the coastlines under them). */
+  outline: 0.09,
+  /**
+   * Sampling. The shader draws a texel as ink where its coverage is at least `cut` (under a half: strokes survive being squeezed to a cell, they
+   * thicken a little rather than drop out) and looks `lodBias` levels sharper than the screen asks (negative: sharper). `bitmapBold`: the bitmap
+   * face's pixels are drawn this much larger on each side, in its own pixels.
+   */
+  cut: 0.35,
+  lodBias: -0.7,
+  bitmapBold: 0.18,
+  /** Texture: texels in a cap height (the sampling is at the art cell, so this only has to be a couple of texels per cell on a big screen). */
+  texCap: 64,
+} as const;
 
 /**
  * The ring of type (engine/ring.ts, engine/ring-layer.ts; docs/web-architecture.md, "Ring of type"): one short line of the site's identity, set in

@@ -24,7 +24,7 @@ describe("EntryView", () => {
     expect(html).toContain("/locations/ljubljana");
     expect(html).toContain("/locations/split");
     // entries that share a place with it: the timetable tool (Belgrade, Zagreb) and the night platform (Zagreb, Split)
-    expect(html).toContain("/projects/timetable-diff");
+    expect(html).toContain("/software/timetable-diff");
     expect(html).toContain("/artworks/night-platform-split");
   });
   it("uses the authored cover when there is one", () => {
@@ -138,7 +138,7 @@ describe("EntryView", () => {
   });
   it("links each tag to the filtered list of its kind", () => {
     expect(render("article", "demo-article", "panel")).toContain('href="/articles?tag=night-trains"');
-    expect(render("project", "demo-project", "panel")).toMatch(/href="\/projects\?tag=/);
+    expect(render("project", "demo-project", "panel")).toMatch(/href="\/software\?tag=/);
   });
   it("draws the copy-link button only once hydrated (nothing to press without scripts)", () => {
     expect(render("article", "demo-article", "panel")).not.toContain("Copy link");
@@ -160,12 +160,16 @@ describe("EntryView", () => {
       expect(html).toContain('data-surface="reading"');
       expect(html).toMatch(/class="entry mx-auto/);
     });
-    it("starts an article with the double rule, the kicker (kind, places, reading time), the headline in the entry-title role and a standfirst", () => {
+    it("starts an article with the running head (the kicker: kind, places, reading time, over one hairline), the headline in the entry-title role and a standfirst", () => {
       const html = render("article", "demo-article", "full");
-      const order = ['class="entry-rule"', 'data-slot="entry-meta"', "<h1", 'class="type-standfirst', 'data-slot="entry-dateline"', 'data-slot="entry-margin"', 'data-slot="entry-body"'].map((s) => html.indexOf(s));
+      const order = ['data-slot="entry-meta"', "<h1", 'class="type-standfirst', 'data-slot="entry-dateline"', 'data-slot="entry-margin"', 'data-slot="entry-body"'].map((s) => html.indexOf(s));
       expect(order.every((n) => n >= 0)).toBe(true);
       expect([...order].sort((a, b) => a - b)).toEqual(order);
       expect(html).toMatch(/<h1[^>]*class="entry-title/);
+      // one hairline under the kicker row (the lists' running head); no thick-over-thin pair anywhere
+      const meta = html.match(/<[^>]*data-slot="entry-meta"[^>]*>/)?.[0] ?? "";
+      expect(meta).toMatch(/\sclass="(?:[^"]*\s)?entry-running(?:\s[^"]*)?"/);
+      expect(html).not.toContain("entry-rule");
       expect(html).toContain("Ljubljana, Zagreb +2");
       // no author is published, so none is written
       expect(text(html.slice(0, html.indexOf('data-slot="entry-body"')))).not.toMatch(/\bBy \w/);
@@ -214,7 +218,8 @@ describe("EntryView", () => {
     it("puts a poem's title, then its lines, then its marginalia (the grid places the margin beside the title on a wide screen)", () => {
       const html = render("poem", "demo-poem", "full");
       expect(html).toMatch(/<h1[^>]*data-poem/);
-      expect(html).not.toContain('class="entry-rule"');
+      expect(html).not.toContain("entry-rule");
+      expect(html).not.toContain("entry-running");
       const order = ["<h1", 'data-slot="entry-body"', 'data-slot="entry-margin"'].map((s) => html.indexOf(s));
       expect([...order].sort((a, b) => a - b)).toEqual(order);
       expect(html).toContain("open on the globe");

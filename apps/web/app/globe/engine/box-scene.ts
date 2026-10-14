@@ -39,17 +39,17 @@
  * host's pointer handling, so that dragging over a label still pans and the touch target can be enlarged.
  */
 import type { Rgb } from "./colors";
-import { isBigBox, pickAlpha, pickNode, type PointerKind, type Target } from "./hit-area";
+import { isBigBox, minTargetBox, pickAlpha, pickNode, type PointerKind, type Target } from "./hit-area";
 import { FrameDriver } from "./frame-driver";
 import { LabelLayer, type LabelMode } from "./label-dom";
 import { PX_UNITS, boxesToAvoid, smoothUnits } from "./label-plan";
 import { LabelTracker, SlotMemory, motionLimitPx, type Placed, type TrackItem } from "./label-track";
 import { subText } from "./label-sub";
-import { labelVariants, type LabelText } from "./label-text";
+import { LABEL_TYPE, labelVariants, type LabelText } from "./label-text";
 import { LOD, type LodTree } from "./lod-tree";
 import type { NodeScreen } from "./node-screen";
 import { textFloorLevel } from "./palette";
-import { ALPHA_STEPS, HASH_SEED, PixelOverlay, SPOT, drawBox, hashStep, labelTones, quantAlpha, type CellRect, type LabelTones } from "./pixel-labels";
+import { ALPHA_STEPS, HASH_SEED, PixelOverlay, SPOT, boxOpenness, dashingFor, drawBox, hashStep, labelTones, quantAlpha, selectedShiftAt, type CellRect, type LabelTones } from "./pixel-labels";
 
 /** Room kept between a label and the boxes of the other nodes, px (the early opening keeps `LOD.open.gapPx.leave` from every box and label: the same). */
 const AVOID_PAD = LOD.open.gapPx.leave;
@@ -260,6 +260,7 @@ export class BoxScene {
     return this.last.map((t) => {
       const mode = this.modeOf(t.i, t.wanted);
       const v = this.shownText(t);
+      const shift = this.cardShift(t, v.x, v.y, v.size.w, v.size.h);
       return {
         slug: lod.slug[t.i]!,
         kind: lod.kind[t.i]!,
@@ -288,6 +289,9 @@ export class BoxScene {
           /** Hovered, focused (`hover`) or selected (inverted plate); the text is the same in every state. */
           mode,
           moved: t.place.moved,
+          /** The card's shift when selected (`selectedShift`): the plate drawn at (`x` + `dx`, `y` + `dy`) in that state. */
+          dx: shift.dx,
+          dy: shift.dy,
         },
         text: lod.text[t.i]!,
         /** The second line as it is whole (the variant written may have dropped parts of it). */
@@ -297,6 +301,9 @@ export class BoxScene {
         fillAlpha: this.fillAlphaOf(t, mode),
         /** The cut wants it drawn (else it is fading out). */
         wanted: t.wanted,
+        /** How open the outline is (0 closed rectangle .. 1 full corners and dashes) and the arm and gap in cells it is drawn with. */
+        open: this.openNessOf(t),
+        dash: dashingFor(t.rect.c1 - t.rect.c0, t.rect.r1 - t.rect.r0, this.openNessOf(t)),
         /** Hovered, focused or selected: the ink instead of the rest tone. */
         active: mode !== "rest",
         /** Selected: one solid line. */
@@ -341,6 +348,36 @@ export class BoxScene {
   /** What is written, where and how big: the way of writing the label its slot chose, at its slot. The same in every state. */
   private shownText(t: Item): { size: LabelText; x: number; y: number } {
     return { size: t.variants[Math.min(t.place.variant, t.variants.length - 1)]!, x: t.place.x, y: t.place.y };
+  }
+
+  /**
+   * How far label `t`'s plate moves when it is selected (`selectedShiftAt`: the plate at rest hangs outside its box so that the text is flush with the
+   * box's edge, the selected card is flush with the box): by what really hangs out, and kept within the room, so the card stays on the screen.
+   */
+  private cardShift(t: Item, x: number, y: number, w: number, h: number): { dx: number; dy: number } {
+    // (limited to what hangs out: a plate held on the screen by the edge's clamp is already nearer its box than the bleed)
+    const s = selectedShiftAt(t.place.cand, LABEL_TYPE.bleed, LABEL_TYPE.bleedY, { x, y, w }, t.cont);
+    if (s.dx === 0 && s.dy === 0) return s;
+    const room = this.view();
+    return { dx: Math.max(-x, Math.min(room.cols - w - x, s.dx)), dy: Math.max(-y, Math.min(room.rows - h - y, s.dy)) };
+  }
+
+  /**
+   * How open node `t`'s outline is, 0 (a closed rectangle, at the floor size) to 1 (corner arms and dashes in full): from the smaller side of its
+   * PROJECTED drawn rectangle (not snapped to cells: a box at the floor that breathes by a cell keeps one look) against the floor size, which for a
+   * group includes the `padCells` of room it has all round. The smaller side, because the arms and the gaps are sized by it (a strip that is at the
+   * floor on one axis stays a closed rectangle until its short side grows). A function of the size only, so a box that grows opens continuously.
+   */
+  private openNessOf(t: Item): number {
+    const cell = this.frame!.grid.cell;
+    const side = Math.min(t.cont.c1 - t.cont.c0, t.cont.r1 - t.cont.r0);
+    const floor = (LOD.floorCells + (this.lod.isGroup[t.i] ? 2 * LOD.padCells : 0)) * cell;
+    return boxOpenness(side, floor);
+  }
+
+  /** The gap in cells that `openNessOf(t)` gives the box (what the canvas signature sees). */
+  private openOf(t: Item): number {
+    return dashingFor(t.rect.c1 - t.rect.c0, t.rect.r1 - t.rect.r0, this.openNessOf(t)).gap;
   }
 
   /** The opacity of node `t`'s box and label: its own timed opacity in every state, so a group and its children cross-fade whatever is hovered or selected. */
@@ -436,6 +473,7 @@ export class BoxScene {
       vkey: this.vkey(t.i),
       avoid: () => boxesToAvoid(boxPlates, n, t.variants[0]!.w + t.variants[0]!.h + 2 * AVOID_PAD),
       pref: CUT_SPOT[lod.plateSlot(t.i)],
+      reserve: t.i === this.selected,
     }));
     const placed: Placed[] = this.tracker.step(now, track, view, units);
     if (this.tracker.info.full) this.replans++;
@@ -509,6 +547,7 @@ export class BoxScene {
       const alpha = this.alphaOf(t, mode);
       const fillAlpha = this.fillAlphaOf(t, mode);
       const v = this.shownText(t);
+      const shift = this.cardShift(t, v.x, v.y, v.size.w, v.size.h);
       this.layer.put(t.i, lod.slug[t.i]!, {
         x: v.x,
         y: v.y,
@@ -519,12 +558,19 @@ export class BoxScene {
         mode,
         over: t.place.overlap && !forced,
         alpha,
+        dx: shift.dx,
+        dy: shift.dy,
       });
       h = hashStep(hashStep(hashStep(hashStep(h, t.i), t.rect.c0 * 4096 + t.rect.r0), t.rect.c1 * 4096 + t.rect.r1), Math.round(alpha * ALPHA_STEPS) * 16 + (mode === "selected" ? 1 : 0) + (forced ? 2 : 0));
       h = hashStep(h, Math.round(fillAlpha * ALPHA_STEPS));
+      h = hashStep(h, this.openOf(t)); // (how open the outline is: its gap in cells, which changes only at a size threshold)
       const box = { x0: t.px.c0, y0: t.px.r0, x1: t.px.c1, y1: t.px.r1 };
-      const plate = { x0: v.x, y0: v.y, x1: v.x + v.size.w, y1: v.y + v.size.h };
-      targets.push({ id: t.i, box, plate, alpha: pickAlpha(lod.alpha[t.i]!, t.wanted, LOD.pickFadingMin), priority: lod.priority[t.i]!, big: isBigBox(box, mapMinSide), slug: lod.slug[t.i]! });
+      // the selected label is the card, flush with its box: the plate moved by its shift (the CSS `translate` that the label layer's `dx`, `dy` drive)
+      const sx = mode === "selected" ? shift.dx : 0;
+      const sy = mode === "selected" ? shift.dy : 0;
+      const plate = { x0: v.x + sx, y0: v.y + sy, x1: v.x + sx + v.size.w, y1: v.y + sy + v.size.h };
+      // the pointer target of a box is never smaller than `HIT.minBoxPx`, whatever the box drawn (a floor-sized box is a small drawing, not a small target)
+      targets.push({ id: t.i, box: minTargetBox(box), plate, alpha: pickAlpha(lod.alpha[t.i]!, t.wanted, LOD.pickFadingMin), priority: lod.priority[t.i]!, big: isBigBox(box, mapMinSide), slug: lod.slug[t.i]! });
     }
     this.layer.end();
     h = hashStep(hashStep(h, items.length), grid.cols * 4096 + grid.rows);
@@ -533,7 +579,7 @@ export class BoxScene {
     this.overlay.frame(h, (buf) => {
       for (const t of paint) {
         const mode = this.modeOf(t.i, t.wanted);
-        drawBox(buf, t.rect, this.tones, { alpha: this.alphaOf(t, mode), fillAlpha: this.fillAlphaOf(t, mode), active: mode !== "rest", solid: mode === "selected" });
+        drawBox(buf, t.rect, this.tones, { alpha: this.alphaOf(t, mode), fillAlpha: this.fillAlphaOf(t, mode), active: mode !== "rest", solid: mode === "selected", open: this.openNessOf(t) });
       }
     });
     this.targets = targets;

@@ -63,19 +63,39 @@ describe("EntryListPage", () => {
     // the entry's own kicker (singular) is not the list's business
     expect(html).not.toContain("Poetry /");
   });
+  it("calls the projects' section \"Software\" (title, list, filter) and counts it as software, which has no plural", () => {
+    const software = listEntries(demo, "project");
+    const at = (items: EntrySummary[], search = "") =>
+      renderToStaticMarkup(createElement(StaticRouter, { location: `/software${search}` }, createElement(EntryListPage, { kind: "project", items })));
+    const html = at(software);
+    expect(html).toMatch(/<h1[^>]*>Software<\/h1>/);
+    expect(html).toContain(`>${software.length} software<`);
+    expect(html).toContain('aria-label="Filter software by tag"');
+    expect(html).toContain('role="list" aria-label="Software"');
+    expect(html).not.toMatch(/Projects?\b|projects\b|softwares/);
+    expect(at(software.slice(0, 1))).toContain(">1 software<");
+    const tag = software.find((p) => p.tags.length > 0)?.tags[0];
+    expect(tag).toBeTruthy();
+    expect(at(software, `?tag=${encodeURIComponent(tag!)}`)).toMatch(new RegExp(`Showing \\d+ of ${software.length} software tagged`));
+  });
   it("ignores an unknown tag", () => {
     expect((render(articles, "?tag=nope").match(/<article/g) ?? []).length).toBe(articles.length);
   });
   it("shows the empty state and no filter for no entries", () => {
     const html = render([]);
     expect(html).toContain("Nothing here yet");
+    expect(html).toContain(">0 articles<");
     expect(html).not.toContain('data-slot="tag-filter"');
   });
   it("sets the entries as hairline rows of type: a mono dateline, the title in the display role, no card, box or generated cover for an article", () => {
     const html = render(articles);
     expect(html).toContain('data-surface="reading"');
-    expect(html).toMatch(/<h1[^>]*class="entry-title/);
-    expect(html).toContain('class="entry-rule"');
+    // the head is a journal's: a running head over one hairline, then the title; no masthead double rule, no standfirst
+    expect(html).toMatch(/<h1[^>]*class="list-title"/);
+    expect(html).toMatch(/<p class="list-running[^"]*">.*?Elliot N\u00E9grel-Jerzy.*?data-slot="list-count"/s);
+    expect(html).not.toContain("list-standfirst");
+    expect(html).not.toContain("entry-rule");
+    expect((html.match(/<h1/g) ?? []).length).toBe(1);
     expect((html.match(/entry-row/g) ?? []).length).toBe(articles.length);
     expect(html).toMatch(/<h2[^>]*class="type-display-md[^"]*"/);
     expect(html).toContain("type-meta");

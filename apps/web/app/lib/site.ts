@@ -17,7 +17,7 @@ export const SITE = {
   shortName: "Elliot N.-J.",
   /** Who: what the owner does, and where. The hero says "<role> based in <location>." */
   role: "Front-end and UX software engineer",
-  location: "Paris",
+  location: "Warsaw",
   /** What: the fields, in the owner's order. A sentence of its own. */
   speciality: "Data visualisation, geospatial and cartography interfaces, design systems, computer graphics",
 } as const;
@@ -37,6 +37,13 @@ export const archiveLine = (what: string) => `${what} from the archive of ${SITE
 export const SITE_TITLE = `${SITE_NAME} · ${SITE.role}`;
 /** The temporary main domain of the new site; `CATALYST_SITE_URL` overrides it (the owner's move to the final domain is that one variable). */
 export const DEFAULT_SITE_URL = "https://v2.bsodium.fr";
+
+/**
+ * What the home screen asks of the visitor, as the two short phrases that wrap the planet in capitals (`GlobeProps.captionPhrases`): what to do with
+ * the globe. Interface copy, not a fact about the owner; the hero's how-to line says the same in the page as text (visually hidden while the caption
+ * is there).
+ */
+export const SITE_CALL = ["Drag to explore", "Pick a place"] as const;
 
 /** The role inside a sentence, as the share image's alt text says it: lower-cased where it starts a clause, but "UX" stays "UX" (never `role.toLowerCase()`). */
 export const ROLE_IN_SENTENCE = "front-end and UX software engineer";

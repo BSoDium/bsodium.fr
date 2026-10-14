@@ -91,10 +91,17 @@ describe("BlockRenderer typography", () => {
   it("opens the body with a drop cap only when asked, and only the first block, and only a long paragraph", () => {
     const blocks: PublishedBodyBlock[] = [{ type: "paragraph", text: long }, { type: "paragraph", text: long }];
     const html = renderWith(blocks, true);
-    expect((html.match(/drop-cap/g) ?? []).length).toBe(1);
+    expect((html.match(/class="[^"]*\bdrop-cap\b/g) ?? []).length).toBe(1);
+    expect(html).toContain('data-drop-cap="plain"');
     expect(html.indexOf("drop-cap")).toBeLessThan(html.indexOf("<p", html.indexOf("drop-cap") + 1));
     expect(renderWith(blocks, false)).not.toContain("drop-cap");
     expect(renderWith([{ type: "paragraph", text: "Short." }], true)).not.toContain("drop-cap");
+    // a paragraph that opens with a quote, a lowercase letter or an elision is left plain (the cap would not sit on its lines)
+    for (const lead of ["\u00AB Il", "\u201CA", "quand", "L'exil"]) {
+      expect(renderWith([{ type: "paragraph", text: `${lead} ${long}` }], true), lead).not.toContain("drop-cap");
+    }
+    // an accented capital is given room for its mark
+    expect(renderWith([{ type: "paragraph", text: `\u00C9crit ${long}` }], true)).toContain('data-drop-cap="accent"');
     // a paragraph that is not first in the body never takes one
     expect(renderWith([{ type: "heading", level: 2, text: "H" }, { type: "paragraph", text: long }], true)).not.toContain("drop-cap");
   });

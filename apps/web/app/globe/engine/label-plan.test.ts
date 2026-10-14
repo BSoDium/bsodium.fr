@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pickNode } from "./hit-area";
-import { CLEARANCE, PX_UNITS, UPGRADE_MARGIN, boxesToAvoid, planLabels, pxUnits, smoothUnits, type PlanItem, type PlanResult } from "./label-plan";
+import { CLEARANCE, PX_UNITS, UPGRADE_MARGIN, boxesToAvoid, occupied, planLabels, pxUnits, smoothUnits, type PlanItem, type PlanResult } from "./label-plan";
 import { LOD } from "./lod-tree";
 import { SPOT, chipText, labelVariants } from "./pixel-labels";
 
@@ -342,7 +342,8 @@ describe("on the art-pixel lattice (pxUnits): every distance is a whole number o
     const rect = { c0: 100, r0: 200, c1: 140, r1: 230 };
     const [p] = planLabels([{ score: 1, area: 1200, key: "a", rect, variants: [{ w: 90, h: 40 }], prev: null }], GRID, u);
     expect(rect.r0 - (p!.y + p!.h)).toBe(u.gap);
-    expect(p!.x).toBe(rect.c0);
+    // the plate hangs `bleed` (6 px) outside the box's edge, on the lattice: the nearest cell of 94 is 95
+    expect(p!.x).toBe(95);
   });
 });
 
@@ -385,7 +386,7 @@ describe("smoothUnits: what the labels are drawn with (no lattice, exact positio
     const rect = { c0: 100.37, r0: 203.81, c1: 140.1, r1: 233.2 };
     const [p] = planLabels([{ score: 1, area: 1000, key: "a", rect, variants: [{ w: 83.5, h: 38 }], prev: null }], GRID, u);
     expect(p!.cand).toBe(SPOT.aboveLeft);
-    expect(p!.x).toBeCloseTo(100.37, 9);
+    expect(p!.x).toBeCloseTo(100.37 - u.bleed, 9); // the plate's padding hangs outside the edge: the TEXT is on it
     expect(rect.r0 - (p!.y + p!.h)).toBeCloseTo(u.gap, 9);
   });
   it("the positions shifted along an edge follow the box continuously (no snap to half a pixel)", () => {
@@ -399,5 +400,75 @@ describe("smoothUnits: what the labels are drawn with (no lattice, exact positio
     }
     // consecutive positions differ by about the box's own 0.07 px (a quarter-pixel snap would make some zero and some 0.5)
     for (let k = 1; k < ys.length; k++) expect(ys[k]! - ys[k - 1]!).toBeLessThan(0.5);
+  });
+});
+
+describe("the text is flush with the box's edge (the plate hangs outside it by its padding) and the plan keeps the selected card's room", () => {
+  const grid = { cols: 1200, rows: 800 };
+  const u = smoothUnits(2.5);
+  const W = 84;
+  const H = 38;
+  it("an isolated box: the plate is `bleed` outside its left edge, so the text (padX inside the plate) is on the edge; the gap above is unchanged", () => {
+    const rect = { c0: 400.3, r0: 300.6, c1: 450.9, r1: 340.1 };
+    const [p] = planLabels([{ score: 1, area: 2000, key: "a", rect, variants: [{ w: W, h: H }], prev: null }], grid, u);
+    expect(p!.cand).toBe(SPOT.aboveLeft);
+    expect(p!.x + 6).toBeCloseTo(rect.c0, 9);
+    expect(rect.r0 - (p!.y + p!.h)).toBeCloseTo(u.gap, 9);
+  });
+  it("the plan keeps clear of plates as DRAWN: two boxes side by side get plates that do not overlap each other (clearance included), hanging padding and all", () => {
+    const a = { c0: 300, r0: 300, c1: 330, r1: 330 };
+    const b = { c0: 400, r0: 300, c1: 430, r1: 330 };
+    const out = planLabels(
+      [
+        { score: 2, area: 900, key: "a", rect: a, variants: [{ w: W, h: H }], prev: null },
+        { score: 1, area: 900, key: "b", rect: b, variants: [{ w: W, h: H }], prev: null },
+      ],
+      grid,
+      u,
+    );
+    const [pa, pb] = out as [PlanResult, PlanResult];
+    const clear = pa.x + pa.w + u.clearance <= pb.x || pb.x + pb.w + u.clearance <= pa.x || pa.y + pa.h + u.clearance <= pb.y || pb.y + pb.h + u.clearance <= pa.y;
+    expect(clear).toBe(true);
+  });
+  it("occupied(): a selected label's card (flush with the box) is inside the room the plan reserves; an unselected plate reserves only itself", () => {
+    const plate = { x: 100, y: 50, w: 84, h: 38 };
+    const rest = occupied(plate.x, plate.y, plate.w, plate.h, -1, u);
+    expect(rest).toEqual({ x0: 100, y0: 50, x1: 184, y1: 88 });
+    const left = occupied(plate.x, plate.y, plate.w, plate.h, SPOT.aboveLeft, u);
+    expect(left).toEqual({ x0: 100, y0: 50, x1: 184 + u.bleed, y1: 88 });
+    const right = occupied(plate.x, plate.y, plate.w, plate.h, SPOT.aboveRight, u);
+    expect(right).toEqual({ x0: 100 - u.bleed, y0: 50, x1: 184, y1: 88 });
+    const side = occupied(plate.x, plate.y, plate.w, plate.h, SPOT.right, u);
+    expect(side).toEqual({ x0: 100, y0: 50, x1: 184, y1: 88 + u.bleedY });
+  });
+  it("a selected node reserves its card: a neighbour is not planned over the place the card will take", () => {
+    const rect = { c0: 400, r0: 300, c1: 440, r1: 330 };
+    // a second box whose plate (hanging `bleed` left of it) starts exactly `clearance` after the first one's plate: free at rest, over the 6 px the card takes
+    const probe = planLabels([{ score: 2, area: 1200, key: "a", rect, variants: [{ w: W, h: H }], prev: null, reserve: true }], grid, u)[0]!;
+    const near = { c0: probe.x + probe.w + u.clearance + u.bleed, r0: rect.r0, c1: probe.x + probe.w + u.clearance + u.bleed + 40, r1: rect.r1 };
+    const withReserve = planLabels(
+      [
+        { score: 2, area: 1200, key: "a", rect, variants: [{ w: W, h: H }], prev: null, reserve: true },
+        { score: 1, area: 1200, key: "b", rect: near, variants: [{ w: W, h: H }], prev: null },
+      ],
+      grid,
+      u,
+    );
+    const noReserve = planLabels(
+      [
+        { score: 2, area: 1200, key: "a", rect, variants: [{ w: W, h: H }], prev: null },
+        { score: 1, area: 1200, key: "b", rect: near, variants: [{ w: W, h: H }], prev: null },
+      ],
+      grid,
+      u,
+    );
+    const [a, b] = withReserve as [PlanResult, PlanResult];
+    const card = occupied(a.x, a.y, a.w, a.h, a.cand, u);
+    const apart = (r: { x0: number; y0: number; x1: number; y1: number }, p: PlanResult) =>
+      r.x1 + u.clearance <= p.x || p.x + p.w + u.clearance <= r.x0 || r.y1 + u.clearance <= p.y || p.y + p.h + u.clearance <= r.y0;
+    expect(apart(card, b)).toBe(true); // the neighbour is clear of the card as well as of the plate
+    // without the reservation the neighbour's plate takes the place right of the plate (overlapping the room the card would take)
+    const bare = occupied(noReserve[0]!.x, noReserve[0]!.y, noReserve[0]!.w, noReserve[0]!.h, noReserve[0]!.cand, u);
+    expect(apart(bare, noReserve[1]!)).toBe(false);
   });
 });

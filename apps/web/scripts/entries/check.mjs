@@ -13,8 +13,11 @@ import { BASE_URL, OUT_DIR, DESKTOP, MOBILE, launch } from "../globe/_lib.mjs";
 // The four legacy slugs are the first entry of their kind in the demo fixture; the whole fixture is also read, so that every entry (long
 // title, long verse line, wide code, many tags, no cover) goes through the layout checks below.
 const FIXTURE = JSON.parse(readFileSync(new URL("../../../../packages/published/fixtures/demo.json", import.meta.url), "utf8"));
-// [kind, projection key (the fixture's), route segment]: the poems' section is `/poetry`, the other three are named after their plural.
-const COLLECTIONS = [["article", "articles", "articles"], ["project", "projects", "projects"], ["artwork", "artworks", "artworks"], ["poem", "poems", "poetry"]];
+// [kind, projection key (the fixture's), route segment]: the sections are named after their plural except two, `/software` (the project kind) and
+// `/poetry` (the poems); lib/sections.ts is the table.
+const COLLECTIONS = [["article", "articles", "articles"], ["project", "projects", "software"], ["artwork", "artworks", "artworks"], ["poem", "poems", "poetry"]];
+// The word an entry's meta line starts with (lib/sections.ts `label`): the kind's own name, except for the project kind, which reads "Software".
+const KIND_WORD = { project: "software" };
 const ALL_ENTRIES = COLLECTIONS.flatMap(([kind, key, segment]) => FIXTURE[key].map((e) => ({ kind, key, slug: e.slug, title: e.title, path: `/${segment}/${e.slug}` })));
 const ENTRIES = ["demo-article", "demo-poem", "demo-project", "demo-artwork"].map((slug) => ALL_ENTRIES.find((e) => e.slug === slug));
 
@@ -63,7 +66,7 @@ for (const entry of ENTRIES) {
   const text = await page.locator("[data-panel] h1").innerText();
   ok(text === entry.title, `${t}: the panel's h1 is the title`);
   const metaLine = await page.locator("[data-slot=entry-meta]").innerText();
-  ok(new RegExp(`^${entry.kind}`, "i").test(metaLine) && !/\/\s*\d{4}|№/.test(metaLine), `${t}: the meta line says the kind in plain words and carries no index code (${metaLine.replace(/\n/g, " ")})`);
+  ok(new RegExp(`^${KIND_WORD[entry.kind] ?? entry.kind}`, "i").test(metaLine) && !/\/\s*\d{4}|№/.test(metaLine), `${t}: the meta line says the kind in plain words and carries no index code (${metaLine.replace(/\n/g, " ")})`);
   const p0 = await panelState(page);
   ok(p0.layout === "panel" && p0.role === "complementary" && Math.abs(p0.left - 720) <= 2, `${t}: the panel is the right half, a complementary landmark`);
   ok(outline(await headingLevels(page)), `${t}: one h1, headings never skip a level (${(await headingLevels(page)).join("")})`);
@@ -139,7 +142,7 @@ for (const entry of ENTRIES) {
   ok((await page.locator("[data-panel] h1").innerText()) === "Lisbon", "place: panel h1 is the place");
   ok(outline(await headingLevels(page)), `place: headings in order (${(await headingLevels(page)).join("")})`);
   const groups = await page.locator("[data-slot=place-entries] h2").allInnerTexts();
-  ok(groups.length === 2 && /articles/i.test(groups[0]) && /projects/i.test(groups[1]), `place: entries grouped by kind (${groups.join(" | ").replace(/\n/g, " ")})`);
+  ok(groups.length === 2 && /articles/i.test(groups[0]) && /software/i.test(groups[1]), `place: entries grouped by kind (${groups.join(" | ").replace(/\n/g, " ")})`);
   await page.screenshot({ path: `${OUT_DIR}/place-dark.png` });
   await page.evaluate(() => {
     document.querySelector("[data-panel]").__marker = "same-panel";
@@ -159,7 +162,7 @@ for (const entry of ENTRIES) {
   ok((await page.locator("[data-panel] h1").innerText()) === "Lisbon", "back path returns to the place panel");
   // entry -> place by its places list
   await page.getByRole("link", { name: "Collide, a label collision engine for maps" }).click();
-  await page.waitForURL("**/projects/label-collision-engine");
+  await page.waitForURL("**/software/label-collision-engine");
   await page.locator('[data-slot=entry-view] section a[href="/locations/lisbon"]').click();
   await page.waitForURL("**/locations/lisbon");
   await page.waitForSelector("[data-slot=place-view]");
@@ -169,7 +172,7 @@ for (const entry of ENTRIES) {
 }
 
 // --- 3. Unknown slugs are real 404s through the not-found page ----------------------------------------------------------------------------
-for (const path of ["/articles/nope", "/projects/demo-poem", "/poetry/Demo-Poem"]) {
+for (const path of ["/articles/nope", "/software/demo-poem", "/poetry/Demo-Poem"]) {
   const { ctx, page } = await newPage(DESKTOP);
   const r = await page.goto(`${BASE_URL}${path}`);
   ok(r?.status() === 404, `${path}: 404`);
@@ -187,6 +190,29 @@ for (const [from, to] of [["/poems", "/poetry"], ["/poems?tag=night", "/poetry?t
   ok(r?.status() === 200 && url.pathname + url.search === to, `${from}: the browser lands on ${to} (${url.pathname}${url.search})`);
   if (to.startsWith("/poetry/")) await waitPanel(page);
   ok(logs.length === 0, `${from}: no console errors${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+// The projects' section is "Software" at /software; /projects (and every entry under it) is a permanent redirect that keeps the query.
+for (const [from, to] of [["/projects", "/software"], ["/projects?tag=rail", "/software?tag=rail"], ["/projects/demo-project", "/software/demo-project"], ["/projects/demo-project?view=full", "/software/demo-project?view=full"]]) {
+  const { ctx, page, logs } = await newPage(DESKTOP);
+  const first = await page.request.get(`${BASE_URL}${from}`, { maxRedirects: 0 });
+  ok(first.status() === 301 && first.headers().location === to, `${from}: 301 to ${to} (${first.status()} ${first.headers().location})`);
+  const r = await page.goto(`${BASE_URL}${from}`);
+  const url = new URL(page.url());
+  ok(r?.status() === 200 && url.pathname + url.search === to, `${from}: the browser lands on ${to} (${url.pathname}${url.search})`);
+  if (to.startsWith("/software/")) await waitPanel(page);
+  ok(logs.length === 0, `${from}: no console errors${logs.length ? ` (${logs.join(" | ")})` : ""}`);
+  await ctx.close();
+}
+{
+  const { ctx, page } = await newPage(DESKTOP);
+  await page.goto(`${BASE_URL}/software`);
+  ok((await page.locator("h1").first().innerText()) === "Software", "/software: the page is called Software");
+  const count = await page.locator("[data-slot=list-count]").innerText();
+  ok(/^\d+ software$/i.test(count.trim()), `/software: the count says software (${count.trim()})`);
+  const nav = await page.locator('nav[aria-label="Primary"] a').allInnerTexts();
+  ok(nav.some((t) => /^software$/i.test(t.trim())) && !nav.some((t) => /^projects$/i.test(t.trim())), `/software: the header's section is Software (${nav.join(", ")})`);
+  ok((await page.title()).startsWith("Software"), `/software: the title starts with Software (${await page.title()})`);
   await ctx.close();
 }
 {
@@ -234,18 +260,18 @@ if (process.env.BASE_URL_EMPTY) {
 
 // --- 5. 390 px: no horizontal overflow, slide-over, no expand toggle ----------------------------------------------------------------------
 for (const scheme of ["dark", "light"]) {
-  for (const path of [...ALL_ENTRIES.map((e) => e.path), "/locations/lisbon", "/locations/cusco", "/locations/zagreb", "/articles", "/poetry", "/projects", "/artworks"]) {
+  for (const path of [...ALL_ENTRIES.map((e) => e.path), "/locations/lisbon", "/locations/cusco", "/locations/zagreb", "/articles", "/poetry", "/software", "/artworks"]) {
     const { ctx, page, logs } = await newPage(MOBILE, scheme);
     await page.goto(`${BASE_URL}${path}`);
     await page.waitForTimeout(700);
     const o = await overflow(page);
     ok(o <= 0, `390px ${scheme} ${path}: no horizontal overflow (${o})`);
-    if (/\/(articles|projects|artworks|poetry|locations)\/./.test(path)) {
+    if (/\/(articles|software|artworks|poetry|locations)\/./.test(path)) {
       await page.waitForSelector("[role=dialog]");
       ok((await page.getByRole("button", { name: "Full screen" }).count()) === 0 || !(await page.getByRole("button", { name: "Full screen" }).isVisible()), `390px ${path}: no expand toggle (the slide-over is full screen)`);
       ok(await page.evaluate(() => document.activeElement?.id === "panel-heading"), `390px ${path}: focus moves to the heading`);
-      if (/^\/(articles|projects|artworks|poetry)\//.test(path) || path.startsWith("/locations/")) await page.screenshot({ path: `${OUT_DIR}/${path.slice(1).replace(/\//g, "-")}-${scheme}-390.png` });
-    } else if (path === "/poetry" || path === "/articles" || path === "/projects" || path === "/artworks") await page.screenshot({ path: `${OUT_DIR}/list${path.replace("/", "-")}-${scheme}-390.png` });
+      if (/^\/(articles|software|artworks|poetry)\//.test(path) || path.startsWith("/locations/")) await page.screenshot({ path: `${OUT_DIR}/${path.slice(1).replace(/\//g, "-")}-${scheme}-390.png` });
+    } else if (path === "/poetry" || path === "/articles" || path === "/software" || path === "/artworks") await page.screenshot({ path: `${OUT_DIR}/list${path.replace("/", "-")}-${scheme}-390.png` });
     // 44 px targets
     const small = await page.evaluate(() => [...document.querySelectorAll("a, button")].filter((e) => e.getClientRects().length && !e.closest("[inert]") && !e.classList.contains("sr-only")).map((e) => {
       // A control may reach 44 px with a ::before hit area (tag links, heading anchors): count the larger of the two boxes.
@@ -262,7 +288,7 @@ for (const scheme of ["dark", "light"]) {
 
 // --- 6. Desktop screenshots in both schemes, and reduced motion ---------------------------------------------------------------------------
 for (const scheme of ["dark", "light"]) {
-  for (const [name, path] of [["article", "/articles/demo-article"], ["poem", "/poetry/demo-poem"], ["project", "/projects/demo-project"], ["artwork", "/artworks/demo-artwork"], ["article-full", "/articles/demo-article?view=full"], ["poem-full", "/poetry/demo-poem?view=full"], ["list-articles", "/articles"]]) {
+  for (const [name, path] of [["article", "/articles/demo-article"], ["poem", "/poetry/demo-poem"], ["project", "/software/demo-project"], ["artwork", "/artworks/demo-artwork"], ["article-full", "/articles/demo-article?view=full"], ["poem-full", "/poetry/demo-poem?view=full"], ["list-articles", "/articles"]]) {
     const { ctx, page } = await newPage(DESKTOP, scheme);
     await page.goto(`${BASE_URL}${path}`);
     await page.waitForTimeout(1500);
@@ -561,7 +587,7 @@ for (const [label, options, path] of [
 }
 
 // 10e. Forced colours: the header's backdrop is a solid canvas-colour band and the hero's plate a solid block (gradients are dropped there).
-for (const path of ["/", "/projects"]) {
+for (const path of ["/", "/software"]) {
   const ctx = await browser.newContext({ ...DESKTOP, forcedColors: "active", colorScheme: "light" });
   const page = await ctx.newPage();
   await page.goto(`${BASE_URL}${path}`);

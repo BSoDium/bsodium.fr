@@ -12,13 +12,19 @@ import { useLandingHero } from "~/hooks/use-landing-hero";
 import { useViewportWidth } from "~/hooks/use-viewport-width";
 import { getProjection } from "~/lib/content.server";
 import { getTilesConfig } from "~/lib/tiles-config.server";
-import { parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
+import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
 import { panelInset } from "~/lib/layout";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
-import { SITE } from "~/lib/site";
+import { SITE, SITE_CALL } from "~/lib/site";
+
+/** The sections the no-script text lists, in the order of the header (the names and addresses are `lib/sections.ts`'s). */
+const NOSCRIPT_KINDS = ["project", "article", "artwork", "poem"] as const;
 
 /** The words of the globe's ring of type: the site's identity (name, role, fields, place), the same constant the head tags and the hero read. */
 const RING_PHRASES = ringPhrases(SITE);
+/** The caption that wraps the planet with it: what to do (it replaces the hero's how-to line while the globe has the caption). */
+const CAPTION_PHRASES = [...SITE_CALL];
+const NO_PHRASES: readonly string[] = [];
 
 export async function loader() {
   // `tiles` is the street map's tile source configuration (CATALYST_TILES_* read at request time, see
@@ -33,7 +39,7 @@ export function shouldRevalidate() {
 }
 
 /**
- * Pathless layout for `/`, `/locations/:slug` and the entries (`/articles/:slug`, `/projects/:slug`, `/artworks/:slug`,
+ * Pathless layout for `/`, `/locations/:slug` and the entries (`/articles/:slug`, `/software/:slug`, `/artworks/:slug`,
  * `/poetry/:slug`): one full-bleed globe instance, the keyboard path to the places (`PlacesNav`, visually hidden until
  * focused), and the detail panel (whose content is the child route). An entry opens in the side panel or, with `?view=full`,
  * in the full-screen container: the panel widens over the SAME globe, which stays mounted and keeps its view.
@@ -95,6 +101,10 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
     intent.current.user = true;
   }, []);
   const hero = useLandingHero(isOpen);
+  // The globe has the caption (it is up, and the page does not switch it off): the hero's how-to line is then said by the caption and is
+  // kept for assistive technology only (visually hidden). Nothing else of the shell depends on it.
+  const [orbit, setOrbit] = useState<boolean | null>(null);
+  const empty = places.length === 0;
   const heroOnView = hero.onView;
   const saveView = useCallback(
     (view: GlobeViewState) => {
@@ -129,6 +139,9 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
               tiles={tiles}
               attribution={AttributionSlot}
               ringPhrases={RING_PHRASES}
+              captionPhrases={empty ? NO_PHRASES : CAPTION_PHRASES}
+              showcase={hero.showcase}
+              onOrbit={setOrbit}
               onSelect={select}
               onViewChange={saveView}
               onInteract={hero.onInteract}
@@ -138,14 +151,20 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
           <noscript>
             <p className="absolute inset-y-0 left-0 m-0 flex w-full items-center justify-center px-6 text-center text-sm text-muted-foreground md:w-1/2 [&_a]:underline">
               <span className="max-w-xs">
-                The globe needs JavaScript. The <a href="/articles">articles</a>, <a href="/projects">projects</a>, <a href="/artworks">artworks</a> and{" "}
-                <a href="/poetry">poetry</a> are readable without it.
+                The globe needs JavaScript. The{" "}
+                {NOSCRIPT_KINDS.map((kind, i) => (
+                  <span key={kind}>
+                    {i > 0 && (i === NOSCRIPT_KINDS.length - 1 ? " and " : ", ")}
+                    <a href={KIND_PATHS[kind]}>{KIND_PLURALS[kind].toLowerCase()}</a>
+                  </span>
+                ))}{" "}
+                are readable without it.
               </span>
             </p>
           </noscript>
         </div>
         {/* The landing hero: the globe page's h1 (the panel's title is the h1 while a place or entry is open) and the way into the lists. */}
-        <LandingHero machine={hero.machine} away={isOpen} empty={places.length === 0} />
+        <LandingHero machine={hero.machine} away={isOpen} empty={empty} orbit={orbit} onCover={hero.setCover} />
         <PlacesNav places={places} groups={groups} currentSlug={selectedSlug} onFocusSlug={setFocusedSlug} onOpen={markUserIntent} />
       </main>
       <DetailPanel

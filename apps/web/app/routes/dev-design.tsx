@@ -72,7 +72,7 @@ const SAMPLES: Record<Exclude<EntryKind, "place">, { title: string; summary: str
   },
   project: {
     title: "Tessera, a tiling toy",
-    summary: "A placeholder project: a small program that fills a plane with tiles and lets you break the rules one at a time.",
+    summary: "A placeholder piece of software: a small program that fills a plane with tiles and lets you break the rules one at a time.",
     meta: [
       { label: "Stack", value: "TypeScript, SVG" },
       { label: "Year", value: "2026" },
@@ -151,8 +151,11 @@ const SWATCHES: { token: string; role: string }[] = [
   { token: "--signal-text", role: "The accent as text under 24 px" },
   { token: "--signal-foreground", role: "Text on a signal fill" },
   { token: "--signal-wash", role: "Active plate" },
+  { token: "--signal-hover", role: "Primary fill, hovered" },
+  { token: "--signal-active", role: "Primary fill, pressed" },
+  { token: "--ring", role: "Focus ring" },
   { token: "--kind-article", role: "Article hue" },
-  { token: "--kind-project", role: "Project hue" },
+  { token: "--kind-project", role: "Software hue" },
   { token: "--kind-artwork", role: "Artwork hue" },
   { token: "--kind-poem", role: "Poem hue" },
 ];
@@ -170,7 +173,12 @@ const PAIRS: { fg: string; bg: string; need: number; use: string }[] = [
   { fg: "--signal", bg: "--background", need: 3, use: "Accent, large display text and marks" },
   { fg: "--signal", bg: "--surface", need: 3, use: "Accent mark on a frame" },
   { fg: "--signal-foreground", bg: "--signal", need: 4.5, use: "Text on a signal fill" },
-  { fg: "--border-strong", bg: "--background", need: 2.8, use: "Control outline" },
+  { fg: "--primary-foreground", bg: "--signal-hover", need: 4.5, use: "Primary label, hovered" },
+  { fg: "--primary-foreground", bg: "--signal-active", need: 4.5, use: "Primary label, pressed" },
+  { fg: "--ring", bg: "--background", need: 3, use: "Focus ring" },
+  { fg: "--ring", bg: "--accent", need: 3, use: "Focus ring on hover" },
+  { fg: "--signal-hover", bg: "--background", need: 3, use: "Hovered fill against the page" },
+  { fg: "--border-strong", bg: "--background", need: 3, use: "Control outline" },
 ];
 
 /** Reads the live computed values from a probe element, so the table always shows what the browser resolved. */
@@ -203,8 +211,10 @@ function Colour({ scheme }: { scheme: Scheme }) {
   return (
     <Stack gap={6}>
       <Note>
-        One grey family (the map's near-black and near-white) and one accent, BSoD blue. The accent is large display text, a mark (a tick, an underline, a
-        cover's mark) or a fill; text under 24 px takes its text variant (deeper in the light scheme, lighter in the dark one). The faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
+        One grey family (the map's near-black and near-white, no warm cast anywhere: the entries and the lists are on the page's own colour) and one accent, BSoD
+        blue. The accent is the call to action (the primary button's fill, hovered a step deeper, pressed another), the link in running text, the focus ring,
+        the selection and the current mark of a navigation or a filter; as large display text, a mark (a tick, an underline, a cover's mark) or a fill it is
+        `signal`, as text under 24 px its text variant (deeper in the light scheme, lighter in the dark one). The faint kind hues only tint the generated covers. Values below are the browser's resolved ones for the current scheme.
       </Note>
       <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-5">
         {SWATCHES.map((s) => (
@@ -267,7 +277,7 @@ function Icons() {
                 Search places and entries
               </span>
               <span className="font-display text-3xl font-light">
-                Projects <Icon name="arrow-right" size={size} />
+                Software <Icon name="arrow-right" size={size} />
               </span>
               <span className="text-sm text-muted-foreground">{where}</span>
             </li>
@@ -277,6 +287,15 @@ function Icons() {
       <Spec caption="The shortcut hint (the command key on a Mac, Ctrl elsewhere): plain muted text, never a box">
         <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
           <KeyHint />
+        </div>
+      </Spec>
+      <Spec caption="The header's search trigger: icon, word and hint in the header's mono capitals; the icon and the command key are one size (inline, 1.1 em of 12 px)">
+        <div className="flex flex-wrap items-center gap-6 text-muted-foreground">
+          <span className="nav-link nav-search inline-flex min-h-11 items-center">
+            <Icon name="search" size="inline" />
+            <span>Search</span>
+            <KeyHint />
+          </span>
         </div>
       </Spec>
     </Stack>
@@ -462,7 +481,7 @@ function Lines() {
         <Grid className="mt-2">
           {Array.from({ length: 12 }, (_, i) => (
             <Col key={i} span={1} className="ds-hatch flex h-8 items-center justify-center border border-border">
-              <span className="ds-meta">{i + 1}</span>
+              <span className="ds-meta bg-background">{i + 1}</span>
             </Col>
           ))}
         </Grid>
@@ -961,21 +980,20 @@ function Brand() {
 /* ------------------------------------------------------------ entry pages */
 
 /**
- * The entry pages' grammar (docs/design-system.md, "Entry pages") at the width of a column, in both reading surfaces: the double rule, the
+ * The entry pages' grammar (docs/design-system.md, "Entry pages") at the width of a column, in both reading surfaces: the running head over one hairline, the
  * kicker, a headline whose clause after a comma is thin, the standfirst, the dateline, the marginalia, the body with its drop cap and
- * pull quote, a figure with its caption; then a poem. Made-up text. The surface is the page's reading surface (paper / night), bound
+ * pull quote, a figure with its caption; then a poem. Made-up text. The surface is the page's reading surface (the page's own colours), bound
  * for the element by `data-reading-surface`; the sizes follow the width of the block (`cqi`), as they do on the page.
  */
 function EntrySpecimen({ scheme }: { scheme: "light" | "dark" }) {
   return (
     <div data-scheme={scheme} data-reading-surface data-layout="full" data-kind="article" className="entry min-w-0 border border-border bg-background p-6 text-foreground">
-      <p className="ds-meta m-0 mb-6">Surface: {scheme === "light" ? "paper" : "night"}</p>
-      <div className="entry-rule" aria-hidden="true" />
-      <p className="type-meta m-0 mt-[1.375rem] flex justify-between text-muted-foreground">
+      <p className="ds-meta m-0 mb-6">Surface: the page ({scheme})</p>
+      <p className="type-meta entry-running m-0 flex justify-between text-muted-foreground">
         <span>Article &middot; Placeholder Bay</span>
         <span>6 min read</span>
       </p>
-      <h3 className="entry-title mt-[1.625rem]">
+      <h3 className="entry-title mt-8">
         Notes on a quiet compiler<span className="entry-title-tail">, written on a slow train</span>
       </h3>
       <p className="type-standfirst mt-6 max-w-[25.4em]">One made-up sentence that says what the piece is, set thin and italic against the heavy headline.</p>
@@ -1058,7 +1076,7 @@ function EntryPages() {
       <Note>
         The article and poem boards of the owner's canvas, as the entry pages build them: Newsreader 700 for the headline (its clause after a comma, a colon or
         a dash at 300), thin italic for the standfirst and the pull quote, mono for the kicker, the dateline, the marginalia and the captions, a drop cap in the
-        ink, ink rules, and a poem set as its own page: a thin italic title over lines at 300. Paper in the light scheme, night in the dark.
+        ink, ink rules, and a poem set as its own page: a thin italic title over lines at 300. On the page's own colours, near-white in the light scheme and near-black in the dark one.
       </Note>
       <div className="grid gap-6 lg:grid-cols-2">
         {(["light", "dark"] as const).map((scheme) => (

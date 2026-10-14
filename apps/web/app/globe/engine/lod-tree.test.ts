@@ -734,15 +734,40 @@ describe("buildLodNodes and the tree's structure", () => {
 describe("minimum size and its fill", () => {
   const side = (t: LodTree, slug: string) => t.boxX1[t.indexOf(slug)]! - t.boxX0[t.indexOf(slug)]!;
   const one = () => new LodTree([p("a", undefined, 10, 20, 12)]);
-  it("the minimum is 8 to 10 art cells", () => {
+  it("the footprint the cut keeps is 8 to 10 art cells; the rectangle drawn has a lower floor, 4 to 6 cells (2026-10-13: the owner found the floor too big)", () => {
     expect(LOD.minBoxCells).toBeGreaterThanOrEqual(8);
     expect(LOD.minBoxCells).toBeLessThanOrEqual(10);
+    expect(LOD.floorCells).toBeGreaterThanOrEqual(4);
+    expect(LOD.floorCells).toBeLessThanOrEqual(6);
+    expect(LOD.floorCells).toBeLessThan(LOD.minBoxCells);
+  });
+  it("the drawn rectangle is concentric with the footprint, at its floor when the true size is under it, the footprint when the true size is over the footprint's", () => {
+    const t = one();
+    evaluate(t, camAt(20, 10, 2.7));
+    const dw = t.drawX1[0]! - t.drawX0[0]!;
+    const dh = t.drawY1[0]! - t.drawY0[0]!;
+    expect(dw).toBeCloseTo(LOD.floorCells * CELL, 9);
+    expect(dh).toBeCloseTo(LOD.floorCells * CELL, 9);
+    expect((t.drawX0[0]! + t.drawX1[0]!) / 2).toBeCloseTo((t.boxX0[0]! + t.boxX1[0]!) / 2, 9);
+    expect((t.drawY0[0]! + t.drawY1[0]!) / 2).toBeCloseTo((t.boxY0[0]! + t.boxY1[0]!) / 2, 9);
+    evaluate(t, camAt(20, 10, 8));
+    expect(t.drawX0[0]).toBeCloseTo(t.boxX0[0]!, 9); // a box over the footprint: the same rectangle
+    expect(t.drawX1[0]).toBeCloseTo(t.boxX1[0]!, 9);
+    // every drawn rectangle is the footprint or inside it, on every zoom
+    for (let z = 2; z <= 9; z += 0.1) {
+      evaluate(t, camAt(20, 10, z));
+      expect(t.drawX0[0]!).toBeGreaterThanOrEqual(t.boxX0[0]! - 1e-9);
+      expect(t.drawX1[0]!).toBeLessThanOrEqual(t.boxX1[0]! + 1e-9);
+      expect(t.drawY0[0]!).toBeGreaterThanOrEqual(t.boxY0[0]! - 1e-9);
+      expect(t.drawY1[0]!).toBeLessThanOrEqual(t.boxY1[0]! + 1e-9);
+      expect(t.drawX1[0]! - t.drawX0[0]!).toBeGreaterThanOrEqual(LOD.floorCells * CELL - 1e-9);
+    }
   });
   it("a place clamped to the minimum has its interior fully masked (the mask is as opaque as the node)", () => {
     const t = one();
     evaluate(t, camAt(20, 10, 2.7));
     expect(side(t, "a")).toBeCloseTo(LOD.minBoxCells * CELL, 9);
-    expect(t.side[0]).toBeLessThan(LOD.minBoxCells * CELL);
+    expect(t.side[0]).toBeLessThan(LOD.floorCells * CELL);
     expect(t.alpha[0]).toBe(1);
     expect(t.fillAlpha[0]).toBe(1);
   });
@@ -750,7 +775,7 @@ describe("minimum size and its fill", () => {
     const t = one();
     const fillAt = (z: number) => {
       evaluate(t, camAt(20, 10, z));
-      return { f: t.fillAlpha[0]!, ratio: t.side[0]! / (LOD.minBoxCells * CELL) };
+      return { f: t.fillAlpha[0]!, ratio: t.side[0]! / (LOD.floorCells * CELL) }; // (the mask is judged against the DRAWN floor)
     };
     const up: number[] = [];
     let prev = 1;
@@ -774,7 +799,7 @@ describe("minimum size and its fill", () => {
     // a box bigger than the minimum is only its outline
     evaluate(t, camAt(20, 10, 9));
     expect(t.fillAlpha[0]).toBe(0);
-    expect(side(t, "a")).toBeGreaterThan(LOD.minBoxCells * CELL * LOD.fillFadeTo);
+    expect(side(t, "a")).toBeGreaterThan(LOD.floorCells * CELL * LOD.fillFadeTo);
   });
   it("the mask is timed too: it fades out over the fade time when it is switched off, whatever the camera does", () => {
     const t = one();
@@ -807,12 +832,13 @@ describe("minimum size and its fill", () => {
     const t = new LodTree(germany());
     evaluate(t, camAt(10, 50.7, 2.7));
     const de = t.indexOf("de");
-    expect(t.fillAlpha[de]).toBeCloseTo(t.alpha[de]!, 6);
+    // (the mask is judged against the DRAWN floor, 5 cells since 2026-10-13: at the world view this group's true side is already over it, so it is hollow)
+    expect(t.fillAlpha[de] === 0 || Math.abs(t.fillAlpha[de]! - t.alpha[de]!) < 1e-6).toBe(true); // (masked as the node is, or hollow: never in between)
     // close to the point where it opens, the group's box is much bigger than the minimum
     let hollow = false;
     for (let z = 2.7; z < 4.5; z += 0.02) {
       evaluate(t, camAt(10, 50.7, z));
-      if (t.alpha[de]! > 0.5 && t.side[de]! > LOD.minBoxCells * CELL * LOD.fillFadeTo) hollow = hollow || t.fillAlpha[de] === 0;
+      if (t.alpha[de]! > 0.5 && t.side[de]! > LOD.floorCells * CELL * LOD.fillFadeTo) hollow = hollow || t.fillAlpha[de] === 0;
     }
     expect(hollow).toBe(true);
   });
@@ -941,5 +967,44 @@ describe("label text: the name on the first line, the country on the second", ()
   it("buildLodNodes passes the country code of a place", () => {
     const nodes = buildLodNodes([{ slug: "x", name: "X", lat: 1, lon: 2, labelPriority: 5, countryCode: "CO" }], []);
     expect(nodes[0]!.countryCode).toBe("CO");
+  });
+});
+
+/** Run the clock for a second at 60 Hz from `start` (a gap over `MAX_STEP_MS` counts as one frame, so a fade needs real steps). */
+function run(t: LodTree, start: number) {
+  for (let k = 0; k <= 70; k++) t.advance(start + 1 + k * 16);
+}
+
+describe("suppression: the home screen's caption replaces every box and label", () => {
+  it("sends every node's target OFF, keeps the cut itself, and brings them back; a node that is on its way out is no click target", () => {
+    const t = new LodTree([g("de", "country", undefined, 51, 10, 400, 70), ...germany().slice(1)]);
+    const cam = camAt(10, 50.5, 2.7);
+    t.alphas(cam);
+    const shown = t.count;
+    expect(shown).toBeGreaterThan(0);
+    t.setSuppressed(true);
+    expect(t.isSuppressed).toBe(true);
+    t.update({ ...cam, zoom: cam.zoom + 1e-9 }, -1, -1, false);
+    // every drawn node is heading OFF; they are still there (a fade runs), and none of them is wanted: the picking rules read `wanted`
+    for (let k = 0; k < t.count; k++) expect(t.life.target[t.visible[k]!]).toBe(0);
+    run(t, 0);
+    expect(t.count).toBe(0);
+    expect(t.animating).toBe(false);
+    // and back
+    t.setSuppressed(false);
+    t.update({ ...cam, zoom: cam.zoom + 2e-9 }, -1, -1, false);
+    run(t, 10_000);
+    expect(t.count).toBe(shown);
+  });
+
+  it("is instant under reduced motion", () => {
+    const t = new LodTree(germany());
+    const cam = camAt(10, 50.5, 2.7);
+    t.alphas(cam, true);
+    t.setSuppressed(true);
+    t.update({ ...cam, zoom: cam.zoom + 1e-9 }, -1, -1, true);
+    t.advance(1);
+    t.advance(2);
+    expect(t.count).toBe(0);
   });
 });

@@ -775,8 +775,11 @@ describe.skipIf(!havePreview)("the owner's preview projection (sweeps)", () => {
         lastPlaces = places;
       }
     }
-    // measured: 2 events (a neighbour near the bottom edge moved its label to the first position that was left, onto the one of a node that was kept by its own test: a place at Europe 5.43, another at the Andes 5.02) over 14 views x 650 steps of zoom
-    expect(events.length, events.join("; ")).toBeLessThanOrEqual(3);
+    // measured: 2 events (a neighbour near the bottom edge moved its label to the first position that was left, onto the one of a node that was kept by its own test: a place at Europe 5.43, another at the Andes 5.02) over 14 views x 650 steps of zoom.
+    // 2026-10-13: the plate hangs `LABEL_TYPE.bleed` (6 px) outside its box's left edge so the text is flush with it, so the cut's plates are 6 px further
+    // out and take 6 px of room more on the left: 6 events (a group that closes at Maghreb 3.94, a place at the same zoom, one at 5.02 and 7.71, two at
+    // Central Europe / Europe 5.44 to 5.5), the limit moved with it.
+    expect(events.length, events.join("; ")).toBeLessThanOrEqual(6);
   });
 
   it("is deterministic: the same nodes drawn whatever the order of the input", () => {
@@ -887,15 +890,16 @@ describe.skipIf(!havePreview)("the owner's preview projection (sweeps)", () => {
     }
 
     it("pairs closer than 24 px drop to a tenth on the way in and from a fresh tree, and by 60 % on the way out (where what was kept is allowed down to 12 px)", () => {
-      expect(legs!.in.near24).toBeLessThanOrEqual(BEFORE.sweep.in.near24 / 10);
-      expect(legs!.fresh.near24).toBeLessThanOrEqual(BEFORE.sweep.fresh.near24 / 10);
+      // (2026-10-13: a tenth became a fifth: the plates hang 6 px further out, outside the box's edge, so a pair that was 26 px apart is 20 now; 98 and 141 of 940 and 866 are measured)
+      expect(legs!.in.near24).toBeLessThanOrEqual(BEFORE.sweep.in.near24 / 5);
+      expect(legs!.fresh.near24).toBeLessThanOrEqual(BEFORE.sweep.fresh.near24 / 5);
       expect(legs!.out.near24).toBeLessThanOrEqual(BEFORE.sweep.out.near24 * 0.4);
     });
 
     it("pairs closer than the leave gap (12 px) are almost gone, and nothing overlaps (but two roots, two places cut out of each other)", () => {
       for (const k of ["in", "out", "fresh"] as const) {
         // (a plate that was kept is allowed down to the leave gap of a plate, 8 px: the pairs of the out leg between 8 and 12 are by design)
-        expect(legs![k].near12, k).toBeLessThanOrEqual(Math.ceil(legs![k].views * 0.5));
+        expect(legs![k].near12, k).toBeLessThanOrEqual(Math.ceil(legs![k].views * 0.6)); // (was 0.5; 76 of 150 on the way out since the plates hang 6 px outside the box)
         expect(legs![k].near12, k).toBeLessThanOrEqual(BEFORE.sweep[k].near12 / 10);
         expect(legs![k].overlapping, k).toBeLessThanOrEqual(2);
       }
@@ -906,14 +910,14 @@ describe.skipIf(!havePreview)("the owner's preview projection (sweeps)", () => {
         expect(legs![k].changes / legs![k].labels, k).toBeLessThan(0.005);
         expect(legs![k].changes, k).toBeLessThanOrEqual(BEFORE.sweep[k].changes / 3);
         // (what comes and goes under the jitter: nodes at the edge of the canvas and thresholds crossed once; the count of before is the reference)
-        expect(legs![k].toggles, k).toBeLessThanOrEqual(Math.round(BEFORE.sweep[k].toggles * 1.5));
+        expect(legs![k].toggles, k).toBeLessThanOrEqual(Math.round(BEFORE.sweep[k].toggles * 1.7)); // (was 1.5: 76 and 74 against 49 and 55 since the plates hang 6 px outside the box)
       }
     });
 
     it("on the owner's own window (902 x 652, free area 800 wide) the same: pairs closer than 24 px drop to a tenth (60 % on the way out), none overlap", () => {
       const own = crowdSweep(nodes, SCREEN_OWNER);
-      expect(own.in.near24).toBeLessThanOrEqual(BEFORE.owner.in.near24 / 10);
-      expect(own.fresh.near24).toBeLessThanOrEqual(BEFORE.owner.fresh.near24 / 10);
+      expect(own.in.near24).toBeLessThanOrEqual(BEFORE.owner.in.near24 / 5); // (a tenth before the plates hung 6 px outside the box: 61 of 582 measured)
+      expect(own.fresh.near24).toBeLessThanOrEqual(BEFORE.owner.fresh.near24 / 5);
       expect(own.out.near24).toBeLessThanOrEqual(BEFORE.owner.out.near24 * 0.4);
       for (const k of ["in", "out", "fresh"] as const) expect(own[k].overlapping, k).toBeLessThanOrEqual(2);
     });

@@ -1,14 +1,96 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { Link } from "react-router";
 import { openSearch } from "~/components/search-palette";
 import { Icon, KeyHint } from "~/components/ui";
 import { KIND_PATHS, KIND_PLURALS } from "~/lib/entries";
 import type { HeroMachine, HeroSnapshot } from "~/lib/hero-machine";
 import { setHeroResting } from "~/lib/hero-rest";
+import { NameTravel, type TravelHalf } from "~/lib/name-travel";
 import { SITE, SITE_FOCUS, SITE_IDENTITY } from "~/lib/site";
 
 /** The four shortcuts, in the header's order. Paths and words come from the one table the lists and the navigation use. */
 const SHORTCUTS = (["project", "article", "artwork", "poem"] as const).map((kind) => ({ to: KIND_PATHS[kind], label: KIND_PLURALS[kind] }));
+
+/**
+ * The name's travel to the collapsed line and back (owner, round 3, items 10 and 3): `--hero-travel` of app.css, with its ease (a fast start and a
+ * soft landing). The two must be the same; `landing-hero.test.ts` keeps them so.
+ */
+export const NAME_TRAVEL_MS = 320;
+export const NAME_TRAVEL_EASE = "cubic-bezier(0.2, 0.9, 0.1, 1)";
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+/** The text's own box (the font's content area), page px: what travels, whatever the element's line box is. */
+function textBox(el: Element): DOMRect {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return range.getBoundingClientRect();
+}
+
+const HALVES = [
+  [".hero-given", ".hero-mini-given"],
+  [".hero-family", ".hero-mini-family"],
+] as const;
+
+/**
+ * Where each half of the name must be when it is the collapsed name: the transform that puts its text box on the ghost's (`.hero-mini-given`,
+ * `.hero-mini-family`, never painted). Measured in the half's REST position (no transform: the caller clears it first), so it is the
+ * same whatever the state it is read in; the scale is the ratio of the boxes' widths (the ghost is the same drawing at another size), the
+ * translation puts the box's top-left corner on the other's (the origin of the transform is the element's own top-left corner).
+ */
+function finalTransforms(root: HTMLElement): { el: HTMLElement; transform: string }[] {
+  const out: { el: HTMLElement; transform: string }[] = [];
+  for (const [from, to] of HALVES) {
+    const el = root.querySelector<HTMLElement>(from);
+    const ghost = root.querySelector<HTMLElement>(to);
+    if (!el || !ghost) continue;
+    const prev = el.style.transform;
+    el.style.transform = "none";
+    const a = textBox(el);
+    const o = el.getBoundingClientRect();
+    el.style.transform = prev;
+    const b = textBox(ghost);
+    if (!(a.width > 0) || !(b.width > 0)) continue;
+    const s = b.width / a.width;
+    const dx = b.left - o.left - (a.left - o.left) * s;
+    const dy = b.top - o.top - (a.top - o.top) * s;
+    out.push({ el, transform: `translate(${dx}px, ${dy}px) scale(${s})` });
+  }
+  return out;
+}
+
+/** Hold the collapsed name where it belongs (its final transform as the halves' own style), or put it back in place. */
+function holdName(root: HTMLElement, collapsed: boolean): void {
+  if (!collapsed) {
+    for (const [from] of HALVES) root.querySelector<HTMLElement>(from)?.style.removeProperty("transform");
+    return;
+  }
+  for (const { el, transform } of finalTransforms(root)) el.style.transform = transform;
+}
+
+/**
+ * The halves as the choreography (`lib/name-travel.ts`) sees them: measured once here, run by `Element.animate` on `transform` (translate and ONE
+ * uniform scale per half: no font size, no layout, no JS per frame; `will-change` only for the length of the animation, by the API itself).
+ */
+function halvesOf(root: HTMLElement): TravelHalf[] {
+  return finalTransforms(root).map(({ el, transform }) => ({
+    final: transform,
+    setInline: (value) => (value === null ? el.style.removeProperty("transform") : (el.style.transform = value)),
+    computed: () => getComputedStyle(el).transform,
+    animate: (from, to) => {
+      // The way back is the same motion with the same ease (a fast start and a soft landing), from the corner to the place: not the ease run backwards.
+      const animation = el.animate([{ transform: from }, { transform: to }], { duration: NAME_TRAVEL_MS, easing: NAME_TRAVEL_EASE, fill: "both" });
+      return {
+        cancel: () => animation.cancel(),
+        get onfinish() {
+          return animation.onfinish as (() => void) | null;
+        },
+        set onfinish(fn: (() => void) | null) {
+          animation.onfinish = fn;
+        },
+      };
+    },
+  }));
+}
 
 /** What the server (and the hydration pass) renders: the full hero. Stable object: a valid server snapshot. */
 const SERVER_SNAPSHOT: HeroSnapshot = { state: "rest", world: true };
@@ -36,6 +118,14 @@ function FamilyName() {
 
 interface LandingHeroProps {
   machine: HeroMachine;
+  /**
+   * The globe has the caption (`GlobeProps.onOrbit`): it says what the how-to line says, so the line is kept for assistive technology only. `null` or
+   * absent while the globe is not up (on the server too), where it is hidden under a script too (`scripting: enabled`: the globe is about to say it) and
+   * shown without one; `false` when there is no such type (no WebGL, `?no-ring`) and the line stays.
+   */
+  orbit?: boolean | null;
+  /** The height the name covers at the bottom of the page, CSS px, when it is measured and when it changes (the globe lifts the planet clear of it). */
+  onCover?: (px: number) => void;
   /** A place or an entry is open: the hero is not the page (its name is no heading then). */
   away: boolean;
   /** No place is published: the globe has nothing on it. */
@@ -55,7 +145,7 @@ interface LandingHeroProps {
  *
  * Order in the DOM is reading order: name, who, search, lists. The grid places the name last on a wide screen; focus never lands on it.
  */
-export function LandingHero({ machine, away, empty }: LandingHeroProps) {
+export function LandingHero({ machine, away, empty, orbit = null, onCover }: LandingHeroProps) {
   const snapshot = useSyncExternalStore(machine.subscribe, machine.getSnapshot, () => SERVER_SNAPSHOT);
   const state = away ? "away" : snapshot.state;
   // The header reads this: while the rows are showing it carries no section links of its own.
@@ -65,12 +155,80 @@ export function LandingHero({ machine, away, empty }: LandingHeroProps) {
   }, [state]);
   // Away, the panel's own title is the page's h1: the name stays as text, hidden, and is not a second heading.
   const Name = away ? "p" : "h1";
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // The name shrinks into the collapsed line when the hero steps back, and grows out of it on the way back (rest <-> collapsed: from or to
+  // `away` the hero is not on screen and the name just sits where the state says; reduced motion: instant, as the CSS). The collapsed name is the
+  // two halves of the big name held at the ghost line's boxes: it is re-measured when the block is resized (a window, a font arriving).
+  const previous = useRef<typeof state>(state);
+  // (`holdName` again when a travel to the corner has ended: a resize or a font that arrived during its 320 ms is not lost)
+  const travel = useRef<NameTravel | null>(null);
+  const rootForTravel = useRef<HTMLDivElement | null>(null);
+  if (travel.current === null) {
+    travel.current = new NameTravel((toCorner) => {
+      const root = rootForTravel.current;
+      if (root && toCorner) holdName(root, true);
+    });
+  }
+  useIsoLayoutEffect(() => {
+    const was = previous.current;
+    previous.current = state;
+    const root = rootRef.current;
+    rootForTravel.current = root;
+    if (!root) return;
+    const toMini = was === "rest" && state === "collapsed";
+    const back = was === "collapsed" && state === "rest";
+    // (a turn-around, the state flipping again while the name is on its way, is a travel like any other: `NameTravel.go` starts from where it is)
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (was === state) return;
+    if ((!toMini && !back) || reduced || typeof root.querySelector(".hero-given")?.animate !== "function") {
+      travel.current!.cancel();
+      holdName(root, state === "collapsed");
+      return;
+    }
+    travel.current!.go(halvesOf(root), state === "collapsed");
+  }, [state]);
+  useEffect(() => () => travel.current?.cancel(), []);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || state !== "collapsed" || typeof ResizeObserver === "undefined") return;
+    // The collapsed name is held at the ghost line's boxes: re-measured when the block is resized (a window, a font arriving). Not while it travels
+    // (the end of the travel re-measures).
+    const ro = new ResizeObserver(() => {
+      if (travel.current?.isRunning) return;
+      holdName(root, true);
+    });
+    ro.observe(root);
+    return () => ro.disconnect();
+  }, [state]);
+
+  // How much of the page's bottom the name covers: the globe lifts the planet clear of it (docs/landing.md). Layout offsets, so a transform
+  // (the name's own travel) never changes it; read when the block is resized (fonts arriving, the window, the tiers of the CSS).
+  useEffect(() => {
+    const root = rootRef.current;
+    const name = root?.querySelector<HTMLElement>(".hero-name");
+    const main = root?.offsetParent;
+    if (!root || !name || !main || !onCover || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      if (getComputedStyle(root).visibility === "hidden") return;
+      const covered = main.clientHeight - (root.offsetTop + name.offsetTop);
+      if (covered > 0 && covered < main.clientHeight) onCover(covered);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    ro.observe(name);
+    ro.observe(main);
+    return () => ro.disconnect();
+  }, [onCover, Name]);
 
   return (
     <div
       data-slot="landing-hero"
       data-hero={state}
       data-world={snapshot.world ? "true" : "false"}
+      data-orbit={empty || orbit === false ? "false" : orbit ? "true" : "pending"}
+      ref={rootRef}
       aria-hidden={away ? true : undefined}
       className="landing-hero print:hidden"
     >
@@ -85,6 +243,7 @@ export function LandingHero({ machine, away, empty }: LandingHeroProps) {
             {SITE_IDENTITY}
             <span className="hero-intro-more">{` ${SITE_FOCUS}`}</span>
           </p>
+          {/* How to use the page. While the globe says it itself (the caption, `data-orbit`), this line is for assistive technology only. */}
           <p className="hero-hint">
             {empty ? (
               HINT_NO_PLACE
@@ -128,8 +287,8 @@ export function LandingHero({ machine, away, empty }: LandingHeroProps) {
       {/* What stays when the hero has stepped back: the name as one small line and, while the way back is real, the hint. Decoration (the h1 is above). */}
       <p aria-hidden="true" className="hero-mini">
         <span className="hero-mini-name">
-          {SITE.givenName}{" "}
-          <span className="type-thin">
+          <span className="hero-mini-given">{SITE.givenName}</span>{" "}
+          <span className="hero-mini-family type-thin">
             <FamilyName />
           </span>
         </span>

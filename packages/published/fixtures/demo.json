@@ -491,5 +491,104 @@
       ],
       "placeSlugs": ["paris"]
     }
-  ]
+    ],
+  "career": {
+    "title": "Career",
+    "summary": "Frontend engineer who builds interfaces for map-heavy and data-heavy products. A made-up profile: every employer, school and link on this page is invented, so the page can be designed and tested without anything real.",
+    "updated": "2026-09",
+    "availability": { "text": "Open to example opportunities", "asOf": "2026-09" },
+    "roles": [
+      {
+        "id": "lead-frontend-example-studio",
+        "title": "Lead Frontend Engineer",
+        "org": "Example Studio",
+        "orgUrl": "https://example.org/studio",
+        "location": "Lisbon, Portugal",
+        "place": "lisbon",
+        "employment": "Permanent",
+        "start": "2025-09",
+        "end": "present",
+        "highlights": [
+          "Led a team of four on a rebuild of the studio's flagship mapping product, from the rendering layer to the design language.",
+          "Cut the time to first interactive view from eight seconds to under two by moving the heavy work off the main thread."
+        ],
+        "skills": ["React", "TypeScript", "WebGL", "Design systems"]
+      },
+      {
+        "id": "frontend-engineer-sample-works",
+        "title": "Frontend Engineer",
+        "org": "Sample Works Ltd",
+        "location": "Remote",
+        "employment": "Contract",
+        "start": "2023-04",
+        "end": "2025-08",
+        "highlights": [
+          "Built a charting library on top of D3 that three product teams adopted in place of their own.",
+          "Introduced visual regression tests, which caught a class of layout bugs before release."
+        ],
+        "skills": ["React", "D3.js", "Storybook", "Playwright"]
+      },
+      {
+        "id": "interface-designer-placeholder-co",
+        "title": "Interface Designer",
+        "org": "Placeholder & Co",
+        "orgUrl": "https://example.com/placeholder",
+        "location": "Paris, France",
+        "place": "paris",
+        "start": "2021",
+        "highlights": ["Designed and shipped the booking flow of a travel start-up, from paper sketches to production components."],
+        "skills": ["Figma", "UX research", "CSS"]
+      },
+      {
+        "id": "intern-demo-labs",
+        "title": "Software Engineering Intern",
+        "org": "Demo Labs",
+        "location": "Zagreb, Croatia",
+        "employment": "Internship",
+        "start": "2019-06",
+        "end": "2019-09",
+        "highlights": [],
+        "skills": ["JavaScript"]
+      }
+    ],
+    "education": [
+      {
+        "id": "institut-exemple",
+        "institution": "Institut Exemple",
+        "programme": "Computer Science and Applied Mathematics",
+        "level": "MEng",
+        "start": "2016",
+        "end": "2021",
+        "location": "Paris, France",
+        "place": "paris"
+      },
+      {
+        "id": "sample-state-university",
+        "institution": "Sample State University",
+        "programme": "Computer Graphics and Vision",
+        "level": "MSc",
+        "start": "2019-09",
+        "end": "2020-06",
+        "location": "Ljubljana, Slovenia",
+        "place": "ljubljana",
+        "note": "Exchange year."
+      }
+    ],
+    "languages": [
+      { "name": "English", "level": "C2", "label": "Native" },
+      { "name": "French", "level": "B2", "label": "Upper-intermediate" },
+      { "name": "Portuguese", "level": "A2" }
+    ],
+    "skills": [
+      { "group": "Primary", "items": ["React", "TypeScript", "JavaScript", "Frontend architecture", "Design systems"] },
+      { "group": "Secondary", "items": ["Node.js", "GraphQL", "D3.js", "WebGL", "Storybook"] },
+      { "group": "Domain", "items": ["Cartography", "Data visualisation", "Accessibility (WCAG)"] },
+      { "group": "Process", "items": ["Agile/Scrum", "Code review"] }
+    ],
+    "links": [
+      { "label": "Code", "url": "https://example.com/demo-profile/code" },
+      { "label": "Writing", "url": "https://example.org/demo-profile/writing" },
+      { "label": "Sketches", "url": "https://example.org/demo-profile/sketches" }
+    ]
+  }
 }

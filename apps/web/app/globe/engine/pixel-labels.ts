@@ -184,13 +184,15 @@ export interface BoxStyle {
   active?: boolean;
   /** One uninterrupted line all round (the selected box); else the four corners are solid and the rest of each edge is dashed (at rest and hovered alike). */
   solid?: boolean;
+  /** How open the box is, 0 (a closed rectangle: it is at its floor size) to 1 (arms and dashes in full; the default): `boxOpenness`. */
+  open?: number;
 }
 
 /**
  * The resting outline: each corner has a solid ARM along both of its edges and the rest of the edge is DASHES (`DASH_ON` cells lit, then
  * a gap), counted from the corner the edge is ANCHORED to (below). How long the arms and the gaps are depends on the box's on-screen size
- * (`dashingFor`): a big box has long, noticeable arms and scarce dashes, a small one short arms and denser dashes, a tiny one just a
- * solid outline.
+ * (`dashingFor`): a big box has long, noticeable arms and scarce dashes, a small one short arms and denser dashes, and a box at its floor
+ * size (`LOD.minBoxCells`) is a plain closed rectangle that OPENS into this look as its true size grows (`BOX_STYLE.open`, `boxOpenness`).
  */
 export const BOX_STYLE = {
   /** Cells lit in every dash. */
@@ -199,6 +201,14 @@ export const BOX_STYLE = {
   arm: { frac: 0.1, min: 3, max: 14 },
   /** Gap between dashes in cells: `frac` of the box's smaller side, between `min` and `max`. */
   gap: { frac: 0.035, min: 2, max: 9 },
+  /**
+   * How the box opens (2026-10-13, owner: a city's box at its floor size should be a rectangle that splits into corners and dashes as it grows).
+   * The box's TRUE size, as a multiple of its floor size, goes from `from` (the gap is 0: a closed rectangle, whatever the arm) to `to` (the full
+   * look): the gap grows from 0 to its full value on a straight line and is rounded to whole cells, so the rectangle gets a one cell notch in
+   * the middle of each edge, then a wider one, then its dashes. A corner arm that is at least half of the side with no gap IS a rectangle, so
+   * there is no pop: the picture changes by a cell at a time, and only where the size crosses a threshold.
+   */
+  open: { from: 1, to: 2 },
 } as const;
 
 /** How one box is dashed: arm length and gap, in cells. */
@@ -209,10 +219,28 @@ export interface Dashing {
 
 const clampInt = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v)));
 
-/** The arm and gap of a box of `w x h` cells (by the smaller side: both axes share them, so the four corners match). */
-export function dashingFor(w: number, h: number): Dashing {
+/**
+ * How open a box is, 0 (a closed rectangle: its true size is at its floor or under) to 1 (the full corner-and-dash look): from the box's TRUE
+ * size (the SMALLER of its width and height as projected, before the floor is applied: the arms and the gaps are sized by the short side) against the
+ * floor size, both in px. Monotone and
+ * continuous in the size. Not a function of the snapped box, so a floor-sized box that breathes by a cell while the globe turns keeps one look.
+ */
+export function boxOpenness(truePx: number, floorPx: number): number {
+  if (!(floorPx > 0) || !Number.isFinite(truePx)) return 1;
+  const { from, to } = BOX_STYLE.open;
+  return Math.max(0, Math.min(1, (truePx / floorPx - from) / (to - from)));
+}
+
+/**
+ * The arm and gap of a box of `w x h` cells (by the smaller side: both axes share them, so the four corners match) at openness `open` (0..1,
+ * `boxOpenness`; 1 by default: the full look). The arm is the one of the full look (it does not show while the gap is 0), the gap runs from 0
+ * to the full look's on a straight line, in whole cells: non-decreasing in the size, and 0 gives a closed rectangle.
+ */
+export function dashingFor(w: number, h: number, open = 1): Dashing {
   const side = Math.min(w, h);
-  return { arm: clampInt(side * BOX_STYLE.arm.frac, BOX_STYLE.arm.min, BOX_STYLE.arm.max), gap: clampInt(side * BOX_STYLE.gap.frac, BOX_STYLE.gap.min, BOX_STYLE.gap.max) };
+  const gapFull = clampInt(side * BOX_STYLE.gap.frac, BOX_STYLE.gap.min, BOX_STYLE.gap.max);
+  const o = Math.max(0, Math.min(1, open));
+  return { arm: clampInt(side * BOX_STYLE.arm.frac, BOX_STYLE.arm.min, BOX_STYLE.arm.max), gap: o >= 1 ? gapFull : Math.round(gapFull * o) };
 }
 
 /**
@@ -232,7 +260,7 @@ export function edgeLit(i: number, n: number, solid: boolean, dash: Dashing = da
 /**
  * A box: a one-cell outline around the cells of `rect` and, inside it, the interior mask in the page colour. The outline is the rest
  * tone, or the ink when `active`. At rest and hovered the four corners are solid and the rest of each edge is dashed (a map of boxes is
- * quiet; `dashingFor` sizes the arms and the gaps by the box's size, and `edgeLit` anchors each edge to one corner); selected (`solid`) it is
+ * quiet; `dashingFor` sizes the arms and the gaps by the box's size and how far it has opened from its floor, and `edgeLit` anchors each edge to one corner); selected (`solid`) it is
  * one uninterrupted line. It is one cell thick in every state: nothing doubles. The mask stops short of the outline, so a translucent
  * outline is composited over the map exactly like an opaque one is.
  */
@@ -242,7 +270,7 @@ export function drawBox(buf: PixelBuffer, rect: CellRect, tones: LabelTones, sty
   if (style.fillAlpha > 0) buf.fillRect(rect.c0 + 1, rect.r0 + 1, w - 2, h - 2, tones.bg, style.fillAlpha);
   const solid = !!style.solid;
   const level = (style.active ? tones.active : tones.rest).box;
-  const dash = dashingFor(w, h);
+  const dash = dashingFor(w, h, style.open ?? 1);
   for (let i = 0; i < w; i++) {
     if (edgeLit(i, w, solid, dash)) buf.set(rect.c0 + i, rect.r0, level, style.alpha); // top: anchored at its left corner
     if (h > 1 && edgeLit(w - 1 - i, w, solid, dash)) buf.set(rect.c0 + i, rect.r1 - 1, level, style.alpha); // bottom: at its right corner
@@ -317,6 +345,8 @@ export interface SpotUnits {
   gap?: number;
   /** How far a plate aligned with a box edge sticks out past it, so that the TEXT (which has padding inside its plate) lines up with the edge. Default 0. */
   bleed?: number;
+  /** The same for a plate beside its box (`left`, `right`): its top sticks out this far above the box's top edge. Default 0. */
+  bleedY?: number;
   /** A plate that would stick out of the grid is pulled back inside it (it slides along its box's edge, or stays at the screen's edge over the box) instead of being refused: the position of a label that is kept while its box moves. */
   slide?: boolean;
   /**
@@ -326,6 +356,45 @@ export interface SpotUnits {
    * others to the nearest cell. Absent: the positions are exact (the pixel text, tests).
    */
   lattice?: Lattice;
+}
+
+/**
+ * How far the CARD moves when its label is selected, in units of the plate's bleed: the plate of a label at rest hangs outside its box's edge so
+ * that the text is flush with it (`bleed`); the selected label is a card whose plate is flush with the box instead, so it moves towards the box
+ * by exactly what hung out. A left-aligned plate (above or below, at the box's left edge) moves right, a right-aligned one left, one beside its
+ * box down (its top is flush with the box's top edge); a nested one, or one shifted along an edge, is where it is (no edge to align with).
+ * The drawn plate (DOM transform) and the plate the hit hull and the plan reserve both come from this one function.
+ */
+export function selectedShift(id: number, bleed: number, bleedY: number): { dx: number; dy: number } {
+  switch (id) {
+    case SPOT.aboveLeft:
+    case SPOT.aboveVisibleLeft:
+    case SPOT.belowLeft:
+      return { dx: bleed, dy: 0 };
+    case SPOT.aboveRight:
+    case SPOT.aboveVisibleRight:
+    case SPOT.belowRight:
+      return { dx: -bleed, dy: 0 };
+    case SPOT.left:
+    case SPOT.right:
+      return { dx: 0, dy: bleedY };
+    default:
+      return { dx: 0, dy: 0 };
+  }
+}
+
+/**
+ * How far the CARD actually moves when its label is selected: `selectedShift`'s nominal move, limited to what was really hanging out. A plate that
+ * was held on the screen by the clamp or slid back by `spotAt` at the screen's edge (a box at x = 3 has a plate at 0, not at 3 - bleed) is already
+ * nearer its box's edge than `bleed`, and moving it by the whole `bleed` would leave the card that much off the box. `plate`: where the plate is (its
+ * top-left corner) and its width; `box`: the box's rectangle, in the same units.
+ */
+export function selectedShiftAt(id: number, bleed: number, bleedY: number, plate: { x: number; y: number; w: number }, box: { c0: number; c1: number; r0: number; r1?: number }): { dx: number; dy: number } {
+  const s = selectedShift(id, bleed, bleedY);
+  if (s.dx > 0) return { dx: Math.max(0, Math.min(s.dx, box.c0 - plate.x)), dy: 0 };
+  if (s.dx < 0) return { dx: Math.min(0, Math.max(s.dx, box.c1 - plate.w - plate.x)), dy: 0 };
+  if (s.dy > 0) return { dx: 0, dy: Math.max(0, Math.min(s.dy, box.r0 - plate.y)) };
+  return s;
 }
 
 /** The art-pixel grid as a lattice of positions: `cell` CSS px, with a lattice point at (`ox`, `oy`). */
@@ -357,6 +426,18 @@ export function coversBox(x: number, y: number, w: number, h: number, rect: Cell
 }
 
 /**
+ * The padding that hangs outside the box's edge never takes the plate off the screen: against the screen's edge the plate stays on it (the text is
+ * then up to `bleed` from the box's edge, which is itself at the screen's edge). The one function of this clamp: the planner (`spotAt`) and the cut
+ * of the hierarchy (engine/lod-tree.ts `plateAt`) both call it, so the cut keeps the above-left and above-right slots of a box within `bleed` of the edge.
+ */
+export function holdBleedOnScreen(id: number, x: number, w: number, width: number, bleed: number): number {
+  if (!(bleed > 0)) return x;
+  if (id === SPOT.aboveLeft || id === SPOT.aboveVisibleLeft || id === SPOT.belowLeft) return Math.max(x, 0);
+  if (id === SPOT.aboveRight || id === SPOT.aboveVisibleRight || id === SPOT.belowRight) return Math.min(x, width - w);
+  return x;
+}
+
+/**
  * The place of candidate `id` for a plate of `w x h` around `rect` (the same function for a position remembered from an earlier frame and for
  * the list below), or false when it is not available: the plate would leave the grid, a nested one does not fit inside the box, or the
  * edge is too short to shift along. `out` receives the corner and whether it is nested. Positions are relative to the VISIBLE part of the box
@@ -367,6 +448,7 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
   const quant = units.quant ?? 1; // (0 is exact, not the default)
   const gap = units.gap ?? 0;
   const bleed = units.bleed ?? 0;
+  const bleedY = units.bleedY ?? 0;
   const lat = units.lattice;
   // which way a coordinate is rounded on the lattice: down (away from the box) for plates above or beside it
   let downX = false;
@@ -420,12 +502,12 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
       break;
     case SPOT.left:
       x = rect.c0 - w - gap;
-      y = rect.r0;
+      y = rect.r0 - bleedY;
       downX = true;
       break;
     case SPOT.right:
       x = rect.c1 + gap;
-      y = rect.r0;
+      y = rect.r0 - bleedY;
       break;
     default: {
       const k = id >= SPOT.belowShift ? id - SPOT.belowShift : id - SPOT.aboveShift;
@@ -437,6 +519,7 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
       downY = id < SPOT.belowShift;
     }
   }
+  x = holdBleedOnScreen(id, x, w, grid.cols, bleed);
   if (lat) {
     x = snapToLattice(x, lat.ox, lat.cell, downX);
     y = snapToLattice(y, lat.oy, lat.cell, downY);

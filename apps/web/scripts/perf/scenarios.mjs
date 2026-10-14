@@ -134,6 +134,31 @@ export const SCENARIOS = [
     },
   },
   {
+    id: "caption-enter",
+    title: "caption: the showcase turned off and on five times, 1.4 s apart (boxes and labels fade against the caption's entrance round the planet; it is part of the globe's own frames)",
+    ring: true,
+    flags: { showcase: "1" },
+    async setup(page) {
+      await settleWorld(page);
+      await waitQuiet(page, { quietMs: 600, minMs: 300 });
+    },
+    async run(page) {
+      const a = await page.evaluate(() => ({ draws: window.__pf.drawsTotal, frames: window.__globeDebug.frames() }));
+      for (let k = 0; k < 5; k++) {
+        await page.evaluate(() => window.__globeDebug.showcase(false));
+        await sleep(700);
+        await page.evaluate(() => window.__globeDebug.showcase(true));
+        await sleep(1400);
+      }
+      const b = await page.evaluate(() => ({ draws: window.__pf.drawsTotal, frames: window.__globeDebug.frames(), c: window.__globeDebug.caption() }));
+      await waitQuiet(page, { quietMs: 600, minMs: 200, maxMs: 4000 });
+      const rest = await page.evaluate(() => ({ draws: window.__pf.drawsTotal, raf: window.__pf.rafCalls }));
+      await sleep(1500);
+      const rest2 = await page.evaluate(() => ({ draws: window.__pf.drawsTotal, raf: window.__pf.rafCalls }));
+      return { glFrames: b.frames - a.frames, glDraws: b.draws - a.draws, built: b.c?.built, font: b.c?.font, showcase: b.c?.showcase, restDraws: rest2.draws - rest.draws };
+    },
+  },
+  {
     id: "s1",
     title: "S1 world view, slow rotation by drag (street not mounted)",
     async setup(page) {

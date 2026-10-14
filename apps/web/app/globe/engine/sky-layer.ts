@@ -109,6 +109,8 @@ export interface SkyFrame {
   bufW: number;
   bufH: number;
   shiftBuf: number;
+  /** How far the projection centre is lifted, buffer px (the landing hero covers the bottom). */
+  liftBuf?: number;
 }
 
 export class SkyLayer {
@@ -184,7 +186,7 @@ export class SkyLayer {
 
   /** Per frame: decide on/off, advance the timed value, set the uniforms. `now` is the clock (ms) the fade runs on; `instant`: reduced motion. */
   sync(frame: SkyFrame, now: number, instant: boolean) {
-    const geo = skyGeometry(frame.d, frame.bufW, frame.bufH, frame.shiftBuf);
+    const geo = skyGeometry(frame.d, frame.bufW, frame.bufH, frame.shiftBuf, frame.liftBuf ?? 0);
     this.rhoMax = geo.rhoMax;
     this.geo = geo;
     this.on = skyWanted(this.on, geo.rhoMax);

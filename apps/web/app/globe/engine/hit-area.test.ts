@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HIT, convexHull, distanceToHull, isBigBox, nodeHull, outlineDistance, pickAlpha, pickNode, targetDistance, type Rect, type Target } from "./hit-area";
+import { HIT, convexHull, distanceToHull, isBigBox, minTargetBox, nodeHull, outlineDistance, pickAlpha, pickNode, targetDistance, type Rect, type Target } from "./hit-area";
 import { LOD } from "./lod-tree";
 
 // A small box (25 px) at (100, 100) with a label plate much wider than it, sitting just above its top edge.
@@ -164,5 +164,27 @@ describe("a group that is cross-fading out does not steal a click from the child
     }
     // the group and the child are both targets for a while (so a click is never lost in the middle of the fade)
     expect(both).toBeGreaterThan(0);
+  });
+});
+
+describe("the pointer target does not shrink with the drawing (the floor of a drawn box is 5 cells, 12.5 px)", () => {
+  it("minTargetBox grows a small box about its centre to HIT.minBoxPx on each axis and leaves a bigger one alone", () => {
+    const small: Rect = { x0: 100, y0: 200, x1: 112.5, y1: 212.5 };
+    const g = minTargetBox(small);
+    expect([g.x1 - g.x0, g.y1 - g.y0]).toEqual([HIT.minBoxPx, HIT.minBoxPx]);
+    expect([(g.x0 + g.x1) / 2, (g.y0 + g.y1) / 2]).toEqual([106.25, 206.25]);
+    const wide: Rect = { x0: 0, y0: 0, x1: 80, y1: 12.5 };
+    const w = minTargetBox(wide);
+    expect([w.x1 - w.x0, w.y1 - w.y0]).toEqual([80, HIT.minBoxPx]);
+    const big: Rect = { x0: 0, y0: 0, x1: 60, y1: 40 };
+    expect(minTargetBox(big)).toBe(big);
+    expect(HIT.minBoxPx).toBeGreaterThanOrEqual(22.5); // what a box could not be smaller than before the floor went down
+  });
+  it("a click 11 px from the centre of a floor-sized drawing (inside its 24 px target) and 15 px (within the 4 px slop) is on it, 20 px is not: as it was with the old 22.5 px floor", () => {
+    const drawn: Rect = { x0: 100, y0: 100, x1: 112.5, y1: 112.5 };
+    const t = target(1, minTargetBox(drawn), null);
+    expect(pickNode([t], 106.25 + 11, 106.25, "mouse", 0.3)).toBe(1); // 11 px from the centre: inside the 24 px target
+    expect(pickNode([t], 106.25 + 15, 106.25, "mouse", 0.3)).toBe(1); // within the 4 px slop of it
+    expect(pickNode([t], 106.25 + 20, 106.25, "mouse", 0.3)).toBe(-1);
   });
 });
