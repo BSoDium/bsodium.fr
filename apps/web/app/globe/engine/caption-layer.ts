@@ -165,7 +165,7 @@ export interface CaptionState {
   seed: number | null;
   lines: { text: string; parent: number; theta: number; visible: boolean; halfSpanDeg: number; baseLat: number; capR: number; side: number; styles: string[] }[];
   /** The phrase sets that take turns: how many, which one is shown, whether a swap is on, and whether a timer is waiting for the next. */
-  cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number };
+  cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number; lastOut: number[]; lastIn: number[] };
   clearances: number[];
   centreY: number;
   texture: { width: number; height: number }[];
@@ -357,6 +357,8 @@ export class CaptionLayer {
   private cur = 0;
   private swap: Swap | null = null;
   private swaps = 0;
+  private lastOut: number[] = [];
+  private lastIn: number[] = [];
   private timer = 0;
   private paused = false;
   /** What the parallels' solver costs (checks): the last, the worst and how many times it ran. */
@@ -546,6 +548,8 @@ export class CaptionLayer {
     this.swaps++;
     const sides = entranceSides((this.motion.seed ?? 0) ^ 0x5bd1e995, this.swaps, rows * 2);
     this.swap = { from, to, t0: now, frozen: null, out: sides.slice(0, rows), in: sides.slice(rows) };
+    this.lastOut = this.swap.out;
+    this.lastIn = this.swap.in;
     return true;
   }
 
@@ -769,7 +773,7 @@ export class CaptionLayer {
         side: this.motion.side(v.row),
         styles: [...new Set(v.line.runs.map((r) => r.style ?? "plain"))],
       })),
-      cycle: { sets: this.opts.content.sets.length, current: this.cur, swapping: this.swap !== null, waiting: this.timer !== 0, paused: this.paused, swaps: this.swaps },
+      cycle: { sets: this.opts.content.sets.length, current: this.cur, swapping: this.swap !== null, waiting: this.timer !== 0, paused: this.paused, swaps: this.swaps, lastOut: this.lastOut, lastIn: this.lastIn },
       clearances: b?.clearances ?? [],
       centreY: b?.centreY ?? 0,
       solver: { lastMs: this.placeMs, maxMs: this.placeMax, runs: this.places },

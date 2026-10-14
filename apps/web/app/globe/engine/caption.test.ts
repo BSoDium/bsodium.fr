@@ -583,6 +583,32 @@ describe("the sides the lines come in from", () => {
     }
   });
 
+  it("takes the FIRST entrance's sides from the session seed on the layer's real path (seed set, then show, then the rows are laid out), not from the null default", () => {
+    let west = 0;
+    let allEast = 0;
+    const N = 400;
+    for (let i = 0; i < N; i++) {
+      // the layer: a fresh motion, its seed assigned in the constructor, `show(null)` before the first frame, the rows set when the build lands
+      const m = new CaptionMotion();
+      m.seed = (Math.imul(i + 1, 2654435761) >>> 1) | 0;
+      m.enter(null);
+      m.setStarts([start, start, start, start], [0, 1, 2, 3]);
+      const sides = [0, 1, 2, 3].map((r) => m.side(r));
+      west += sides.filter((x) => x === -1).length;
+      if (sides.every((x) => x === 1)) allEast++;
+      // the sign of the turn is the side: east is positive, the line starts to the right and travels left
+      expect(sides.map((x, r) => Math.sign(m.angle(0, r, start)))).toEqual(sides.map((x) => (x === 1 ? 1 : -1)));
+    }
+    expect(west / (4 * N)).toBeGreaterThan(0.44);
+    expect(west / (4 * N)).toBeLessThan(0.56);
+    expect(allEast / N).toBeLessThan(0.2); // 1 in 16 on paper
+    // a missing seed is the plain default: all from the east (documented; the layer always gives one)
+    const n = new CaptionMotion();
+    n.enter(null);
+    n.setStarts([start, start], [0, 1]);
+    expect([n.side(0), n.side(1)]).toEqual([1, 1]);
+  });
+
   it("gives the same sequence for the same seed (the generator)", () => {
     const r1 = seededUnit(42);
     const r2 = seededUnit(42);
