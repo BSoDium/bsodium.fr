@@ -2,45 +2,49 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { NavLink, useLocation, useMatches } from "react-router";
 import { SearchPalette, SearchTriggers } from "~/components/search-palette";
 import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView } from "~/lib/entries";
+import { GESTURE_GUARD_CAP_MS, GESTURE_GUARD_MS, GestureGuard } from "~/lib/gesture-guard";
 import { useHeroResting } from "~/lib/hero-rest";
 import { SITE_NAME } from "~/lib/site";
 import { cn } from "~/lib/utils";
 
-/**
- * How long after the pointer sequence that made the header appear its controls ignore the pointer, ms. A touch tap fires its click at whatever is
- * under the finger when the finger lifts: if the press collapsed the hero, the header's row is there by then, and a tap near the top of the
- * globe would activate a link nobody aimed at (observed: "Articles", navigating away).
- */
-export const GESTURE_GUARD_MS = 350;
+/** Re-exported for the tests that name the guard's length. */
+export { GESTURE_GUARD_CAP_MS, GESTURE_GUARD_MS };
 const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /**
  * Guards the header that appears BECAUSE OF a gesture on the home page (the hero stepping back): while `data-guard` is on it, CSS (app.css,
  * `[data-slot="site-header"][data-guard]`) makes its controls ignore the pointer, so the click that gesture produces lands on the globe
- * beneath, which has no click behaviour. The guard ends `GESTURE_GUARD_MS` after the pointer sequence that is going on has ended (or after
- * the header appeared when none is). Only `pointer-events`: the header stays visible, keyboard focus and assistive technology are not
- * affected (activating a link by them dispatches a click on the element itself). Every other way the header comes (a route change, a load)
- * is not guarded.
+ * beneath, which has no click behaviour. A touch tap fires its click at whatever is under the finger when the finger lifts: the header's row is
+ * there by then, and a tap near the top of the globe would activate a link nobody aimed at (observed: "Articles", navigating away). The guard
+ * ends `GESTURE_GUARD_MS` after the pointer sequence that is going on has ended (or after the header appeared when none is), and in any case
+ * `GESTURE_GUARD_CAP_MS` after it appeared (`lib/gesture-guard.ts`: a pointerup that never came must not leave the header inert). Only
+ * `pointer-events`: the header stays visible, keyboard focus and assistive technology are not affected (activating a link by them dispatches a
+ * click on the element itself). Every other way the header comes (a route change, a load) is not guarded.
  */
 function useGestureGuard(bar: boolean, onHome: boolean, ref: { current: HTMLElement | null }) {
   const was = useRef(bar);
-  const pointers = useRef(0);
-  const lastEnd = useRef(0);
+  const guard = useRef<GestureGuard | null>(null);
+  guard.current ??= new GestureGuard();
   useEffect(() => {
-    const down = (e: Event) => {
-      if (e.type === "pointerdown") pointers.current++;
+    const g = guard.current!;
+    const down = (e: Event) => g.pointerDown((e as PointerEvent).pointerId ?? 0);
+    const up = (e: Event) => g.pointerUp((e as PointerEvent).pointerId ?? 0, performance.now());
+    const reset = () => g.reset(performance.now());
+    const hidden = () => {
+      if (document.hidden) reset();
     };
-    const up = () => {
-      pointers.current = Math.max(0, pointers.current - 1);
-      lastEnd.current = performance.now();
-    };
-    window.addEventListener("pointerdown", down, { capture: true, passive: true });
-    window.addEventListener("pointerup", up, { capture: true, passive: true });
-    window.addEventListener("pointercancel", up, { capture: true, passive: true });
+    const opts = { capture: true, passive: true } as const;
+    window.addEventListener("pointerdown", down, opts);
+    window.addEventListener("pointerup", up, opts);
+    window.addEventListener("pointercancel", up, opts);
+    window.addEventListener("blur", reset);
+    document.addEventListener("visibilitychange", hidden);
     return () => {
-      window.removeEventListener("pointerdown", down, { capture: true });
-      window.removeEventListener("pointerup", up, { capture: true });
-      window.removeEventListener("pointercancel", up, { capture: true });
+      window.removeEventListener("pointerdown", down, opts);
+      window.removeEventListener("pointerup", up, opts);
+      window.removeEventListener("pointercancel", up, opts);
+      window.removeEventListener("blur", reset);
+      document.removeEventListener("visibilitychange", hidden);
     };
   }, []);
   useIsoLayoutEffect(() => {
@@ -48,17 +52,18 @@ function useGestureGuard(bar: boolean, onHome: boolean, ref: { current: HTMLElem
     was.current = bar;
     const el = ref.current;
     if (!appeared || !onHome || !el) return;
+    const g = guard.current!;
+    const at = performance.now();
     el.setAttribute("data-guard", "");
-    lastEnd.current = Math.max(lastEnd.current, performance.now());
     let timer = 0;
-    const release = () => {
-      if (pointers.current > 0 || performance.now() - lastEnd.current < GESTURE_GUARD_MS) {
-        timer = window.setTimeout(release, 50);
+    const check = () => {
+      if (g.mayRelease(at, performance.now())) {
+        el.removeAttribute("data-guard");
         return;
       }
-      el.removeAttribute("data-guard");
+      timer = window.setTimeout(check, 50);
     };
-    timer = window.setTimeout(release, GESTURE_GUARD_MS);
+    timer = window.setTimeout(check, GESTURE_GUARD_MS);
     return () => {
       window.clearTimeout(timer);
       el.removeAttribute("data-guard");

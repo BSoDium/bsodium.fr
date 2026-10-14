@@ -218,7 +218,11 @@ export default function GlobeCanvas({
             latest.current.onViewChange(view);
             perfEnd("react.onViewChange", t0);
           },
-          onContextChange: (lost) => setStatus(lost ? "lost" : "ready"),
+          onContextChange: (lost) => {
+            setStatus(lost ? "lost" : "ready");
+            // The caption's pixels are gone with the context: the hero's how-to line must be there over a dead globe, and goes again on restore.
+            latest.current.onOrbit?.(lost ? false : (handleRef.current?.hasOrbit() ?? false));
+          },
           onReveal: veil ? () => setRevealed(true) : undefined,
           streetOptions: debugEnabled() ? streetDebugOptions() : undefined,
           dissolve: debugEnabled() ? dissolveForTests() : undefined,

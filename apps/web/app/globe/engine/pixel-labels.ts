@@ -221,7 +221,8 @@ const clampInt = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi
 
 /**
  * How open a box is, 0 (a closed rectangle: its true size is at its floor or under) to 1 (the full corner-and-dash look): from the box's TRUE
- * size (the larger of its width and height as projected, before the floor is applied) against the floor size, both in px. Monotone and
+ * size (the SMALLER of its width and height as projected, before the floor is applied: the arms and the gaps are sized by the short side) against the
+ * floor size, both in px. Monotone and
  * continuous in the size. Not a function of the snapped box, so a floor-sized box that breathes by a cell while the globe turns keeps one look.
  */
 export function boxOpenness(truePx: number, floorPx: number): number {
@@ -382,6 +383,20 @@ export function selectedShift(id: number, bleed: number, bleedY: number): { dx: 
   }
 }
 
+/**
+ * How far the CARD actually moves when its label is selected: `selectedShift`'s nominal move, limited to what was really hanging out. A plate that
+ * was held on the screen by the clamp or slid back by `spotAt` at the screen's edge (a box at x = 3 has a plate at 0, not at 3 - bleed) is already
+ * nearer its box's edge than `bleed`, and moving it by the whole `bleed` would leave the card that much off the box. `plate`: where the plate is (its
+ * top-left corner) and its width; `box`: the box's rectangle, in the same units.
+ */
+export function selectedShiftAt(id: number, bleed: number, bleedY: number, plate: { x: number; y: number; w: number }, box: { c0: number; c1: number; r0: number; r1?: number }): { dx: number; dy: number } {
+  const s = selectedShift(id, bleed, bleedY);
+  if (s.dx > 0) return { dx: Math.max(0, Math.min(s.dx, box.c0 - plate.x)), dy: 0 };
+  if (s.dx < 0) return { dx: Math.min(0, Math.max(s.dx, box.c1 - plate.w - plate.x)), dy: 0 };
+  if (s.dy > 0) return { dx: 0, dy: Math.max(0, Math.min(s.dy, box.r0 - plate.y)) };
+  return s;
+}
+
 /** The art-pixel grid as a lattice of positions: `cell` CSS px, with a lattice point at (`ox`, `oy`). */
 export interface Lattice {
   cell: number;
@@ -408,6 +423,18 @@ export function clampOn(v: number, lo: number, hi: number, origin?: number, cell
 /** The plate `x, y, w, h` overlaps the box `rect` (its outline is the ring along the rectangle's edge, so any overlap covers an arm or a dash). */
 export function coversBox(x: number, y: number, w: number, h: number, rect: CellRect): boolean {
   return x < rect.c1 && x + w > rect.c0 && y < rect.r1 && y + h > rect.r0;
+}
+
+/**
+ * The padding that hangs outside the box's edge never takes the plate off the screen: against the screen's edge the plate stays on it (the text is
+ * then up to `bleed` from the box's edge, which is itself at the screen's edge). The one function of this clamp: the planner (`spotAt`) and the cut
+ * of the hierarchy (engine/lod-tree.ts `plateAt`) both call it, so the cut keeps the above-left and above-right slots of a box within `bleed` of the edge.
+ */
+export function holdBleedOnScreen(id: number, x: number, w: number, width: number, bleed: number): number {
+  if (!(bleed > 0)) return x;
+  if (id === SPOT.aboveLeft || id === SPOT.aboveVisibleLeft || id === SPOT.belowLeft) return Math.max(x, 0);
+  if (id === SPOT.aboveRight || id === SPOT.aboveVisibleRight || id === SPOT.belowRight) return Math.min(x, width - w);
+  return x;
 }
 
 /**
@@ -492,10 +519,7 @@ export function spotAt(id: number, rect: CellRect, w: number, h: number, grid: G
       downY = id < SPOT.belowShift;
     }
   }
-  // the padding that hangs outside the box's edge never takes the plate off the screen: against the screen's edge the plate stays on it (the text is
-  // then up to `bleed` from the box's edge, which is itself at the screen's edge)
-  if (bleed > 0 && (id === SPOT.aboveLeft || id === SPOT.aboveVisibleLeft || id === SPOT.belowLeft)) x = Math.max(x, Math.min(0, xl));
-  if (bleed > 0 && (id === SPOT.aboveRight || id === SPOT.aboveVisibleRight || id === SPOT.belowRight)) x = Math.min(x, Math.max(grid.cols - w, xr - w));
+  x = holdBleedOnScreen(id, x, w, grid.cols, bleed);
   if (lat) {
     x = snapToLattice(x, lat.ox, lat.cell, downX);
     y = snapToLattice(y, lat.oy, lat.cell, downY);

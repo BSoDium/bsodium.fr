@@ -180,7 +180,7 @@ describe("the pointer target does not shrink with the drawing (the floor of a dr
     expect(minTargetBox(big)).toBe(big);
     expect(HIT.minBoxPx).toBeGreaterThanOrEqual(22.5); // what a box could not be smaller than before the floor went down
   });
-  it("a click 8 px outside a floor-sized drawing is on its target, as it was with the old 22.5 px floor (mouse slop 4 px)", () => {
+  it("a click 11 px from the centre of a floor-sized drawing (inside its 24 px target) and 15 px (within the 4 px slop) is on it, 20 px is not: as it was with the old 22.5 px floor", () => {
     const drawn: Rect = { x0: 100, y0: 100, x1: 112.5, y1: 112.5 };
     const t = target(1, minTargetBox(drawn), null);
     expect(pickNode([t], 106.25 + 11, 106.25, "mouse", 0.3)).toBe(1); // 11 px from the centre: inside the 24 px target

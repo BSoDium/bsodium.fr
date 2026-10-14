@@ -40,7 +40,7 @@ export interface LabelView {
   /** The node's own opacity (its timed fade), 0..1. */
   alpha: number;
   /**
-   * How far the plate moves when the label is selected (px; engine/pixel-labels.ts `selectedShift`): the plate at rest hangs outside its box so the
+   * How far the plate moves when the label is selected (px; engine/pixel-labels.ts `selectedShiftAt`): the plate at rest hangs outside its box so the
    * text is flush with the box's edge, the selected card is flush with the box. Written as the CSS custom properties the stylesheet's `translate`
    * of a selected label reads (a compositor transition, no layout); written whenever the slot changes, whatever the mode is.
    */

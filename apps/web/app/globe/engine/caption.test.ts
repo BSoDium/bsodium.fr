@@ -251,6 +251,63 @@ describe("the entrance: fast, then a slow settle, staggered, a function of time"
   });
 });
 
+describe("leaving and entering again, cut short", () => {
+  const start = 2.6;
+
+  it("keeps a line that has not begun to arrive behind the planet: it does not sweep across the face on its way out", () => {
+    const m = new CaptionMotion();
+    m.setStarts([start, start]);
+    m.enter(0);
+    // 50 ms in: line 0 has begun, line 1 is still waiting for its stagger (140 ms)
+    m.leave(50);
+    for (const t of [50, 90, 150, 240]) {
+      expect(m.angle(t, 1, start)).toBe(start);
+      expect(m.angle(t, 0, start)).toBeLessThan(start);
+    }
+    // while a line that was in view goes on across, and ends hidden on the other side
+    expect(m.angle(50 + CAPTION.leaveMs * 0.99, 0, start)).toBeLessThan(0);
+    // a showcase that ends before its first frame (a pending entrance) never shows anything
+    const p = new CaptionMotion();
+    p.setStarts([start]);
+    p.enter(null);
+    expect(p.animating).toBe(false); // nothing moves before the first frame gives it a clock
+    p.leave(10);
+    for (const t of [10, 100, 200]) expect(p.angle(t, 0, start)).toBe(start);
+  });
+
+  it("goes on from where it is when a leaving is cut short by an entrance: no jump, no stagger, and it settles into its place", () => {
+    const m = new CaptionMotion();
+    m.setStarts([start, start]);
+    m.enter(0);
+    m.leave(400);
+    const at = [m.angle(520, 0, start), m.angle(520, 1, start)];
+    m.enter(520);
+    expect(m.phase).toBe("in");
+    // the first reading of the new entrance is the last one of the leaving
+    expect(m.angle(520, 0, start)).toBeCloseTo(at[0]!, 9);
+    expect(m.angle(520, 1, start)).toBeCloseTo(at[1]!, 9);
+    for (let t = 530; t <= 520 + CAPTION.enter.ms; t += 40) {
+      expect(Math.abs(m.angle(t, 0, start))).toBeLessThanOrEqual(Math.abs(at[0]!) + 1e-9);
+    }
+    m.angle(520 + CAPTION.enter.ms + entranceMs(2), 0, start);
+    expect(m.angle(520 + 3000, 0, start)).toBe(0);
+    expect(m.phase).toBe("rest");
+  });
+
+  it("enters from behind the planet when it comes from hidden, and ignores an entrance while one is running", () => {
+    const m = new CaptionMotion();
+    m.setStarts([start]);
+    m.enter(0);
+    m.leave(10);
+    m.angle(10 + CAPTION.leaveMs + 1, 0, start); // out -> hidden
+    m.enter(1000);
+    expect(m.angle(1000, 0, start)).toBe(start);
+    const mid = m.angle(1100, 0, start);
+    m.enter(1100); // a second show while in: nothing restarts
+    expect(m.angle(1100, 0, start)).toBe(mid);
+  });
+});
+
 describe("the faces", () => {
   it("falls back along the chain to the face that reads at the size the page has, the bitmap font last", () => {
     expect(legibleFont("jacquard", 19)).toBe("jacquard");

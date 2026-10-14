@@ -36,7 +36,7 @@ export const LABEL_TYPE = {
    * How far the plate sticks out past the box's edge it is aligned with (2026-10-13, owner: "the text should be aligned with the edge of the
    * bbox"): the plate's padding HANGS OUTSIDE the box, `padX` past the left edge of a left-aligned label (and the right edge of a
    * right-aligned one), so the TEXT and the box's edge share one vertical line. A SELECTED label is the card: it moves by this much towards the
-   * box (a transform, `selectedShift` in pixel-labels.ts) so its plate is flush on the box and the padding is inside the card, as before.
+   * box (a CSS `translate`, `selectedShiftAt` in pixel-labels.ts) so its plate is flush on the box and the padding is inside the card, as before.
    * `bleedY` is the same for a label beside its box (left or right of it): its plate's top hangs `padY` above the box's top edge.
    */
   bleed: 6,

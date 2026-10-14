@@ -49,7 +49,7 @@ import { LABEL_TYPE, labelVariants, type LabelText } from "./label-text";
 import { LOD, type LodTree } from "./lod-tree";
 import type { NodeScreen } from "./node-screen";
 import { textFloorLevel } from "./palette";
-import { ALPHA_STEPS, HASH_SEED, PixelOverlay, SPOT, boxOpenness, dashingFor, drawBox, hashStep, labelTones, quantAlpha, selectedShift, type CellRect, type LabelTones } from "./pixel-labels";
+import { ALPHA_STEPS, HASH_SEED, PixelOverlay, SPOT, boxOpenness, dashingFor, drawBox, hashStep, labelTones, quantAlpha, selectedShiftAt, type CellRect, type LabelTones } from "./pixel-labels";
 
 /** Room kept between a label and the boxes of the other nodes, px (the early opening keeps `LOD.open.gapPx.leave` from every box and label: the same). */
 const AVOID_PAD = LOD.open.gapPx.leave;
@@ -351,11 +351,12 @@ export class BoxScene {
   }
 
   /**
-   * How far label `t`'s plate moves when it is selected (`selectedShift`: the plate at rest hangs outside its box so that the text is flush with the
-   * box's edge, the selected card is flush with the box): kept within the room, so the card stays on the screen. A function of the slot only.
+   * How far label `t`'s plate moves when it is selected (`selectedShiftAt`: the plate at rest hangs outside its box so that the text is flush with the
+   * box's edge, the selected card is flush with the box): by what really hangs out, and kept within the room, so the card stays on the screen.
    */
   private cardShift(t: Item, x: number, y: number, w: number, h: number): { dx: number; dy: number } {
-    const s = selectedShift(t.place.cand, LABEL_TYPE.bleed, LABEL_TYPE.bleedY);
+    // (limited to what hangs out: a plate held on the screen by the edge's clamp is already nearer its box than the bleed)
+    const s = selectedShiftAt(t.place.cand, LABEL_TYPE.bleed, LABEL_TYPE.bleedY, { x, y, w }, t.cont);
     if (s.dx === 0 && s.dy === 0) return s;
     const room = this.view();
     return { dx: Math.max(-x, Math.min(room.cols - w - x, s.dx)), dy: Math.max(-y, Math.min(room.rows - h - y, s.dy)) };

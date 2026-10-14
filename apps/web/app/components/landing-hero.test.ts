@@ -141,7 +141,7 @@ describe("the name's travel and the collapsed name (owner, round 3, item 3)", ()
     expect(src).toContain("el.animate(");
     expect(src).not.toMatch(/requestAnimationFrame|setInterval/);
     // the keyframes: the start and the end, transform only
-    expect([...src.matchAll(/\{ transform(?:: [^}]*)? \}/g)]).toHaveLength(3); // the start, the end, and the held state's, whichever way it goes
+    expect([...src.matchAll(/\{ transform(?:: [^}]*)? \}/g)]).toHaveLength(2); // the start and the end of the travel, whichever way it goes (`lib/name-travel.test.ts` tests the choreography)
     expect(src).not.toContain('direction: "reverse"');
     expect(css).toMatch(/\.hero-given,\s*\.hero-family \{\s*display: inline-block;\s*transform-origin: 0 0;/);
   });

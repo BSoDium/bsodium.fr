@@ -5,6 +5,7 @@ import { Icon, KeyHint } from "~/components/ui";
 import { KIND_PATHS, KIND_PLURALS } from "~/lib/entries";
 import type { HeroMachine, HeroSnapshot } from "~/lib/hero-machine";
 import { setHeroResting } from "~/lib/hero-rest";
+import { NameTravel, type TravelHalf } from "~/lib/name-travel";
 import { SITE, SITE_FOCUS, SITE_IDENTITY } from "~/lib/site";
 
 /** The four shortcuts, in the header's order. Paths and words come from the one table the lists and the navigation use. */
@@ -67,42 +68,28 @@ function holdName(root: HTMLElement, collapsed: boolean): void {
 }
 
 /**
- * The name's two halves shrink and travel to the collapsed line, or back (a FLIP: the rectangles are measured once, here, and the browser runs a
- * `transform` animation on the compositor: translate and ONE uniform scale per half, no font size, no layout, no JS per frame; `will-change` only
- * for the length of the animation, by the Web Animations API itself). The collapsed name IS these halves: the inline transform that is the
- * animation's end is set at the start (the animation overrides it while it runs), so there is no frame at which anything is handed over; going
- * back the inline transform is removed at the start and the animation runs from where they were. An animation still running is turned round, not
- * restarted. Returns the running animations.
+ * The halves as the choreography (`lib/name-travel.ts`) sees them: measured once here, run by `Element.animate` on `transform` (translate and ONE
+ * uniform scale per half: no font size, no layout, no JS per frame; `will-change` only for the length of the animation, by the API itself).
  */
-function travelName(root: HTMLElement, running: Animation[], toMini: boolean): Animation[] {
-  if (running.length > 0 && running.every((a) => a.playState === "running")) {
-    for (const a of running) a.reverse();
-    return running;
-  }
-  for (const a of running) a.cancel();
-  const finals = finalTransforms(root);
-  const out: Animation[] = [];
-  for (const { el, transform } of finals) {
-    if (typeof el.animate !== "function") {
-      if (toMini) el.style.transform = transform;
-      else el.style.removeProperty("transform");
-      continue;
-    }
-    if (toMini) el.style.transform = transform;
-    else el.style.removeProperty("transform");
-    // The way back is the same motion with the same ease (a fast start and a soft landing), from the corner to the place: not the ease run backwards
-    // (playing the animation in reverse would give a slow start and an arrival at speed).
-    const identity = { transform: "translate(0px, 0px) scale(1)" };
-    const animation = el.animate(toMini ? [identity, { transform }] : [{ transform }, identity], {
-      duration: NAME_TRAVEL_MS,
-      easing: NAME_TRAVEL_EASE,
-      fill: "both",
-    });
-    // Out of the compositor's hands the moment it is over: what is left is the inline state, which is the same picture.
-    animation.onfinish = () => animation.cancel();
-    out.push(animation);
-  }
-  return out;
+function halvesOf(root: HTMLElement): TravelHalf[] {
+  return finalTransforms(root).map(({ el, transform }) => ({
+    final: transform,
+    setInline: (value) => (value === null ? el.style.removeProperty("transform") : (el.style.transform = value)),
+    computed: () => getComputedStyle(el).transform,
+    animate: (from, to) => {
+      // The way back is the same motion with the same ease (a fast start and a soft landing), from the corner to the place: not the ease run backwards.
+      const animation = el.animate([{ transform: from }, { transform: to }], { duration: NAME_TRAVEL_MS, easing: NAME_TRAVEL_EASE, fill: "both" });
+      return {
+        cancel: () => animation.cancel(),
+        get onfinish() {
+          return animation.onfinish as (() => void) | null;
+        },
+        set onfinish(fn: (() => void) | null) {
+          animation.onfinish = fn;
+        },
+      };
+    },
+  }));
 }
 
 /** What the server (and the hydration pass) renders: the full hero. Stable object: a valid server snapshot. */
@@ -174,33 +161,44 @@ export function LandingHero({ machine, away, empty, orbit = null, onCover }: Lan
   // `away` the hero is not on screen and the name just sits where the state says; reduced motion: instant, as the CSS). The collapsed name is the
   // two halves of the big name held at the ghost line's boxes: it is re-measured when the block is resized (a window, a font arriving).
   const previous = useRef<typeof state>(state);
-  const travelling = useRef<Animation[]>([]);
+  // (`holdName` again when a travel to the corner has ended: a resize or a font that arrived during its 320 ms is not lost)
+  const travel = useRef<NameTravel | null>(null);
+  const rootForTravel = useRef<HTMLDivElement | null>(null);
+  if (travel.current === null) {
+    travel.current = new NameTravel((toCorner) => {
+      const root = rootForTravel.current;
+      if (root && toCorner) holdName(root, true);
+    });
+  }
   useIsoLayoutEffect(() => {
     const was = previous.current;
     previous.current = state;
     const root = rootRef.current;
+    rootForTravel.current = root;
     if (!root) return;
     const toMini = was === "rest" && state === "collapsed";
     const back = was === "collapsed" && state === "rest";
+    // (a turn-around, the state flipping again while the name is on its way, is a travel like any other: `NameTravel.go` starts from where it is)
     const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (was === state) return;
-    if ((!toMini && !back) || reduced) {
-      for (const a of travelling.current) a.cancel();
-      travelling.current = [];
+    if ((!toMini && !back) || reduced || typeof root.querySelector(".hero-given")?.animate !== "function") {
+      travel.current!.cancel();
       holdName(root, state === "collapsed");
       return;
     }
-    travelling.current = travelName(root, travelling.current, toMini);
+    travel.current!.go(halvesOf(root), state === "collapsed");
   }, [state]);
+  useEffect(() => () => travel.current?.cancel(), []);
   useEffect(() => {
     const root = rootRef.current;
     if (!root || state !== "collapsed" || typeof ResizeObserver === "undefined") return;
+    // The collapsed name is held at the ghost line's boxes: re-measured when the block is resized (a window, a font arriving). Not while it travels
+    // (the end of the travel re-measures).
     const ro = new ResizeObserver(() => {
-      if (travelling.current.some((a) => a.playState === "running")) return;
+      if (travel.current?.isRunning) return;
       holdName(root, true);
     });
     ro.observe(root);
-    void document.fonts?.ready.then(() => holdName(root, true));
     return () => ro.disconnect();
   }, [state]);
 

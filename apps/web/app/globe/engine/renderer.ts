@@ -381,7 +381,8 @@ export class GlobeRenderer {
   private layoutRing() {
     if (!this.ring) return;
     const { width: w, height: h } = this;
-    const key = `${w}x${h}@${this.insetTarget}`;
+    // (the art cell is part of it: a device-pixel-ratio change moves the cell and so which face reads, and a bitmap pixel's size)
+    const key = `${w}x${h}@${this.insetTarget}x${this.pixel}`;
     if (key === this.ringLayoutKey) return;
     this.ringLayoutKey = key;
     const free = freeWidth(w, clampInset(this.insetTarget, w));

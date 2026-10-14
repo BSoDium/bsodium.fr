@@ -59,12 +59,45 @@ export interface CaptionState {
   texture: { width: number; height: number }[];
 }
 
+/**
+ * One load per face of the page, for the page's life: `document.fonts` keeps what is added (a rebuild for another size must not add the same file
+ * again). The promise settles when the face is usable or has failed (a failed face is the system face: the lines are set in it rather than not at all).
+ */
+const FACE_LOADS = new Map<string, Promise<void>>();
+function loadFace(family: string, url: string, weight: number): Promise<void> {
+  const key = `${family}|${weight}|${url}`;
+  let p = FACE_LOADS.get(key);
+  if (!p) {
+    p = (async () => {
+      try {
+        const face = new FontFace(family, `url(${url})`, { weight: String(weight), display: "block" });
+        document.fonts.add(face);
+        await face.load();
+      } catch {
+        // the face did not come
+      }
+    })();
+    FACE_LOADS.set(key, p);
+  }
+  return p;
+}
+
 export class CaptionLayer {
   private motion = new CaptionMotion();
   private built: Built | null = null;
   private material: ShaderMaterial;
   private textures: CanvasTexture[] = [];
   private geometries: BufferGeometry[] = [];
+  /** The per-line materials (clones over the shared shader): each is disposed with its line. */
+  private materials: ShaderMaterial[] = [];
+  /** A build that threw (a canvas context refused, ...): the caption is not there and asks for no frames. */
+  private failed = false;
+  private vE = new Vector3();
+  private vN = new Vector3();
+  private vC = new Vector3();
+  /** The basis and turns the meshes were last placed with: a frame that changes none of them does nothing. */
+  private placed: { key: number[]; thetas: number[] } | null = null;
+  private allHidden = false;
   private disposed = false;
   private want = false;
   private reduced: boolean;
@@ -113,13 +146,20 @@ export class CaptionLayer {
     this.sizing = { cell, r };
     this.capCells = (CAPTION.capR * r) / cell;
     const font = legibleFont(this.opts.font, this.capCells);
-    if (this.built?.font === font && this.built.sizeKey === this.sizeKey()) return;
+    if (this.built?.font === font && this.built.sizeKey === this.sizeKey(font)) {
+      // what is built is what is wanted: a build for another face that is still on its way must not land on top of it
+      this.token++;
+      return;
+    }
     void this.build(font);
   }
 
-  /** What the bitmap face's scale depends on (a rebuild only when it changes). */
-  private sizeKey(): string {
-    return this.sizing ? `${Math.round(this.capCells)}` : "";
+  /**
+   * What a build depends on besides the face: only the bitmap face's scale does (a pixel of the face is a whole number of art cells), so the
+   * other faces are not rebuilt when the size moves.
+   */
+  private sizeKey(font: CaptionFont): string {
+    return font === "bitmap" && this.sizing ? `${Math.round(this.capCells)}` : "";
   }
 
   setTheme(theme: GlobeTheme): void {
@@ -158,7 +198,8 @@ export class CaptionLayer {
 
   /** Something is moving: the frame loop must keep going. */
   get animating(): boolean {
-    return this.motion.animating;
+    // Nothing to turn before the lines exist (the face is still coming, or the build failed): no frames are asked for.
+    return this.built !== null && !this.failed && this.motion.animating;
   }
 
   get isBuilt(): boolean {
@@ -171,20 +212,54 @@ export class CaptionLayer {
    */
   sync(basis: ViewBasis, now: number): void {
     const b = this.built;
-    if (!b) return;
+    if (!b || this.failed) return;
     if (this.motion.waiting) this.motion.begin(now, CAPTION.enter.loadDelayMs);
+    const n = b.meshes.length;
+    // Hidden (the showcase is off and the lines have gone): every mesh is hidden once, and then there is nothing to do, whatever the camera does.
+    if (this.motion.phase === "hidden" && this.motion.pinned === null && this.motion.pinnedAngle === null) {
+      if (!this.allHidden) {
+        for (const m of b.meshes) m.visible = false;
+        this.allHidden = true;
+        this.placed = null;
+        this.lastThetas.length = n;
+        for (let i = 0; i < n; i++) this.lastThetas[i] = b.starts[i]!;
+      }
+      return;
+    }
+    this.allHidden = false;
     const d = basis.d;
+    const e = basis.east;
+    const nn = basis.north;
+    const c = basis.c;
+    this.lastThetas.length = n;
+    let changed = this.placed === null;
+    const key = this.placed?.key ?? new Array<number>(10).fill(0);
+    const next = [e[0], e[1], e[2], nn[0], nn[1], nn[2], c[0], c[1], c[2], d];
+    for (let k = 0; k < 10; k++) {
+      if (key[k] !== next[k]) changed = true;
+      key[k] = next[k]!;
+    }
+    const thetas = this.placed?.thetas ?? new Array<number>(n).fill(NaN);
+    for (let i = 0; i < n; i++) {
+      const theta = this.motion.angle(now, i, b.starts[i]!);
+      if (thetas[i] !== theta) changed = true;
+      thetas[i] = theta;
+      this.lastThetas[i] = theta;
+    }
+    this.placed = { key, thetas };
+    // At rest with the camera still (the showcase is on and nothing moves): the meshes are where they were.
+    if (!changed) return;
     // the view's frame as a matrix: its columns are east, north and the direction to the camera, in the globe's frame
-    this.basisM.makeBasis(new Vector3(...basis.east), new Vector3(...basis.north), new Vector3(...basis.c));
+    this.vE.set(e[0], e[1], e[2]);
+    this.vN.set(nn[0], nn[1], nn[2]);
+    this.vC.set(c[0], c[1], c[2]);
+    this.basisM.makeBasis(this.vE, this.vN, this.vC);
     const { A } = bandFrame();
     this.axis.set(A[0], A[1], A[2]);
-    this.lastThetas.length = b.meshes.length;
-    for (let i = 0; i < b.meshes.length; i++) {
+    for (let i = 0; i < n; i++) {
       const mesh = b.meshes[i]!;
-      const line = b.layout.lines[i]!;
-      const theta = this.motion.angle(now, i, b.starts[i]!);
-      this.lastThetas[i] = theta;
-      const hidden = lineHidden(theta, line, d);
+      const theta = thetas[i]!;
+      const hidden = lineHidden(theta, b.layout.lines[i]!, d);
       mesh.visible = !hidden;
       if (hidden) continue;
       this.tmp.makeRotationAxis(this.axis, theta);
@@ -216,37 +291,50 @@ export class CaptionLayer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.token++;
+    this.release();
+    this.material.dispose();
+    this.built = null;
+  }
+
+  /** Take the lines out of the scene and free what they hold (geometry, texture, the per-line material). */
+  private release(): void {
     for (const m of this.built?.meshes ?? []) this.scene.remove(m);
     for (const g of this.geometries) g.dispose();
     for (const t of this.textures) t.dispose();
-    this.material.dispose();
-    this.built = null;
+    for (const m of this.materials) m.dispose();
+    this.geometries = [];
+    this.textures = [];
+    this.materials = [];
+    this.texSizes = [];
+    this.placed = null;
+    this.allHidden = false;
   }
 
   /* ------------------------------ building ------------------------------ */
 
   private async build(font: CaptionFont): Promise<void> {
     const token = ++this.token;
-    const spec = CAPTION_FONTS[font];
-    if (spec.url && typeof FontFace !== "undefined" && typeof document !== "undefined") {
-      try {
-        const face = new FontFace(spec.family, `url(${spec.url})`, { weight: String(spec.weight), display: "block" });
-        document.fonts.add(face);
-        await face.load();
-      } catch {
-        // the face did not come: the lines are set in the system face rather than not at all
+    try {
+      await this.buildLines(font, token);
+    } catch {
+      // Anything the browser refuses (a 2D context, a texture): the caption is not there, quietly, and it asks for no frames.
+      if (token === this.token && !this.disposed) {
+        this.release();
+        this.built = null;
+        this.failed = true;
       }
     }
+  }
+
+  private async buildLines(font: CaptionFont, token: number): Promise<void> {
+    const spec = CAPTION_FONTS[font];
+    if (spec.url && typeof FontFace !== "undefined" && typeof document !== "undefined") await loadFace(spec.family, spec.url, spec.weight);
     if (this.disposed || token !== this.token) return;
+    this.failed = false;
     const texts = this.opts.phrases.map((p) => (spec.upper ? p.trim().toLocaleUpperCase("en") : p.trim())).filter((p) => p.length > 0);
     if (texts.length === 0) return;
-    // A rebuild replaces the lines: the old ones go first.
-    for (const m of this.built?.meshes ?? []) this.scene.remove(m);
-    for (const g of this.geometries) g.dispose();
-    for (const t of this.textures) t.dispose();
-    this.geometries = [];
-    this.textures = [];
-    this.texSizes = [];
+    // The sheets first (they can throw): a rebuild replaces the lines only once the new ones are made.
     const sheets = font === "bitmap" ? this.bitmapSheets(texts) : this.canvasSheets(font, texts);
     const widths = sheets.map((s) => s.widthEm);
     let capR: number = CAPTION.capR;
@@ -261,6 +349,8 @@ export class CaptionLayer {
       }
     }
     const layout = layoutCaption(texts, widths, spec.capEm, spec.boxCaps, capR);
+    this.release();
+    this.built = null;
     const meshes: Mesh[] = [];
     layout.lines.forEach((line, i) => {
       const sheet = sheets[i]!;
@@ -280,6 +370,7 @@ export class CaptionLayer {
       // one material per line (its own texture) over the shared shader
       const mat = this.material.clone();
       mat.uniforms = { uMap: { value: tex }, uInk: this.material.uniforms.uInk!, uBack: this.material.uniforms.uBack! };
+      this.materials.push(mat);
       const mesh = new Mesh(g, mat);
       mesh.matrixAutoUpdate = false;
       mesh.frustumCulled = false;
@@ -290,7 +381,7 @@ export class CaptionLayer {
     });
     const starts = layout.lines.map((l) => entranceStart(l));
     this.motion.setStarts(starts);
-    this.built = { font, layout, meshes, starts, sizeKey: this.sizeKey() };
+    this.built = { font, layout, meshes, starts, sizeKey: this.sizeKey(font) };
     if (this.want && this.reduced) this.motion.settle(true);
     this.opts.onChange();
   }
@@ -302,16 +393,18 @@ export class CaptionLayer {
     const face = `${spec.weight} ${emPx}px "${spec.family}", system-ui, sans-serif`;
     const outlinePx = CAPTION.outline * CAPTION.texCap;
     const pad = Math.ceil(outlinePx * 2 + 4);
-    const probe = document.createElement("canvas").getContext("2d")!;
-    probe.font = face;
+    const probe = document.createElement("canvas").getContext("2d");
+    if (probe) probe.font = face;
     return texts.map((text) => {
+      if (!probe) throw new Error("no 2D context");
       const advance = probe.measureText(text).width + spec.tracking * emPx * text.length;
       const w = Math.ceil(advance + 2 * pad);
       const h = Math.ceil(spec.boxCaps * CAPTION.texCap);
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
-      const c = canvas.getContext("2d")!;
+      const c = canvas.getContext("2d");
+      if (!c) throw new Error("no 2D context");
       c.font = face;
       c.textBaseline = "alphabetic";
       c.textAlign = "left";
@@ -343,7 +436,8 @@ export class CaptionLayer {
       const canvas = document.createElement("canvas");
       canvas.width = wPx * k;
       canvas.height = rows * k;
-      const c = canvas.getContext("2d")!;
+      const c = canvas.getContext("2d");
+      if (!c) throw new Error("no 2D context");
       c.scale(k, k);
       // a stroke is a pixel of the face and a little more: at one art cell a pixel the sampling would otherwise drop the thinnest strokes
       const e = CAPTION.bitmapBold;

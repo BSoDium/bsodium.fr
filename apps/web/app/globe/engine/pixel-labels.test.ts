@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CLEAR, MIXED, PixelBuffer } from "./pixel-buffer";
-import { ALPHA_STEPS, BOX_STYLE, LABEL_PAD, MIN_LABEL_CHARS, SPOT, TEXT_GAP, boxOpenness, chipText, dashingFor, drawBox, drawLabel, edgeLit, labelCandidates, labelLayout, labelTones, labelVariants, quantAlpha, selectedShift, snapToLattice, spotAt } from "./pixel-labels";
+import { ALPHA_STEPS, BOX_STYLE, LABEL_PAD, MIN_LABEL_CHARS, SPOT, TEXT_GAP, boxOpenness, chipText, dashingFor, drawBox, drawLabel, edgeLit, labelCandidates, labelLayout, labelTones, labelVariants, holdBleedOnScreen, quantAlpha, selectedShift, selectedShiftAt, snapToLattice, spotAt } from "./pixel-labels";
 import { FONT_CAP, FONT_DESCENT, measureText } from "./pixel-font/pixel-font";
 import { buildRamp, textFloorLevel } from "./palette";
 
@@ -631,5 +631,39 @@ describe("the text is flush with the box's edge when the label is not selected; 
     const right = { c0: 950, r0: 100, c1: 998, r1: 130 };
     expect(spotAt(SPOT.aboveRight, right, W, H, grid, U, o)).toBe(true);
     expect(o.x + W).toBeLessThanOrEqual(grid.cols);
+  });
+});
+
+describe("a box at the screen's edge: the bleed is held on the screen, and the card is flush with the box it really is next to", () => {
+  const grid = { cols: 200, rows: 100 };
+  const W = 60;
+  const H = 12;
+
+  it("holdBleedOnScreen is the clamp spotAt applies: left-aligned slots stay at 0 or more, right-aligned at the grid's width less the plate or less", () => {
+    expect(holdBleedOnScreen(SPOT.aboveLeft, -3, W, 200, 6)).toBe(0);
+    expect(holdBleedOnScreen(SPOT.aboveVisibleLeft, 4, W, 200, 6)).toBe(4);
+    expect(holdBleedOnScreen(SPOT.aboveRight, 150, W, 200, 6)).toBe(140);
+    expect(holdBleedOnScreen(SPOT.insideTopLeft, -3, W, 200, 6)).toBe(-3); // no bleed hangs out of a nested plate
+    expect(holdBleedOnScreen(SPOT.aboveLeft, -3, W, 200, 0)).toBe(-3);
+    // and spotAt gives exactly that for a box 3 px from the left edge
+    const rect = { c0: 3, c1: 50, r0: 40, r1: 80 };
+    const at = { x: 0, y: 0, inside: false };
+    expect(spotAt(SPOT.aboveLeft, rect, W, H, grid, { bleed: 6, gap: 3 }, at)).toBe(true);
+    expect(at.x).toBe(holdBleedOnScreen(SPOT.aboveLeft, rect.c0 - 6, W, grid.cols, 6));
+    expect(at.x).toBe(0);
+  });
+
+  it("selectedShiftAt moves the card by what really hangs out: the plate held at 0 by a box at x = 3 moves 3, not the whole bleed", () => {
+    const rect = { c0: 3, c1: 50, r0: 40, r1: 80 };
+    expect(selectedShiftAt(SPOT.aboveLeft, 6, 3, { x: 0, y: 25, w: W }, rect)).toEqual({ dx: 3, dy: 0 });
+    // away from the edge it is the nominal shift
+    expect(selectedShiftAt(SPOT.aboveLeft, 6, 3, { x: 94, y: 25, w: W }, { c0: 100, c1: 150, r0: 40, r1: 80 })).toEqual({ dx: 6, dy: 0 });
+    // right-aligned: the plate held at the right edge
+    expect(selectedShiftAt(SPOT.aboveRight, 6, 3, { x: 140, y: 25, w: W }, { c0: 100, c1: 197, r0: 40, r1: 80 })).toEqual({ dx: -3, dy: 0 });
+    // a slid plate (already flush or past the edge) does not move the wrong way
+    expect(selectedShiftAt(SPOT.aboveLeft, 6, 3, { x: 10, y: 25, w: W }, { c0: 4, c1: 50, r0: 40, r1: 80 })).toEqual({ dx: 0, dy: 0 });
+    // beside the box: down by what hangs above its top edge
+    expect(selectedShiftAt(SPOT.right, 6, 3, { x: 52, y: 38, w: W }, rect)).toEqual({ dx: 0, dy: 2 });
+    expect(selectedShiftAt(SPOT.insideTopLeft, 6, 3, { x: 4, y: 41, w: W }, rect)).toEqual({ dx: 0, dy: 0 });
   });
 });

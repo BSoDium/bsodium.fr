@@ -39,9 +39,9 @@ export interface CaptionFontSpec {
 }
 
 export const CAPTION_FONTS: Record<CaptionFont, CaptionFontSpec> = {
-  /** Jacquard 24 (Soft Type Project, SIL OFL 1.1): a pixel blackletter; subset of Basic Latin, `public/fonts/jacquard-24-1.002-latin-400.woff2` (18.9 kB). */
+  /** Jacquard 24 (The Soft Type Project Authors, SIL OFL 1.1): a pixel blackletter; subset of Basic Latin, `public/fonts/jacquard-24-1.002-latin-400.woff2` (18.9 kB). */
   jacquard: { url: "/fonts/jacquard-24-1.002-latin-400.woff2", family: "Jacquard 24", weight: 400, capEm: 750 / 1290, boxCaps: 2.3, upper: false, tracking: 0.02, minCapCells: 13 },
-  /** Pixelify Sans (Stefie Justprince, SIL OFL 1.1), instanced at weight 700; Basic Latin, `public/fonts/pixelify-sans-1.000-latin-700.woff2` (3.9 kB). */
+  /** Pixelify Sans (The Pixelify Sans Project Authors, SIL OFL 1.1), instanced at weight 700; Basic Latin, `public/fonts/pixelify-sans-1.000-latin-700.woff2` (3.9 kB). */
   pixelify: { url: "/fonts/pixelify-sans-1.000-latin-700.woff2", family: "Pixelify Sans", weight: 700, capEm: 0.7, boxCaps: 1.9, upper: true, tracking: 0.04, minCapCells: 12 },
   /** The map's own pixel font (engine/pixel-font), 7 px capitals, scaled up by a whole number: no file, no font load. */
   bitmap: { url: null, family: "Fusion Pixel", weight: 400, capEm: 0.7, boxCaps: 2, upper: true, tracking: 0, minCapCells: 7 },
@@ -262,12 +262,23 @@ export class CaptionMotion {
     this.starts = [...starts];
   }
 
-  /** The showcase begins: the lines come in (from hidden, or from where a leaving had got to, when it is cut short: they are behind the planet either way). */
+  /**
+   * The showcase begins: the lines come in. From hidden they start behind the planet (`start`, staggered). When a leaving is cut short the lines
+   * are on the face or on their way out on the other side: each goes on from exactly where it is (no stagger, no jump) and settles into its place.
+   */
   enter(now: number | null): void {
+    if (this.phase === "in") return;
+    this.enterFrom = null;
+    if (this.phase === "out" && now !== null) {
+      this.enterFrom = this.starts.map((s, i) => this.angle(now, i, s));
+    }
     this.phase = "in";
     this.pending = now === null;
     this.t0 = now ?? 0;
   }
+
+  /** Where each line was when an entrance cut a leaving short (null: from behind the planet). */
+  private enterFrom: number[] | null = null;
 
   /** Whether `enter` is waiting for a first time reading. */
   get waiting(): boolean {
@@ -282,14 +293,21 @@ export class CaptionMotion {
     }
   }
 
-  /** The showcase ends: the lines go on behind the planet. */
+  /**
+   * The showcase ends: the lines on the face go on behind the planet the other way. A line that has not begun to arrive (waiting for the first
+   * frame, its load delay or its stagger) is still behind the planet, and STAYS there: it does not sweep across the face on its way "out".
+   */
   leave(now: number): void {
     if (this.phase === "hidden" || this.phase === "out") return;
     // each line goes on from where it is now (an entrance cut short keeps every line where it had got to)
     this.leaveAngles = this.starts.map((s, i) => this.angle(now, i, s));
+    this.leaveStays = this.leaveAngles.map((a, i) => a >= (this.starts[i] ?? 0) - 1e-9);
     this.phase = "out";
     this.t0 = now;
   }
+
+  /** Per line: it was still at its start when the leaving began. */
+  private leaveStays: boolean[] = [];
 
   private leaveAngles: number[] = [];
 
@@ -313,9 +331,10 @@ export class CaptionMotion {
       case "rest":
         return 0;
       case "in": {
-        if (this.pending) return start;
+        if (this.pending) return this.enterFrom?.[i] ?? start;
         const t = now - this.t0;
-        const a = enteringAngle(t, i, start);
+        const from = this.enterFrom?.[i];
+        const a = from === undefined ? enteringAngle(t, i, start) : from * (1 - easeOutExpo(t / CAPTION.enter.ms));
         if (t >= entranceMs(this.starts.length || 1)) {
           this.phase = "rest";
           return 0;
@@ -328,6 +347,7 @@ export class CaptionMotion {
           this.phase = "hidden";
           return start;
         }
+        if (this.leaveStays[i]) return start;
         return leavingAngle(t, this.leaveAngles[i] ?? 0, start);
       }
     }
@@ -335,7 +355,8 @@ export class CaptionMotion {
 
   /** Something is moving (the frame loop must keep going). */
   get animating(): boolean {
-    return this.pinned === null && this.pinnedAngle === null && (this.phase === "in" || this.phase === "out");
+    // (a pending entrance is not a frame loop: nothing moves until the first frame has given it a clock)
+    return this.pinned === null && this.pinnedAngle === null && ((this.phase === "in" && !this.pending) || this.phase === "out");
   }
 }
 

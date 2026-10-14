@@ -67,6 +67,7 @@ import { countryName } from "./country-names";
 import { FadeArray, clockStep, easeFade } from "./fade";
 import { groupSub, nodeEntryCounts, placeSub, subText, type EntryRef, type LabelSub } from "./label-sub";
 import { LABEL_TYPE, labelText } from "./label-text";
+import { holdBleedOnScreen, SPOT } from "./pixel-labels";
 import { TUNING } from "./tuning";
 import { markerShown } from "./visibility";
 
@@ -1408,6 +1409,10 @@ export class LodTree {
       return true;
     }
     this.plateX = cand === 0 || cand === 2 ? this.boxX0[c]! - bleed : cand === 1 || cand === 3 ? this.boxX1[c]! - w + bleed : cand === 4 ? this.boxX1[c]! + g : this.boxX0[c]! - w - g;
+    // (the same clamp as the planner's `spotAt`, one function: a box within `bleed` of the canvas's edge keeps its slots above its corners. The
+    // planner's SLIDE back onto the screen is not shared: it admits plates the cut's calibrated crowding rules were not tuned with, and `open.test.ts`'s
+    // sweeps (pairs closer than the leave gap) go over their limits with it)
+    if (cand < 4) this.plateX = holdBleedOnScreen(CUT_SPOTS[cand]!, this.plateX, w, this.cam.width, bleed);
     this.plateY = cand < 2 ? this.boxY0[c]! - h - g : cand < 4 ? this.boxY1[c]! + g : this.boxY0[c]! - LABEL_TYPE.bleedY;
     return true;
   }
@@ -1422,6 +1427,9 @@ export class LodTree {
     this.wantFill[i] = this.fillOn[i]!;
   }
 }
+
+/** The cut's four slots that hang out of the box's edge (`plateAt` 0 to 3) as the planner's slot ids. */
+const CUT_SPOTS: readonly number[] = [SPOT.aboveLeft, SPOT.aboveRight, SPOT.belowLeft, SPOT.belowRight];
 
 /** Nodes of a tree from the seam's places and groups (`GlobeGroup`, `GlobePlace`). */
 export function buildLodNodes(
