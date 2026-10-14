@@ -26,6 +26,10 @@ describe("entryJsonLd", () => {
       image: `${ORIGIN}/media/x/c.jpg`,
       keywords: "a, b",
       contentLocation: [{ "@type": "Place", name: "Lisbon", url: `${ORIGIN}/locations/lisbon` }],
+      copyrightHolder: { "@type": "Person", name: "Elliot Négrel-Jerzy" },
+      copyrightYear: 2024,
+      copyrightNotice:
+        "© 2024 Elliot Négrel-Jerzy. All rights reserved. Please do not reproduce this article without permission; short quotations with attribution are welcome.",
       isPartOf: { "@type": "WebSite", name: "Elliot Négrel-Jerzy", url: `${ORIGIN}/` },
     });
   });
@@ -33,6 +37,18 @@ describe("entryJsonLd", () => {
     const ld = entryJsonLd(entry({}), ORIGIN);
     for (const key of ["author", "publisher", "datePublished", "description", "image", "keywords", "contentLocation"]) expect(ld).not.toHaveProperty(key);
     expect(Object.values(ld).every((v) => v !== undefined && v !== null && v !== "")).toBe(true);
+  });
+  it("states the copyright of writing and artwork (holder, year when known, notice) and of software nothing", () => {
+    const poem = entryJsonLd(entry({ kind: "poem", href: "/poetry/a", date: "2021-03", meta: [{ label: "Language", value: "French" }] }), ORIGIN);
+    expect(poem).toMatchObject({ copyrightHolder: { "@type": "Person", name: "Elliot Négrel-Jerzy" }, copyrightYear: 2021 });
+    expect(poem.copyrightNotice).toContain("Tous droits réservés");
+    const undated = entryJsonLd(entry({ kind: "artwork", href: "/artworks/a" }), ORIGIN);
+    expect(undated).toHaveProperty("copyrightHolder");
+    expect(undated).toHaveProperty("copyrightNotice");
+    expect(undated).not.toHaveProperty("copyrightYear");
+    expect(undated).not.toHaveProperty("license");
+    const code = entryJsonLd(entry({ kind: "project", href: "/software/a", url: "https://github.com/a/b" }), ORIGIN);
+    for (const key of ["copyrightHolder", "copyrightYear", "copyrightNotice"]) expect(code).not.toHaveProperty(key);
   });
   it("caps the article headline at 110 characters (schema.org's advice) and keeps the full name", () => {
     const ld = entryJsonLd(entry({ title: "x".repeat(150) }), ORIGIN);
