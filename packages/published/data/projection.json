@@ -1627,15 +1627,121 @@
       "body": [
         {
           "type": "paragraph",
-          "text": "Replicating reality is a goal that we have essentially always been striving to achieve. This obsession with realism started with cave paintings, and has now reached the age of computer-generated imagery, with highly advanced, mathematically-proven methods, one of these being caustics."
+          "text": "Elliot Négrel-Jerzy, ENSEEIHT - Computer Science Dept."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Abstract"
         },
         {
           "type": "paragraph",
-          "text": "This paper explains in simple words the idea behind texture projections, ray tracing, volumetric lighting and real-time simulation, and what makes these methods effective."
+          "text": "Replicating reality is a goal that we have essentially always been striving to achieve. This obsession with realism started with cave paintings, and has now reached the age of computer-generated imagery, with highly advanced, mathematically-proven methods, one of these being caustics. The existing literature does cover many approaches to this phenomenon, and their perks, including the following, which we intend to discuss here: we’ll explore texture projections, ray-tracing, volumetric lighting, and real-time simulation, opposed to precomputed rendering. Despite the variety of these subjects, this paper’s fundamental aim is to explain in simple words the idea behind these methods, as well as what makes them so effective."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Cost-performance trade-off"
+        },
+        {
+          "type": "paragraph",
+          "text": "The most obvious distinction which comes to mind when talking about rendering objects, is between real-time and precomputed simulations. Both approaches do obviously offer unique advantages which are sought after in specific fields of computer imagery."
+        },
+        {
+          "type": "paragraph",
+          "text": "Pre-rendering, as expected, is not suitable for videogames, or any kind of interactive medium, since it consists of generating the images/video feed beforehand. This is done very often on a powerful machine, allowing for more complex and detailed simulations, while keeping the rendering speeds pretty low compared to what it would take for an average computer to do the same. Therefore, this technique is mostly used in cinematography and filmmaking, with software such as Blender 3D (open source), Cinema 4D, 3ds Max and many others (Fig. 1)."
+        },
+        {
+          "type": "paragraph",
+          "text": "Fig. 1: Most popular 3D Modelling tools in 2016, sorted by market presence vertically and user satisfaction horizontally (G2, 2016)"
+        },
+        {
+          "type": "paragraph",
+          "text": "In contrast, real-time rendering techniques are extensively becoming the preferred method for 3D imagery (Christen, 2017), due to their speed, which allows for an efficient workflow, and a quick visualisation of the final result. Now, obviously, this speed doesn’t come without a cost: accuracy is considered low priority, hence algorithms which require heavy computations will often be replaced with visually similar, although physically incorrect alternatives."
+        },
+        {
+          "type": "paragraph",
+          "text": "However, it is important to note that nowadays, the frontier between these two categories is becoming thinner with the constant increase in computing power, and the new algorithms made available on the market (cf. Unreal Engine 5 – Lumen Global Illumination and Reflections). On the same note, software usually used in pre-computed rendering can be applied to virtual reality, and other forms of interactive 3D visualization in some very specific hardware configurations (Interactive rendering with blender cycles for virtual reality using hpc clusters, 2019), such as the one described below (Fig. 2). Here, the computing power is fully relocated to a high-performance computing data centre, which can handle the rendering of 60 images in one second. This cloud-computing infrastructure receives lightweight network packets containing user input data, and sends back compressed images back to the user’s interface."
+        },
+        {
+          "type": "paragraph",
+          "text": "Fig. 2: Cloud-computing infrastructure, featuring an HPC distributed rendering Cluster (Interactive rendering with blender cycles for virtual reality using hpc clusters, 2019)"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Caustic Rendering"
+        },
+        {
+          "type": "paragraph",
+          "text": "Now that we have properly defined the technical solutions used in the field of computer-generated imagery, we can finally explore in detail what Caustics are, and how most render engines approach them."
+        },
+        {
+          "type": "paragraph",
+          "text": "Caustic networks are shapes of concentrated light projected onto a surface, which are created when rays of light pass through a curved object made of a transparent material. A common occurrence of these optic artefacts is a glass of water exposed to a powerful light source (Fig. 3). Again, various methods are available. The most naïve approach uses ray-tracing (Wyman, et al., 2004) to calculate the colour of each pixel of the image. To keep things simple, it can be summarized in the following manner: the computer casts a ray from each pixel of the camera, which intersects both the pixel of the near plane¹ (see Fig. 4) and the eye point (centre of the projection). This ray then bounces off the faces of the objects it encounters, or gets through them, following the basic principles of refraction and reflection angles; throughout this process, it gains or loses energy, as the surfaces it hits absorb part of it. The ray will keep on bouncing until a maximum number of iterations (set by the user) is reached. If by then it has not collided with a light source, the pixel will be black, or else it will inherit the light source’s colour (this is a clear oversimplification of the process, if you want to know more about it, please check the bibliography (Arvo, 1986))."
+        },
+        {
+          "type": "paragraph",
+          "text": "¹ The near plane, or near clipping plane lies perpendicular to the camera direction. The distance from the camera (eye point) to the near plane is the closest distance that any object can be to the camera while still remaining in the view."
+        },
+        {
+          "type": "paragraph",
+          "text": "Fig. 3: Caustics created by a glass of water (cgiknowledge, 2013)"
+        },
+        {
+          "type": "paragraph",
+          "text": "Fig. 4: Common representation of a virtual camera in 3D rendering (Moccozet, 2008)"
+        },
+        {
+          "type": "paragraph",
+          "text": "This approach is efficient, but as you might have guessed by now, extremely costly and slow. Hence, the preferred technique in the video game and virtual/augmented reality industry, attempts to replace most of these heavy calculations with pre-computed models (Zeltner, et al., 2020), at the expense of accuracy. This sacrifice is however absolutely legitimate, since as long as the player does not physically interact with the shape of the object through which light shines, there is no reason for the game to recompute the aforementioned model in real-time."
+        },
+        {
+          "type": "paragraph",
+          "text": "A common example (Dual Heights Software AB, 2021) of its use is water: pre-calculated caustics textures are projected onto the ocean/pool floor (Fig. 5) and distorted to create the illusion of movement, while the water surface itself is displaced according to an independent noise texture. The lack of consistency between cause (distortion of the water surface) and effect (resulting caustic network) remains unnoticed as long as the waves are low in height and uniform."
+        },
+        {
+          "type": "paragraph",
+          "text": "Fig. 5: Caustic network textures projected onto various shapes in Unity 3D (Dual Heights Software AB, 2021)"
+        },
+        {
+          "type": "paragraph",
+          "text": "More complex situations, such as moving glass surfaces or dynamic bodies of water, require more advanced models (Villani, 2009), which allow the algorithm to avoid using actual ray-tracing, and still get significantly convincing results."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Conclusion"
+        },
+        {
+          "type": "paragraph",
+          "text": "With the increasing presence of virtual and augmented reality in our lives on a daily basis, computer graphics have become a major part of our lives, and before we know it, we might as well end up spending more time in simulated environments than in our actual world. Thus, the breakthroughs made in the field of lighting, and more specifically caustics are more than necessary, they are vital to our mental health in the long run. Despite the fact that at this point, we still need to use smart tricks (Xiao, et al., 2020) to get away with the extensive complexity and cost of our algorithms, it is safe to assume that, in a couple years, we’ll have sorted these issues out, either by improving our hardware or by creating new, more efficient software solutions."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "References"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "Arvo, James. 1986. Backward Ray Tracing. Developments in Ray Tracing, SIGGRAPH '86 Course Notes. Chelmsford : s.n., 1986, Vol. 12.",
+            "cgiknowledge. 2013. caustics_glass_image. cgiknowledge.files.wordpress.com. [Online] 2013. https://cgiknowledge.files.wordpress.com/2013/01/caustics_glass_image.jpg.",
+            "Christen, Jonas. 2017. Reconstructing Vindonissa as a living document - A case-study of digital reconstruction for output to pre-rendered and real-time applications. Zurich : Zurich University of the Arts, 2017.",
+            "Dual Heights Software AB. 2021. caustics-water-texturing-using-unity3d. www.dualheights.se. [Online] 2021. https://www.dualheights.se/caustics/caustics-water-texturing-using-unity3d.shtml.",
+            "G2. 2016. g2.com. [Online] 2016. https://www.g2.com/categories/3d-modeling.",
+            "Interactive rendering with blender cycles for virtual reality using high performance computing clusters. Jaros, Milan, et al. 2019. s.l. : aip.scitation.org, 2019. AIP Conference Proceedings 2116, 320005. p. 2.",
+            "Moccozet, Laurent. 2008. Camera-perspective-To-illustrate-the-camera-frustum-manipulation. www.researchgate.net. [Online] July 2008. https://www.researchgate.net/profile/Laurent-Moccozet/publication/216127594/figure/fig5/AS:651866769735680@1532428557051/Camera-perspective-To-illustrate-the-camera-frustum-manipulation-we-create-two-separated.png.",
+            "Villani, Cedric. 2009. Optimal Transport - Old and New. s.l. : Springer, Berlin, Heidelberg, 2009.",
+            "Wyman, Chris, Hansen, Charles and Shirley, Peter. 2004. Interactive Caustics Using Local Precomputed Irradiance. Salt Lake City, Utah, USA : School of Computing, The University of Utah, 2004.",
+            "Xiao, Lei, et al. 2020. Neural supersampling for real-time rendering. s.l. : Facebook Reality Labs, 2020.",
+            "Zeltner, Tizian, Georgiev, Iliyan and Jakob, Wenzel. 2020. Specular Manifold Sampling for Rendering High-Frequency Caustics and Glints. 2020."
+          ]
         },
         {
           "type": "link",
-          "title": "Full text on ResearchGate",
+          "title": "Also on ResearchGate",
           "url": "https://www.researchgate.net/publication/360604514_Rendering_techniques_applied_to_caustics"
         },
         {
@@ -1671,15 +1777,123 @@
       "body": [
         {
           "type": "paragraph",
-          "text": "Virtual reality is a software marvel combined with decades of experience in computer hardware and sensors, and a tool now used in a large variety of domains."
+          "text": "Elliot Négrel-Jerzy, ENSEEIHT - Computer Science Dept."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Abstract"
         },
         {
           "type": "paragraph",
-          "text": "This article compares and summarises, in a clear and concise manner, the many approaches chosen to address the subject: the existing hardware, the most commonly used tracking systems, and the software that brings the machinery to life."
+          "text": "Virtual reality, a dream become reality, a software marvel combined with decades of experience in computer hardware, sensors, but also, most importantly a tool, now used in a large variety of domains. Although at first sight, the concept might seem easy to get a grasp of, the technology behind it is considerably more complex than one might think at first sight. The available literature is extremely detailed and comprehensive; therefore, this article’s aim is to compare and summarize in a clear and concise manner the many approaches chosen to address the subject. We’ll be exploring the existing hardware, as well as the most commonly used tracking systems and the software bringing this whole machinery to life."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "VR display hardware solutions"
+        },
+        {
+          "type": "paragraph",
+          "text": "The state-of-the-art virtual reality headsets available on the market have led major companies such as Meta or Google to seriously consider investing in this domain, despite the initial drawbacks that the new technology came with. Their interest is, to this day, one of the main reasons why these devices are being mass produced, and are as a result, substantially cheap."
+        },
+        {
+          "type": "paragraph",
+          "text": "After taking a look at the actual design of one of these headsets (Parkin, 2014), we can identify three “main” components, the first being the circuit board. It features a highly powerful graphical processing unit, due to the very high requirements in terms of display latency: extended looking at a slow and unresponsive video feed has proven to induce nausea and headaches."
+        },
+        {
+          "type": "paragraph",
+          "text": "Figure 1: Inside view of an Oculus Rift VR headset (Parkin, 2014)"
+        },
+        {
+          "type": "paragraph",
+          "text": "This board is then connected to a high-definition display module, whose technology can vary depending on the budget (LCD or OLED solutions are often preferred). However, the most commonly encountered design uses a backlit liquid crystal display, i.e., a non-emissive, translucent layer of so-called liquid crystals (extensively small cells whose color can be dynamically changed by applying a specific voltage for each color), coupled with a monochrome light-emitting backlight unit (BLU), which ensured the visibility of the content displayed on the aforementioned layer, by shining light through it."
+        },
+        {
+          "type": "paragraph",
+          "text": "Figure 2: Schematic diagram of an LCD (Liquid crystal display and organic light-emitting diode display: present status and future perspectives, 2017)"
+        },
+        {
+          "type": "paragraph",
+          "text": "Finally, two lenses are positioned in front of both eyes, ensuring that the perceived image is positioned “at infinity”, so as to reduce eye strain. This setting essentially means that the light coming from the objects as seen through the lens will appear to be coming from a very long distance, thus allowing the user’s eyes to effortlessly focus on them."
+        },
+        {
+          "type": "paragraph",
+          "text": "At this point, we do have a fairly accurate view of how an average entry-level VR headset’s works; therefore, we can dive into the existing hardware solutions used in movement and position tracking."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Tracking systems"
+        },
+        {
+          "type": "paragraph",
+          "text": "Presently, virtual reality is being used in a plethora of domains, most of which require an interaction between the user and the virtual environment in which he is immersed, hence the necessity of tracking movement and position in space, sometimes even to the accuracy level of finger movement."
+        },
+        {
+          "type": "paragraph",
+          "text": "Multiple solutions do exist, and yet it would be a lie to say that these are in competition on the market, as each and every single one of them is more suitable for certain specific use cases. Open environments with great freedom of movement, such as virtual reality battle arenas (e.g., EVA) or military combat training infrastructure (Lele, 2011), will require positional tracking of limbs and weapons, which best works using optical tracking methods. The monitored zone cannot be infinite, and must be surrounded with cameras, coupled with highly powerful light projectors (preferably infrared, due to its imperceptibility to the human eye). The user should be equipped with judiciously placed retro-reflective markers, so as to minimize the positional estimation error; obviously, these markers are in general specifically designed to reflect extremely well the light frequency emitted by the aforementioned projectors. In the end, what the cameras see is an extremely dark image, covered with blindingly white dots, which correspond to the limbs of the user, and whose coordinates can later be determined, in order to programmatically calculate his position. Variations of this method may involve laser emitters instead of markers (Simulation of a virtual reality tracking system, 2011), whose beams will project dots of light on the walls of the monitored room. However, both techniques make use of cameras when it comes to locating them."
+        },
+        {
+          "type": "paragraph",
+          "text": "Figure 3: Visualization of an optical tracker's detection system (RetroTracker: Upgrading Existing Virtual Reality Tracking Systems, 2019)"
+        },
+        {
+          "type": "paragraph",
+          "text": "High precision motion capture is usually sought after in VR apps which call for (included but not limited to) hand-gesture detection and close contact interactions with the environment. Again, several solutions are available to the public: optical detection in conjunction with AI algorithms, or gloves/suits equipped with structural deformation sensors."
+        },
+        {
+          "type": "paragraph",
+          "text": "Figure 4: Motion capture using an Optitrack marker suit and IMU-based gloves (Parger, et al., 2020)"
+        },
+        {
+          "type": "paragraph",
+          "text": "Yet, these systems could never be this efficient if it wasn’t for the software that analyses the generated data."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Software appliances"
+        },
+        {
+          "type": "paragraph",
+          "text": "The main challenge that programmers have to face when designing so-called “VR-ready” software, is the need for two points of view, or cameras, one for each eye. This is due to the fact that our perception of depth is highly dependent on our ability to merge two slightly different images, allowing us to see both sides of an object at the same time when it is close to us."
+        },
+        {
+          "type": "paragraph",
+          "text": "The drastically different interface, when comparing a headset to a common computer monitor also requires many modifications in terms of user interface, but also of sound quality and graphics. Rendering techniques such as caustic shading (Négrel-Jerzy, 2022) or ray tracing may be implemented with the aim to improve the realism of an environment in which the user is supposed to feel immersed."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Conclusion"
+        },
+        {
+          "type": "paragraph",
+          "text": "The emergence of fully virtual worlds such as the metaverse by Meta (formerly Facebook) shows the increasing importance of VR in our lives, sometimes without the need for special gear: augmented reality is slowly making its way into our daily routines, mostly through some of our smartphone applications. This technology is constantly evolving, breakthroughs are being made every day, improving both its looks and its performance. And yet, this persistent seeking of innovation and progress has been proven to be our society’s main vulnerability. With climate change on our doorstep, should we really keep on following such an ethically unacceptable industrial model? It is to be hopped that we will eventually learn from our mistakes, and save ourselves from the consequences of our own choices."
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Bibliography"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "2013. John Carmack Talks Virtual Reality Latency Mitigation Strategies. TOVR. [Online] February 24, 2013. [Cited: May 14, 2022.] https://www.roadtovr.com/john-carmack-talks-virtual-reality-latency-mitigation-strategies/.",
+            "Lele, Ajey. 2011. Virtual reality and its military utility. 2011.",
+            "Liquid crystal display and organic light-emitting diode display: present status and future perspectives. Chen, Hai-Wei, et al. 2017. 2017.",
+            "Négrel-Jerzy, Elliot. 2022. Rendering techniques applied to Caustics. 2022.",
+            "Parger, Mathias, et al. 2020. UNOC: Understanding Occlusion for Embodied Presence in Virtual Reality. 2020.",
+            "Parkin, Simon. 2014. Oculus Rift. MIT technology review. [Online] April 23, 2014. [Cited: May 14, 2022.] https://www.technologyreview.com/technology/oculus-rift/.",
+            "RetroTracker: Upgrading Existing Virtual Reality Tracking Systems. Krzanich, Kylee, et al. 2019. 2019.",
+            "Simulation of a virtual reality tracking system. Patel, Kapil and Stuerzlinger, Wolfgang. 2011. 2011."
+          ]
         },
         {
           "type": "link",
-          "title": "Full text on ResearchGate",
+          "title": "Also on ResearchGate",
           "url": "https://www.researchgate.net/publication/364840600_Virtual_reality_technologies"
         }
       ],
