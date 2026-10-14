@@ -91,23 +91,25 @@ The ring of type that circles the planet's disc when the globe is zoomed out bel
 
 Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251), because at those values it reads as the same barely-there haze as the dark one and the stipple does not compete with the boxes; `?no-sky` is the off switch.
 
-### Caption (the home screen's call to action)
+### Caption (the home screen's words over the planet)
 
-The three lines that float over the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Orbiting type"): the reading serif (Newsreader, the intro's own face, no file of its own), **outlined** (the inside of a letter is the page colour, its outline the ink) and given **thickness** on the Z axis (a stack of slices towards the planet, in the ink). Two colours of the theme and nothing else: no tone of its own, a theme change is two shader uniforms, no rebuild.
+The rows that float over the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Caption on the sphere"): the reading serif (Newsreader, the intro's own face, no file of its own) in medium and heavy weights and a heavy italic, the code face (JetBrains Mono, the page's own) for "Software" and a calligraphic script (Allura) for "Poetry", **outlined** (face colour inside, a thin outline outside the glyph) and given a short **thickness** on the Z axis (a stack of slices towards the planet). Monochrome, from the globe's own palette (`captionColors`): no accent, no pure black or white; the colours are uniforms, so a theme change is no rebuild.
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `radius`, `depth`, `slices` | 1.15, 0.015, 5 | the shell the front faces float on, in planet radii (the coastlines and the graticule are at 1: parallax is visible while the globe turns); the thickness towards the planet and the slices that make it |
-| `capR` | 0.06, 0.06, 0.1 | cap height per logical line in planet radii: what the site is, what it holds, the call to action (the largest) |
-| `aboveDeg`, `aboveWrappedDeg`, `topLat` | 24, 30, -45 to 60 | the top baseline is the multiple of 7.5 degrees nearest the view's latitude plus this (28 + 24: 52.5); a small screen starts higher; the clamp |
-| `gapDeg`, `maxSpanDeg` | 0.3, 116 | the room under a line, and the most a line may span round its parallel (the cap shrinks to it) |
-| `minCapPx`, `wrapCapPx` | 11, 12 | under 11 CSS px a letter the lines are wrapped (each long line cut in two at its best delimiter) and the caps are brought up to 12 |
-| `enter` | from 100 degrees, 1000 ms, stagger 260 ms, 350 ms after load | each line comes round from behind the planet with an ease-out-expo, line 1 first |
-| `leaveMs` | 200 | leaving is quick, on behind the planet the other way |
-| `outline`, `texCap` | 0.085, 96 | the outline in cap heights; texels in a cap height |
-| `cut`, `lodBias`, `pixel` | 0.4, -0.5, false | the pixel pass's coverage threshold and sharpening; the render mode (false: crisp) |
+| `radius`, `depth`, `slices` | 1.15, 0.016, 6 | the shell the front faces float on, in planet radii (the coastlines and the graticule are at 1); the thickness towards the planet and the slices that make it |
+| `capR` | slot 0.10, fixed 0.145 | cap height in planet radii of the rows that take turns and of the call to action (the biggest); the block shrinks together where a chord needs it |
+| `centreDeg`, `gapDeg`, `inkFraction` | 0, 2.2, 0.9 | the block's middle is on the planet's centre; rows are this far clear of one another (the least vertical clearance at equal x, the same from every tilt); the share of a row's ink box the clearance is measured from |
+| `hardSpanDeg`, `visibleFraction`, `latMax`, `minScale` | 160, 0.85, 86, 0.2 | the most a row spans round its parallel; how near the shell's horizon its ends may go; the pole's floor; the least scale of the block |
+| `minCapPx` | 12 | the smallest letter, CSS px (a block may go to three quarters of it at an extreme tilt on a small planet) |
+| `outline`, `texCap` | 0.04, 96 | the outline in cap heights (outside the glyph, so the face keeps its area); texels in a cap height |
+| `colors` | face 0.03 / 0.26, outline 0.6 / 0.45, side 0.55 | the face's tint towards the ink (light / dark), the outline's push from the coast tone to the ink, the side between face and outline |
+| `enter` | from 100 degrees, 1000 ms, stagger 260 ms, 350 ms after load | each row comes round from behind the planet from a random side with an ease-out-expo |
+| `cycle` | dwell 5500 ms, exit 520 ms, exit stagger 90 ms | the rows that take turns: how long a set stays, the orbit exit of the outgoing rows (ease-in), then the next set's entrance |
+| `fadeMs`, `leaveMs` | 180, 200 | the interaction's exit is an opacity fade of the canvas; the orbit exit (kept) takes `leaveMs` |
+| `glideMs` | 110 | the parallels glide to a new tilt |
 
-Face: Newsreader (`CAPTION_FACE`: weight 500 at the display optical size, a literary serif like Times New Roman, its italic is in the same file family). The two pixel faces of the first version (Jacquard 24, Pixelify Sans) and their licences are gone. Render mode: `?orbit-pixel=0|1` (or sessionStorage `orbit-pixel`).
+Faces (`CAPTION_FACES`, `CAPTION_STYLES`): `plain` Newsreader 500, `heavy` 800, `heavy-italic` 800 italic, `mono` JetBrains Mono 700 (scaled 0.88 to the serif's caps), `script` Allura 400 (scaled 1.12, thickened 0.05 caps; SIL OFL 1.1, `public/fonts/allura-1.110-latin-400.woff2`, 13.7 kB, Basic Latin subset of google/fonts `ofl/allura/Allura-Regular.ttf` (246.6 kB), `kern` only; the licence is `LICENSE-allura.txt` beside it; loaded by the globe with the `FontFace` API only when a caption has a word in it). A face that fails falls back (the script to the heavy italic serif).
 
 ### Map card and credits line
 
