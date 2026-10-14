@@ -13,6 +13,7 @@ import { NotFoundPage } from "~/components/not-found-page";
 import { SearchPalette } from "~/components/search-palette";
 import { createHeroMachine } from "~/lib/hero-machine";
 import { getEntryDetail, listEntries, CONTENT_KINDS } from "./entries";
+import { SECTIONS } from "./sections";
 import { entryMeta, listMeta } from "./entry-meta";
 import { entryJsonLd, websiteJsonLd } from "./json-ld";
 import { pageMeta } from "./meta";
@@ -80,7 +81,7 @@ describe("head tags, structured data, sitemap and search index (demo content)", 
   it("the home page, the lists and every kind of entry say the owner's name and never the code name", () => {
     const tags = [
       pageMeta({ origin, path: "/", jsonLd: websiteJsonLd(origin) }),
-      ...CONTENT_KINDS.map((kind) => listMeta(kind, { origin, path: `/${kind}s` })),
+      ...CONTENT_KINDS.map((kind) => listMeta(kind, { origin, path: `/${SECTIONS[kind].slug}` })),
       ...entries.map((entry) => entryMeta({ entry }, { origin, path: entry.href })),
       entryMeta(undefined),
     ];
@@ -115,7 +116,7 @@ describe("the markup of the main routes (demo content)", () => {
 
   it("a list and an entry of each kind", () => {
     for (const kind of CONTENT_KINDS) {
-      expect(has(render(createElement(EntryListPage, { kind, items: listEntries(demo, kind) }), `/${kind}s`)), `list ${kind}`).toBe(false);
+      expect(has(render(createElement(EntryListPage, { kind, items: listEntries(demo, kind) }), `/${SECTIONS[kind].slug}`)), `list ${kind}`).toBe(false);
       const entry = getEntryDetail(demo, kind, listEntries(demo, kind)[0]!.slug)!;
       for (const layout of ["panel", "full"] as const) expect(has(render(createElement(EntryView, { entry, layout }))), `${kind} ${layout}`).toBe(false);
     }

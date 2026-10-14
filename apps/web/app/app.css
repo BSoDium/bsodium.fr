@@ -1690,7 +1690,7 @@
   }
 
   /*
-   * Entry pages (docs/design-system.md, "Entry pages"): the "Article on paper" and "Poem at night" boards of the owner's canvas.
+   * Entry pages (docs/design-system.md, "Entry pages"): the article and poem boards of the owner's canvas.
    * The entry is a container (`cqi`): the headline, the body and the poem scale with the width of the column they sit in, so the half
    * panel and the full screen are the same design at two widths. From 1024 px of a full screen the page is a 12-column grid with
    * 28 px gutters: marginalia in 1-3, the text in 4-9, the figures in 10-12 (an article, a project); an artwork's image and a poem's
@@ -1743,7 +1743,7 @@
     font-weight: 300;
   }
 
-  /* A poem's title: thin italic, much larger than the lines (the night board: 128 px, 200, 0.95). */
+  /* A poem's title: thin italic, much larger than the lines (the poem board: 128 px, 200, 0.95). */
   .entry-title[data-poem] {
     max-width: none;
     font-size: var(--poem-title);
@@ -1853,7 +1853,7 @@
     padding-top: 0.75rem;
   }
 
-  /* A poem: the lines are the page's type (the night board: roman 300, 36 px / 1.38 at full width, one block per authored line). */
+  /* A poem: the lines are the page's type (the poem board: roman 300, 36 px / 1.38 at full width, one block per authored line). */
   .entry[data-kind="poem"] .ds-prose [data-slot="verse"] {
     font-size: var(--poem-size);
     font-weight: var(--weight-light);
@@ -2058,10 +2058,11 @@
 }
 
 /*
- * Reading surface: an entry (in the panel or full screen) and the four lists sit on paper in the light scheme and on night in the
- * dark (`--paper*`, design-tokens.md). UNLAYERED on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The page tokens are rebound for the subtree, so every component of it (rules, muted text, hover,
+ * Reading surface: an entry (in the panel or full screen) and the four lists sit on the page's own near-white and near-black: the
+ * `--paper*` tokens are a near-identity rebind of the page's (same values, design-tokens.md); only the borders differ (the foreground
+ * mixed at 18 % and 55 %). UNLAYERED on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The page tokens are rebound for the subtree, so every component of it (rules, muted text, hover,
  * focus ring, the accent) follows without naming a colour. The entry's panel is the element that is rebound, so its own `bg-background`
- * (and the navigation scrim inside it) takes the paper; the list pages rebind the root, since the page is their surface; `data-reading-surface`
+ * (and the navigation scrim inside it) takes the surface; the list pages rebind the root, since the page is their surface; `data-reading-surface`
  * does it for one element (the styleguide's specimens). Contrast is
  * tested for the pairs that are used (`design-system.test.ts`, "reading surface").
  */
@@ -2327,7 +2328,7 @@ h1[tabindex="-1"]:focus-visible {
     --primary-foreground: #fff;
     --ring: #000;
     /* The reading surface rebinds the page tokens from these (`:root:has(main[data-surface="reading"])`, more specific than this
-       block): in the dark scheme they would be night and ivory on paper. Ink on white, whatever the scheme. */
+       block): in the dark scheme they would be near-white on near-black. Ink on white, whatever the scheme. */
     --paper: #fff;
     --paper-foreground: #000;
     --paper-muted: #404040;
@@ -2758,17 +2759,11 @@ h1[tabindex="-1"]:focus-visible {
     white-space: nowrap;
   }
 
-  /* Filled in after hydration (the command key or "Ctrl", then K); the box holds its place, and a touch screen has no use for it. */
+  /* Filled in after hydration (the command key or "Ctrl", then K); the box holds its place, and where there is no keyboard to plausibly press it (see the end of this file) it is not drawn. */
   .hero-kbd {
     min-width: 4.25em;
     font-size: 0.875rem;
     justify-content: flex-end;
-  }
-
-  @media (hover: none) {
-    .hero-kbd {
-      display: none;
-    }
   }
 
   .hero-list {
@@ -3156,6 +3151,17 @@ h1[tabindex="-1"]:focus-visible {
  */
 @media (scripting: none) {
   [data-needs-script] {
+    display: none !important;
+  }
+}
+
+/*
+ * The shortcut hint is drawn only where a keyboard is plausible: a fine, hovering primary pointer (a mouse or a trackpad). Touch phones
+ * and tablets, whatever their width, have no use for "Ctrl K". Unlayered and `!important` to beat the utilities that place the hint
+ * (`hidden @xl:inline-flex`); decided in CSS so the server and the first client render stay identical (no hydration difference).
+ */
+@media not all and (hover: hover) and (pointer: fine) {
+  .ds-kbd {
     display: none !important;
   }
 }

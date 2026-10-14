@@ -14,7 +14,8 @@ interface KeyHintProps {
  * border, no background, no box (owner, 2026-10-13: a key cap drawn as a box, nested in a boxed row, was ugly). Decorative: the control
  * that holds it names the shortcut for assistive technology (`aria-keyshortcuts`). The platform is only known in the browser, so the
  * server and the first client render both draw an empty box of the final width (no layout shift, no hydration difference) and the
- * contents come after hydration.
+ * contents come after hydration. Where there is no keyboard to plausibly press it (no hovering fine pointer: touch phones and tablets,
+ * at any width) CSS does not draw it at all (`@media not all and (hover: hover) and (pointer: fine)`, app.css).
  */
 export function KeyHint({ keyName = "K", className }: KeyHintProps) {
   const [mac, setMac] = useState<boolean | null>(null);

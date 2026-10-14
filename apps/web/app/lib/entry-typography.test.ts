@@ -66,6 +66,19 @@ describe("dropCapKind", () => {
     expect(dropCapKind(`\u00C0 ${long}`)).toBe("accent");
     expect(dropCapKind(`   T${long}`)).toBe("plain");
   });
+  it("takes the Latin Extended-A capitals (Polish, Czech, ...): room for a mark above the letter, none for a stroke or an ogonek", () => {
+    expect(dropCapKind(`\u0141\u00F3d\u017A${long}`)).toBe("plain"); // Ł
+    expect(dropCapKind(`\u015Awiat${long}`)).toBe("accent"); // Ś
+    expect(dropCapKind(`\u017B\u00F3\u0142w${long}`)).toBe("accent"); // Ż
+    expect(dropCapKind(`\u0104${long}`)).toBe("plain"); // Ą
+    expect(dropCapKind(`\u017Dena${long}`)).toBe("accent"); // Ž
+    expect(dropCapKind(`\u010Cesko${long}`)).toBe("accent"); // Č
+    expect(dropCapKind(`\u0118${long}`)).toBe("plain"); // Ę
+    expect(dropCapKind(`\u0179${long}`)).toBe("accent"); // Ź
+  });
+  it("skips Latin Extended-A capitals with a cedilla and lowercase letters of the block", () => {
+    for (const lead of ["\u015E", "\u0162", "\u0122", "\u0142\u00F3d\u017A"]) expect(dropCapKind(`${lead}${long}`), lead).toBeNull();
+  });
   it("skips an opening quote or bracket, a letter that hangs below the baseline, a lowercase start and a capital followed by a mark (an elision too)", () => {
     for (const lead of ["\u00ABIl", "\u201CA", "\"A", "'A", "(A", "Quand", "\u00C7a", "answer", "I,", "A.", "\u00E9t\u00E9", "L'exil", "L\u2019exil", "I'm"]) {
       expect(dropCapKind(`${lead}${long}`), lead).toBeNull();

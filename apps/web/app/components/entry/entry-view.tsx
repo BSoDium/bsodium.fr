@@ -43,7 +43,7 @@ function placeNames(places: readonly EntryPlaceLink[]): string | null {
 }
 
 /**
- * One entry (article, project, artwork or poem), typeset after the "Article on paper" and "Poem at night" boards of the owner's canvas
+ * One entry (article, project, artwork or poem), typeset after the article and poem boards of the owner's canvas
  * (docs/design-system.md, "Entry pages"). The SAME component fills the side panel and the full-screen view: only `layout` changes
  * the grid (CSS, app.css `.entry-*`), never the data, the markup or the order.
  *

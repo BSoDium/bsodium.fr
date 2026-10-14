@@ -14,7 +14,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:5464";
 const OUT_DIR = process.env.OUT_DIR ?? ".";
-const PATHS = (process.env.DROPCAP_PATHS ?? "/articles/demo-article,/articles/rain-at-the-citadel-gate,/articles/morocco-coast-bus,/projects/weather-ledger,/projects/label-collision-engine,/projects/timetable-diff").split(",");
+const PATHS = (process.env.DROPCAP_PATHS ?? "/articles/demo-article,/articles/rain-at-the-citadel-gate,/articles/morocco-coast-bus,/software/weather-ledger,/software/label-collision-engine").split(",");
 const WIDTHS = [390, 768, 1440];
 const VARIANTS = [
   ["J", "Jamais je n'avais pris un train de nuit quatre fois en une semaine, et pourtant la nuit suivante je montais encore dans le dernier wagon du quai neuf."],
