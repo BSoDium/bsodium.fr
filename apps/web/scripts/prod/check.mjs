@@ -142,6 +142,16 @@ const page = async (path, label, { status = 200, method = "GET" } = {}) => {
   const exempt = codeNameEntries.has(path.split("?")[0]);
   // Also exempt: the serialised data of such a link (its title sits within a few characters of its slug in the page's state).
   let scanned = body.replace(/<a\b[^>]*href="(\/[a-z]+\/[^"#?]+)"[^>]*>\s*catalyst\s*<\/a>/gi, (m, href) => (codeNameEntries.has(href) ? "" : m));
+  // the entry's own row on a list page (an `article` with the slug as its id) says what the entry says: it explains the code name
+  for (const href of codeNameEntries) scanned = scanned.replace(new RegExp(`<article id="${href.split("/").pop().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?</article>`, "g"), "");
+  if (codeNameEntries.size) {
+    // the same entry's serialised data on a list page: its title as a bare JSON string, the sentence that explains the name, and the
+    // repository fact (a link to the public repository, which is called what the code name is)
+    scanned = scanned
+      .replace(/\\?"Catalyst\\?"/g, '""')
+      .replace(/Catalyst is the code name of this website[^"\\<]*/g, "")
+      .replace(/github\.com\/BSoDium\/Catalyst(?![A-Za-z0-9_-])/g, "");
+  }
   for (const href of codeNameEntries) scanned = scanned.replace(new RegExp(`.{0,160}${href.split("/").pop().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.{0,160}`, "gs"), "");
   ok(exempt || !/catalyst/i.test(scanned), `${label}: the code name appears nowhere in the document${exempt ? " (the entry that explains it)" : /catalyst/i.test(scanned) ? ` (…${/.{0,40}catalyst.{0,40}/i.exec(scanned)?.[0]}…)` : ""}`);
   return { res, body };
