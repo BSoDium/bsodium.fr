@@ -69,8 +69,8 @@ export interface HandoverOptions {
   onNotice(notice: Notice | null): void;
   /** The line of the ring of type round the planet when zoomed out (`engine/ring.ts`); absent = no ring. Handed to the globe unchanged. */
   ringText?: string;
-  /** The lines of the caption that wraps the planet (`GlobeProps.captionPhrases`), its render mode, the cover and the showcase at start: handed to the globe unchanged. */
-  captionPhrases?: readonly string[];
+  /** The lines of the caption that wraps the planet (`GlobeProps.captionPhrases`), the cover and the showcase at start: handed to the globe unchanged. */
+  captionPhrases?: import("../types").GlobeCaption;
   captionPixel?: boolean;
   coverBottom?: number;
   showcase?: boolean;

@@ -721,14 +721,15 @@ for (const [label, options, scheme] of SHAPES) {
   const nums = await page.evaluate(() => ({ fit: window.__globeDebug.fitZoom(), floor: window.__globeDebug.floorZoom() }));
   ok(Math.abs(v.zoom - nums.floor) < 1e-6 && nums.floor < nums.fit - 0.3, `${label}: the page opens fully zoomed out (zoom ${v.zoom.toFixed(2)}, the fit is ${nums.fit.toFixed(2)})`);
   ok(ring.shown && ring.alpha > 0, `${label}: the flat ring of type is shown (the ring is main's, unchanged)`);
-  ok(c.built && c.showcase && c.overlayHidden && c.lines.length >= 3 && c.lines.every((l) => l.visible && Math.abs(l.theta) < 1e-3), `${label}: the caption is built and in place (${c.pixel ? "pixel pass" : "crisp"}, ${c.lines.map((l) => l.text).join(" / ")})`);
+  ok(c.built && c.showcase && c.overlayHidden && c.lines.length >= 3 && c.lines.every((l) => l.visible && Math.abs(l.theta) < 1e-3), `${label}: the caption is built and in place (crisp, ${c.lines.map((l) => l.text).join(" / ")})`);
   {
     const said = c.lines.map((l) => l.text).join(" ").replace(/\s+/g, " ");
-    ok(/A personal archive, organised around places\./.test(said) && /Software \u00b7 Articles( \u00b7)? Artworks \u00b7 Poetry/.test(said) && /Drag to explore\. Pick a place\./.test(said), `${label}: the caption says what the site is, what it holds and what to do (${said})`);
+    ok(c.lines.length === 4 && /A personal archive, organised around places\./.test(said) && /Drag to explore\. Pick a place\./.test(said), `${label}: four rows: the first phrase set (what the site is) over the call to action (${said})`);
+    ok(c.cycle.sets >= 2 && c.cycle.current === 0, `${label}: the phrase sets take turns (${c.cycle.sets} sets, the first shown)`);
     // the lines lie on real parallels, top to bottom, the call to action the largest letters
     const lats = c.lines.map((l) => l.baseLat);
-    ok(lats.every((x, i) => i === 0 || x < lats[i - 1]) && lats.every((x) => Math.abs((x / 7.5) % 1) < 1e-9), `${label}: every line is on a parallel (7.5 degree grid), one under the other (${lats.join(", ")})`);
-    ok(c.lines.at(-1).capR >= Math.max(...c.lines.map((l) => l.capR)) - 1e-9, `${label}: the call to action has the largest letters`);
+    ok(lats.every((x, i) => i === 0 || x < lats[i - 1]), `${label}: every line is on its own parallel, one under the other (${lats.map((x) => x.toFixed(1)).join(", ")})`);
+    ok(c.lines.at(-1).capR >= Math.max(...c.lines.map((l) => l.capR)) - 1e-9 && c.lines[2].capR > c.lines[0].capR, `${label}: the call to action has the largest letters`);
   }
   ok(p.labels === 0, `${label}: every box and label is out`);
   ok(p.lift > 5 && p.cy - p.r >= -0.5, `${label}: the planet is lifted by ${p.lift.toFixed(0)} px (cover ${p.cover}), its top is inside the window (${Math.round(p.cy - p.r)} px)`);
@@ -765,7 +766,12 @@ for (const [label, options, scheme] of SHAPES) {
   const cap = await captionOf(page);
   ok(!cap.showcase && after.lift === 0 && !cap.overlayHidden && after.labels > 0, `${label}: the press ended the showcase (boxes back ${after.labels}, the planet down)`);
   ok(new URL(page.url()).pathname === path0, `${label}: the press selected nothing`);
-  ok(cap.lines.every((l) => !l.visible), `${label}: the caption's lines are behind the planet`);
+  ok(cap.lines.every((l) => !l.visible) && cap.phase === "hidden" && cap.opacity === 0, `${label}: the caption is gone after its fade (hidden, opacity ${cap.opacity})`);
+  {
+    // the flat ring gave way to the boxes and labels the moment they came back, and stays away while they are there
+    const ring = await ringOf(page);
+    ok(!ring.shown && ring.presence === 0, `${label}: the flat ring is hidden while the boxes and labels are shown (presence ${ring.presence})`);
+  }
   ok(await page.locator(".hero-given").evaluate((e) => e.getAnimations().length === 0 && getComputedStyle(e).willChange === "auto"), `${label}: nothing is left running or promoted (no will-change)`);
   const sizePx = await page.evaluate(() => {
     const g = document.createRange();
@@ -805,16 +811,38 @@ for (const [label, options, scheme] of SHAPES) {
     await sleep(80);
     return (await captionOf(page)).lines;
   };
+  // (the sides the lines come in from are random per entrance: held all from the east here, so the order of the turns can be read off the angles)
+  await page.evaluate(() => window.__globeDebug.captionSeed(null));
+  // a logical line's pieces come in together: the turns are the parents, 260 ms apart
+  const turn = (lines, p) => lines.filter((l) => l.parent === p);
   const f0 = await at(0);
   ok(f0.every((l) => !l.visible && l.theta > 1.5), "entrance: at 0 ms every line is behind the planet");
   const f100 = await at(100);
-  ok(f100[0].visible && !f100[1].visible, "entrance: at 100 ms line 1 is arriving and line 2 has not started");
+  ok(turn(f100, 0).every((l) => l.visible) && turn(f100, 1).every((l) => !l.visible), "entrance: at 100 ms the first line is arriving and the second has not started");
   const f400 = await at(400);
-  ok(f400[0].visible && f400[1].visible && !f400[2].visible && f400[1].theta > f400[0].theta, "entrance: at 400 ms lines 1 and 2 are in view (line 2 behind line 1), line 3 is waiting for its turn (260 ms stagger)");
+  ok(turn(f400, 0).every((l) => l.visible) && turn(f400, 1).every((l) => l.visible) && turn(f400, 2).every((l) => !l.visible) && turn(f400, 1)[0].theta > turn(f400, 0)[0].theta, "entrance: at 400 ms lines 1 and 2 are in view (line 2 behind line 1), line 3 is waiting for its turn (260 ms stagger)");
   const f700 = await at(700);
-  ok(f700[0].theta < 0.1 && f700[1].theta > f700[0].theta && f700[2].theta > f700[1].theta, "entrance: at 700 ms line 1 is almost there (fast), the others settling in order");
-  const fEnd = await at(500 + 1000 + 300);
+  ok(turn(f700, 0)[0].theta < 0.1 && turn(f700, 1)[0].theta > turn(f700, 0)[0].theta && turn(f700, 2)[0].theta > turn(f700, 1)[0].theta, "entrance: at 700 ms line 1 is almost there (fast), the others settling in order");
+  const fEnd = await at(1000 + 3 * 260 + 300);
   ok(fEnd.every((l) => Math.abs(l.theta) < 0.01), "entrance: once the last line's turn has run every line is in place (the ease has 0.1 % of the way left)");
+  // random sides: over a few seeds each line comes from the west and from the east, a seed gives the same sides again, and the angle's sign is the side
+  const sides = async (seed) => {
+    await page.evaluate((s) => window.__globeDebug.captionSeed(s), seed);
+    await page.evaluate(() => window.__globeDebug.pinCaption(0));
+    await sleep(60);
+    return (await captionOf(page)).lines.map((l) => ({ side: l.side, sign: Math.sign(l.theta) }));
+  };
+  const seen = new Set();
+  let consistent = true;
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const a = await sides(seed);
+    const b = await sides(seed);
+    consistent = consistent && JSON.stringify(a) === JSON.stringify(b) && a.every((x) => x.sign === x.side);
+    a.forEach((x) => seen.add(x.side));
+  }
+  ok(seen.has(1) && seen.has(-1), "entrance: the lines come in from both sides, drawn at random per entrance");
+  ok(consistent, "entrance: a seed gives the same sides again, and the angle's sign (east positive) is the line's side");
+  await page.evaluate(() => window.__globeDebug.captionSeed(null));
   await page.evaluate(() => window.__globeDebug.pinCaption(null));
   // the limb: lines held half past the horizon on either side never mirror: the shell's front faces end before the limb and the planet's depth does the rest
   for (const deg of [58, 70, -58, -70, 80, -80]) {
@@ -823,6 +851,111 @@ for (const [label, options, scheme] of SHAPES) {
   }
   await page.evaluate(() => window.__globeDebug.pinCaptionAngle(null));
   await ctx.close();
+}
+
+// The interaction's exit is a FADE of the caption, and the words stay locked to the globe while it runs: opacity is the only thing that changes (the
+// lines do not travel round the orbit), their width goes with the planet's radius as it grows under a zoom (the cursor on the centre, off it, and a
+// two-finger pinch on a touch screen), and they follow the earth when it is dragged. Sampled every frame in the page.
+const sampler = (page) =>
+  page.evaluate(() => {
+    const S = { frames: [], stop: false, t0: performance.now() };
+    window.__fade = S;
+    const tick = () => {
+      const c = window.__globeDebug.caption();
+      const e = window.__globeDebug.captionExtent();
+      S.frames.push({ t: performance.now() - S.t0, opacity: c.opacity, phase: c.phase, thetas: c.lines.map((l) => l.theta), width: e ? e.width : null, radius: e ? e.radiusPx : null, zoom: e ? e.zoom : null, lat: c.viewLat, lon: e ? e.lon : null, left: e ? e.left.x : null, parallelsFor: c.parallelsFor });
+      if (!S.stop) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+const sampled = (page) => page.evaluate(() => { window.__fade.stop = true; return window.__fade.frames; });
+async function fadeCase(name, options, start) {
+  const { ctx, page } = await newPage(options);
+  await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
+  await waitGlobe(page);
+  await waitDebug(page);
+  await sleep(3600); // at rest: every line in place
+  await page.evaluate(() => window.__globeDebug.captionSeed(null));
+  const before = await captionOf(page);
+  ok(before.phase === "rest" && before.opacity === 1, `${name}: at rest, opaque`);
+  await sampler(page);
+  await sleep(60);
+  await start(page, ctx);
+  await sleep(700);
+  const frames = await sampled(page);
+  const f0 = frames.find((f) => f.width !== null);
+  const fade = frames.filter((f) => f.phase === "fade");
+  ok(fade.length >= 4, `${name}: the caption fades over several frames (${fade.length})`);
+  ok(frames.at(-1).opacity === 0 && frames.at(-1).phase === "hidden", `${name}: it is gone at the end (opacity ${frames.at(-1).opacity})`);
+  let mono = true;
+  for (let i = 1; i < frames.length; i++) if (frames[i].opacity > frames[i - 1].opacity + 1e-6) mono = false;
+  ok(mono, `${name}: the opacity only goes down`);
+  ok(fade.every((f) => f.thetas.every((t) => Math.abs(t) < 1e-6)), `${name}: no orbit travel: every line stays at its turn 0 for the whole fade`);
+  // locked to the globe: at the middle of the fade the words are as wide as the planet's growth says
+  const mid = fade.filter((f) => f.opacity > 0.15 && f.opacity < 0.85 && f.width !== null);
+  ok(mid.length > 0, `${name}: frames in the middle of the fade (${mid.length}) still have their words in view`);
+  if (mid.length && f0) {
+    const grew = Math.max(...mid.map((f) => f.radius / f0.radius));
+    // (the words float above the surface, so the nearer the camera the more perspective they gain over the silhouette: by a few percent for a
+    // small zoom, up to a third for a big one; never less than the planet's own growth)
+    const ratios = mid.map((f) => f.width / f0.width / (f.radius / f0.radius));
+    ok(Math.min(...ratios) > 0.95 && Math.max(...ratios) < 1.0 + Math.max(0.1, (grew - 1) * 0.28), `${name}: their width goes with the planet's radius through the fade (radius x${grew.toFixed(2)}, width / radius ${Math.min(...ratios).toFixed(2)} to ${Math.max(...ratios).toFixed(2)})`);
+    return { ctx, page, frames, grew };
+  }
+  return { ctx, page, frames, grew: 1 };
+}
+{
+  const zoomIn = (x, y) => async (page) => {
+    await page.mouse.move(x, y);
+    for (let i = 0; i < 6; i++) {
+      await page.mouse.wheel(0, -160);
+      await sleep(16);
+    }
+  };
+  for (const [name, x, y] of [["fade, zoom from the centre", 720, 360], ["fade, zoom from off the centre", 930, 250]]) {
+    const r = await fadeCase(name, DESKTOP, zoomIn(x, y));
+    ok(r.grew > 1.03, `${name}: the planet did grow under the fade (x${r.grew.toFixed(2)})`);
+    await r.ctx.close();
+  }
+  // a pinch on a touch screen (two fingers moving apart), through the protocol
+  const pinch = async (page, ctx) => {
+    const cdp = await ctx.newCDPSession(page);
+    const cx = 195;
+    const cy = 250;
+    const send = (type, pts) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: pts.map((p, id) => ({ x: p[0], y: p[1], id })) });
+    await send("touchStart", [[cx - 20, cy], [cx + 20, cy]]);
+    for (let i = 1; i <= 8; i++) {
+      await send("touchMove", [[cx - 20 - i * 8, cy], [cx + 20 + i * 8, cy]]);
+      await sleep(16);
+    }
+    await send("touchEnd", []);
+  };
+  const r = await fadeCase("fade, pinch on touch", MOBILE, pinch);
+  ok(r.frames.length > 0, "fade, pinch on touch: sampled");
+  await r.ctx.close();
+  // a drag: the parallels follow the earth's tilt while the caption fades (the words are on the globe's own parallels, as at rest)
+  {
+    const { ctx, page } = await newPage(DESKTOP);
+    await page.goto(`${BASE_URL}/${SHOW_QUERY}`);
+    await waitGlobe(page);
+    await waitDebug(page);
+    await sleep(3600);
+    await sampler(page);
+    await page.mouse.move(720, 330);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) {
+      await page.mouse.move(720, 330 + i * 14);
+      await sleep(16);
+    }
+    await page.mouse.up();
+    await sleep(500);
+    const frames = await sampled(page);
+    const fade = frames.filter((f) => f.phase === "fade");
+    const last = fade.at(-1) ?? frames.at(-1);
+    ok(fade.length >= 2 && Math.abs(frames.at(-1).lat - frames[0].lat) > 3, `fade, drag: the camera moved under the fade (tilt ${frames[0].lat.toFixed(1)} to ${frames.at(-1).lat.toFixed(1)})`);
+    ok(Math.abs(last.parallelsFor - fade[0].parallelsFor) < 1e-6, `fade, drag: the rows stay on their parallels while they fade (picked for ${fade[0].parallelsFor.toFixed(1)}, the camera went to ${last.lat.toFixed(1)}): they are part of the earth that turns under the camera`);
+    await ctx.close();
+  }
 }
 
 // Reduced motion: the showcase is there at once (the final composition, no entrance) and the name does not travel.

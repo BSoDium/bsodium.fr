@@ -148,39 +148,66 @@ export const INSET_EASE = [0.2, 0, 0, 1] as const;
 export const CAPTION = {
   /** The shell the letters' FRONT face is on: floating, clearly above the surface (the orbit). The extrusion goes down towards the planet from it. */
   radius: 1.15,
-  /** Drawn in the globe's own pixel pass (true) or crisp, in a canvas of its own over it (false); the page's choice, `?orbit-pixel=0|1` overrides. */
-  pixel: false,
-  /** Cap height of each logical line, in planet radii (the call to action, the last, is the biggest); a line shrinks to the span it may have. */
-  capR: [0.06, 0.06, 0.1],
-  /** The block's top baseline is the graticule's parallel nearest the view's latitude plus this many degrees (clamped to `topLat`). */
-  aboveDeg: 24,
-  /** The same when the lines are wrapped (a phone: the lower half of the face is under the page's own text). */
-  aboveWrappedDeg: 30,
-  topLat: { min: -45, max: 60 },
-  /** The room a line needs under the one before it, as a gap in degrees of latitude (after its caps and the descenders of the line before). */
-  gapDeg: 0.3,
-  /** The most a line may span round its parallel, degrees (a long phrase shrinks to it), and the smallest cap height a letter may have, CSS px (under it the lines are wrapped). */
-  maxSpanDeg: 116,
-  minCapPx: 11,
-  /** When the lines are wrapped (a small screen) the caps are brought up to this many CSS px: the lines are shorter, so they can be. */
-  wrapCapPx: 12,
-  /** The thickness of the letters, in planet radii (towards the planet from the front face), and the number of slices stacked to make it. */
-  depth: 0.015,
-  slices: 5,
   /**
-   * The entrance: each line starts hidden behind the planet (`fromDeg` east of the central meridian at least, and as far as its parallel needs to
-   * be hidden), travels round the sphere to its place with `easeOutExpo`, `ms` in all, line i starting `staggerMs` after line i - 1 (on load,
-   * `loadDelayMs` later still: the page's own fade-in goes first). Leaving is quick: it goes on behind the planet the other way in `leaveMs`.
+   * Cap height of the rows, in planet radii: the rows that take turns (`slot`) and the call to action under them (`fixed`, the biggest). Four
+   * rows are in view at once; a row too wide for its parallel shrinks with the whole block (`solveParallels`).
+   */
+  capR: { slot: 0.1, fixed: 0.145 },
+  /**
+   * Where the block sits (engine/caption.ts `solveParallels`): its middle is `centreDeg` of the shell's arc above the view's centre, on the screen,
+   * whatever the tilt; the rows are `gapDeg` of arc clear of one another (the ink of one against the ink of the next, the LEAST over their width:
+   * parallels near a pole bend towards one another). The viewing latitude is taken within +-`tiltMax`, a row never goes past `latMax` (and no two
+   * share a parallel closer than `minLatGapDeg`), the block fills at most `blockDiscFraction` of the way to the horizon, and a row spans at most
+   * `hardSpanDeg` of its parallel and no farther than `visibleFraction` of the shell's horizon from the view's axis (the whole block shrinks
+   * together when one would).
+   */
+  centreDeg: 0,
+  gapDeg: 2.2,
+  /** The share of a line's ink box (ascenders above the baseline, descenders below, outline room included) the clearance is measured from. */
+  inkFraction: 0.9,
+  tiltMax: 90,
+  latMax: 86,
+  minLatGapDeg: 0.5,
+  blockDiscFraction: 0.82,
+  hardSpanDeg: 160,
+  visibleFraction: 0.85,
+  /** The least scale the whole block is shrunk to (a camera over a pole: the parallels are small circles). */
+  minScale: 0.2,
+  /** The smallest cap height a letter may have, CSS px. */
+  minCapPx: 12,
+  /** How fast the parallels follow a change of the camera's tilt (the time constant, ms): they glide, they do not jump. */
+  glideMs: 110,
+  /**
+   * The rows that take turns: a phrase set stays `dwellMs`, then goes (each row round the orbit and behind the limb in `exitMs`, `exitStaggerMs`
+   * after the row above) and the next one comes in from random sides, row by row `enter.staggerMs` apart, once the last one has gone.
+   */
+  cycle: { dwellMs: 5500, exitMs: 520, exitStaggerMs: 90 },
+  /** The thickness of the letters, in planet radii (towards the planet from the front face), and the number of slices stacked to make it. */
+  depth: 0.016,
+  slices: 6,
+  /**
+   * The entrance: each line starts hidden behind the planet (`fromDeg` of longitude from the central meridian at least, and as far as its parallel
+   * needs to be hidden), on a side of its own drawn at random per entrance (west or east along its parallel), travels round the sphere to its
+   * place with `easeOutExpo`, `ms` in all, line i starting `staggerMs` after line i - 1 (on load, `loadDelayMs` later still: the page's own
+   * fade-in goes first). Leaving is quick: it goes on behind the planet the same way in `leaveMs`.
    */
   enter: { fromDeg: 100, ms: 1000, staggerMs: 260, loadDelayMs: 350 },
-  leaveMs: 200,
-  /** The outline's width, in cap heights (the ink; the inside of a letter is the page colour). */
-  outline: 0.085,
   /**
-   * Sampling. The shader draws a texel where its coverage is at least `cut` and looks `lodBias` levels sharper than the screen asks (negative:
-   * sharper), so a thin stroke survives being squeezed to a cell. Texture: texels in a cap height.
+   * Leaving. The interaction's exit is a FADE of the caption's canvas (`fadeMs`, a CSS opacity transition on the compositor: no geometry and
+   * no texture while it runs, the lines keep following the camera); the orbit exit (the lines go on round behind the planet the same way,
+   * `leaveMs`, ease-in) stays available for a caption whose words change (`CaptionLayer.hide(now, "orbit")`).
    */
-  cut: 0.4,
+  fadeMs: 180,
+  leaveMs: 200,
+  /** The outline's width, in cap heights: drawn OUTSIDE the glyph, so the face keeps its whole area (the inside is the face's colour). */
+  outline: 0.04,
+  /**
+   * Colours, from the globe's own palette (engine/colors.ts): the face is the page colour tinted towards the ink (`faceMix`, per scheme: a dark
+   * page needs more of the ink for the face to read), the outline the coastline's tone pushed `outlineMix` of the way to the ink, the extrusion
+   * `sideMix` of the way from the face to the outline (a tone of its own, between the two). Greys only.
+   */
+  colors: { faceMix: { light: 0.03, dark: 0.26 }, outlineMix: { light: 0.6, dark: 0.45 }, sideMix: 0.55 },
+  /** Sampling: the shader looks `lodBias` levels sharper than the screen asks (negative: sharper). Texture: texels in a cap height. */
   lodBias: -0.5,
   texCap: 96,
 } as const;

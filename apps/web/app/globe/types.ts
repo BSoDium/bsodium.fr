@@ -153,6 +153,25 @@ export interface GlobeSignal<T> {
   subscribe(listener: () => void): () => void;
 }
 
+/**
+ * What the caption says (`GlobeProps.captionPhrases`): `sets` are phrase sets that take turns in the upper rows (each a list of rows, each row a
+ * list of spans: the app wraps its own phrases), `fixed` the rows that stay under them (the call to action). Four rows are in view at once.
+ */
+export interface GlobeCaption {
+  sets: readonly (readonly (readonly GlobeCaptionSpan[])[])[];
+  fixed: readonly (readonly GlobeCaptionSpan[])[];
+}
+
+/**
+ * A stretch of a caption line in one style (`GlobeProps.captionPhrases`): the words and how they are set. `plain` is the reading serif in a medium
+ * weight (the default), `heavy` and `heavy-italic` the same face at its heaviest (the words to highlight), `mono` the site's code face and `script`
+ * a handwriting. Spans of a line are set one after the other on one baseline: put the spaces in the text.
+ */
+export interface GlobeCaptionSpan {
+  text: string;
+  style?: "plain" | "heavy" | "heavy-italic" | "mono" | "script";
+}
+
 export interface GlobeProps {
   places: GlobePlace[];
   /**
@@ -203,7 +222,7 @@ export interface GlobeProps {
    * The lines of the caption that wraps the planet in 3D, one under the other: short, what the site is and what the visitor should do. Set in the
    * reading serif, outlined and extruded, on real parallels of the globe (engine/caption.ts). Read once. Optional: omitted or empty = the ring alone.
    */
-  captionPhrases?: readonly string[];
+  captionPhrases?: GlobeCaption;
   /**
    * The home screen's showcase, as a signal the globe follows without the app re-rendering (a gesture starts it, a frame is not wanted from React):
    * while `on` the boxes and labels are out and the caption is in (the camera comes back to its lowest zoom, where the ring fits), and the

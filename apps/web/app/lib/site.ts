@@ -40,19 +40,86 @@ export const SITE_TITLE = `${SITE_NAME} · ${SITE.role}`;
 /** The temporary main domain of the new site; `CATALYST_SITE_URL` overrides it (the owner's move to the final domain is that one variable). */
 export const DEFAULT_SITE_URL = "https://v2.bsodium.fr";
 
+/** A stretch of a caption line (`GlobeProps.captionPhrases`): the words and the style they are set in (`plain` when absent). */
+export interface CaptionSpan {
+  text: string;
+  style?: "plain" | "heavy" | "heavy-italic" | "mono" | "script";
+}
+
+/** How each section's name is set in the caption: the code section in the mono face, the poems in a handwriting, the others in the heavy serif. */
+const SECTION_CAPTION_STYLE = {
+  project: "mono",
+  article: "heavy",
+  artwork: "heavy-italic",
+  poem: "script",
+} as const satisfies Record<keyof typeof SECTIONS, NonNullable<CaptionSpan["style"]>>;
+
+/** The words a caption row can be set in: heavy for the ones to highlight, the section kinds' own faces (see `SECTION_CAPTION_STYLE`). */
+type CaptionRow = readonly CaptionSpan[];
+
+/** What the caption says (`GlobeProps.captionPhrases`): sets that take turns in the upper rows, and the rows that stay under them. */
+export interface SiteCaption {
+  sets: readonly (readonly CaptionRow[])[];
+  fixed: readonly CaptionRow[];
+}
+
+/** How many of each kind the archive holds (published entries), when the page knows. */
+export type KindCounts = Record<keyof typeof SECTIONS, number>;
+
+const KINDS = Object.keys(SECTIONS) as (keyof typeof SECTIONS)[];
+
+/** `n` of a kind in its own noun (singular or plural: "1 poem", "5 poems"), the number picked out. */
+const countSpans = (kind: keyof typeof SECTIONS, n: number): CaptionSpan[] => [
+  { text: String(n), style: "heavy" },
+  { text: ` ${n === 1 ? SECTIONS[kind].noun.one : SECTIONS[kind].noun.many}` },
+];
+
 /**
- * The three lines that float over the planet on the home screen (`GlobeProps.captionPhrases`, set in the reading serif on parallels of the globe):
- * what the site is, what it holds (the sections' own public names, in the order of the lists: they can never drift from them), and the call to
- * action, which is the largest. Facts about the site and interface copy, nothing about the owner; the hero's how-to line says the same in the page
- * as text (visually hidden while the caption is there).
+ * The caption of the home screen, set on parallels of the globe (reading serif, a few weights, the code face and a calligraphic script): four
+ * rows in view at once. The call to action is two rows that stay at the bottom, the biggest; the two rows above take turns, every few seconds,
+ * through the phrase sets: (1) what the site is, (2) what it holds (the sections' own public names in the order of the lists, so they cannot
+ * drift from them, in two rows) and (3) how much of it there is, from the published projection with the sections' own nouns (left out when the
+ * page does not know the counts). Facts about the site and interface copy, nothing about the owner; the hero's how-to line says the same in the
+ * page as text, always (the caption is for the eyes: it is hidden from assistive technology).
  */
-export const SITE_CALL = [
-  "A personal archive, organised around places.",
-  Object.values(SECTIONS)
-    .map((s) => s.name)
-    .join(" \u00b7 "),
-  "Drag to explore. Pick a place.",
-] as const;
+export function siteCaption(counts?: KindCounts | null): SiteCaption {
+  const names = (a: number, b: number): CaptionRow => {
+    const one = KINDS[a]!;
+    const two = KINDS[b]!;
+    return [
+      { text: SECTIONS[one].name, style: SECTION_CAPTION_STYLE[one] },
+      { text: " \u00b7 " },
+      { text: SECTIONS[two].name, style: SECTION_CAPTION_STYLE[two] },
+    ];
+  };
+  const sets: CaptionRow[][] = [
+    [
+      [{ text: "A " }, { text: "personal archive", style: "heavy" }, { text: "," }],
+      [{ text: "organised around " }, { text: "places", style: "heavy-italic" }, { text: "." }],
+    ],
+    [names(0, 1), names(2, 3)],
+  ];
+  if (counts && KINDS.every((k) => Number.isFinite(counts[k]) && counts[k] >= 0) && KINDS.some((k) => counts[k] > 0)) {
+    const row = (a: number, b: number): CaptionRow => [...countSpans(KINDS[a]!, counts[KINDS[a]!]), { text: " \u00b7 " }, ...countSpans(KINDS[b]!, counts[KINDS[b]!])];
+    sets.push([row(0, 1), row(2, 3)]);
+  }
+  return {
+    sets,
+    fixed: [
+      [{ text: "Drag to " }, { text: "explore", style: "heavy" }, { text: "." }],
+      [{ text: "Pick a " }, { text: "place", style: "heavy" }, { text: "." }],
+    ],
+  };
+}
+
+/** The caption without counts. */
+export const SITE_CALL: SiteCaption = siteCaption();
+
+/** A caption as plain text: one string per row, per set, and for the fixed rows (tests, and anything that wants the words without the styles). */
+export const captionText = (c: SiteCaption): { sets: string[][]; fixed: string[] } => ({
+  sets: c.sets.map((set) => set.map((row) => row.map((s) => s.text).join(""))),
+  fixed: c.fixed.map((row) => row.map((s) => s.text).join("")),
+});
 
 /** The role inside a sentence, as the share image's alt text says it: lower-cased where it starts a clause, but "UX" stays "UX" (never `role.toLowerCase()`). */
 export const ROLE_IN_SENTENCE = "front-end and UX software engineer";
