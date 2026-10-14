@@ -24,7 +24,7 @@ content with real entries is all it takes to go from demo to real.
 - **A made-up `career` document** (the optional top-level `career` object, see `docs/api-contract.md`): four roles at invented employers
   (Example Studio, Sample Works Ltd, Placeholder & Co, Demo Labs), an ongoing role, a role with no end, a year-only start, a role with no
   highlights, two education items (both with a place), three languages, four skill groups and three links on example domains. It is the
-  sample the career page is built against on `pnpm dev:demo`; a test keeps it plainly fictional (example domains, no contact details).
+  sample the career page (not built yet) is meant to be developed against on `pnpm dev:demo`; a test keeps it plainly fictional (example domains, no contact details).
 - Together they use every body block type, 1 to 4 places each (both directions of the place link are exercised, including one place that
   names an entry the entry does not list), 2 to 6 kebab-case tags, and dates spread over 2021 to 2026. Eleven of them have an authored
   cover; the other seven exercise the generated cover art (the design system's fallback).

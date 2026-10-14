@@ -345,13 +345,13 @@
         "title": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 80,
+          "maxLength": 40,
           "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
         },
         "summary": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 1000,
+          "maxLength": 500,
           "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
         },
         "updated": {
@@ -380,38 +380,38 @@
         },
         "roles": {
           "minItems": 1,
-          "maxItems": 20,
+          "maxItems": 8,
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "id": {
                 "type": "string",
-                "maxLength": 80,
+                "maxLength": 40,
                 "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
               },
               "title": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 120,
+                "maxLength": 60,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "org": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 120,
+                "maxLength": 50,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "orgUrl": {
                 "type": "string",
-                "maxLength": 2000,
+                "maxLength": 100,
                 "format": "uri",
                 "pattern": "^https:\\/\\/[^\\s\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]+$"
               },
               "location": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 120,
+                "maxLength": 40,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "place": {
@@ -422,7 +422,7 @@
               "employment": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 40,
+                "maxLength": 30,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "start": {
@@ -434,22 +434,22 @@
                 "pattern": "^(?:(?:19|20)\\d{2}(?:-(?:0[1-9]|1[0-2]))?|present)$"
               },
               "highlights": {
+                "maxItems": 5,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 180,
+                  "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
+                }
+              },
+              "skills": {
                 "maxItems": 8,
                 "type": "array",
                 "items": {
                   "type": "string",
                   "minLength": 1,
-                  "maxLength": 300,
-                  "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
-                }
-              },
-              "skills": {
-                "maxItems": 15,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 40,
+                  "maxLength": 30,
                   "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
                 }
               }
@@ -467,32 +467,32 @@
           }
         },
         "education": {
-          "maxItems": 12,
+          "maxItems": 4,
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "id": {
                 "type": "string",
-                "maxLength": 80,
+                "maxLength": 40,
                 "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
               },
               "institution": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 160,
+                "maxLength": 60,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "programme": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 160,
+                "maxLength": 60,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "level": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 40,
+                "maxLength": 20,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "start": {
@@ -506,7 +506,7 @@
               "location": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 120,
+                "maxLength": 40,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "place": {
@@ -517,7 +517,7 @@
               "note": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 300,
+                "maxLength": 80,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               }
             },
@@ -532,7 +532,7 @@
           }
         },
         "languages": {
-          "maxItems": 10,
+          "maxItems": 6,
           "type": "array",
           "items": {
             "type": "object",
@@ -540,19 +540,19 @@
               "name": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 40,
+                "maxLength": 30,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "level": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 20,
+                "maxLength": 12,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "label": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 40,
+                "maxLength": 30,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               }
             },
@@ -564,7 +564,7 @@
           }
         },
         "skills": {
-          "maxItems": 10,
+          "maxItems": 6,
           "type": "array",
           "items": {
             "type": "object",
@@ -572,17 +572,17 @@
               "group": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 40,
+                "maxLength": 30,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "items": {
                 "minItems": 1,
-                "maxItems": 30,
+                "maxItems": 16,
                 "type": "array",
                 "items": {
                   "type": "string",
                   "minLength": 1,
-                  "maxLength": 60,
+                  "maxLength": 36,
                   "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
                 }
               }
@@ -595,7 +595,7 @@
           }
         },
         "links": {
-          "maxItems": 8,
+          "maxItems": 6,
           "type": "array",
           "items": {
             "type": "object",
@@ -603,12 +603,12 @@
               "label": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 40,
+                "maxLength": 30,
                 "pattern": "^[^\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]*$"
               },
               "url": {
                 "type": "string",
-                "maxLength": 2000,
+                "maxLength": 100,
                 "format": "uri",
                 "pattern": "^https:\\/\\/[^\\s\\u0000-\\u001F\\u007F\\u202A-\\u202E\\u2066-\\u2069]+$"
               }
