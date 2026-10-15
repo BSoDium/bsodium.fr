@@ -22,3 +22,5 @@ coverage/
 packages/published/data/preview.projection.json
 # Screenshots of the preview show real place positions: keep them local.
 docs/screenshots/preview-*.png
+# Images of previewed entries (copied by `pnpm export:preview` in the private repo). Local only.
+apps/web/public/media/preview/

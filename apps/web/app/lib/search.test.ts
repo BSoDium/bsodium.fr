@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadDemoProjection } from "@catalyst/published";
+import { EMPTY_PROJECTION } from "@catalyst/schemas";
 import { buildSearchIndex, foldText, groupResults, rankItems, resultsStatus, searchItems, SEARCH_LABELS, SEARCH_SINGULAR, SEARCH_TYPES, type SearchItem } from "./search";
 
 const demo = loadDemoProjection();
@@ -18,7 +19,9 @@ describe("foldText", () => {
 describe("buildSearchIndex", () => {
   it("has every place and every entry, places first, with their hrefs", () => {
     const entries = demo.articles.length + demo.projects.length + demo.artworks.length + demo.poems.length;
-    expect(index).toHaveLength(demo.places.length + entries);
+    // the demo has a career document: one more row, after the entries
+    expect(index).toHaveLength(demo.places.length + entries + 1);
+    expect(index.at(-1)).toMatchObject({ type: "career", href: "/career" });
     expect(index.slice(0, demo.places.length).every((i) => i.type === "place" && i.href.startsWith("/locations/"))).toBe(true);
     const article = index.find((i) => i.href === "/articles/demo-article");
     expect(article).toMatchObject({ type: "article", title: "Night trains through the Balkans" });
@@ -32,7 +35,7 @@ describe("buildSearchIndex", () => {
     expect(JSON.stringify(index)).not.toContain(body.text.slice(0, 40));
   });
   it("is empty for an empty projection", () => {
-    expect(buildSearchIndex({ ...demo, places: [], articles: [], projects: [], artworks: [], poems: [] })).toEqual([]);
+    expect(buildSearchIndex({ ...demo, places: [], articles: [], projects: [], artworks: [], poems: [], career: undefined })).toEqual([]);
   });
 });
 
@@ -107,6 +110,20 @@ describe("searchItems", () => {
       { type: "article", title: "Alpha", href: "/articles/a" },
     ];
     expect(searchItems(items, "alpha").map((i) => i.type)).toEqual(["place", "article", "poem"]);
+  });
+});
+
+describe("the career page in the index", () => {
+  it("is one row, only when the projection has a career, found by its words, an employer or a skill", () => {
+    expect(buildSearchIndex(EMPTY_PROJECTION).some((i) => i.type === "career")).toBe(false);
+    const index = buildSearchIndex(loadDemoProjection());
+    const rows = index.filter((i) => i.type === "career");
+    expect(rows).toEqual([expect.objectContaining({ title: "Career", href: "/career" })]);
+    for (const q of ["career", "resume", "cv", "example studio", "webgl"]) expect(searchItems(index, q).map((i) => i.href), q).toContain("/career");
+  });
+  it("comes after the entries in the group order", () => {
+    expect(SEARCH_TYPES.at(-1)).toBe("career");
+    expect(SEARCH_LABELS.career).toBe("Career");
   });
 });
 

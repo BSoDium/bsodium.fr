@@ -117,6 +117,41 @@ describe("career (an optional singleton document, additive in schema version 1)"
     });
   });
 
+  describe("portrait (an optional picture, additive in schema version 1)", () => {
+    const portrait = (extra: object = {}) => ({ src: "/media/career/portrait.1a2b3c4d.webp", alt: "A smiling person in a grey jumper, outdoors", width: 800, height: 1000, ...extra });
+
+    it("is optional: a career without it is valid and the key stays absent", () => {
+      expect(parse(career()).career).not.toHaveProperty("portrait");
+    });
+    it("accepts exactly { src, alt, width, height }, kept as given", () => {
+      expect(parse(career({ portrait: portrait() })).career!.portrait).toEqual(portrait());
+    });
+    it("needs a /media/ path, alt text and both dimensions", () => {
+      for (const src of ["https://example.org/p.webp", "/media/../x.webp", "/media//x.webp", "/img/p.webp", "media/p.webp", ""]) bad(career({ portrait: portrait({ src }) }));
+      for (const alt of ["", "   ", "x".repeat(CAREER_TEXT.portraitAlt + 1), "two\nlines"]) bad(career({ portrait: portrait({ alt }) }));
+      ok(career({ portrait: portrait({ alt: "x".repeat(CAREER_TEXT.portraitAlt) }) }));
+      const { width: _w, ...noWidth } = portrait();
+      const { height: _h, ...noHeight } = portrait();
+      bad(career({ portrait: noWidth }));
+      bad(career({ portrait: noHeight }));
+      const { alt: _a, ...noAlt } = portrait();
+      bad(career({ portrait: noAlt }));
+      for (const width of [0, -1, 1.5, "800"]) bad(career({ portrait: portrait({ width }) }));
+    });
+    it("is strict, and its alt text is not a place for a contact detail", () => {
+      for (const extra of [{ caption: "x" }, { email: "a@b.c" }, { credit: "x" }, { exif: {} }]) bad(career({ portrait: portrait(extra) }));
+      bad(career({ portrait: portrait({ alt: "Write to me at someone@example.org" }) }), /e-mail/);
+      bad(career({ portrait: "/media/career/portrait.webp" }));
+    });
+    it("is described by the generated JSON Schema as an optional strict object with these four properties", () => {
+      const p = JSON.parse(buildJsonSchema()).properties.career.properties.portrait;
+      expect(Object.keys(p.properties).sort()).toEqual(["alt", "height", "src", "width"]);
+      expect(p.required.sort()).toEqual(["alt", "height", "src", "width"]);
+      expect(p.additionalProperties).toBe(false);
+      expect(JSON.parse(buildJsonSchema()).properties.career.required).not.toContain("portrait");
+    });
+  });
+
   describe("dates", () => {
     it("accept YYYY and YYYY-MM for a start, and `present` or nothing for an end", () => {
       for (const start of ["2026", "2025-02", "1999-12"]) ok(career({ roles: [role({ start })] }));
@@ -244,6 +279,7 @@ describe("career (an optional singleton document, additive in schema version 1)"
         summary: f(CAREER_TEXT.summary),
         updated: "2026-10",
         availability: { text: f(CAREER_TEXT.availability), asOf: "2026-10" },
+        portrait: { src: `/media/career/${"p".repeat(260)}.1a2b3c4d.webp`, alt: f(CAREER_TEXT.portraitAlt), width: 4000, height: 5000 },
         roles: n(CAREER_LIMITS.roles).map((i) => ({
           id: `${"r".repeat(CAREER_TEXT.id - 2)}${String(i).padStart(2, "0")}`,
           title: f(CAREER_TEXT.roleTitle),
@@ -299,7 +335,7 @@ describe("career (an optional singleton document, additive in schema version 1)"
       const shape = (o: object) => Object.keys(o).sort();
       expect(shape(max.roles[0]!)).toEqual(["end", "employment", "highlights", "id", "location", "org", "orgUrl", "place", "skills", "start", "title"].sort());
       expect(shape(max.education[0]!)).toEqual(["end", "id", "institution", "level", "location", "note", "place", "programme", "start"].sort());
-      expect(shape(max)).toEqual(["availability", "education", "languages", "links", "roles", "skills", "summary", "title", "updated"]);
+      expect(shape(max)).toEqual(["availability", "education", "languages", "links", "portrait", "roles", "skills", "summary", "title", "updated"]);
     });
   });
 

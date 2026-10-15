@@ -1,0 +1,104 @@
+/**
+ * The career page's pure part (docs/career-page.md): dates as the page shows them, the languages line, the share/structured-data
+ * facts. Everything is derived from the projection's `career` (nothing is invented) and the site's own name. No clock: the page
+ * shows authored months only ("as of September 2026"), never "x years ago", so server and client agree and nothing goes stale in a
+ * cached page.
+ */
+import type { PublishedCareer, PublishedCareerLanguage, PublishedCareerRole } from "@catalyst/schemas";
+import { safeExternalUrl, safeMediaSrc } from "./entry-blocks";
+import { absoluteUrl } from "./meta";
+import { SITE } from "./site";
+
+/** The page's address and its name in the navigation (a career is not a content kind: it has no row of `lib/sections.ts`). */
+export const CAREER_PATH = "/career";
+export const CAREER_LABEL = "Career";
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] as const;
+
+/** `2026-09` -> `September 2026`; `2021` -> `2021`; anything else gives null. Fixed English names: no locale, no time zone. */
+export function formatCareerMonth(date: string, style: "long" | "short" = "long"): string | null {
+  const m = /^((?:19|20)\d{2})(?:-(0[1-9]|1[0-2]))?$/.exec(date);
+  if (!m) return null;
+  if (!m[2]) return m[1]!;
+  const name = MONTHS[Number(m[2]) - 1]!;
+  return `${style === "short" ? name.slice(0, 3) : name} ${m[1]}`;
+}
+
+/** `as of September 2026`: the availability's date, as the page words it. */
+export function asOfText(asOf: string): string {
+  const month = formatCareerMonth(asOf);
+  return month ? `as of ${month}` : "";
+}
+
+export interface CareerPeriod {
+  /** The visible text, `Sep 2025 – Present`. */
+  text: string;
+  /** Machine-readable parts for `<time>`: the start, and the end when it is a date (`present` and no end have none). */
+  start: { text: string; dateTime: string };
+  end?: { text: string; dateTime?: string };
+  /** A screen reader's sentence: `September 2025 to present`. */
+  spoken: string;
+}
+
+/**
+ * The period of a role or a programme. A missing end (the document says nothing about it) shows the start alone; `present` shows
+ * "Present" (no `<time>`: it has no date). The end of a same-year or same-text range is not repeated.
+ */
+export function careerPeriod(start: string, end: string | undefined): CareerPeriod {
+  const from = formatCareerMonth(start, "short") ?? start;
+  const fromLong = formatCareerMonth(start) ?? start;
+  const startPart = { text: from, dateTime: start };
+  if (end === undefined) return { text: from, start: startPart, spoken: `from ${fromLong}` };
+  if (end === "present") return { text: `${from} – Present`, start: startPart, end: { text: "Present" }, spoken: `${fromLong} to present` };
+  const to = formatCareerMonth(end, "short") ?? end;
+  if (to === from) return { text: from, start: startPart, spoken: fromLong };
+  return { text: `${from} – ${to}`, start: startPart, end: { text: to, dateTime: end }, spoken: `${fromLong} to ${formatCareerMonth(end) ?? end}` };
+}
+
+/** Whether a role is the one in progress (`end: present`). */
+export const isCurrent = (r: Pick<PublishedCareerRole, "end">): boolean => r.end === "present";
+
+/** A language as the line reads it: the label and the level, not the same word twice (`Native, C2`; `A2`). */
+export function languageDetail(l: PublishedCareerLanguage): string {
+  const parts = [l.label, l.level].filter((p): p is string => !!p);
+  return parts.filter((p, i) => parts.findIndex((q) => q.toLowerCase() === p.toLowerCase()) === i).join(", ");
+}
+
+/** The portrait the page may draw: its `src` is checked again on the way out (defence in depth, as an entry's images are). */
+export function safePortrait(career: PublishedCareer): NonNullable<PublishedCareer["portrait"]> | null {
+  const p = career.portrait;
+  if (!p || !safeMediaSrc(p.src)) return null;
+  return p;
+}
+
+/** The links the footer may draw: https only, no credentials (the schema says so; checked again). */
+export function safeLinks(career: PublishedCareer): { label: string; url: string }[] {
+  return career.links.flatMap((l) => {
+    const url = safeExternalUrl(l.url);
+    return url ? [{ label: l.label, url }] : [];
+  });
+}
+
+/**
+ * Structured data: a `ProfilePage` about a `Person`, minimal on purpose. The name is the site's (the owner's), the job title the
+ * site's own role line, `sameAs` the document's public profile links. NOT included: employers (a role line the owner may still be
+ * wording), the portrait, any contact detail (none exists in the contract), places, dates other than the authored review month.
+ */
+export function careerJsonLd(career: PublishedCareer, origin: string): Record<string, unknown> {
+  const url = absoluteUrl(CAREER_PATH, origin);
+  const sameAs = safeLinks(career).map((l) => l.url);
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    url,
+    dateModified: career.updated,
+    isPartOf: { "@type": "WebSite", name: SITE.name, url: `${origin}/` },
+    mainEntity: {
+      "@type": "Person",
+      name: SITE.name,
+      jobTitle: SITE.role,
+      url: `${origin}/`,
+      ...(sameAs.length ? { sameAs } : {}),
+    },
+  };
+}

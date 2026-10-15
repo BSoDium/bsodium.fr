@@ -84,6 +84,9 @@ const PAGES = [
   { name: "list-articles", path: "/articles" },
   { name: "list-artworks", path: "/artworks" },
   { name: "list-poetry", path: "/poetry" },
+  // The career page (the demo content has a career document, with a portrait); the header carries its link too.
+  { name: "career", path: "/career" },
+  { name: "home-search-career", path: "/", after: searchPalette("career") },
   { name: "article-full", path: "/articles/demo-article?view=full" },
   { name: "article-panel", path: "/articles/demo-article", after: async (p) => { await waitGlobe(p); await sleep(2000); } },
   { name: "note-full", path: "/articles/rain-at-the-citadel-gate?view=full" },
