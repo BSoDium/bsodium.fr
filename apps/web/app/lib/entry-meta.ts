@@ -1,4 +1,5 @@
 import { KIND_LABELS, KIND_PLURALS, type EntryDetail } from "./entries";
+import { copyrightNotice } from "./copyright";
 import { safeMediaSrc } from "./entry-blocks";
 import { entryJsonLd } from "./json-ld";
 import { pageMeta } from "./meta";
@@ -32,6 +33,7 @@ export function entryMeta(data: { entry: EntryDetail; origin?: string } | undefi
     publishedTime: entry.date,
     tags: entry.tags,
     noImageIndex: isSensitive(entry),
+    copyright: copyrightNotice(entry)?.text,
     jsonLd: origin ? entryJsonLd(entry, origin) : undefined,
   });
 }

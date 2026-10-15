@@ -135,6 +135,24 @@ describe.each(["light", "dark"] as const)("contrast audit of the tokens (%s)", (
     check(tokens, PAGE, "reading surface");
   });
 
+  it("the copyright notice (an entry's last line) is the muted tone, a solid token on the page, AA in the reading surface and printed in ink", () => {
+    const rule = ruleBody(css, css.indexOf("  .entry-copyright {"));
+    expect(rule).toMatch(/color:\s*var\(--muted-foreground\);/);
+    // tones are solid colours: no opacity, no translucent mix on the notice
+    expect(rule).not.toMatch(/opacity|rgb\(|rgba\(|color-mix|transparent/);
+    expect(rule).toMatch(/font-size:\s*0\.75rem/);
+    const tokens = context(scheme, reading);
+    const page = colour(tokens, "--background");
+    const ratio = contrastRatio(colour(tokens, "--muted-foreground", page), page);
+    expect(ratio, `${scheme}: the notice is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(TEXT);
+    // print: ink on white, pinned by an explicit rule (the notice is not hidden by the print block's `hidden` rules)
+    const print = ruleBody(css, css.indexOf('[data-slot="entry-copyright"] {', css.indexOf("@media print {")));
+    expect(print).toMatch(/color:\s*#000/);
+    expect(print).toMatch(/display:\s*block/);
+    const white = parseColor("#fff")!;
+    expect(contrastRatio(parseColor("#000")!, white)).toBeGreaterThanOrEqual(BODY);
+  });
+
   it("an inverted frame's pairs: its own page, ink, muted text, accent text, ring and fill", () => {
     const tokens = context(scheme, inverted);
     // (a link in an inverted frame has no hover fill: the accent's text is not drawn on the hover grey there)
