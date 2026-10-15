@@ -1779,6 +1779,24 @@
     color: var(--muted-foreground);
   }
 
+  /*
+   * The copyright notice at the end of a poem, an article or an artwork (`lib/copyright.ts`): the marginalia's mono 12 px in the muted
+   * tone (a solid colour, 4.5:1 on the page in both schemes: the contrast audit pins it), a sentence so not in capitals. It follows the
+   * text and the figures and precedes "keep reading". Printed, in ink.
+   */
+  .entry-copyright {
+    margin: 3rem 0 0;
+    max-width: 44rem;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    font-feature-settings: "calt" 0;
+    color: var(--muted-foreground);
+    text-wrap: pretty;
+    break-inside: avoid;
+  }
+
   /* The facts: a label over its value, two or three to a row where the column is wide (a phone, the half panel), one to a row in the margin. */
   .entry-margin dl {
     display: grid;
@@ -2368,6 +2386,12 @@ h1[tabindex="-1"]:focus-visible {
 
   [data-slot="entry-view"] .ds-grid {
     display: block;
+  }
+
+  /* The notice stays on paper, in ink (the reading surface's tokens are rebound above, this is the explicit guard). */
+  [data-slot="entry-copyright"] {
+    display: block !important;
+    color: #000 !important;
   }
 
   [data-slot="entry-view"] .ds-col {

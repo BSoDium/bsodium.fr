@@ -22,6 +22,9 @@ describe("EntryListPage", () => {
     expect(html).toContain(">5 articles<");
     expect(html).not.toMatch(/Article \/ Index|005|№/i);
   });
+  it("carries no copyright notice (it belongs to an entry's page)", () => {
+    for (const kind of ["article", "poem"] as const) expect(render(listEntries(demo, kind), "", kind)).not.toMatch(/©|entry-copyright|All rights reserved/);
+  });
   it("groups by year, newest first, when the years hold several entries", () => {
     const items = [make("a", "2022-01", ["x"]), make("b", "2024-05", ["x"]), make("c", "2024-02", ["y"]), make("d", "2022-09", ["y"])];
     const html = render(items);

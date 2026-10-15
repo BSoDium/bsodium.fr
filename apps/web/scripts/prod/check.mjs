@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { launch, MOBILE, DESKTOP } from "../perf/lib.mjs";
 import { ensureTiles } from "../street/_lib.mjs";
-import { headTags, jsonLd, linkHref, metaContent, parseCsp, pngSize, title } from "./_html.mjs";
+import { decode, headTags, jsonLd, linkHref, metaContent, parseCsp, pngSize, title } from "./_html.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
@@ -257,6 +257,36 @@ for (const k of ["software", "artworks", "poetry"]) {
   if (p) await document(p, p, { ld: TYPES[k] });
 }
 if (placePath) await document(placePath, placePath, {});
+
+section("copyright notice (poem, article, artwork: yes; software and lists: no)");
+{
+  // app/lib/copyright.ts: the visible line, <meta name="copyright"> and the JSON-LD say the same words. Guarded by what is published.
+  const NOTICE = /^© (?:\d{4} )?Elliot Négrel-Jerzy\. (?:All rights reserved\. Please do not reproduce this (?:poem|article|artwork) without permission; short quotations with attribution are welcome\.|Tous droits réservés\. Merci de ne pas reproduire (?:ce poème|ce texte|cette œuvre) sans autorisation ; de courtes citations avec mention de l'auteur sont bienvenues\.)$/;
+  for (const k of ["poetry", "articles", "artworks"]) {
+    const p = entryPaths.find((x) => kindOf(x) === k);
+    if (!p) {
+      info(`${k}: nothing published, copyright notice not checked`);
+      continue;
+    }
+    const { body } = await text(p);
+    const visible = decode(/data-slot="entry-copyright"[^>]*>([^<]*)</.exec(body)?.[1] ?? "");
+    ok(NOTICE.test(visible), `${p}: ends with the copyright notice (${visible.slice(0, 60)}…)`);
+    ok(body.indexOf('data-slot="entry-copyright"') > body.indexOf('data-slot="entry-view"'), `${p}: the notice is in the entry`);
+    const meta = headTags(body).find((t) => t.name === "copyright");
+    ok(Boolean(meta) && decode(meta.content) === visible, `${p}: <meta name="copyright"> equals the visible notice`);
+    const ld = jsonLd(body)[0] ?? {};
+    ok(ld.copyrightHolder?.["@type"] === "Person" && ld.copyrightHolder?.name === NAME && decode(ld.copyrightNotice ?? "") === visible && !("license" in ld), `${p}: JSON-LD copyrightHolder (Person) and copyrightNotice, no license`);
+  }
+  for (const p of ["/poetry", "/articles", "/artworks", "/software", "/"]) {
+    const { body } = await text(p);
+    ok(!/entry-copyright|All rights reserved/.test(body) && !headTags(body).some((t) => t.name === "copyright"), `${p}: no copyright notice, no copyright meta`);
+  }
+  const code = entryPaths.find((x) => kindOf(x) === "software");
+  if (code) {
+    const { body } = await text(code);
+    ok(!/entry-copyright/.test(body) && !headTags(body).some((t) => t.name === "copyright") && !/copyrightHolder/.test(body), `${code}: software has no notice (code, under the repository licence)`);
+  }
+}
 
 // The career page exists only while the projection has the document (production has none until the owner publishes it): the sitemap says
 // which case this is, and each case is checked (docs/career-page.md). Nothing here fails a deployment that has no career.
