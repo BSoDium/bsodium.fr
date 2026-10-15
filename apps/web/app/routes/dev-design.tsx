@@ -6,7 +6,7 @@
  *
  * Query: `?scheme=light|dark` starts in a forced scheme (default: follow the system).
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { data, useSearchParams } from "react-router";
 import {
   Button,
@@ -41,8 +41,9 @@ import {
   type IconSize,
 } from "~/components/ui";
 import { parseColor, contrastRatio, over } from "~/lib/contrast";
-import { COVER_PATTERNS } from "~/lib/cover-art";
+import { COVER_PALETTES, COVER_PATTERNS } from "~/lib/cover-art";
 import { ENTRY_KINDS, ENTRY_KIND_LABEL, type EntryKind } from "~/lib/entry-kind";
+import { deltaE2000, PALETTE_NAMES, PALETTE_STEPS, rgbToHex, simulateCvd, type Cvd, type PaletteName } from "~/lib/palette";
 import { formatPlaceCoordinates, formatStamp, STATUSES } from "~/lib/labelling";
 import { SITE } from "~/lib/site";
 import { cn } from "~/lib/utils";
@@ -239,6 +240,165 @@ function Colour({ scheme }: { scheme: Scheme }) {
           })}
         </DataList>
       </Frame>
+    </Stack>
+  );
+}
+
+/* ---------------------------------------------------------------- palettes */
+
+const PALETTE_LABEL: Record<PaletteName, string> = { blue: "BSoD Blue", green: "Rainforest Green", ocre: "Desert Ocre", violet: "Violet Purple" };
+const PALETTE_USE: Record<PaletteName, string> = {
+  blue: "The accent: interactive and primary, the default",
+  green: "Nature, travel, the outdoors",
+  ocre: "Land, deserts, warm highlights",
+  violet: "Poetry, the personal, Toulouse",
+};
+const CVD_KINDS: Cvd[] = ["protanopia", "deuteranopia", "tritanopia"];
+
+/** One scheme's palettes: the ten steps of each hue with the contrast of their on-colour, the roles, read from the browser's resolved values. */
+function PalettePanel({ scheme }: { scheme: "light" | "dark" }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [v, setV] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const host = ref.current;
+    if (!host) return;
+    const probe = document.createElement("span");
+    probe.style.display = "none";
+    host.appendChild(probe);
+    const names = ["--background", "--surface", "--accent", "--foreground", "--muted-foreground", "--palette-white", "--palette-black"];
+    for (const n of PALETTE_NAMES) {
+      for (const step of PALETTE_STEPS) names.push(`--palette-${n}-${step}`);
+      names.push(`--palette-${n}`, `--palette-${n}-on`, `--palette-${n}-text`, `--palette-${n}-tint`);
+    }
+    const next: Record<string, string> = {};
+    for (const name of names) {
+      probe.style.color = `var(${name})`;
+      next[name] = getComputedStyle(probe).color;
+    }
+    probe.remove();
+    setV(next);
+  }, [scheme]);
+  const ratio = (fg: string, bg: string) => {
+    const f = parseColor(v[fg] ?? "");
+    const b = parseColor(v[bg] ?? "");
+    return f && b ? contrastRatio(f, b) : null;
+  };
+  const fmt = (r: number | null) => (r === null ? "--" : r.toFixed(1));
+  return (
+    <div ref={ref} data-scheme={scheme} className="min-w-0 border border-border-strong bg-background p-4 text-foreground">
+      <Stack gap={6}>
+        <p className="m-0 text-base font-medium">Scheme: {scheme}</p>
+        {PALETTE_NAMES.map((n) => (
+          <div key={n} className="flex flex-col gap-2">
+            <p className="m-0 text-sm font-medium">
+              {PALETTE_LABEL[n]} <span className="font-normal text-muted-foreground">/ {PALETTE_USE[n]}</span>
+            </p>
+            <ul className="m-0 grid list-none grid-cols-5 gap-1 p-0 sm:grid-cols-10">
+              {PALETTE_STEPS.map((step) => {
+                const on = step <= 500 ? "--palette-black" : "--palette-white";
+                return (
+                  <li key={step} className="flex min-w-0 flex-col">
+                    <div className="flex h-14 flex-col justify-between p-1 text-xs" style={{ background: `var(--palette-${n}-${step})`, color: `var(${on})` }}>
+                      <span className="font-medium">{step}</span>
+                      <span>{fmt(ratio(on, `--palette-${n}-${step}`))}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="ds-meta m-0 break-words">{PALETTE_STEPS.map((s) => v[`--palette-${n}-${s}`] ? rgbToHex(parseColor(v[`--palette-${n}-${s}`]!)!.slice(0, 3)) : "").join(" ")}</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div className="flex min-h-11 items-center justify-between px-3 text-sm font-medium" style={{ background: `var(--palette-${n})`, color: `var(--palette-${n}-on)` }}>
+                <span>Fill, on-colour</span>
+                <span>{fmt(ratio(`--palette-${n}-on`, `--palette-${n}`))}:1</span>
+              </div>
+              <div className="flex min-h-11 items-center justify-between border border-border bg-surface px-3 text-sm font-medium" style={{ color: `var(--palette-${n}-text)` }}>
+                <span>Text tone</span>
+                <span>{fmt(ratio(`--palette-${n}-text`, "--surface"))}:1</span>
+              </div>
+              <div className="flex min-h-11 items-center justify-between px-3 text-sm" style={{ background: `var(--palette-${n}-tint)` }}>
+                <span>Tint, ink</span>
+                <span style={{ color: `var(--palette-${n}-text)` }}>
+                  text {fmt(ratio(`--palette-${n}-text`, `--palette-${n}-tint`))}:1
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </Stack>
+    </div>
+  );
+}
+
+/** The four 600 fills as a person with each deficiency sees them, with the least CIEDE2000 distance between any two. */
+function CvdTable() {
+  const [fills, setFills] = useState<string[] | null>(null);
+  useEffect(() => {
+    const probe = document.createElement("span");
+    probe.style.display = "none";
+    document.body.appendChild(probe);
+    const hex = PALETTE_NAMES.map((n) => {
+      probe.style.color = `var(--palette-${n}-600)`;
+      const c = parseColor(getComputedStyle(probe).color);
+      return c ? rgbToHex(c.slice(0, 3)) : "#000000";
+    });
+    probe.remove();
+    setFills(hex);
+  }, []);
+  if (!fills) return null;
+  const rows: { label: string; colours: string[] }[] = [{ label: "Normal vision", colours: fills }, ...CVD_KINDS.map((k) => ({ label: k, colours: fills.map((f) => simulateCvd(f, k)) }))];
+  return (
+    <Frame padding="md">
+      <div className="flex flex-col gap-4">
+        {rows.map(({ label, colours }) => {
+          const pairs = colours.flatMap((a, i) => colours.slice(i + 1).map((b, j) => ({ a: PALETTE_NAMES[i]!, b: PALETTE_NAMES[i + 1 + j]!, d: deltaE2000(a, b) })));
+          const least = pairs.reduce((m, p) => (p.d < m.d ? p : m));
+          return (
+            <div key={label} className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="w-40 text-sm text-muted-foreground">{label}</span>
+              <span className="flex gap-1" aria-hidden="true">
+                {colours.map((c, i) => (
+                  <span key={PALETTE_NAMES[i]} className="block size-8" style={{ background: c }} />
+                ))}
+              </span>
+              <span className="ds-meta">
+                least distance {least.d.toFixed(1)} ({least.a} / {least.b}); {pairs.map((p) => `${p.a[0]}${p.b[0]} ${p.d.toFixed(0)}`).join(", ")}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </Frame>
+  );
+}
+
+function Palettes() {
+  return (
+    <Stack gap={8}>
+      <Note>
+        Four palettes on one lightness ladder: any hue can stand where another does. Blue is the interface's accent and the default; green, ocre and violet are for graphics (covers, marks, charts, tags), used
+        sparingly in the interface. Each swatch shows its step and the contrast of its on-colour (the near-black up to 500, white from 600): 4.5:1 or more everywhere. The 600 is the fill (white text on it, 3:1 as a graphic); the
+        text tone is 700 in light and 500 in dark; a tint is a solid mix of the 600 into the page colour. Never as text on text; never the only carrier of meaning.
+      </Note>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <PalettePanel scheme="light" />
+        <PalettePanel scheme="dark" />
+      </div>
+      <Spec caption="Colour-vision deficiency: the four 600 fills as seen with protanopia, deuteranopia and tritanopia (Machado 2009, full severity), CIEDE2000 distance of each pair (first letters of the hue names). Under 10 is a pair that must carry a second cue.">
+        <CvdTable />
+      </Spec>
+      <Spec caption="Cover marks: the seed picks one of the four (same grid, same marks, only the colour differs)">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {COVER_PALETTES.map((palette) => (
+            <div key={palette} className="flex flex-col gap-1">
+              <div className="overflow-hidden outline outline-1 -outline-offset-1 outline-border">
+                <CoverArt seed="palettes-sample" pattern="lattice" palette={palette} cols={24} rows={14} />
+              </div>
+              <span className="ds-meta">{palette}</span>
+            </div>
+          ))}
+        </div>
+      </Spec>
     </Stack>
   );
 }
@@ -1160,6 +1320,9 @@ export default function DevDesign() {
       </Section>
       <Section index={14} title="Icons">
         <Icons />
+      </Section>
+      <Section index={15} title="Palettes">
+        <Palettes />
       </Section>
     </main>
   );

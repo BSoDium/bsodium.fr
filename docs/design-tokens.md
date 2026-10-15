@@ -189,6 +189,76 @@ The entry pages and the four lists use the page's own colour in both schemes: **
 
 They are bound, not used by name: for an entry's panel (`[data-panel]:has([data-surface="reading"])`), for the root of a list page (`:root:has(main[data-surface="reading"])`) and for one element (`[data-reading-surface]`, the styleguide), `--background`, `--surface`, `--foreground`, `--muted-foreground`, `--accent`, `--border`, `--border-strong`, `--ring`, `--signal`, `--signal-text` and `--primary` take these values, so every component inside follows (the navigation's scrim, the focus ring, the buttons). The rule is unlayered on purpose: the root rule of the page tokens is, and an unlayered rule beats a layered one. The map, the place panel and the home page keep the page colours. `design-system.test.ts` ("reading surface") and `contrast-audit.test.ts` test the pairs in both schemes.
 
+## Palettes
+
+Four hues for graphics, added 2026-10-14 (owner brief): **BSoD Blue** (the owner's handle; the accent's own family and the default), **Rainforest Green** (the Amazon trips), **Desert Ocre** (the Sahara and the Atacama) and **Violet Purple** (Toulouse's flower). Values and checks only here; where to use them is in [design-system.md](design-system.md), "Palettes". Source: `app.css` (`--palette-*`), tests: `lib/palette.test.ts` (the scale, the roles, colour-vision separation), `lib/contrast-audit.test.ts` ("the four palettes"), live: `/dev/design`, section 15.
+
+**One lightness ladder.** Ten steps, 50 to 900, and the same OKLCH lightness at each step in every hue (50 .975, 100 .95, 200 .905, 300 .84, 400 .755, 500 .656, 600 .563, 700 .51, 800 .43, 900 .35), so a hue can stand where another does without a new contrast check. Chroma is tuned per hue (it follows the same bell along the ladder, scaled to what each hue can reach in sRGB: blue .17, violet .17, green .135, ocre .12 at 600). Hue angles (OKLCH): blue 252, green 150, ocre 78, violet 312. The blue's 500, 600 and 700 are the accent's existing values (`#0a93ff` the dark scheme's text tone, `#0076d4` the fill, `#0067b8` the light scheme's text tone), the rest of the ladder was derived from them. One deliberate deviation: green's 600 is .548, not .563, because at .563 white text on it is 4.33:1 (blue's anchor gives 4.62); at .548 it is 4.60:1. The test allows .02 for that one step and .01 elsewhere. Considered and set aside: a fully equal ladder with the near-black as green's on-colour (breaks interchangeability), and violet at hue 295 (a truer blue-violet, but 1.5 against blue under deuteranopia; 312 gives 4.6, still the weak pair: see below).
+
+| Step | OKLCH L | BSoD Blue | Rainforest Green | Desert Ocre | Violet Purple |
+| --- | --- | --- | --- | --- | --- |
+| 50 | 0.975 | `#f1f8ff` | `#f1faf2` | `#fbf6ee` | `#faf4ff` |
+| 100 | 0.95 | `#e3f0ff` | `#e2f4e5` | `#f8eddd` | `#f6e9ff` |
+| 200 | 0.905 | `#cae2ff` | `#c7eacd` | `#f2dcbd` | `#eed4ff` |
+| 300 | 0.84 | `#a4cfff` | `#a4daae` | `#e6c594` | `#e2b7fd` |
+| 400 | 0.755 | `#70b4ff` | `#7ac38a` | `#d2a865` | `#cd94ef` |
+| 500 | 0.656 | `#0a93ff` | `#3ea95e` | `#bd8514` | `#b769e2` |
+| 600 | 0.563 | `#0076d4` | `#238644` | `#9a6b01` | `#9651bc` |
+| 700 | 0.51 | `#0067b8` | `#23793e` | `#875d01` | `#8346a4` |
+| 800 | 0.43 | `#005093` | `#1a5f30` | `#6a4801` | `#673682` |
+| 900 | 0.35 | `#073b6b` | `#154623` | `#4e3505` | `#4b285f` |
+
+**Names.** The shadcn contract's `--accent` is the hover grey in this repo (and `--accent-foreground`), so the owner's "`--accent` = blue" could not be taken without turning every hover row blue; the blue accent is `--signal` (and `--palette-blue` is the same fill). No `--accent-2..4` exist: the other hues are `--palette-green`, `--palette-ocre` and `--palette-violet`.
+
+**Tokens.** `--palette-<hue>-<step>` is the scale (same in both schemes; `<hue>` is `blue`, `green`, `ocre`, `violet`). The roles pick the step per scheme and are what a component uses:
+
+| Token | Light | Dark | Use |
+| --- | --- | --- | --- |
+| `--palette-<hue>` | 600 | 600 | the fill, a mark, a bar, a swatch; 3:1 or more as a graphic on the page, the surface and the cover's ground |
+| `--palette-<hue>-on` | `#ffffff` | `#ffffff` | text on the fill (4.6:1 or more on all four) |
+| `--palette-<hue>-text` | 700 | 500 | the hue as text of any size on the page, the surface, the hover grey and its own tint (4.5:1 or more) |
+| `--palette-<hue>-tint` | 600 mixed 10 % into `#fbfbfb` | 600 mixed 16 % into `#0a0a0a` | a plate behind text: a SOLID colour, never an alpha (green `#e5efe9` / `#0e1e13`, ocre `#f1ede2` / `#211a09`, violet `#f1eaf5` / `#201526`, blue `#e2eef7` / `#081b2a`); the ink is 15.8:1 or more on it |
+| `--palette-white`, `--palette-black` | `#ffffff`, `#0a0a0a` | same | the on-colour of any step: near-black on 50 to 500, white on 600 to 900 (4.5:1 or more on every step of every hue) |
+
+Tailwind: `bg-palette-green`, `text-palette-green-text`, `bg-palette-green-tint`, `text-palette-green-on` and the same for the other three. The tint is a literal hex computed from the page colour of its scheme (a test recomputes it), so inside an inverted frame, which rebinds the page tokens, a tint stays the one of the page's scheme: do not nest a tint in an inverted frame.
+
+**Dark scheme is not an inversion.** The fill does not move (600 in both: the same hue at the same weight, white text on it, 3.3:1 or more on the near-black page for violet, the weakest), the text tone moves from the deep 700 to the bright 500 (not to 300: the ladder's light end is for tints), and the tint is a stronger 16 % mix because 10 % of a mid colour disappears into near-black. Same logic as the accent's: `--signal` is one fill, `--signal-text` is deeper in light and lighter in dark.
+
+**Contrast** (the page `#fbfbfb`/`#0a0a0a`, the surface `#f4f4f4`/`#121212`, the hover grey and a cover's ground `#ececec`/`#1f1f1f`; the same pairs are in `contrast-audit.test.ts`):
+
+| Pair | Scheme | blue | green | ocre | violet |
+| --- | --- | --- | --- | --- | --- |
+| Fill on the page (graphic, 3:1) | light | 4.5 | 4.4 | 4.5 | 4.8 |
+| | dark | 4.3 | 4.3 | 4.2 | 4.0 |
+| Fill on the surface | light | 4.2 | 4.2 | 4.3 | 4.5 |
+| | dark | 4.1 | 4.1 | 4.0 | 3.7 |
+| Fill on the hover grey / a cover's ground | light | 3.9 | 3.9 | 4.0 | 4.2 |
+| | dark | 3.6 | 3.6 | 3.5 | 3.3 |
+| White on the fill (text, 4.5:1) | both | 4.6 | 4.6 | 4.7 | 5.0 |
+| Text tone on the page | light | 5.6 | 5.2 | 5.6 | 6.0 |
+| | dark | 6.3 | 6.6 | 6.2 | 5.8 |
+| Text tone on the surface | light | 5.3 | 4.9 | 5.3 | 5.7 |
+| | dark | 5.9 | 6.3 | 5.8 | 5.5 |
+| Text tone on the hover grey | light | 4.9 | 4.6 | 4.9 | 5.3 |
+| | dark | 5.2 | 5.5 | 5.1 | 4.8 |
+| Text tone on its tint | light | 4.9 | 4.6 | 5.0 | 5.3 |
+| | dark | 5.5 | 5.8 | 5.4 | 5.1 |
+| Ink on its tint (body text, 7:1) | light | 16.8 | 16.8 | 16.9 | 16.8 |
+| | dark | 16.0 | 15.9 | 15.8 | 16.1 |
+
+**Colour-vision deficiency.** The four 600 fills, simulated (Machado, Oliveira, Fernandes 2009, severity 1.0, in linear sRGB) and compared with CIEDE2000 (about 2.3 is a just-noticeable difference, 10 or more reads as a different colour at a glance):
+
+| Pair | Normal | Protanopia | Deuteranopia | Tritanopia |
+| --- | --- | --- | --- | --- |
+| blue / green | 48.2 | 48.5 | 46.1 | **11.7** |
+| blue / ocre | 52.1 | 54.7 | 57.3 | 54.7 |
+| blue / violet | 27.8 | **7.3** | **4.6** | 46.3 |
+| green / ocre | 34.6 | **8.1** | 11.2 | 48.0 |
+| green / violet | 48.6 | 48.0 | 41.5 | 44.4 |
+| ocre / violet | 55.7 | 53.5 | 52.1 | **14.8** |
+
+The weak pairs are blue / violet (red-green deficiencies fold a blue and a purple together) and green / ocre (they fold both to a yellowish olive); blue / green is weak only under the rare tritanopia. Pairing rules: (1) hue is never the only carrier: a mark, a chart series or a tag set in a palette also has a shape, a position, a label or a word; (2) when blue and violet, or green and ocre, appear together in one graphic, separate them on the ladder by 300 or more of the step number as well (blue 700 with violet 400: 28 / 20 under deuteranopia / protanopia; green 700 with ocre 300: 33 / 28), not 600 against 600; (3) blue with ocre and green or ocre with violet are the safe adjacent pairs; (4) do not put more than two palettes in one small graphic. The test pins rules 1 and 2 (the 600/600 weakness and the repair).
+
 ## Contrast audit
 
 Two automatic checks, run before a palette change ships.
