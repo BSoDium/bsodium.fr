@@ -12,7 +12,7 @@ interface AttributionButtonProps {
   /** CSS px of the right edge covered by the detail panel: the card stays left of it. */
   insetRight: number;
   reducedMotion: boolean;
-  /** Which map this sits on; the phone's line is shown once per page session per surface. */
+  /** Which map this sits on; the phone's line is shown once per page load per surface. */
   surface?: CreditsSurface;
 }
 
@@ -31,7 +31,7 @@ interface AttributionButtonProps {
  *  - Below `md` the long card is gone (clutter on a small screen). The OSM Foundation's guidelines do not allow the credit to be
  *    hidden behind an icon by default, so a SHORT line ("© OpenStreetMap contributors · OpenFreeMap · Natural Earth", wrapping
  *    between credits, never clipped) is shown beside the 28 px "i" button at load, and collapses to the button alone after 5 s or on
- *    the first pan, zoom or tap on the map, once per page session per surface (`lib/credits-collapse.ts`). The button
+ *    the first pan, zoom or tap on the map, once per page load per surface (`lib/credits-collapse.ts`). The button
  *    (`data-attribution="compact"`, named "Map credits", 44 px touch target) always opens the same dialog.
  * Place it in a positioned container that fills the map.
  */
@@ -44,14 +44,8 @@ export function AttributionButton({ tiles, insetRight, reducedMotion, surface = 
   const compactBoxRef = useRef<HTMLDivElement>(null);
   const collapseRef = useRef<CreditsCollapse | null>(null);
   useEffect(() => {
-    let storage: Storage | null = null;
-    try {
-      storage = window.sessionStorage;
-    } catch {
-      storage = null;
-    }
     // (kept across StrictMode's second effect run: the guard is read once)
-    collapseRef.current ??= createCreditsCollapse({ surface, storage, onChange: setLineShown });
+    collapseRef.current ??= createCreditsCollapse({ surface, onChange: setLineShown });
     const c = collapseRef.current;
     // Only on a phone: from `md` up the card is always there. A line shown and then a resize to a wide window just hides itself by CSS.
     if (window.matchMedia("(max-width: 767.98px)").matches) c.start();
