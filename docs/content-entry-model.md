@@ -132,6 +132,7 @@ One more vault document maps onto the contract, and it is **not an entry**: `con
 | the body's one paragraph, or `summary` | `summary` | The profile statement. Not both; one paragraph, no hard break, at most 500 characters. Any other block in the body (heading, list, quote, image, code, link card) is an error. Inline marks are flattened with a warning, as in an entry. |
 | `updated` | `updated` | `YYYY-MM`, authored. A month in the future is an error; a document that mentions a later date is warned about. |
 | `availability: { text, asOf }` | `availability` | Optional. `text` 1 to 120, one line of plain text (no e-mail address or phone number); `asOf` `YYYY-MM`, a month in the future is an error. Both are required when the key is there. |
+| `portrait: { file, alt, rights }` | `portrait` | Optional. `file` is `./portrait.<ext>` next to `content/career/index.md` (raster only), `alt` 1 to 200 characters (required), `rights: own \| licensed \| permission` (required). Exported as `{ src: "/media/career/portrait.<hash>.<ext>", alt, width, height }` with the real pixel size; the file's own name is never published; the same media checks as every published image (no EXIF/XMP, 3000 px, 2.5 MB). |
 | `roles` | `roles` | Most recent first by `start` (an error otherwise). `place: place/<slug>` becomes `place: "<slug>"`. |
 | `education`, `languages`, `skills`, `links` | the same names | Same field names; `orgUrl` and `links[].url` are https without credentials. |
 | `status` | (filter) | Only `published` is exported; the preview (`pnpm export:preview`) includes it whatever its status. |
@@ -143,4 +144,4 @@ Rules the private validator adds on top of the contract (errors for a published 
 
 **Order of deployment** (the contract must know the key before a projection carries it): see [api-contract.md](api-contract.md#the-career-document-career).
 
-**Conformance sample.** `packages/published/fixtures/demo.json` has a made-up `career` (made-up employers: "Example Studio", "Sample Works Ltd", example domains only) that uses every field, so the career page (not built yet; it will read `career` from the projection) can be developed on `pnpm dev:demo`.
+**Conformance sample.** `packages/published/fixtures/demo.json` has a made-up `career` (made-up employers: "Example Studio", "Sample Works Ltd", example domains only) that uses every field, and an abstract `portrait` (`/media/demo/portrait-example.svg`), so the career page ([career-page.md](career-page.md)) can be developed on `pnpm dev:demo`.

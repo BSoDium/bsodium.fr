@@ -8,7 +8,7 @@ import { PageNavScrim } from "~/components/nav-scrim";
 import { Navbar } from "~/components/navbar";
 import { NotFoundPage } from "~/components/not-found-page";
 import { SkipLinks } from "~/components/skip-links";
-import { getContentMode } from "~/lib/content.server";
+import { getContentMode, getProjection } from "~/lib/content.server";
 import { THEME_COLORS } from "~/lib/site";
 import { getSiteUrl } from "~/lib/site.server";
 import "./app.css";
@@ -51,12 +51,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 /** `siteUrl` is the origin every canonical and Open Graph URL is built on (`CATALYST_SITE_URL`): the routes' `meta` reads it from here, so the server and the client agree. */
-export function loader() {
+export async function loader() {
   // Only the dev badge needs the content mode: production builds never expose it (the branch is dead code there).
-  return { siteUrl: getSiteUrl(), devContentMode: import.meta.env.DEV ? getContentMode() : null };
+  // `hasCareer`: the header, the home page's list and the search show the career page only while the projection has a career document.
+  const projection = await getProjection();
+  return { siteUrl: getSiteUrl(), devContentMode: import.meta.env.DEV ? getContentMode() : null, hasCareer: projection.career !== undefined };
 }
 
-/** The site origin and the dev badge never change while the app runs: no navigation (a `?view=full` toggle, a filter chip, a tag link) reloads them. */
+/** The site origin, the dev badge and whether there is a career never change while the app runs: no navigation (a `?view=full` toggle, a filter chip, a tag link) reloads them. */
 export function shouldRevalidate() {
   return false;
 }

@@ -103,6 +103,31 @@ describe("EntryView", () => {
     expect(middle).toContain('rel="next"');
     expect(render("article", "demo-article", "panel")).toContain('id="entry-places"');
   });
+  it("ends a poem, an article and an artwork with the copyright notice (after the body, before keep reading), and software with none", () => {
+    const text = (html: string) => (/data-slot="entry-copyright"[^>]*>([^<]*)</.exec(html)?.[1] ?? "").replace(/&#x27;/g, "'");
+    for (const [kind, slug, noun] of [["poem", "demo-poem", "poem"], ["article", "demo-article", "article"], ["artwork", "demo-artwork", "artwork"]] as const) {
+      for (const layout of ["panel", "full"] as const) {
+        const html = render(kind, slug, layout);
+        expect(text(html), `${kind} ${layout}`).toMatch(new RegExp(`^© \\d{4} Elliot Négrel-Jerzy\\. All rights reserved\\. Please do not reproduce this ${noun} without permission; short quotations with attribution are welcome\\.$`));
+        expect((html.match(/data-slot="entry-copyright"/g) ?? []).length).toBe(1);
+        expect(html.indexOf('data-slot="entry-copyright"')).toBeGreaterThan(html.lastIndexOf('class="entry-text'));
+        if (html.includes('data-slot="entry-more"')) expect(html.indexOf('data-slot="entry-copyright"')).toBeLessThan(html.indexOf('data-slot="entry-more"'));
+      }
+    }
+    expect(render("project", "demo-project", "panel")).not.toContain("entry-copyright");
+    expect(render("project", "timetable-diff", "full")).not.toContain("©");
+  });
+  it("says the notice in French, with its own lang, for a French entry", () => {
+    const html = render("poem", "quai-de-nuit", "panel");
+    const notice = html.slice(html.indexOf('data-slot="entry-copyright"') - 5);
+    expect(notice).toContain('lang="fr"');
+    expect(notice).toContain("© 2021 Elliot Négrel-Jerzy. Tous droits réservés. Merci de ne pas reproduire ce poème sans autorisation");
+  });
+  it("leaves the year out when the entry has no date", () => {
+    const undated = { ...getEntryDetail(demo, "poem", "demo-poem")!, date: undefined };
+    const html = renderToStaticMarkup(createElement(StaticRouter, { location: "/" }, createElement(EntryView, { entry: undated, layout: "panel" })));
+    expect(html).toContain("© Elliot Négrel-Jerzy. All rights reserved.");
+  });
   it("sets the language of French and Spanish poems on their text", () => {
     expect(render("poem", "quai-de-nuit", "panel")).toContain('lang="fr"');
     expect(render("poem", "cuesta-arriba", "panel")).toContain('lang="es"');

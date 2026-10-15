@@ -94,6 +94,14 @@ describe("entryMeta", () => {
     expect(ld?.["script:ld+json"]["@type"]).toBe("Article");
     expect(entryMeta({ entry: entry({}) }).some((t) => "script:ld+json" in t)).toBe(false);
   });
+  it("carries <meta name=copyright> for writing and artwork, and not for software", () => {
+    const notice = find(entryMeta({ entry: entry({ kind: "poem", date: "2024-04-02" }) }), "name", "copyright")?.content;
+    expect(notice).toBe("© 2024 Elliot Négrel-Jerzy. All rights reserved. Please do not reproduce this poem without permission; short quotations with attribution are welcome.");
+    expect(find(entryMeta({ entry: entry({ kind: "artwork" }) }), "name", "copyright")?.content).toMatch(/^© Elliot Négrel-Jerzy\. All rights reserved/);
+    expect(find(entryMeta({ entry: entry({ kind: "project" }) }), "name", "copyright")).toBeUndefined();
+    expect(find(listMeta("poem"), "name", "copyright")).toBeUndefined();
+    expect(find(pageMeta(), "name", "copyright")).toBeUndefined();
+  });
   it("uses the loader's origin when the page's own is not known", () => {
     expect(find(entryMeta({ entry: entry({}), origin: ORIGIN }), "property", "og:url")?.content).toBe(`${ORIGIN}/articles/a`);
     expect(find(entryMeta({ entry: entry({}), origin: ORIGIN }), "property", "og:image")?.content).toBe(`${ORIGIN}/og-default.png`);

@@ -72,6 +72,75 @@
   --kind-poem: oklch(0.58 0.1 340);
   --kind-place: var(--muted-foreground);
 
+  /*
+   * Palettes (docs/design-tokens.md, "Palettes"; usage: docs/design-system.md, "Palettes"). Four hues on ONE OKLCH lightness ladder
+   * (50 .975, 100 .95, 200 .905, 300 .84, 400 .755, 500 .656, 600 .563, 700 .51, 800 .43, 900 .35), chroma tuned per hue to stay in sRGB:
+   * the same step is the same lightness in every hue, so a hue can be swapped for another without re-checking contrast. Blue is the
+   * accent's own family (500 = the dark scheme's accent text, 600 = `--signal`, 700 = its light-scheme text tone). Green's 600 sits
+   * .015 lower than the ladder so white text on it is AA (4.60:1). The scale is the same in both schemes; the roles below pick the
+   * step per scheme. `lib/palette.test.ts` derives each hue's lightness from these hex values and fails on drift.
+   */
+  --palette-blue-50: #f1f8ff;
+  --palette-blue-100: #e3f0ff;
+  --palette-blue-200: #cae2ff;
+  --palette-blue-300: #a4cfff;
+  --palette-blue-400: #70b4ff;
+  --palette-blue-500: #0a93ff;
+  --palette-blue-600: #0076d4;
+  --palette-blue-700: #0067b8;
+  --palette-blue-800: #005093;
+  --palette-blue-900: #073b6b;
+  --palette-green-50: #f1faf2;
+  --palette-green-100: #e2f4e5;
+  --palette-green-200: #c7eacd;
+  --palette-green-300: #a4daae;
+  --palette-green-400: #7ac38a;
+  --palette-green-500: #3ea95e;
+  --palette-green-600: #238644;
+  --palette-green-700: #23793e;
+  --palette-green-800: #1a5f30;
+  --palette-green-900: #154623;
+  --palette-ocre-50: #fbf6ee;
+  --palette-ocre-100: #f8eddd;
+  --palette-ocre-200: #f2dcbd;
+  --palette-ocre-300: #e6c594;
+  --palette-ocre-400: #d2a865;
+  --palette-ocre-500: #bd8514;
+  --palette-ocre-600: #9a6b01;
+  --palette-ocre-700: #875d01;
+  --palette-ocre-800: #6a4801;
+  --palette-ocre-900: #4e3505;
+  --palette-violet-50: #faf4ff;
+  --palette-violet-100: #f6e9ff;
+  --palette-violet-200: #eed4ff;
+  --palette-violet-300: #e2b7fd;
+  --palette-violet-400: #cd94ef;
+  --palette-violet-500: #b769e2;
+  --palette-violet-600: #9651bc;
+  --palette-violet-700: #8346a4;
+  --palette-violet-800: #673682;
+  --palette-violet-900: #4b285f;
+  --palette-white: #ffffff;
+  --palette-black: #0a0a0a;
+  /* Fill roles, the same in both schemes: the 600 step and white text on it (4.6:1 or more for the four; 500 and lighter take --palette-black). */
+  --palette-blue: var(--palette-blue-600);
+  --palette-blue-on: var(--palette-white);
+  --palette-green: var(--palette-green-600);
+  --palette-green-on: var(--palette-white);
+  --palette-ocre: var(--palette-ocre-600);
+  --palette-ocre-on: var(--palette-white);
+  --palette-violet: var(--palette-violet-600);
+  --palette-violet-on: var(--palette-white);
+  /* Palette roles (light): the text tone and a solid tint (the 600 fill mixed 10 % into the page colour, never an alpha). */
+  --palette-blue-text: var(--palette-blue-700);
+  --palette-blue-tint: #e2eef7;
+  --palette-green-text: var(--palette-green-700);
+  --palette-green-tint: #e5efe9;
+  --palette-ocre-text: var(--palette-ocre-700);
+  --palette-ocre-tint: #f1ede2;
+  --palette-violet-text: var(--palette-violet-700);
+  --palette-violet-tint: #f1eaf5;
+
   /* Radii: none. Square edges everywhere; the names stay so shadcn-style classes (`rounded-md`) resolve to 0. */
   --radius-sm: 0;
   --radius-md: 0;
@@ -159,6 +228,15 @@
     --kind-artwork: oklch(0.76 0.1 55);
     --kind-poem: oklch(0.76 0.1 340);
     --kind-place: var(--muted-foreground);
+  /* Palette roles (dark): the text tone and a solid tint (the 600 fill mixed 16 % into the page colour, never an alpha). */
+  --palette-blue-text: var(--palette-blue-500);
+  --palette-blue-tint: #081b2a;
+  --palette-green-text: var(--palette-green-500);
+  --palette-green-tint: #0e1e13;
+  --palette-ocre-text: var(--palette-ocre-500);
+  --palette-ocre-tint: #211a09;
+  --palette-violet-text: var(--palette-violet-500);
+  --palette-violet-tint: #201526;
   }
 }
 
@@ -271,6 +349,22 @@
   --color-kind-artwork: var(--kind-artwork);
   --color-kind-poem: var(--kind-poem);
   --color-kind-place: var(--kind-place);
+  --color-palette-blue: var(--palette-blue);
+  --color-palette-blue-on: var(--palette-blue-on);
+  --color-palette-blue-text: var(--palette-blue-text);
+  --color-palette-blue-tint: var(--palette-blue-tint);
+  --color-palette-green: var(--palette-green);
+  --color-palette-green-on: var(--palette-green-on);
+  --color-palette-green-text: var(--palette-green-text);
+  --color-palette-green-tint: var(--palette-green-tint);
+  --color-palette-ocre: var(--palette-ocre);
+  --color-palette-ocre-on: var(--palette-ocre-on);
+  --color-palette-ocre-text: var(--palette-ocre-text);
+  --color-palette-ocre-tint: var(--palette-ocre-tint);
+  --color-palette-violet: var(--palette-violet);
+  --color-palette-violet-on: var(--palette-violet-on);
+  --color-palette-violet-text: var(--palette-violet-text);
+  --color-palette-violet-tint: var(--palette-violet-tint);
 }
 
 /*
@@ -321,6 +415,15 @@
   --kind-artwork: oklch(0.58 0.1 55);
   --kind-poem: oklch(0.58 0.1 340);
   --kind-place: var(--muted-foreground);
+  /* Palette roles (light): the text tone and a solid tint (the 600 fill mixed 10 % into the page colour, never an alpha). */
+  --palette-blue-text: var(--palette-blue-700);
+  --palette-blue-tint: #e2eef7;
+  --palette-green-text: var(--palette-green-700);
+  --palette-green-tint: #e5efe9;
+  --palette-ocre-text: var(--palette-ocre-700);
+  --palette-ocre-tint: #f1ede2;
+  --palette-violet-text: var(--palette-violet-700);
+  --palette-violet-tint: #f1eaf5;
 }
 
 :root[data-scheme="dark"],
@@ -365,6 +468,15 @@
   --kind-artwork: oklch(0.76 0.1 55);
   --kind-poem: oklch(0.76 0.1 340);
   --kind-place: var(--muted-foreground);
+  /* Palette roles (dark): the text tone and a solid tint (the 600 fill mixed 16 % into the page colour, never an alpha). */
+  --palette-blue-text: var(--palette-blue-500);
+  --palette-blue-tint: #081b2a;
+  --palette-green-text: var(--palette-green-500);
+  --palette-green-tint: #0e1e13;
+  --palette-ocre-text: var(--palette-ocre-500);
+  --palette-ocre-tint: #211a09;
+  --palette-violet-text: var(--palette-violet-500);
+  --palette-violet-tint: #201526;
 }
 
 /*
@@ -1223,6 +1335,23 @@
     fill: var(--signal);
   }
 
+  /* The marks take the palette the seed chose (blue is the accent's own fill); a solid colour, 3:1 or more on the cover's ground. */
+  .ds-cover[data-palette="blue"] [data-l="m"] {
+    fill: var(--palette-blue);
+  }
+
+  .ds-cover[data-palette="green"] [data-l="m"] {
+    fill: var(--palette-green);
+  }
+
+  .ds-cover[data-palette="ocre"] [data-l="m"] {
+    fill: var(--palette-ocre);
+  }
+
+  .ds-cover[data-palette="violet"] [data-l="m"] {
+    fill: var(--palette-violet);
+  }
+
   /*
    * Sensitive media (components/ui/sensitive-media.tsx, docs/design-system.md "Sensitive media"): an image of mature content is blurred
    * from the first byte of HTML. The state is an attribute, so the server render, a browser without scripts and print all show the
@@ -1777,6 +1906,24 @@
     line-height: 1.7;
     font-feature-settings: "calt" 0;
     color: var(--muted-foreground);
+  }
+
+  /*
+   * The copyright notice at the end of a poem, an article or an artwork (`lib/copyright.ts`): the marginalia's mono 12 px in the muted
+   * tone (a solid colour, 4.5:1 on the page in both schemes: the contrast audit pins it), a sentence so not in capitals. It follows the
+   * text and the figures and precedes "keep reading". Printed, in ink.
+   */
+  .entry-copyright {
+    margin: 3rem 0 0;
+    max-width: 44rem;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+    font-feature-settings: "calt" 0;
+    color: var(--muted-foreground);
+    text-wrap: pretty;
+    break-inside: avoid;
   }
 
   /* The facts: a label over its value, two or three to a row where the column is wide (a phone, the half panel), one to a row in the margin. */
@@ -2370,6 +2517,12 @@ h1[tabindex="-1"]:focus-visible {
     display: block;
   }
 
+  /* The notice stays on paper, in ink (the reading surface's tokens are rebound above, this is the explicit guard). */
+  [data-slot="entry-copyright"] {
+    display: block !important;
+    color: #000 !important;
+  }
+
   [data-slot="entry-view"] .ds-col {
     margin-bottom: 1rem;
   }
@@ -2528,6 +2681,49 @@ h1[tabindex="-1"]:focus-visible {
   }
 
   /*
+   * With a career document the row has one more word ("Career": seven items). The same tiers, one step tighter so that the row holds
+   * its width (measured: 390, 430, 768 and 1440 px, with and without the panel); under 24 rem of row (a phone narrower than 384 px) the career link
+   * is left out of the header, where the home page's list and the search have it.
+   */
+  [data-slot="site-header"][data-career] .nav-link {
+    letter-spacing: 0;
+  }
+
+  @container (max-width: 23.99rem) {
+    [data-slot="site-header"] [data-nav-item="career"] {
+      display: none;
+    }
+  }
+
+  @container (min-width: 23rem) {
+    [data-slot="site-header"][data-career] .nav-link {
+      letter-spacing: 0.02em;
+      padding-inline: 0.1875rem;
+    }
+  }
+
+  @container (min-width: 28rem) {
+    [data-slot="site-header"][data-career] .nav-link {
+      letter-spacing: 0.02em;
+      padding-inline: 0.3125rem;
+    }
+  }
+
+  @container (min-width: 32rem) {
+    [data-slot="site-header"][data-career] .nav-link {
+      letter-spacing: 0.06em;
+      padding-inline: 0.5rem;
+    }
+  }
+
+  @container (min-width: 44rem) {
+    [data-slot="site-header"][data-career] .nav-link {
+      letter-spacing: 0.1em;
+      padding-inline: 1.125rem;
+    }
+  }
+
+  /*
    * The hero. `position: absolute` in the shell's `main`, over the globe (z 10: above the labels, below the credits line at 20, the
    * navigation at 40 and the detail panel at 30), bottom-anchored, and `pointer-events: none`: only the search line and the rows take
    * the pointer, so the globe is draggable and zoomable beneath all the rest. Three states in `data-hero`:
@@ -2540,8 +2736,8 @@ h1[tabindex="-1"]:focus-visible {
    * a wide screen it is one line that takes `--hero-span` of the viewport's width (72 %: deliberately NOT the full width between the
    * gutters; the size is that share of the width over `--hero-fit`, the name's width in em), never more than a third of the viewport's
    * height (a short window) nor 30 rem. Stacked (under 48 rem) the two halves are two lines and the longer one, the family name,
-   * fills the width between the gutters. The block rises by the credits line's height (the
-   * line is bottom right and sits at 8 to 30 px from the bottom) plus what the "y" hangs below the line box, so no letter is ever over it.
+   * fills the width between the gutters. The block rises by the credits' height (the
+   * card, or on a phone the 28 px "i" button, is bottom right and sits at 6 to 30 px from the bottom) plus what the "y" hangs below the line box, so no letter is ever over it.
    */
   .landing-hero {
     --hero-gutter: clamp(1rem, 3.9vw, 3.5rem);
@@ -2550,7 +2746,7 @@ h1[tabindex="-1"]:focus-visible {
     --hero-fit: 6.6;
     --hero-span: 0.72;
     --hero-size: min(calc(100vw * var(--hero-span) / var(--hero-fit)), 33vh, 30rem);
-    /* The credits line's top edge (0.5 rem + its card) and a little air; a phone's dev badge sits higher (below). */
+    /* The credits' top edge (0.5 rem + the card; the phone's "i" button tops out at 34 px) and a little air; a phone's dev badge sits higher (below). */
     --hero-clear: 2.25rem;
     --hero-fade: var(--duration-base) var(--ease-standard);
     position: absolute;
@@ -2562,7 +2758,7 @@ h1[tabindex="-1"]:focus-visible {
     pointer-events: none;
   }
 
-  /* Phones: the name stacks, the family name fills the width; the credits line takes the whole bottom edge and the dev-only content badge sits above it. */
+  /* Phones: the name stacks, the family name fills the width; the credits are the small "i" button bottom right (no card) and the dev-only content badge sits raised at the left. */
   @media (max-width: 47.99rem) {
     .landing-hero {
       /* The family name (the longer line, 4.57 em at 390 px, 4.7 on the smallest) fills the width between the gutters. */
@@ -2576,13 +2772,19 @@ h1[tabindex="-1"]:focus-visible {
         min(
           calc((100vw - 2 * var(--hero-gutter)) / var(--hero-fit)),
           24vh,
-          calc((100dvh - var(--hero-fixed) - var(--hero-clear) - env(safe-area-inset-bottom, 0px) - 1rem) / 1.9)
+          calc((100dvh - var(--hero-fixed) - var(--hero-extra, 0rem) - var(--hero-clear) - env(safe-area-inset-bottom, 0px) - 1rem) / 1.9)
         )
       );
     }
 
     body:has([data-dev-content-badge]) .landing-hero {
       --hero-clear: 4.75rem;
+    }
+
+    /* A fifth row (the career page: `data-rows="5"`) is one more 44 px target and its hairline, which the name gives up. The stacked
+       tiers below hold the row in two columns too: five rows are three lines there, which is also one more line. */
+    .landing-hero[data-rows="5"] {
+      --hero-extra: 2.8125rem;
     }
   }
 
@@ -3006,7 +3208,7 @@ h1[tabindex="-1"]:focus-visible {
    * The collapsed name's place, not a second copy of it: this line is the GHOST the two halves of the real name (`.hero-given`, `.hero-family`)
    * travel to and stay on (landing-hero.tsx `travelName`: it measures these boxes, never paints them). It is set like the big name (the same face, weights,
    * tracking, and the optical size pinned at the big name's 96, so it is the same drawing at another size) at `--hero-mini-size`: 44 px on a wide
-   * screen, 9.5 vw down to 28 px on a phone, so that it clears the credits line, the dev badge and the hint beside it from 320 px.
+   * screen, 9.5 vw down to 28 px on a phone, so that it clears the credits (card or "i" button), the dev badge and the hint beside it from 320 px.
    */
   .hero-mini-name {
     --hero-mini-size: clamp(1.75rem, 9.5vw, 2.75rem);
@@ -3163,5 +3365,399 @@ h1[tabindex="-1"]:focus-visible {
 @media not all and (hover: hover) and (pointer: fine) {
   .ds-kbd {
     display: none !important;
+  }
+}
+
+/* ==================================================================================================================================
+ * The career page (`/career`, components/career-page.tsx, docs/career-page.md). The head is the lists' head (`.list-head`); everything
+ * below it is local to this block. Solid colours of the page's own tokens only (no opacity to lighten or darken); no motion at all.
+ * ================================================================================================================================== */
+
+@layer components {
+  /* The name block and the portrait: beside each other at every width (the portrait is optional; without it the text takes the room). */
+  .career-id {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem 2rem;
+    align-items: start;
+  }
+
+  .career-id[data-portrait="true"] {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .career-name {
+    --list-title: clamp(2.25rem, 6cqi, 5rem);
+  }
+
+  .career-id-text {
+    min-width: 0;
+  }
+
+  /* The portrait: 4:5, the top of the picture first (a face is never cut off at the head), a hairline frame in the strong border. */
+  .career-portrait {
+    margin: clamp(2rem, 4.4cqi, 4rem) 0 0;
+    width: clamp(5.5rem, 22cqi, 12rem);
+  }
+
+  .career-portrait img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    object-position: 50% 0;
+    background: var(--surface);
+    border: var(--hairline) solid var(--border-strong);
+  }
+
+  /* The headline statement: the reading face, one paragraph, a comfortable measure. */
+  .career-summary {
+    margin: 1.5rem 0 0;
+    max-width: 40rem;
+    font-family: var(--font-reading);
+    font-size: var(--text-reading);
+    line-height: 1.55;
+    color: var(--foreground);
+    text-wrap: pretty;
+  }
+
+  .career-availability {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    margin: 1.25rem 0 0;
+    color: var(--muted-foreground);
+  }
+
+  /* A solid square, the foreground: a mark, not a status light (nothing here says "online"). */
+  .career-dot {
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--foreground);
+    transform: translateY(-0.05em);
+  }
+
+  .career-asof {
+    white-space: nowrap;
+  }
+
+  /* Languages: ONE compact line under the head, between two hairlines of the page; wraps on a phone. */
+  .career-languages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 2rem;
+    margin-top: 2.5rem;
+    padding-block: 0.875rem;
+    border-block: var(--hairline) solid var(--border);
+  }
+
+  .career-languages-label {
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+
+  .career-languages ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .career-language-name {
+    font-family: var(--font-reading);
+    font-weight: var(--weight-medium);
+  }
+
+  .career-language-detail {
+    margin-left: 0.5rem;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    font-feature-settings: "calt" 0;
+  }
+
+  /* A block: its heading at the left from 48 rem, above its content below it; a hairline closes every block's top. */
+  .career-block {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem 2rem;
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: var(--hairline) solid var(--border-strong);
+  }
+
+  .career-block-title {
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+
+  .career-block-body {
+    min-width: 0;
+    max-width: 52rem;
+  }
+
+  @media (min-width: 48rem) {
+    .career-block {
+      grid-template-columns: 12rem minmax(0, 1fr);
+    }
+  }
+
+  /* The timeline: an ordered list with ONE vertical hairline at its left and a solid square on it for every item. */
+  .career-timeline {
+    margin: 0;
+    padding: 0 0 0 1.75rem;
+    list-style: none;
+    border-left: var(--hairline) solid var(--border-strong);
+  }
+
+  .career-item {
+    position: relative;
+    padding-bottom: 2.75rem;
+    break-inside: avoid;
+  }
+
+  .career-item:last-child {
+    padding-bottom: 0;
+  }
+
+  .career-item::before {
+    content: "";
+    position: absolute;
+    left: calc(-1.75rem - var(--hairline) / 2 - 0.1875rem);
+    top: 0.5rem;
+    width: 0.375rem;
+    height: 0.375rem;
+    background: var(--muted-foreground);
+  }
+
+  /* The role in progress: its square is the foreground, the others muted. */
+  .career-item[data-current="true"]::before {
+    background: var(--foreground);
+  }
+
+  .career-period {
+    margin: 0;
+    color: var(--muted-foreground);
+  }
+
+  .career-org {
+    margin: 0.375rem 0 0;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: var(--weight-heavy);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+
+  .career-org-link,
+  .career-place,
+  .career-link {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: var(--border-strong);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.25em;
+  }
+
+  .career-org-link:hover,
+  .career-org-link:focus-visible,
+  .career-place:hover,
+  .career-place:focus-visible,
+  .career-link:hover,
+  .career-link:focus-visible {
+    color: var(--signal-text);
+    text-decoration-color: currentColor;
+  }
+
+  .career-role {
+    margin: 0.125rem 0 0;
+    font-family: var(--font-reading);
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  .career-level {
+    color: var(--muted-foreground);
+  }
+
+  .career-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1rem;
+    margin: 0.375rem 0 0;
+    color: var(--muted-foreground);
+  }
+
+  .career-highlights {
+    margin: 0.875rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-reading);
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+
+  .career-highlights li {
+    position: relative;
+    padding-left: 1.125rem;
+    text-wrap: pretty;
+  }
+
+  .career-highlights li + li {
+    margin-top: 0.5rem;
+  }
+
+  .career-highlights li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 0.5rem;
+    border-top: var(--hairline) solid var(--muted-foreground);
+  }
+
+  .career-stack {
+    margin: 0.875rem 0 0;
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: var(--muted-foreground);
+    font-feature-settings: "calt" 0;
+  }
+
+  .career-skills {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1.25rem 2rem;
+    margin: 0;
+  }
+
+  .career-skills dt {
+    color: var(--muted-foreground);
+  }
+
+  .career-skills dd {
+    margin: 0.25rem 0 0;
+    font-family: var(--font-reading);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .career-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem 2rem;
+    margin-top: 3.5rem;
+    padding-top: 1rem;
+    border-top: var(--hairline) solid var(--border-strong);
+  }
+
+  @media (min-width: 48rem) {
+    .career-footer {
+      grid-template-columns: 12rem minmax(0, 1fr);
+    }
+  }
+
+  .career-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .career-links li {
+    display: flex;
+  }
+
+  .career-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.75rem;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+  }
+}
+
+@media print {
+  /* One clean column on paper: the timeline's hairline and squares stay (ink), the blocks stack, an item is never split, the portrait is
+     small, the links print their address. The page's own chrome (header, skip links, scrim) is already hidden by the print block above. */
+  .career {
+    --list-title: 28pt;
+  }
+
+  .career-name {
+    --list-title: 28pt;
+    margin-top: 1rem;
+  }
+
+  .career-block,
+  .career-footer {
+    display: block;
+    margin-top: 1.25rem;
+    border-top-color: #000;
+  }
+
+  .career-block-title {
+    margin-bottom: 0.5rem;
+    break-after: avoid;
+  }
+
+  .career-portrait {
+    width: 3cm;
+    margin-top: 1rem;
+  }
+
+  .career-summary,
+  .career-highlights,
+  .career-skills dd,
+  .career-role {
+    font-size: 10.5pt;
+  }
+
+  .career-org {
+    font-size: 12pt;
+  }
+
+  .career-item {
+    padding-bottom: 1rem;
+    break-inside: avoid;
+  }
+
+  .career-languages {
+    margin-top: 1rem;
+    border-color: #000;
+  }
+
+  .career-timeline {
+    border-left-color: #000;
+  }
+
+  .career-item::before,
+  .career-item[data-current="true"]::before,
+  .career-dot {
+    background: #000;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .career-link::after {
+    content: " (" attr(href) ")";
+    font-family: var(--font-meta);
+    font-size: 0.7em;
+    word-break: break-all;
+  }
+
+  .career-org-link::after {
+    content: none;
   }
 }

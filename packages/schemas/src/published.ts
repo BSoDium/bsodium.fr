@@ -546,6 +546,7 @@ export const CAREER_TEXT = {
   group: 30,
   item: 36,
   linkLabel: 30,
+  portraitAlt: 200,
 } as const;
 
 // --- Contact details are not published ----------------------------------------------------------------------------------------
@@ -711,6 +712,22 @@ export const careerAvailabilitySchema = z
   })
   .strict();
 
+/**
+ * The portrait: ONE optional picture of the owner at the head of the page. A `/media/` file shipped with the web app, like an
+ * entry's cover, with two differences: the alt text is required and is a plain line of at most 200 characters (it is read aloud
+ * and must be a description, not a caption), and `width` and `height` are REQUIRED, so the page reserves the box before the
+ * file arrives (no layout shift). The web app never uses it as the share image. It is not a field of the privacy kind: it shows a
+ * face on purpose, which is why the owner sets it, and why the private repo asks for a rights attestation and strips the metadata.
+ */
+export const careerPortraitSchema = z
+  .object({
+    src: mediaSrcSchema,
+    alt: careerText(CAREER_TEXT.portraitAlt),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+  })
+  .strict();
+
 const uniqueBy = <T>(items: readonly T[], key: (t: T) => string) => new Set(items.map(key)).size === items.length;
 
 export const publishedCareerSchema = z
@@ -721,6 +738,8 @@ export const publishedCareerSchema = z
     summary: careerText(CAREER_TEXT.summary),
     /** `YYYY-MM`: when the owner last reviewed the document. Authored, never the clock. */
     updated: z.string().regex(/^(?:19|20)\d{2}-(?:0[1-9]|1[0-2])$/, "YYYY-MM"),
+    /** Optional, additive in schema version 1: a picture of the owner at the head of the page. Absent = the page has no picture. */
+    portrait: careerPortraitSchema.optional(),
     /** Optional: a dated "open to work" statement, shown with its date. Absent = the document says nothing. */
     availability: careerAvailabilitySchema.optional(),
     /** Most recent first (by `start`), at least one. */
@@ -937,6 +956,7 @@ export type PublishedCareerEducation = z.infer<typeof careerEducationSchema>;
 export type PublishedCareerLanguage = z.infer<typeof careerLanguageSchema>;
 export type PublishedCareerSkillGroup = z.infer<typeof careerSkillGroupSchema>;
 export type PublishedCareerLink = z.infer<typeof careerLinkSchema>;
+export type PublishedCareerPortrait = z.infer<typeof careerPortraitSchema>;
 export type PublishedCareerAvailability = z.infer<typeof careerAvailabilitySchema>;
 export type PublishedProjection = z.infer<typeof publishedProjectionSchema>;
 

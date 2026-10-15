@@ -19,6 +19,8 @@ export interface PageMeta {
   /** Articles: the authored date (a partial ISO date) and the tags. */
   publishedTime?: string;
   tags?: readonly string[];
+  /** The copyright notice (`lib/copyright.ts`): `<meta name="copyright">`. Writing and artwork only. */
+  copyright?: string;
   /** Structured data, one JSON-LD object (see `json-ld.ts`). */
   jsonLd?: object;
 }
@@ -61,7 +63,7 @@ export function canonicalUrl(path: string | undefined, origin: string | undefine
  * Every head tag of a page: title, description, canonical, Open Graph, Twitter card and, when given, the robots hint and JSON-LD. Every
  * page has a share image: the entry's cover when it is a format scrapers read, else the default one (1200x630 PNG).
  */
-export function pageMeta({ title, description = SITE_DESCRIPTION, type = "website", image, origin, path, noindex, noImageIndex, publishedTime, tags, jsonLd }: PageMeta = {}): MetaDescriptor[] {
+export function pageMeta({ title, description = SITE_DESCRIPTION, type = "website", image, origin, path, noindex, noImageIndex, publishedTime, tags, copyright, jsonLd }: PageMeta = {}): MetaDescriptor[] {
   const fullTitle = pageTitle(title);
   const canonical = canonicalUrl(path, origin);
   const useCover = image !== undefined && isScrapableImage(image.src);
@@ -91,6 +93,7 @@ export function pageMeta({ title, description = SITE_DESCRIPTION, type = "websit
     ...(share.alt ? [{ property: "og:image:alt", content: share.alt }] : []),
     ...(type === "article" && publishedTime ? [{ property: "article:published_time", content: publishedTime }] : []),
     ...(type === "article" ? (tags ?? []).map((t) => ({ property: "article:tag", content: t })) : []),
+    ...(copyright ? [{ name: "copyright", content: copyright }] : []),
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: fullTitle },
     { name: "twitter:description", content: description },
