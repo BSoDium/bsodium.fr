@@ -56,7 +56,8 @@ const searchPalette = (query) => async (page) => {
 const creditsDialog = async (page) => {
   await waitGlobe(page);
   await sleep(1500);
-  await page.click("[data-attribution] button");
+  // the card's "See more" from md up, the phone's "i" button below it (the other is display: none)
+  await page.click('[data-attribution="card"] button:visible, button[data-attribution="compact"]:visible');
   await page.waitForSelector("dialog[open]", { timeout: 5000 });
   await sleep(700);
   return "dialog[open]";
@@ -84,6 +85,9 @@ const PAGES = [
   { name: "list-articles", path: "/articles" },
   { name: "list-artworks", path: "/artworks" },
   { name: "list-poetry", path: "/poetry" },
+  // The career page (the demo content has a career document, with a portrait); the header carries its link too.
+  { name: "career", path: "/career" },
+  { name: "home-search-career", path: "/", after: searchPalette("career") },
   { name: "article-full", path: "/articles/demo-article?view=full" },
   { name: "article-panel", path: "/articles/demo-article", after: async (p) => { await waitGlobe(p); await sleep(2000); } },
   { name: "note-full", path: "/articles/rain-at-the-citadel-gate?view=full" },

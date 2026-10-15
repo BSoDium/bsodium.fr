@@ -152,6 +152,8 @@ export interface GlobeDebug {
   lodStats(): { evaluations: number; cacheHits: number; visited: number; nodes: number; groups: number; drawnMarkers: number; drawnGroups: number };
   /** Ids of the routes drawn now (only the ones through the selected place). */
   routesShown(): string[];
+  /** The paths layer: leg and vertex counts, segments per level, buffer bytes, the level and segments drawn, draw calls. */
+  pathStats(): ReturnType<GlobeRenderer["pathStats"]>;
   /** Hierarchy in tree order: slug, kind, parent slug (or null), radius km. */
   tree(): { slug: string; kind: string; parent: string | null; radiusKm: number; lon: number; lat: number }[];
   /** Measurement: cost in ms of `n` forced semantic-zoom evaluations at the current camera (the pure O(visible) pass, no drawing). */
@@ -186,6 +188,8 @@ export interface GlobeHandle {
   setLabelsActive(on: boolean): void;
   /** Highlight or clear the selected place. The camera is not moved: the handover controller flies it (handover/controller.ts). */
   setSelected(slug: string | null): void;
+  /** The "Paths" layer on or off. */
+  setPaths(on: boolean): void;
   setFocused(slug: string | null): void;
   /** Highlight (or clear) the group under the pointer. */
   setHovered(slug: string | null): void;
@@ -309,6 +313,9 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       renderer.setSelected(slug, true);
       labels.setSelected(slug);
     },
+    setPaths(on) {
+      renderer.setPathsVisible(on);
+    },
     setFocused(slug) {
       renderer.setFocused(slug);
       labels.setFocused(slug);
@@ -424,6 +431,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         };
       },
       routesShown: () => renderer.routesShown(),
+      pathStats: () => renderer.pathStats(),
       tree: () => Array.from({ length: lod.size }, (_, i) => ({ slug: lod.slug[i]!, kind: lod.kind[i]!, parent: lod.parent[i]! >= 0 ? lod.slug[lod.parent[i]!]! : null, radiusKm: lod.radiusKm[i]!, lon: lod.lon[i]!, lat: lod.lat[i]! })),
       benchLod(n) {
         const cam = renderer.lodCameraNow();

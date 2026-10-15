@@ -7,8 +7,8 @@ import { createHeroMachine } from "~/lib/hero-machine";
 import { SITE_FOCUS, SITE_IDENTITY, SITE_NAME, SITE_TAGLINE } from "~/lib/site";
 import { LandingHero, NAME_TRAVEL_EASE, NAME_TRAVEL_MS } from "./landing-hero";
 
-async function render(props: { away?: boolean; empty?: boolean; orbit?: boolean | null } = {}, machine = createHeroMachine()): Promise<string> {
-  const routes = [{ id: "routes/shell", path: "*", Component: () => createElement(LandingHero, { machine, away: props.away ?? false, empty: props.empty ?? false, orbit: props.orbit ?? null }) }];
+async function render(props: { away?: boolean; empty?: boolean; orbit?: boolean | null; hasCareer?: boolean } = {}, machine = createHeroMachine()): Promise<string> {
+  const routes = [{ id: "routes/shell", path: "*", Component: () => createElement(LandingHero, { machine, away: props.away ?? false, empty: props.empty ?? false, orbit: props.orbit ?? null, hasCareer: props.hasCareer ?? false }) }];
   const handler = createStaticHandler(routes);
   const context = (await handler.query(new Request("http://localhost/"))) as StaticHandlerContext;
   const router = createStaticRouter(handler.dataRoutes, context);
@@ -58,6 +58,24 @@ describe("LandingHero", () => {
     expect(nav).toContain("<ul>");
     expect(nav.match(/<svg/g)).toHaveLength(4);
     expect(nav.match(/aria-hidden="true"/g)?.length).toBe(4);
+  });
+
+  it("has a fifth row, \"Career\", after Poetry when the projection has a career document, in the same row style", async () => {
+    const html = await render({ hasCareer: true });
+    const nav = html.slice(html.indexOf('<nav aria-label="Primary" class="hero-list">'), html.indexOf("</nav>"));
+    const rows = [...nav.matchAll(/<a [^>]*class="hero-row"[^>]*href="([^"]+)"[^>]*><span>([^<]+)<\/span>|<a [^>]*href="([^"]+)"[^>]*class="hero-row"[^>]*><span>([^<]+)<\/span>/g)].map((m) => [m[1] ?? m[3], m[2] ?? m[4]]);
+    expect(rows).toEqual([["/software", "Software"], ["/articles", "Articles"], ["/artworks", "Artworks"], ["/poetry", "Poetry"], ["/career", "Career"]]);
+    expect(nav.match(/<svg/g)).toHaveLength(5);
+    expect(html).toContain('data-rows="5"');
+    // still ONE primary navigation, and no count anywhere in the row
+    expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
+    expect(nav.replace(/<[^>]+>/g, "")).not.toMatch(/\d/);
+  });
+
+  it("has only the four rows, and no link to /career, when there is no career document", async () => {
+    const html = await render();
+    expect(html).not.toContain("/career");
+    expect(html).toContain('data-rows="4"');
   });
 
   it("has a labelled search button that names the shortcut, then the four lists as links in order", async () => {
@@ -231,7 +249,9 @@ describe("the hero's CSS (app.css, 'Landing hero')", () => {
   it("fits the whole block in a short window: the stacked name's size takes the height that is left, and each short tier drops what it can", () => {
     // the stacked name is also capped by what the window leaves after the rest of the block (the figure per tier is in `--hero-fixed`)
     expect(css).toMatch(/--hero-fixed: 26\.5rem;/);
-    expect(css).toMatch(/calc\(\(100dvh - var\(--hero-fixed\) - var\(--hero-clear\) - env\(safe-area-inset-bottom, 0px\) - 1rem\) \/ 1\.9\)/);
+    // a fifth row (the career page) is one more 44 px target that the name gives up
+    expect(css).toMatch(/\.landing-hero\[data-rows="5"\] \{\s*--hero-extra: 2\.8125rem;/);
+    expect(css).toMatch(/calc\(\(100dvh - var\(--hero-fixed\) - var\(--hero-extra, 0rem\) - var\(--hero-clear\) - env\(safe-area-inset-bottom, 0px\) - 1rem\) \/ 1\.9\)/);
     // up to 40 rem tall: no how-to line; up to 36 rem: the rows in two columns; a phone on its side: the wide layout in small
     expect(css).toMatch(/\(max-width: 47\.99rem\) and \(max-height: 40rem\) \{[^@]*--hero-fixed: 24\.5rem;[^@]*\.hero-hint \{\s*display: none;/);
     expect(css).toMatch(/\(max-width: 47\.99rem\) and \(max-height: 36rem\) \{[^@]*--hero-fixed: 17rem;[^@]*grid-template-columns: 1fr 1fr;/);

@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { NavLink, useLocation, useMatches } from "react-router";
 import { SearchPalette, SearchTriggers } from "~/components/search-palette";
+import { CAREER_LABEL, CAREER_PATH } from "~/lib/career";
 import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView } from "~/lib/entries";
 import { GESTURE_GUARD_CAP_MS, GESTURE_GUARD_MS, GestureGuard } from "~/lib/gesture-guard";
 import { useHeroResting } from "~/lib/hero-rest";
+import { useHasCareer } from "~/lib/use-has-career";
 import { SITE_NAME } from "~/lib/site";
 import { cn } from "~/lib/utils";
 
@@ -77,7 +79,12 @@ const HOME_LABEL = "Globe";
 /** The four sections, in the header's order (the hero's rows have the same): paths and names come from the kinds' tables (`Poetry` at `/poetry`). */
 const LINKS = (["project", "article", "artwork", "poem"] as const).map((kind) => ({ to: KIND_PATHS[kind], label: KIND_PLURALS[kind] }));
 
+/** The career page, after the four sections and only while the projection has a career document (`useHasCareer`). Not a content kind. */
+const CAREER_LINK = { to: CAREER_PATH, label: CAREER_LABEL } as const;
+
 interface NavbarProps {
+  /** A fixed answer in place of the projection's (tests): whether the career link is drawn. */
+  hasCareer?: boolean | undefined;
   /** A fixed answer in place of the hero's published state (tests: the server snapshot is always "at rest"). */
   heroResting?: boolean | undefined;
 }
@@ -114,7 +121,10 @@ const linkClass = "nav-link pointer-events-auto inline-flex min-h-11 min-w-11 it
  * at the top edge easing to nothing, as wide as the row plus a soft margin, so the globe is not dimmed across the whole width. The bar itself
  * ignores the pointer so that wheel and touch gestures in the strip still reach the content underneath.
  */
-export function Navbar({ heroResting: forced }: NavbarProps) {
+export function Navbar({ heroResting: forced, hasCareer: forcedCareer }: NavbarProps) {
+  const storedCareer = useHasCareer();
+  const withCareer = forcedCareer ?? storedCareer;
+  const links = withCareer ? [...LINKS, CAREER_LINK] : LINKS;
   const { pathname, search } = useLocation();
   const onGlobe = useMatches().some((m) => m.id === "routes/shell");
   const route = parsePanelPath(pathname);
@@ -134,6 +144,7 @@ export function Navbar({ heroResting: forced }: NavbarProps) {
         <header
           ref={headerRef}
           data-slot="site-header"
+          data-career={withCareer ? "" : undefined}
           className={cn(
             "@container pointer-events-none fixed top-0 right-0 left-0 z-40",
             "md:transition-[right] md:duration-(--duration-slow) md:ease-(--ease-standard)",
@@ -153,8 +164,8 @@ export function Navbar({ heroResting: forced }: NavbarProps) {
                 {HOME_LABEL}
               </NavLink>
               <ul className="flex items-center">
-                {LINKS.map((link) => (
-                  <li key={link.to}>
+                {links.map((link) => (
+                  <li key={link.to} data-nav-item={link.to === CAREER_PATH ? "career" : undefined}>
                     <NavLink
                       to={link.to}
                       prefetch="intent"

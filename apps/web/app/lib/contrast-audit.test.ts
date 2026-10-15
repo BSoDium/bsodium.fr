@@ -97,7 +97,7 @@ const LARGE = 3;
 const PAGE: Pair[] = [
   { use: "body text", fg: "--foreground", bg: ["--background", "--surface", "--accent"], min: BODY },
   { use: "secondary text and mono metadata", fg: "--muted-foreground", bg: ["--background", "--surface", "--accent"], min: TEXT },
-  { use: "the map credits line (page and surface only)", fg: "--subtle-foreground", bg: ["--background", "--surface"], min: TEXT },
+  { use: "the map credits line, and the info icon of its phone button, a 3:1 mark held to the same 4.5:1 (page and surface only)", fg: "--subtle-foreground", bg: ["--background", "--surface"], min: TEXT },
   { use: "a link in running text, a hovered tag, a hovered nav item, a key hint on hover", fg: "--signal-text", bg: ["--background", "--surface", "--accent"], min: TEXT },
   { use: "a link button's label (variant link)", fg: "--signal-text", bg: ["--background", "--surface"], min: TEXT },
   { use: "primary button label on its fill, at rest, hovered and pressed", fg: "--primary-foreground", bg: ["--primary", "--signal-hover", "--signal-active"], min: TEXT },
@@ -133,6 +133,24 @@ describe.each(["light", "dark"] as const)("contrast audit of the tokens (%s)", (
   it("the reading surface's pairs (an entry, a list): the paper tokens bound to the page tokens", () => {
     const tokens = context(scheme, reading);
     check(tokens, PAGE, "reading surface");
+  });
+
+  it("the copyright notice (an entry's last line) is the muted tone, a solid token on the page, AA in the reading surface and printed in ink", () => {
+    const rule = ruleBody(css, css.indexOf("  .entry-copyright {"));
+    expect(rule).toMatch(/color:\s*var\(--muted-foreground\);/);
+    // tones are solid colours: no opacity, no translucent mix on the notice
+    expect(rule).not.toMatch(/opacity|rgb\(|rgba\(|color-mix|transparent/);
+    expect(rule).toMatch(/font-size:\s*0\.75rem/);
+    const tokens = context(scheme, reading);
+    const page = colour(tokens, "--background");
+    const ratio = contrastRatio(colour(tokens, "--muted-foreground", page), page);
+    expect(ratio, `${scheme}: the notice is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(TEXT);
+    // print: ink on white, pinned by an explicit rule (the notice is not hidden by the print block's `hidden` rules)
+    const print = ruleBody(css, css.indexOf('[data-slot="entry-copyright"] {', css.indexOf("@media print {")));
+    expect(print).toMatch(/color:\s*#000/);
+    expect(print).toMatch(/display:\s*block/);
+    const white = parseColor("#fff")!;
+    expect(contrastRatio(parseColor("#000")!, white)).toBeGreaterThanOrEqual(BODY);
   });
 
   it("an inverted frame's pairs: its own page, ink, muted text, accent text, ring and fill", () => {
@@ -268,5 +286,50 @@ describe("rules that put the accent where the owner asked for it (2026-10-14)", 
   it("the chosen filter and the active frame carry the accent's rule", () => {
     expect(ruleBody(css, css.indexOf('  .ds-filter[aria-current="true"] > span {'))).toContain("border-bottom-color: var(--signal);");
     expect(ruleBody(css, css.indexOf('  .ds-frame[data-variant="active"] {'))).toContain("border-color: var(--signal);");
+  });
+});
+
+/**
+ * The four palettes (docs/design-tokens.md, "Palettes"): blue, green, ocre, violet. Same rules as the accent's: the text tone is AA
+ * on the page, the surface, the hover grey and its own tint; the fill and the cover's marks are 3:1 graphics on the page, the surface and
+ * the cover's ground (the hover grey); the on-colour is AA on the fill. A tint is a solid mix, so the ink and muted text are measured on it.
+ */
+describe.each(["light", "dark"] as const)("the four palettes (%s)", (scheme) => {
+  const tokens = context(scheme, null);
+  const HUES = ["blue", "green", "ocre", "violet"] as const;
+  const at = (fg: string, bgName: string, under?: string) => {
+    const bg = colour(tokens, bgName);
+    return contrastRatio(colour(tokens, fg, bg), bg);
+  };
+
+  it.each(HUES)("%s: text tone is AA on the page, the surface, the hover grey and its tint", (hue) => {
+    for (const bg of ["--background", "--surface", "--accent", `--palette-${hue}-tint`]) {
+      expect(at(`--palette-${hue}-text`, bg), `${scheme} ${hue} text on ${bg}`).toBeGreaterThanOrEqual(TEXT);
+    }
+  });
+
+  it.each(HUES)("%s: the ink is 7:1 and muted text AA on the tint (body text on a tinted plate)", (hue) => {
+    expect(at("--foreground", `--palette-${hue}-tint`)).toBeGreaterThanOrEqual(BODY);
+    expect(at("--muted-foreground", `--palette-${hue}-tint`)).toBeGreaterThanOrEqual(TEXT);
+  });
+
+  it.each(HUES)("%s: the fill is 3:1 as a graphic on the page, the surface and the cover's ground", (hue) => {
+    for (const bg of ["--background", "--surface", "--accent"]) {
+      expect(at(`--palette-${hue}`, bg), `${scheme} ${hue} fill on ${bg}`).toBeGreaterThanOrEqual(LARGE);
+    }
+  });
+
+  it.each(HUES)("%s: the on-colour is AA on the fill", (hue) => {
+    expect(at(`--palette-${hue}-on`, `--palette-${hue}`)).toBeGreaterThanOrEqual(TEXT);
+  });
+
+  it.each(HUES)("%s: the lighter steps carry the near-black and the darker ones white, AA, wherever a step is a fill", (hue) => {
+    for (const s of [50, 100, 200, 300, 400, 500]) expect(at("--palette-black", `--palette-${hue}-${s}`), `${hue} ${s}`).toBeGreaterThanOrEqual(TEXT);
+    for (const s of [600, 700, 800, 900]) expect(at("--palette-white", `--palette-${hue}-${s}`), `${hue} ${s}`).toBeGreaterThanOrEqual(TEXT);
+  });
+
+  it("blue is the accent: same fill as --signal, the text tone is --signal-text", () => {
+    expect(colour(tokens, "--palette-blue")).toEqual(colour(tokens, "--signal"));
+    expect(colour(tokens, "--palette-blue-text")).toEqual(colour(tokens, "--signal-text"));
   });
 });

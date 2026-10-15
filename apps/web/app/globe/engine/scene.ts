@@ -24,8 +24,6 @@ import { SkyLayer } from "./sky-layer";
 import { routeLift } from "./view";
 import { TUNING } from "./tuning";
 
-/** Route dash period in art pixels. */
-const ROUTE_DASH_PX = 7;
 
 function segmentGeometry(positions: Float32Array): BufferGeometry {
   const g = new BufferGeometry();
@@ -141,7 +139,7 @@ export class GlobeScene {
   /** Per-frame uniforms that depend on the camera. `now` is the clock (ms) the border fade runs on; `instant`: reduced motion. */
   syncCamera(basis: ViewBasis, zoom: number, pixel: number, now: number, instant: boolean) {
     this.routes.setLift(routeLift(zoom));
-    this.routes.setPeriod((ROUTE_DASH_PX * pixel) / zoomToRadiusPx(zoom));
+    this.routes.setScale(pixel, zoomToRadiusPx(zoom));
     // Borders: on from the zoom `TUNING.borderZoom` (a hysteresis), off below. The fade is a timed TONE (a line is always solid): the faintest
     // grey level stepping up through the palette to the coast level (the coastline's, `borderLevel`) over `FADE_MS`, whatever the camera does, so the globe
     // at rest never shows a half-faded border. Never a dither: a low-coverage dither on 1px lines reads as noise instead of a fade.

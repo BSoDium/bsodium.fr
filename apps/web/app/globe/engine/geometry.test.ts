@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadBorders, loadCoastlines, type Polylines } from "@catalyst/geodata";
-import type { GlobeRoute } from "../types";
 import { OCCLUDER_RADIUS } from "./materials";
-import { MAX_CHORD_DEG, graticuleSegments, isRouteStop, polylinesToSegments, routeBuffers, routesForPlace, segmentPieces } from "./geometry";
+import { MAX_CHORD_DEG, graticuleSegments, polylinesToSegments, segmentPieces } from "./geometry";
 
 describe("polylinesToSegments", () => {
   it("emits one segment per consecutive vertex pair and never joins separate lines", () => {
@@ -91,47 +90,5 @@ describe("long segments are cut so they never sink into the globe (far-zoom bord
 describe("graticuleSegments", () => {
   it("is built from whole segments", () => {
     expect(graticuleSegments(15, 3).length % 6).toBe(0);
-  });
-});
-
-const route: GlobeRoute = {
-  id: "r",
-  title: "R",
-  points: [
-    { lat: 21.03, lon: 105.85 },
-    { lat: 16.46, lon: 107.59 },
-    { lat: 10.82, lon: 106.63 },
-  ],
-};
-
-describe("routeBuffers", () => {
-  const b = routeBuffers(route);
-  it("duplicates the stroke four times with matching buffer sizes", () => {
-    const vertices = b.position.length / 3;
-    expect(b.distance.length).toBe(vertices);
-    expect(b.offset.length).toBe(vertices * 2);
-    expect(vertices % 8).toBe(0);
-    expect(b.length).toBeGreaterThan(0);
-  });
-  it("uses exactly the four 1px offsets", () => {
-    const set = new Set<string>();
-    for (let i = 0; i < b.offset.length; i += 2) set.add(`${b.offset[i]},${b.offset[i + 1]}`);
-    expect([...set].sort()).toEqual(["0,0", "0,1", "1,0", "1,1"]);
-  });
-});
-
-describe("route membership", () => {
-  it("recognises stops by coordinates and nothing else", () => {
-    expect(isRouteStop(route, { lat: 16.46, lon: 107.59 })).toBe(true);
-    expect(isRouteStop(route, { lat: 16.46, lon: 107.6 })).toBe(false);
-  });
-  it("a route is shown only for a selected stop: the routes through the place, none for any other place or no selection", () => {
-    const hue = { slug: "hue", name: "Hue", lat: 16.46, lon: 107.59, labelPriority: 1 };
-    const paris = { slug: "paris", name: "Paris", lat: 48.86, lon: 2.35, labelPriority: 1 };
-    const other = { id: "o", title: "o", points: [{ lat: 16.46, lon: 107.59 }, { lat: 1, lon: 2 }] };
-    expect(routesForPlace([route], hue).map((r) => r.id)).toEqual(["r"]);
-    expect(routesForPlace([route, other], hue).map((r) => r.id)).toEqual(["r", "o"]);
-    expect(routesForPlace([route], paris)).toEqual([]);
-    expect(routesForPlace([route], undefined)).toEqual([]);
   });
 });

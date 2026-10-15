@@ -16,7 +16,7 @@ Code: `app/components/landing-hero.tsx` (the markup and the name's travel), `app
     p.hero-hint       how: "Drag the globe to explore and pick a place, or start from a list." (muted, a step smaller; gone in a short window; without scripts: "Start from a list."). While the globe has the caption (`data-orbit` "pending" or "true") it is visually hidden and stays in the accessibility tree: the caption is the cue, this is the text.
     button.hero-search  [data-needs-script] the search icon (control size), "Search places and entries" (mono 13), the key hint (command icon + K, or Ctrl K); opens the existing palette
   nav.hero-list       aria-label "Primary" (the home page's navigation; the header has none here)
-    ul > li > a.hero-row  Software, Articles, Artworks, Poetry: hairline rows, Bricolage 30 / 300, an arrow icon at 1.1 em (33 px)
+    ul > li > a.hero-row  Software, Articles, Artworks, Poetry and, only when the projection has a career document, Career (a fifth row, `data-rows="5"`; not a content kind, so not in the caption): hairline rows, Bricolage 30 / 300, an arrow icon at 1.1 em (33 px)
   p.hero-mini         aria-hidden: the GHOST of the collapsed name (span.hero-mini-given + span.hero-mini-family, set like the big name, never painted: the boxes the big name's two halves travel to and stay on) and the hint "Drag to explore. Back to start after a moment."
 ```
 
@@ -93,3 +93,5 @@ Colour: `--foreground`, `--muted-foreground`, `--border`, `--border-strong`, `--
 ## Not done
 
 Safari, iOS and real phones were not tested (the caption is textured geometry in the WebGL scene, the travel the Web Animations API; the lift a view offset of the WebGL camera). The board's REST view puts the globe to the right of the hero and its TOUCHED view centres a larger one; the globe is where the engine puts it: centred horizontally in the free area and, in the showcase, lifted by the cover (the bottom lift of round 3 is the engine change this note asked for; the horizontal shift to the right of the hero is still not there). The credits line keeps its own style and position (bottom right, 10 px mono card); the board draws it at 40 / 32 px in 11 px.
+
+**Fifth row (Career).** While the projection has a `career` the list has a fifth row after Poetry (`/career`, same style, arrow, no count). `--hero-extra` (2.8125 rem, `.landing-hero[data-rows="5"]`, stacked tiers) is one more 44 px target that the name gives up, so the block still fits (`hero.mjs` shapes pass with five rows; set `HERO_CAREER=0` for content that has none). In the two-column tiers five rows are three lines. A touch tap within about 24 px above the list is adjusted by the engine to the nearest link, so `hero.mjs` puts its gesture at least 32 px above the block on touch shapes.

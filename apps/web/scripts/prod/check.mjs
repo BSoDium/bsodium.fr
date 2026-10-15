@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { launch, MOBILE, DESKTOP } from "../perf/lib.mjs";
 import { ensureTiles } from "../street/_lib.mjs";
-import { headTags, jsonLd, linkHref, metaContent, parseCsp, pngSize, title } from "./_html.mjs";
+import { decode, headTags, jsonLd, linkHref, metaContent, parseCsp, pngSize, title } from "./_html.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(`--${name}`);
@@ -142,6 +142,16 @@ const page = async (path, label, { status = 200, method = "GET" } = {}) => {
   const exempt = codeNameEntries.has(path.split("?")[0]);
   // Also exempt: the serialised data of such a link (its title sits within a few characters of its slug in the page's state).
   let scanned = body.replace(/<a\b[^>]*href="(\/[a-z]+\/[^"#?]+)"[^>]*>\s*catalyst\s*<\/a>/gi, (m, href) => (codeNameEntries.has(href) ? "" : m));
+  // the entry's own row on a list page (an `article` with the slug as its id) says what the entry says: it explains the code name
+  for (const href of codeNameEntries) scanned = scanned.replace(new RegExp(`<article id="${href.split("/").pop().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[\\s\\S]*?</article>`, "g"), "");
+  if (codeNameEntries.size) {
+    // the same entry's serialised data on a list page: its title as a bare JSON string, the sentence that explains the name, and the
+    // repository fact (a link to the public repository, which is called what the code name is)
+    scanned = scanned
+      .replace(/\\?"Catalyst\\?"/g, '""')
+      .replace(/Catalyst is the code name of this website[^"\\<]*/g, "")
+      .replace(/github\.com\/BSoDium\/Catalyst(?![A-Za-z0-9_-])/g, "");
+  }
   for (const href of codeNameEntries) scanned = scanned.replace(new RegExp(`.{0,160}${href.split("/").pop().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.{0,160}`, "gs"), "");
   ok(exempt || !/catalyst/i.test(scanned), `${label}: the code name appears nowhere in the document${exempt ? " (the entry that explains it)" : /catalyst/i.test(scanned) ? ` (…${/.{0,40}catalyst.{0,40}/i.exec(scanned)?.[0]}…)` : ""}`);
   return { res, body };
@@ -247,6 +257,57 @@ for (const k of ["software", "artworks", "poetry"]) {
   if (p) await document(p, p, { ld: TYPES[k] });
 }
 if (placePath) await document(placePath, placePath, {});
+
+section("copyright notice (poem, article, artwork: yes; software and lists: no)");
+{
+  // app/lib/copyright.ts: the visible line, <meta name="copyright"> and the JSON-LD say the same words. Guarded by what is published.
+  const NOTICE = /^© (?:\d{4} )?Elliot Négrel-Jerzy\. (?:All rights reserved\. Please do not reproduce this (?:poem|article|artwork) without permission; short quotations with attribution are welcome\.|Tous droits réservés\. Merci de ne pas reproduire (?:ce poème|ce texte|cette œuvre) sans autorisation ; de courtes citations avec mention de l'auteur sont bienvenues\.)$/;
+  for (const k of ["poetry", "articles", "artworks"]) {
+    const p = entryPaths.find((x) => kindOf(x) === k);
+    if (!p) {
+      info(`${k}: nothing published, copyright notice not checked`);
+      continue;
+    }
+    const { body } = await text(p);
+    const visible = decode(/data-slot="entry-copyright"[^>]*>([^<]*)</.exec(body)?.[1] ?? "");
+    ok(NOTICE.test(visible), `${p}: ends with the copyright notice (${visible.slice(0, 60)}…)`);
+    ok(body.indexOf('data-slot="entry-copyright"') > body.indexOf('data-slot="entry-view"'), `${p}: the notice is in the entry`);
+    const meta = headTags(body).find((t) => t.name === "copyright");
+    ok(Boolean(meta) && decode(meta.content) === visible, `${p}: <meta name="copyright"> equals the visible notice`);
+    const ld = jsonLd(body)[0] ?? {};
+    ok(ld.copyrightHolder?.["@type"] === "Person" && ld.copyrightHolder?.name === NAME && decode(ld.copyrightNotice ?? "") === visible && !("license" in ld), `${p}: JSON-LD copyrightHolder (Person) and copyrightNotice, no license`);
+  }
+  for (const p of ["/poetry", "/articles", "/artworks", "/software", "/"]) {
+    const { body } = await text(p);
+    ok(!/entry-copyright|All rights reserved/.test(body) && !headTags(body).some((t) => t.name === "copyright"), `${p}: no copyright notice, no copyright meta`);
+  }
+  const code = entryPaths.find((x) => kindOf(x) === "software");
+  if (code) {
+    const { body } = await text(code);
+    ok(!/entry-copyright/.test(body) && !headTags(body).some((t) => t.name === "copyright") && !/copyrightHolder/.test(body), `${code}: software has no notice (code, under the repository licence)`);
+  }
+}
+
+// The career page exists only while the projection has the document (production has none until the owner publishes it): the sitemap says
+// which case this is, and each case is checked (docs/career-page.md). Nothing here fails a deployment that has no career.
+const hasCareer = paths.includes("/career");
+if (hasCareer) {
+  section("career page (the projection has a career document)");
+  const c = await document("/career", "/career", { ld: "ProfilePage" });
+  ok(title(c.body) === `Career · ${NAME}`, `/career: the title is "Career · name" (${title(c.body)})`);
+  ok((c.body.match(/<h1[ >]/g) ?? []).length === 1 && new RegExp(`<h1[^>]*>${NAME}</h1>`).test(c.body), "/career: one h1, the owner's name");
+  const visible = c.body.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
+  ok(!/mailto:|tel:|sms:/i.test(c.body) && !/@[A-Za-z0-9-]+\.[a-z]{2,}/.test(visible), "/career: no contact channel (no mailto, tel, e-mail address)");
+  ok(/og:image" content="[^"]*og-default\.png"/.test(c.body), "/career: the share image is the site's default (never the portrait)");
+  ok(paths.includes("/career") && /href="\/career"/.test((await text("/")).body), "/: the home page links to /career (the hero's fifth row, in the server HTML)");
+} else {
+  section("career page (no career document in the projection)");
+  const gone = await get("/career");
+  await gone.arrayBuffer();
+  ok(gone.status === 404, `/career: 404 while there is no career document (${gone.status})`);
+  ok(!/href="\/career"/.test((await text("/")).body), "/: no link to /career anywhere in the home page");
+  ok(!sm.body.includes("/career"), "sitemap.xml: no /career");
+}
 
 section("data responses (client navigations)");
 {

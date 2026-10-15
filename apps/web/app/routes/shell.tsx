@@ -1,10 +1,11 @@
 import { useReducedMotion } from "motion/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutlet } from "react-router";
 import type { Route } from "./+types/shell";
 import { AttributionSlot } from "~/components/attribution-slot";
 import { DetailPanel, type OpenIntent } from "~/components/detail-panel";
 import { LandingHero } from "~/components/landing-hero";
+import { PathsToggle } from "~/components/paths-toggle";
 import { PlacesNav } from "~/components/places-nav";
 import { Globe, placeFraming, ringPhrases, type GlobeInitialView, type GlobeViewState } from "~/globe";
 import { useIsMobile } from "~/hooks/use-is-mobile";
@@ -14,6 +15,7 @@ import { getProjection } from "~/lib/content.server";
 import { getTilesConfig } from "~/lib/tiles-config.server";
 import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
 import { panelInset } from "~/lib/layout";
+import { readPathsPref, writePathsPref } from "~/lib/paths-pref";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
 import { SITE, siteCaption, type KindCounts } from "~/lib/site";
 
@@ -61,6 +63,14 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
   const viewportWidth = useViewportWidth();
 
   const [focusedSlug, setFocusedSlug] = useState<string | null>(null);
+  // The "Paths" switch: on until the visitor turns it off (stored per browser). Read after hydration so the server and client agree.
+  const [paths, setPaths] = useState(true);
+  useEffect(() => setPaths(readPathsPref()), []);
+  const changePaths = useCallback((on: boolean) => {
+    setPaths(on);
+    writePathsPref(on);
+  }, []);
+  const hasLegs = useMemo(() => routes.some((r) => r.points.length > 1), [routes]);
   // View state lives here so it survives the globe being unmounted behind the mobile slide-over.
   const viewRef = useRef<GlobeViewState | null>(null);
   const intent = useRef<OpenIntent>({ user: false });
@@ -134,6 +144,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
               places={globePlaces}
               groups={globeGroups}
               routes={routes}
+              paths={paths}
               selectedSlug={selectedSlug}
               focusedSlug={focusedSlug}
               initialView={viewRef.current ?? startView}
@@ -150,6 +161,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
               onInteract={hero.onInteract}
             />
           )}
+          {globeActive && hasLegs && <PathsToggle on={paths} onChange={changePaths} insetRight={insetRight} />}
           {/* Only the globe needs JavaScript: the lists, the entries and the places are server-rendered pages that read and navigate without it. */}
           <noscript>
             <p className="absolute inset-y-0 left-0 m-0 flex w-full items-center justify-center px-6 text-center text-sm text-muted-foreground md:w-1/2 [&_a]:underline">

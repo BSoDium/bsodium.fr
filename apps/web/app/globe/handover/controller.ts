@@ -52,6 +52,8 @@ export interface HandoverOptions {
   /** The automatic hierarchy (empty = no grouping: every place is a marker at every zoom). */
   groups: readonly GlobeGroup[];
   routes: readonly GlobeRoute[];
+  /** The "Paths" layer at start (default true). */
+  paths?: boolean;
   coastlines: Polylines;
   borders: Polylines;
   /** A `GlobeFitView` starts framed on a place; with none, a selected place is framed too (nothing flies on load). */
@@ -127,6 +129,8 @@ export interface HandoverHandle {
   /** Highlight a place; `fly` also moves the camera to it (into street scale when the street map can show it). */
   setSelected(slug: string | null, fly: boolean): void;
   setFocused(slug: string | null): void;
+  /** The "Paths" layer: every route leg faint, the selected place's in ink, on or off (both renderers). */
+  setPaths(on: boolean): void;
   setReducedMotion(on: boolean): void;
   setInset(px: number): void;
   /** The app covers the bottom `px` of the globe (the landing hero at rest): the planet is lifted clear of it as far as there is room. */
@@ -204,6 +208,8 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
   let retreating = false;
   /** A flight toward street scale is under way (or wanted): keeps the street map mounted. */
   let wantStreet = false;
+  /** The "Paths" layer, for the street map when it mounts later. */
+  let pathsOn = opts.paths !== false;
 
   // ---- globe ---------------------------------------------------------------------------------------------------------
   // `onFrame` can fire before `createGlobe` returns; it waits for the assignments below.
@@ -238,6 +244,7 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     pickOverride: (x, y, kind) => (owner === "street" && street ? street.hit(x, y, kind) : undefined),
   });
   renderer = globe.renderer;
+  if (!pathsOn) globe.setPaths(false);
   globe.setFocused(focused);
 
   // Dissolve mode: both overlays fade with the dissolve (an opacity cross-fade of text cannot be a pixel dissolve;
@@ -292,6 +299,7 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
         places: opts.places,
         lod,
         routes: opts.routes,
+        paths: pathsOn,
         selectedSlug: selected,
         focusedSlug: focused,
         reducedMotion: reduced,
@@ -763,6 +771,11 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
 
   return {
     setSelected: select,
+    setPaths(on) {
+      pathsOn = on;
+      globe.setPaths(on);
+      street?.setPaths(on);
+    },
     setFocused(slug) {
       focused = slug;
       globe.setFocused(slug);

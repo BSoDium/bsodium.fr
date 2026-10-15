@@ -19,6 +19,7 @@
  * at paint time (`applyCell` re-applies them when the cell changes).
  */
 import type { ExpressionSpecification, LayerSpecification, Map as MLMap, StyleSpecification } from "maplibre-gl";
+import { LEG_MODES, MODE_STYLE, RAIL_TICK_DASH, RAIL_TICK_WIDTH, dashArray, type LegMode } from "../../paths/modes";
 import { DESIGN_CELL_CSS, THIN_INK, artStops, cssStops, hollowFillStops, inkOpacityFor, inkOpacityStops, type Stops } from "../core/art-line";
 import type { Schema } from "../core/source-descriptor";
 import { roleLevel, type Role } from "../core/palette";
@@ -42,7 +43,12 @@ export interface StreetStyleOptions {
   coastlines: GeoJSON.FeatureCollection;
   borders: GeoJSON.FeatureCollection;
   graticule: GeoJSON.FeatureCollection;
+  /** Every leg of every route, one feature each (`core/routes.ts` `legFeatures`). */
   routes: GeoJSON.FeatureCollection;
+  /** Keys of the legs the focus layers draw in ink: the selected place's (`legKeysAt`). */
+  focusKeys?: readonly string[];
+  /** The "Paths" layer switch: false starts every path layer hidden. */
+  pathsVisible?: boolean;
   /** Zoom at which the world-scale coastline (110m, @catalyst/geodata) hands over to tile geometry. */
   handoffZoom?: number;
   projection?: "globe" | "mercator";
@@ -338,11 +344,24 @@ function artWidthPaint(spec: Spec, cellCss: number): number | ExpressionSpecific
 /** Layer ids of the lines that follow the art cell (world data and routes included). */
 const CELL_LAYERS = ["world-coast", "world-borders", "graticule"] as const;
 /**
- * A route is two art pixels wide, dashed with the globe's 7 px period (62 % ink): the same stroke the Three.js globe
- * draws, so the curated routes keep their weight through the handover. Its erasing halo is four art pixels wide.
+ * The paths: every leg of every route, one art pixel wide (the floor), thin ink so the pass's staircase removal makes a diagonal exactly
+ * one cell per step, patterned by mode with `paths/modes.ts` (the same table the Three.js globe's shader reads, so the look keeps
+ * through the hand-over). Two layers per mode: `routes-faint` (every leg, the map's loudest tone, `coast`) and `routes-focus` (the
+ * legs next to the selected place, the ink; filtered by `setFilter`, never by new data). The rail's ticks are a third, 3-cell wide
+ * layer of 1-cell dashes in solid ink (a wide class is never thinned). No halo: a 1-cell line with an erasing 3-cell halo would
+ * cut every road it crosses.
  */
-const ROUTE_ART = 2;
-const ROUTE_HALO_ART = 4;
+export const ROUTE_LAYER_PREFIXES = ["routes-faint", "routes-focus"] as const;
+const modeSuffix = (m: LegMode) => (m === "road" ? "" : `-${m}`);
+/** Layer id of a path layer: `routes-faint`, `routes-focus` for roads, `routes-faint-rail`, ... for the other modes, `-tick` for rail ticks. */
+export const routeLayerId = (prefix: (typeof ROUTE_LAYER_PREFIXES)[number], mode: LegMode, tick = false): string => `${prefix}${modeSuffix(mode)}${tick ? "-tick" : ""}`;
+/** All path layer ids, bottom first. */
+export const ROUTE_LAYER_IDS: string[] = ROUTE_LAYER_PREFIXES.flatMap((prefix) => LEG_MODES.flatMap((m) => (m === "rail" ? [routeLayerId(prefix, m), routeLayerId(prefix, m, true)] : [routeLayerId(prefix, m)])));
+const NO_KEY = "\u0000none";
+/** The filter of a focus layer: the mode, and the keys of the selected place's legs (none: nothing matches). */
+export function focusFilter(mode: LegMode, keys: readonly string[]): ExpressionSpecification {
+  return ["all", ["==", ["get", "mode"], mode], ["in", ["get", "key"], ["literal", keys.length ? [...keys] : [NO_KEY]]]] as unknown as ExpressionSpecification;
+}
 
 /** Re-apply the art widths after the art cell size changed (viewport crossing 520 px, DPR change). */
 export function applyCell(map: MLMap, cellCss: number): void {
@@ -351,8 +370,7 @@ export function applyCell(map: MLMap, cellCss: number): void {
     map.setPaintProperty(spec.id, "line-width", artWidthPaint(spec, cellCss) as never);
   }
   for (const id of CELL_LAYERS) if (map.getLayer(id)) map.setPaintProperty(id, "line-width", cellCss);
-  if (map.getLayer("routes-line")) map.setPaintProperty("routes-line", "line-width", ROUTE_ART * cellCss);
-  if (map.getLayer("routes-halo")) map.setPaintProperty("routes-halo", "line-width", ROUTE_HALO_ART * cellCss);
+  for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.setPaintProperty(id, "line-width", (id.endsWith("-tick") ? RAIL_TICK_WIDTH : 1) * cellCss);
 }
 
 /** `layout.visibility` of a switched layer: on or off as the switch says (a style built for tests has them all on). */
@@ -465,17 +483,27 @@ export function buildStreetStyle(o: StreetStyleOptions): StyleSpecification {
     layout: visibility("graticule", o.visible),
     paint: { "line-color": lineColor(roleLevel("faint")), "line-opacity": THIN_INK, "line-width": cell, "line-dasharray": [1.5, 2.5] },
   } as LayerSpecification;
-  // Curated routes: an erasing halo (so a route reads over a road of the same ink) and a dashed two-pixel ink line.
-  const routesHalo: LayerSpecification = {
-    id: "routes-halo", type: "line", source: "routes",
-    layout: { "line-cap": "butt", "line-join": "round" },
-    paint: { "line-color": ERASE, "line-width": ROUTE_HALO_ART * cell },
-  } as LayerSpecification;
-  const routesLine: LayerSpecification = {
-    id: "routes-line", type: "line", source: "routes",
-    layout: { "line-cap": "butt", "line-join": "miter" },
-    paint: { "line-color": ink, "line-opacity": 1, "line-width": ROUTE_ART * cell, "line-dasharray": [2.2, 1.3] },
-  } as LayerSpecification;
+  // The paths (see ROUTE_LAYER_PREFIXES).
+  const routeLayers: LayerSpecification[] = [];
+  const focusKeys = o.focusKeys ?? [];
+  for (const [prefix, color] of [["routes-faint", coastInk], ["routes-focus", ink]] as const) {
+    for (const mode of LEG_MODES) {
+      const base = prefix === "routes-faint" ? ["==", ["get", "mode"], mode] : focusFilter(mode, focusKeys);
+      const dash = dashArray(mode);
+      routeLayers.push({
+        id: routeLayerId(prefix, mode), type: "line", source: "routes", filter: base as never,
+        layout: { "line-cap": "butt", "line-join": "miter", ...(o.pathsVisible === false ? { visibility: "none" } : {}) },
+        paint: { "line-color": color, "line-opacity": THIN_INK, "line-width": cell, ...(dash ? { "line-dasharray": dash } : {}) },
+      } as LayerSpecification);
+      if (MODE_STYLE[mode].tick) {
+        routeLayers.push({
+          id: routeLayerId(prefix, mode, true), type: "line", source: "routes", filter: base as never,
+          layout: { "line-cap": "butt", "line-join": "miter", ...(o.pathsVisible === false ? { visibility: "none" } : {}) },
+          paint: { "line-color": color, "line-opacity": 1, "line-width": RAIL_TICK_WIDTH * cell, "line-dasharray": RAIL_TICK_DASH },
+        } as LayerSpecification);
+      }
+    }
+  }
 
   const sources: StyleSpecification["sources"] = {
     coast: { type: "geojson", data: o.coastlines as never },
@@ -502,8 +530,7 @@ export function buildStreetStyle(o: StreetStyleOptions): StyleSpecification {
       grid,
       ...tones,
       ...lines,
-      routesHalo,
-      routesLine,
+      ...routeLayers,
       worldCoastInk,
       bordersInk(noTiles ? 24 : placeholder ? WORLD_PLACEHOLDER_BELOW : borderHandoff(handoff)),
     ],

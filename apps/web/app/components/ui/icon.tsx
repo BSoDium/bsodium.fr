@@ -5,6 +5,7 @@ import {
   ArrowUp,
   ArrowUpLeft,
   ArrowUpRight,
+  Briefcase,
   Check,
   Command,
   Copy,
@@ -15,6 +16,7 @@ import {
   FileText,
   Hash,
   Image as ImageIcon,
+  Info,
   Link2,
   Maximize2,
   MapPin,
@@ -41,6 +43,7 @@ export const ICONS = {
   artwork: ImageIcon,
   poem: Feather,
   place: MapPin,
+  career: Briefcase,
   close: X,
   expand: Maximize2,
   collapse: Minimize2,
@@ -59,6 +62,7 @@ export const ICONS = {
   search: Search,
   eye: Eye,
   "eye-off": EyeOff,
+  info: Info,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

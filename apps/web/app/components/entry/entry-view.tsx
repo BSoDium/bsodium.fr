@@ -6,6 +6,7 @@ import { EntryRefCard } from "~/components/entry/entry-list-card";
 import { TableOfContents } from "~/components/entry/toc";
 import { Button, CopyButton, CoverArt, Icon, SensitiveImage, SensitiveMediaScope, StatusTag, TagList } from "~/components/ui";
 import { shareUrl } from "~/lib/clipboard";
+import { copyrightNotice } from "~/lib/copyright";
 import { formatEntryDate } from "~/lib/dates";
 import {
   entryLanguage,
@@ -49,7 +50,8 @@ function placeNames(places: readonly EntryPlaceLink[]): string | null {
  *
  * Order: back link, the running head (kicker: kind, place, reading time) over one hairline, the headline, the standfirst (the summary), the dateline (date,
  * "open on the globe", copy link), the marginalia (where, written, linked, the authored facts, tags, the external link, contents), the
- * lead image, the text, the figures (articles and projects: the images set apart from the text), then "keep reading". A poem puts its
+ * lead image, the text, the figures (articles and projects: the images set apart from the text), the copyright notice (poems, articles
+ * and artworks: `lib/copyright.ts`), then "keep reading". A poem puts its
  * title and lines in the middle of the page with its marginalia beside the title. Full screen from 1024 px: marginalia in columns 1 to 3,
  * text in 4 to 9, figures in 10 to 12.
  *
@@ -81,6 +83,7 @@ function EntryArticle({ entry, layout, backTo, headingId = PANEL_HEADING_ID }: E
   const hasMore = entry.related.length > 0 || !!entry.prev || !!entry.next;
   const firstPlace = entry.places[0];
   const names = placeNames(entry.places);
+  const notice = copyrightNotice(entry);
   // The images of an article or a project are the figures of the page (third column); an artwork's and a poem's stay in the text, wide.
   const { text, figures } = entry.kind === "article" || entry.kind === "project" ? splitFigures(entry.body) : { text: entry.body, figures: [] };
   const { lead, tail } = poem ? { lead: entry.title, tail: "" } : splitHeadline(entry.title);
@@ -230,6 +233,12 @@ function EntryArticle({ entry, layout, backTo, headingId = PANEL_HEADING_ID }: E
         {poem && <Cover entry={entry} />}
         {figures.length > 0 && <Figures blocks={figures} />}
       </div>
+
+      {notice && (
+        <p data-slot="entry-copyright" lang={notice.language === "fr" ? "fr" : undefined} className="entry-copyright">
+          {notice.text}
+        </p>
+      )}
 
       {hasMore && (
         <div className="mt-16 print:hidden md:mt-20">

@@ -2,6 +2,7 @@
  * Structured data (schema.org JSON-LD) of the pages, built ONLY from what the projection publishes: nothing is invented (no author, no
  * publisher, no dates other than the authored one). Minimal on purpose; every property below is valid for its type.
  */
+import { copyrightNotice } from "./copyright";
 import type { EntryDetail } from "./entries";
 import { isScrapableImage, absoluteUrl } from "./meta";
 import { shareableCover } from "./sensitive";
@@ -40,6 +41,8 @@ export function entryJsonLd(entry: EntryDetail, origin: string): Json {
   // a sensitive entry has no `image` at all: structured data is what a search result is built from
   const shareable = shareableCover(entry);
   const cover = shareable && isScrapableImage(shareable.src) ? absoluteUrl(shareable.src, origin) : undefined;
+  // writing and artwork carry the owner's notice; software is code under the repository's licence (no notice, no license URL either way)
+  const notice = copyrightNotice(entry);
   return {
     "@context": "https://schema.org",
     "@type": type,
@@ -54,6 +57,13 @@ export function entryJsonLd(entry: EntryDetail, origin: string): Json {
     ...(entry.kind === "poem" ? { genre: "Poem" } : {}),
     ...(type === "SoftwareSourceCode" && entry.url ? { codeRepository: entry.url } : {}),
     ...(entry.places.length ? { contentLocation: entry.places.map((p) => ({ "@type": "Place", name: p.name, url: absoluteUrl(p.href, origin) })) } : {}),
+    ...(notice
+      ? {
+          copyrightHolder: { "@type": "Person", name: notice.holder },
+          ...(notice.year !== undefined ? { copyrightYear: notice.year } : {}),
+          copyrightNotice: notice.text,
+        }
+      : {}),
     isPartOf: { "@type": "WebSite", name: SITE_NAME, url: `${origin}/` },
   };
 }

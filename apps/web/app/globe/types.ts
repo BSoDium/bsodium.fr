@@ -116,6 +116,17 @@ export interface GlobeRoute {
   id: string;
   title: string;
   points: { lat: number; lon: number }[];
+  /**
+   * One per consecutive pair of `points` (`points.length - 1`): how the leg is travelled and, optionally, its geometry
+   * (a precision-5 polyline, docs/api-contract.md "Route legs"). Absent, or a leg without a polyline: the geodesic arc.
+   */
+  legs?: GlobeLeg[];
+}
+
+/** A leg of a route: the mode picks the line style, the polyline (when there is one) is the path it follows. */
+export interface GlobeLeg {
+  mode: "road" | "rail" | "ferry" | "flight" | "walk" | "unknown";
+  polyline?: string;
 }
 
 /**
@@ -139,6 +150,8 @@ export interface GlobeAttributionProps {
   tiles: { primaryUrl: string; fallbackPmtilesUrl: string | null } | null;
   insetRight: number;
   reducedMotion: boolean;
+  /** Which map the control sits on: the phone's credits line is shown once per page session per surface. */
+  surface: "globe" | "street";
 }
 
 /** What the app tells the globe about the home screen: it is at rest (`on`), and how much of the bottom of the globe's box it covers then. */
@@ -184,6 +197,11 @@ export interface GlobeProps {
    */
   groups: GlobeGroup[];
   routes: GlobeRoute[];
+  /**
+   * The "Paths" layer: every leg of every route drawn faintly, the selected place's in ink. false hides all of them (the visitor's switch);
+   * default true. Follows without a rebuild.
+   */
+  paths?: boolean;
   selectedSlug: string | null;
   focusedSlug: string | null;
   /**

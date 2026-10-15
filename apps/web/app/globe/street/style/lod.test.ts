@@ -8,7 +8,7 @@ import { zoomCorrection } from "../core/registration";
 import { FILL_LOD, LOD, levelAt, toneLevel, visibleAt, type LodKey } from "./lod";
 import { LayerSwitch, ZOOM_BAND, switchRules } from "./layer-switch";
 import { decodePattern, levelOfPaint } from "./probe";
-import { DEFAULT_HANDOFF, MAJOR_WIDE_FROM, SPECS, WORLD_PLACEHOLDER_BELOW, hasPlaceholder, artWidthStopsOf, buildStreetStyle, linePaint, seaFrom, type Schema } from "./street-style";
+import { DEFAULT_HANDOFF, MAJOR_WIDE_FROM, ROUTE_LAYER_IDS, SPECS, WORLD_PLACEHOLDER_BELOW, hasPlaceholder, artWidthStopsOf, buildStreetStyle, linePaint, seaFrom, type Schema } from "./street-style";
 
 const KEYS = Object.keys(LOD) as LodKey[];
 const LEVEL_COUNTS = [3, 4, 6, 8, 10, 12];
@@ -125,7 +125,7 @@ describe("style wiring of the LOD", () => {
       const hidden = st.filter((l) => l.layout?.visibility === "none").map((l) => l.id);
       const switchedIds = new Set([...SPECS.filter((s) => s.lod || s.fade).map((s) => s.id), "graticule"]);
       for (const id of hidden) expect(switchedIds.has(id) || /^world-/.test(id), `${schema} ${id} must not be hidden by the switch`).toBe(true);
-      for (const id of ["water-edge", "boundary-country", "road-major-fill", "road-medium-fill", "routes-line", "routes-halo", "background"]) expect(hidden.includes(id), `${schema} ${id}`).toBe(false);
+      for (const id of ["water-edge", "boundary-country", "road-major-fill", "road-medium-fill", "routes-faint", "routes-focus", "routes-faint-rail", "background"]) expect(hidden.includes(id), `${schema} ${id}`).toBe(false);
       for (const id of switchedIds) expect(hidden.includes(id), `${schema} ${id}`).toBe(true);
     }
   });
@@ -227,7 +227,7 @@ describe("regression: the coast is never dashed (owner report: coasts dotted aro
   it("the only dashed world layer is the graticule", () => {
     const st = make("openmaptiles").layers as unknown as L[];
     const dashed = st.filter((l) => /^(world-|graticule|routes-)/.test(l.id) && l.paint["line-dasharray"]).map((l) => l.id);
-    expect(dashed.sort()).toEqual(["graticule", "routes-line"]);
+    expect(dashed.sort()).toEqual(["graticule", ...ROUTE_LAYER_IDS.filter((id) => id !== "routes-faint" && id !== "routes-focus").sort()]);
   });
 });
 

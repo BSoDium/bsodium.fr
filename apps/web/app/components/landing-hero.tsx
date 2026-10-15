@@ -2,14 +2,19 @@ import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react"
 import { Link } from "react-router";
 import { openSearch } from "~/components/search-palette";
 import { Icon, KeyHint } from "~/components/ui";
+import { CAREER_LABEL, CAREER_PATH } from "~/lib/career";
 import { KIND_PATHS, KIND_PLURALS } from "~/lib/entries";
 import type { HeroMachine, HeroSnapshot } from "~/lib/hero-machine";
 import { setHeroResting } from "~/lib/hero-rest";
 import { NameTravel, type TravelHalf } from "~/lib/name-travel";
 import { SITE, SITE_FOCUS, SITE_IDENTITY } from "~/lib/site";
+import { useHasCareer } from "~/lib/use-has-career";
 
 /** The four shortcuts, in the header's order. Paths and words come from the one table the lists and the navigation use. */
 const SHORTCUTS = (["project", "article", "artwork", "poem"] as const).map((kind) => ({ to: KIND_PATHS[kind], label: KIND_PLURALS[kind] }));
+
+/** The fifth row, when the projection has a career document: not a content kind, so not in the caption's section names. */
+const CAREER_SHORTCUT = { to: CAREER_PATH, label: CAREER_LABEL } as const;
 
 /**
  * The name's travel to the collapsed line and back (owner, round 3, items 10 and 3): `--hero-travel` of app.css, with its ease (a fast start and a
@@ -130,6 +135,8 @@ interface LandingHeroProps {
   away: boolean;
   /** No place is published: the globe has nothing on it. */
   empty: boolean;
+  /** A fixed answer in place of the projection's (tests): whether the fifth row, the career page, is drawn. */
+  hasCareer?: boolean | undefined;
 }
 
 /**
@@ -145,7 +152,10 @@ interface LandingHeroProps {
  *
  * Order in the DOM is reading order: name, who, search, lists. The grid places the name last on a wide screen; focus never lands on it.
  */
-export function LandingHero({ machine, away, empty, orbit = null, onCover }: LandingHeroProps) {
+export function LandingHero({ machine, away, empty, orbit = null, onCover, hasCareer: forcedCareer }: LandingHeroProps) {
+  const storedCareer = useHasCareer();
+  const career = forcedCareer ?? storedCareer;
+  const shortcuts = career ? [...SHORTCUTS, CAREER_SHORTCUT] : SHORTCUTS;
   const snapshot = useSyncExternalStore(machine.subscribe, machine.getSnapshot, () => SERVER_SNAPSHOT);
   const state = away ? "away" : snapshot.state;
   // The header reads this: while the rows are showing it carries no section links of its own.
@@ -228,6 +238,7 @@ export function LandingHero({ machine, away, empty, orbit = null, onCover }: Lan
       data-hero={state}
       data-world={snapshot.world ? "true" : "false"}
       data-orbit={empty || orbit === false ? "false" : orbit ? "true" : "pending"}
+      data-rows={shortcuts.length}
       ref={rootRef}
       aria-hidden={away ? true : undefined}
       className="landing-hero print:hidden"
@@ -273,7 +284,7 @@ export function LandingHero({ machine, away, empty, orbit = null, onCover }: Lan
         {/* The home page's primary navigation (the header has none here); out of the accessibility tree with the rest when the hero steps back. */}
         <nav aria-label="Primary" className="hero-list">
           <ul>
-            {SHORTCUTS.map((s) => (
+            {shortcuts.map((s) => (
               <li key={s.to}>
                 <Link to={s.to} prefetch="intent" className="hero-row">
                   <span>{s.label}</span>
