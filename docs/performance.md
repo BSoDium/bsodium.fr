@@ -114,7 +114,7 @@ The ring of text that circles the planet's disc below the whole-globe fit (web-a
 
 ### Round 3: the home screen rests on the ring, and the caption is part of the globe's own frames (2026-10-14)
 
-The home page now opens at the globe's lowest zoom, where the ring of type (round 2, unchanged: restored exactly after the owner's review) is shown, so **the page at rest is no longer idle**: it repaints 30 times a second for the ring, until a gesture, a zoom in or a place opening (reduced motion: a static ring, no timer). That is the one standing cost, and it is the ring's own, above. **The caption adds nothing at rest**: it is textured geometry in the globe's scene, drawn in frames the globe draws anyway, and the frame loop is asked for frames only while an entrance (1.14 s) or a departure (200 ms) runs.
+The home page now opens at the globe's lowest zoom, where the ring of type (round 2, unchanged: restored exactly after the owner's review) is shown, so **the page at rest is no longer idle**: it repaints 30 times a second for the ring, until a gesture, a zoom in or a place opening (reduced motion: a static ring, no timer). That is the one standing cost, and it is the ring's own, above. **The caption adds nothing at rest**: it is textured geometry, drawn in frames the globe draws anyway, and the frame loop is asked for frames only while an entrance or a departure (200 ms) runs (round 4 below: the caption is now crisp, in a second canvas).
 
 Measured on a production build served by `react-router-serve` (demo content), headless Chrome for Testing 153 with the GPU, 1440 x 900 @2, 2 repeats, `node apps/web/scripts/perf/run.mjs --scenarios idle,ring-rest,caption-enter`:
 
@@ -129,11 +129,32 @@ Measured on a production build served by `react-router-serve` (demo content), he
 
 `caption-enter` (the showcase turned off and on five times, 700 ms and 1.4 s apart: the boxes and labels cross-fade with the caption's entrance and departure): 421 GL frames in 14.3 s, **p50, p95 and max frame interval 16.7 / 16.7 to 16.8 / 16.8 ms, 0 missed against the 60 Hz compositor, 0 long tasks**, GPU 0.17 to 0.18 ms a frame (mean), and **0 GL draws in the 1.5 s of rest after the last entrance**. The two lines are two draw calls over one shared shader; the geometry is built once (a strip of one column per 2 degrees: about 60 columns x 2 rows x 2 lines), each frame of an entrance is a matrix per line.
 
-The texture (one small canvas per line, drawn once per face and size class: about 900 x 150 texels with mipmaps for Jacquard at 64 texels a cap height) is the only new memory: well under 1 MB.
+The texture (one small canvas per line, drawn once per size class) is the only new memory: well under 1 MB (round 3's first version drew it in a pixel face; see round 4 below).
 
-Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 669.7 KB raw / 182.1 KB gzip against the release's 658.8 / 179.6 (+10.9 KB raw, +2.5 KB gzip: `caption.ts`, `caption-layer.ts`, `lift.ts`, the showcase wiring). The two fonts (18.9 kB and 3.9 kB) are fetched only when the page's caption face is that one, by the globe, after the page is up; Jacquard is the default so it is 18.9 kB on the home page, once (immutable cache).
+Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 669.7 KB raw / 182.1 KB gzip against the release's 658.8 / 179.6 (+10.9 KB raw, +2.5 KB gzip: `caption.ts`, `caption-layer.ts`, `lift.ts`, the showcase wiring). The calligraphic face (Imperial Script, 19.7 kB) is fetched by the globe, after the page is up, only when the caption has a word in it (immutable cache); the serif and the mono are the page's own.
 
 **Not measured:** a real phone, a CPU-throttled run, a 120 Hz headed run, battery (30 repaints a second as the resting state of the home page is the thing to watch: the knob is `RING.frameMs`, 32). The perf budgets (`pnpm perf`) were not run in full for this change.
+
+### Round 4: the caption in the reading serif, outlined and extruded (2026-10-14)
+
+The caption is now Newsreader (the face the page already has: no file), outlined and given a thickness (6 stacked slices in one geometry; four rows in view since round 6, see "Caption on the sphere" in docs/web-architecture.md), floating at 1.15 radii, drawn **crisp** by a second small WebGL canvas over the globe's (there is no pixel pass option any more: an outlined serif is not readable there). The two pixel faces and their licences are gone from `public/fonts` (-22.8 kB of files, never on the page unless asked; later rounds add two caption faces, see below).
+
+Measured as above (production build, `react-router-serve`, demo content, headless Chrome for Testing 153 with the GPU, 1440 x 900 @2, 2 repeats, `node apps/web/scripts/perf/run.mjs --scenarios idle,ring-rest,caption-enter --repeat 2`):
+
+| | idle (3.2 s) | `ring-rest` (5.5 s, ring shown) |
+| --- | --- | --- |
+| main thread `RunTask` | 82 to 124 ms | 261 to 323 ms (47 to 58 ms a second) |
+| `Commit` | 11 to 17 ms (180 frames) | 69 to 91 ms (301 frames) |
+| ring repaints | | 150 in 5 s (30 a second), 42 to 55 ms |
+| GL draws | 0 | 0 |
+
+**Round 8: the resting home screen now has a second 30 a second loop, the caption's roll; it is the only change to the resting repaint rate.** (Before round 8: the ring's 30 a second, nothing from the caption.) The caption's own loop (`GlobeRenderer.captionTick`) draws NOTHING but the caption's canvas (no globe frame, no labels, no tree): measured on the dev machine at 1440 x 900 @2 and at 390 x 844 @3, headless Chrome on Metal, `caption-band.mjs`: 30.0 caption frames a second and 0 full frames in 3 s, 0.22 ms of JS a caption frame (0.21 on the phone) against 0.215 ms for a full `renderNow` before; `requestAnimationFrame` callbacks are 60 a second (every second one draws, like the ring's); with the caption hidden (a gesture's fade has run its course), the tab hidden, the context lost or the street map owning the view: 0 caption frames and 0 full frames in 1.5 s (checked). GPU time is NOT measured (no GPU counters here): the caption's pass is the second canvas's window (about 0.6 x 0.6 of the planet's box at the device ratio up to 2, MSAA, 28 slices of 12 small strips with a premultiplied blend and the dimming's one quad), so it should be a small share of a frame, but that is an estimate. The old entry below it, `caption-enter`, is the entrance only. `caption-enter` (the showcase off and on five times): 640 frames in 15 s (the entrance is longer: since round 7 four rows, 450 ms apart), **p50, p95 and max frame interval 16.7 / 16.7 / 16.8 ms, 0 long tasks, 0 GL draws in the rest after the last entrance**; GPU 2.2 ms a frame on average, 4.5 ms at the 95th percentile (the first version's was 0.17 ms: the cost of a second multisampled canvas at 2 x; it is drawn only while a line is in view, into a window round the planet (about a third of the canvas), and only in frames the globe draws anyway). An idle-rotation frame with the caption in view costs the same; at rest nothing is drawn.
+
+Memory: one small canvas texture per line (about 1300 to 1700 x 170 texels with mipmaps) and a second WebGL context (the pixel mode has none).
+
+Bundle (production build, gzip -9 of the chunk, bytes / 1024): `globe-canvas` 676.4 KB raw / 184.0 KB gzip against round 3's 669.7 / 182.1 (+6.7 KB raw, +1.9 KB gzip: the real-parallel layout, wrapping, the stack, the crisp canvas; the pixel-font caption code and the bitmap sheets are gone). The fonts the caption used to fetch (18.9 and 3.9 kB) are removed; Newsreader is the page's own.
+
+**Not measured:** a real phone, a CPU-throttled run, Safari (a second context, alpha to coverage), battery. The perf budgets (`pnpm perf`) were not run in full.
 
 ## Testing on a phone
 
@@ -254,3 +275,31 @@ Not measured: Safari / iOS, a real phone or a GPU weaker than the M4: the tempor
 - **No quality feedback**: there is no frame governor (removed 2026-10-12, "Constant pixel density" above), so the rotation, the boxes' transitions and a throttled or 40 Hz display cannot change the art pixel. Measured while it turns (dev server, preview data, 1440x900@2, headless 60 Hz and headed 120 Hz): the renderer's frames arrive every 16.7 ms (the 14 ms floor on either display), about 58 % of them while a label glide or a box transition runs, 0.3 to 0.9 ms of main-thread work each.
 - **The perf budgets and the zero-frame checks are unchanged**: `pnpm perf` idle, `groups.mjs idle`, `handover-perf.mjs idle` and `check.mjs` run in debug mode (`?globe-debug`), where the rotation is off by default (`?rotate` or `?spin-idle=MS` turn it on, `?no-rotate` turns it off anywhere). Add `?rotate` to measure the rotation's own GPU cost with the usual scripts (`flags: { rotate: "1" }` in `scripts/perf/lib.mjs` `openPage`).
 - **Not measured**: a real 120 Hz display, a phone, Safari/iOS, battery (the cost above is per frame; with no ceiling a 120 Hz display runs twice the frames of a 60 Hz one). The knobs are in `engine/idle-spin.ts`: `SPIN.degPerSec` (0.2; the label flicker against how alive it looks, table in web-architecture.md), `SPIN.minFrameMs` (a ceiling on the frame rate, 0 = none; 33 would be a 30 Hz cap), `SPIN.idleMs`.
+
+
+## Energy (round 9, 2026-10-15): the resting home screen
+
+The owner saw Chrome's energy spikes on the home page while it only animated. Measured first (`apps/web/scripts/perf/energy.mjs`: headless Chrome on the dev machine, 1440 x 900 @2, dark, 20 s at rest per configuration after the idle rotation had eased in, CDP `Performance.getMetrics` per second, frames each canvas drew, `requestAnimationFrame` callbacks, and the CPU time of Chrome's GPU and renderer helper processes read with `ps`; **real GPU energy and battery are NOT measured**, and the `ps` columns are coarse and noisy: two of them came out negative), then the safe wins were made behind `ENERGY` in `engine/tuning.ts` (mutable, set by `__globeDebug.energy(patch)` for measurements).
+
+**What was burning.** The idle rotation drew a FULL frame (globe, labels, the second canvas, the ring) on every display refresh, 60 a second, for a planet that moves one art pixel every 1.35 s; and a full frame also drew the caption and the ring, so their own loops never showed.
+
+| Configuration (20 s at rest) | task ms/s | script ms/s | globe frames/s | caption frames/s | ring repaints/s | rAF/s | GPU helper CPU ms/s | renderer CPU ms/s |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| before (round 8) | 63 | 32 | 60 | (with the globe's) | 60 | 60 | 132 | 100 |
+| idle rotation at 10 a second (`spinFrameMs` 100, a timer, not a frame per refresh) | 42 | 20 | 9 | 27 | 36 | 18 | 92 | 83 |
+| + caption at 20 a second (`captionFrameMs` 50) | 31 | 15 | 9 | 18 | 36 | 18 | 37 | (-8: noise) |
+| + caption at 15 a second | 43 | 20 | 9 | 14 | 36 | 18 | 92 | 89 |
+| + caption canvas at dpr 1.5 / at dpr 1 | 39 / 31 | 18 / 14 | 9 | 27 | 36 | 18 | 87 / 72 | 78 / 65 |
+| + the second canvas sized to the caption's band, not the planet's box | 27 | 13 | 9 | 27 | 36 | 18 | 70 | 54 |
+| + the ring at 15 a second (`ringFrameMs` 64) | 37 | 17 | 9 | 26 | 17 | 17 | 78 | 70 |
+| **all of the above (shipped)** | **36** | **16** | **9** | **17** | **17** | **17** | **78** | **69** |
+| shipped + the idle budget reached (30 s with no input; 2 s in the run) | 2 | 0.1 | 0 | 0 | 0 | 0 | 12 | 16 |
+
+Shipped: about 45 % less main-thread task time and about 40 % less GPU-helper CPU time at rest while the page animates, and about 0 once the idle budget has run out (the page then costs a timer). Estimated draw calls a second: before about 60 full frames of (the globe's layers, up to a dozen) + 60 of the second canvas; shipped 9 full frames + 17 caption frames (about 12 strips + the occluder + the dimming quad each) + 17 ring repaints (about 100 `drawImage` each).
+
+- **Timers, not animation frames, for the paced loops** (the caption's, the ring's, the idle rotation's): a frame that is not due is no wake. rAF callbacks went from several chains at the display's rate to 17 a second.
+- **`powerPreference`** of the main context is `low-power` (it was `high-performance`; the caption's was already): a creation-time hint; not measurable here (one GPU).
+- **The second canvas's window** is the caption's vertical band (the rows' edges over their whole parallels, with the dimming's reach), not the planet's whole box: a half to a third of the pixels at the same horizontal reach; `captionWindow: "planet"` restores the box.
+- **The idle budget** (`idleFreezeMs` 30 s): the roll, the ring's turn and the idle rotation stop and the composition stays; an input, the window regaining focus or the globe coming back into view starts them again. The same hold applies while the window is blurred (`holdWhenBlurred`), the globe is scrolled out of view (IntersectionObserver, `holdWhenOffscreen`) and when the browser's data saver is on (`holdOnSaveData`). A hidden tab, the street map and reduced motion already stopped everything.
+- **Look.** The roll at 20 a second moves a row about 0.15 degrees a frame (about half a pixel on the planet): imperceptible against 60 (judged in frame strips and by eye); the idle rotation at 10 a second changes nothing visible between frames (it moves one art pixel every 1.35 s; the old checks that assert "a frame per display refresh" were changed honestly: `idle-spin.mjs`, `ring.mjs`). The caption canvas at dpr 1.5 is slightly softer on a 2x display at the largest letters; `captionDpr` is the knob if the owner disagrees.
+- **Not done, recommendations.** (1) Merging the second WebGL context into the main one (one context, one compositing pass): large, and the crisp MSAA caption needs its own sample count; not attempted. (2) Removing the dimming quad: it is one cheap quad and still helps in the gaps between rows (round 9 screenshots), so it stays. (3) Drawing the caption only when a row has moved a pixel (adaptive rate): the roll moves every frame by a fraction of a pixel; a 10 a second caption would be the next step if more is wanted (`captionFrameMs` 100). (4) The `ps` helper numbers need a quiet machine and several runs; take them as a trend.

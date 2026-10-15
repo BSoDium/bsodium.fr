@@ -18,7 +18,7 @@ import { applyDebugLevels } from "./engine/palette";
 import { applySpinFlags } from "./engine/idle-spin";
 import { applySkyFlags } from "./engine/sky";
 import { applyRingFlags, ringText } from "./engine/ring";
-import { applyShowcaseFlags, captionFontFrom } from "./engine/caption";
+import { applyShowcaseFlags } from "./engine/caption";
 import { applyDebugArtPixel } from "./engine/tuning";
 import { enablePerf, perfEnd, perfStart } from "./engine/perf";
 import { startsVeiled, type GlobeProps } from "./types";
@@ -101,15 +101,6 @@ function lodStressCount(): number {
     return Number.isFinite(n) && n > 0 ? n : 0;
   } catch {
     return 0;
-  }
-}
-
-/** A sessionStorage value, or null where there is no storage (private windows, blocked site data). */
-function safeStored(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key);
-  } catch {
-    return null;
   }
 }
 
@@ -217,7 +208,6 @@ export default function GlobeCanvas({
           tiles: tilesKey ? JSON.parse(tilesKey) : null,
           ringText: ringText(now.ringPhrases ?? []), // the line of the ring of type, from the identity the app hands in (the words, capitals and closing seam are the engine's)
           captionPhrases: now.captionPhrases,
-          captionFont: captionFontFrom(location.search, safeStored("orbit-font")),
           coverBottom: now.showcase?.get().coverBottom ?? 0,
           showcase: now.showcase?.get().on ?? false,
           onNotice: setNotice,

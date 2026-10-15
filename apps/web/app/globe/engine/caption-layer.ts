@@ -1,83 +1,444 @@
 /**
- * The caption as objects of the globe's own scene (docs/web-architecture.md, "Orbiting type"; the maths is engine/caption.ts).
+ * The caption as objects in the globe's space (docs/web-architecture.md, "Orbiting type"; the maths is engine/caption.ts).
  *
- * Each line is a strip of the sphere `CAPTION.radius` with a texture of its text, drawn in the SAME pass as the globe: at the drawing buffer's
- * resolution (one art cell per buffer pixel, upscaled with nearest-neighbour), in two colours of the theme (the ink, and the page colour for the
- * keyline), by a shader that thresholds the texture, so it is exactly as pixelated as the coastlines are and holds only palette colours. It is
- * depth-tested against the planet's disc (the far side is hidden by the planet) and back-face culled (the shell's own far side is not drawn): a
- * letter past the horizon is gone, it is never seen mirrored or half cut.
+ * Each line is a strip of the shell `CAPTION.radius` on a REAL parallel of the globe, with a texture of its words (a few faces and weights on one
+ * baseline: the reading serif, its italic, the site's mono, a handwriting), STACKED `CAPTION.slices` times from the front face back towards the
+ * planet: the front face shows the letters in the face colour with a thin outline, the slices behind it are the side of the letters (a short,
+ * retro extrusion that costs one small geometry and no layout). Nothing is laid out or rasterised per frame: the words are drawn once into one
+ * small canvas per line (a size class), the colours are uniforms (a theme change is no rebuild), and a frame is a rotation per line about the
+ * earth's axis (the view's longitude and the entrance's turn).
  *
- * Cost. Nothing is laid out or rasterised per frame: the text is drawn once into one small canvas per line when the face is there (a font, a
- * size class), and a frame is a matrix per line (the entrance's rotation) and two draw calls. Nothing runs while the lines are hidden (they are
- * `visible = false`), and nothing animates at rest: the frame loop is asked for frames only while an entrance or a departure is on.
+ * Drawn crisp: by a second `WebGLRenderer` onto a canvas of its own at the device's resolution, over the globe's (same camera, same rectangle, same
+ * edge mask), with the planet in it as a depth-only sphere so the planet still hides what is behind it. Depth-tested and drawn from both sides: a letter
+ * past the shell's horizon is seen from behind (mirrored, as a ring of type round a planet is), curls back and goes behind the planet's body.
+ *
+ * Nothing runs while the lines are hidden, and at rest the frame loop is asked for nothing: only an entrance or a departure animates.
  */
-import { BufferAttribute, BufferGeometry, CanvasTexture, FrontSide, LinearFilter, LinearMipmapLinearFilter, Matrix4, Mesh, ShaderMaterial, Vector3, type Scene } from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  CanvasTexture,
+  AddEquation,
+  CustomBlending,
+  DoubleSide,
+  FrontSide,
+  LinearFilter,
+  LinearMipmapLinearFilter,
+  Matrix4,
+  MaxEquation,
+  OneFactor,
+  OneMinusSrcAlphaFactor,
+  Mesh,
+  MeshBasicMaterial,
+  type PerspectiveCamera,
+  Scene,
+  ShaderMaterial,
+  SphereGeometry,
+  WebGLRenderer,
+} from "three";
 import type { GlobeTheme } from "./colors";
-import { bandColumns, bandFrame, bandMesh, CAPTION_FONTS, CaptionMotion, entranceStart, layoutCaption, legibleFont, lineHidden, type CaptionFont, type CaptionLayout } from "./caption";
-import type { ViewBasis } from "./geo";
-import { FONT_CAP, forEachInk, measureText } from "./pixel-font/pixel-font";
-import { CAPTION } from "./tuning";
+import {
+  CAPTION_FACE,
+  CAPTION_FACES,
+  CAPTION_FALLBACK_STYLE,
+  CAPTION_STYLES,
+  CaptionMotion,
+  captionColors,
+  captionFont,
+  dimPresence,
+  entranceStart,
+  lineHidden,
+  lineOf,
+  shellXY,
+  shellY,
+  fitScale,
+  minScaleFor,
+  parallelPoint,
+  placeRows,
+  planPieces,
+  runsText,
+  spanOf,
+  cycleMs,
+  unitBand,
+  type CaptionContent,
+  type CaptionExit,
+  type CaptionLine,
+  type CaptionPiece,
+  type CaptionRun,
+  type CaptionStyleKey,
+  type Placement,
+} from "./caption";
+import { OCCLUDER_RADIUS } from "./materials";
+import { CAPTION, ENERGY } from "./tuning";
 
+const DEG_ = Math.PI / 180;
+
+/**
+ * One unit strip serves every line (`unitBand`: `position` is `(u, v, layer)`), and the line's parallel is a handful of uniforms: where the strip
+ * is on the globe is computed here, so a change of the camera's tilt, which moves every line to another parallel, is a few uniforms and no new
+ * geometry. The formula is `bandPoint` (engine/caption.ts, tested).
+ */
 const VERT = /* glsl */ `
+  uniform float uBaseLat;
+  uniform float uBelow;
+  uniform float uAbove;
+  uniform float uHalfSpan;
+  uniform float uR;
+  uniform float uDepth;
   varying vec2 vUv;
+  varying float vLayer;
   void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vUv = position.xy;
+    vLayer = position.z;
+    float lat = uBaseLat - uBelow + position.y * (uBelow + uAbove);
+    float a = (position.x * 2.0 - 1.0) * uHalfSpan;
+    float rs = uR - uDepth * (1.0 - position.z);
+    float cl = cos(lat);
+    vec3 p = rs * vec3(cl * sin(a), sin(lat), cl * cos(a));
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
   }
 `;
 
-/** The texture holds the fill in its green channel and the keyline in its red one; coverage is its alpha: thresholded, so the pass draws two colours. */
+/**
+ * The texture holds the glyph's inside in its green channel and its outline in the red one; coverage is its alpha (the edge's). Output is
+ * premultiplied and blended over (the material): the inside's alpha is exactly 1. The front face is the face colour inside and the outline colour on the outline; every slice behind it is
+ * the side colour (the letters' thickness).
+ */
 const FRAG = /* glsl */ `
   precision highp float;
   uniform sampler2D uMap;
-  uniform vec3 uInk;
-  uniform vec3 uBack;
+  uniform vec3 uFace;
+  uniform vec3 uOutline;
+  uniform vec3 uSide;
+  uniform vec3 uAccent;
+  uniform float uEdgeLayer;
   varying vec2 vUv;
+  varying float vLayer;
   void main() {
     vec4 t = texture2D(uMap, vUv, ${CAPTION.lodBias.toFixed(2)});
-    if (t.a < ${CAPTION.cut.toFixed(2)}) discard;
-    gl_FragColor = vec4(t.g > t.r ? uInk : uBack, 1.0);
+    if (t.a < 0.02) discard;
+    bool front = vLayer > 0.999;
+    // the inside is green (the text tone) or blue (the accent: a word picked out); the red channel is the outline
+    float inside = t.g + t.b;
+    vec3 face = t.b > t.g ? uAccent : uFace;
+    vec3 col = front ? (inside > t.r ? face : uOutline) : (vLayer < uEdgeLayer ? uFace : uSide);
+    // Premultiplied output, blended "over" (see the material): the glyph's inside is exactly 1, so an interior pixel is exactly opaque whatever
+    // stacks behind it; only an edge is partly transparent (and then properly premultiplied: no bright fringe).
+    float a = smoothstep(0.1, 0.9, t.a);
+    gl_FragColor = vec4(col * a, a);
   }
 `;
 
+/**
+ * The dimming of the whole block: one quad in the screen's own tangent space (the camera on the planet's axis: a point's `(x, y) / -z`), sized to
+ * the ellipse's box, drawn BEFORE the letters in the caption's canvas. Clipped to the planet's disc (so never over the ring, the labels or the
+ * page), a smooth falloff to zero at the ellipse's edge, in the page's colour, premultiplied.
+ */
+const DIM_VERT = /* glsl */ `
+  uniform vec2 uCentre;
+  uniform vec2 uRadii;
+  varying vec2 vT;
+  void main() {
+    vT = uCentre + position.xy * uRadii;
+    // ndc = P00 t - P02 (the projection may carry a view offset)
+    gl_Position = vec4(projectionMatrix[0][0] * vT.x - projectionMatrix[2][0], projectionMatrix[1][1] * vT.y - projectionMatrix[2][1], 0.0, 1.0);
+  }
+`;
+const DIM_FRAG = /* glsl */ `
+  precision highp float;
+  uniform vec2 uCentre;
+  uniform vec2 uRadii;
+  uniform float uDisc;
+  uniform float uAlpha;
+  uniform vec3 uColor;
+  varying vec2 vT;
+  void main() {
+    vec2 q = (vT - uCentre) / uRadii;
+    float e = 1.0 - smoothstep(0.0, 1.0, length(q));
+    float inside = 1.0 - smoothstep(uDisc * 0.985, uDisc, length(vT));
+    float a = uAlpha * e * e * inside;
+    if (a < 0.004) discard;
+    gl_FragColor = vec4(uColor * a, a);
+  }
+`;
+/** The per-row band: on the row's parallel at the planet's surface, the strip widened, a falloff across and along it. */
+const BAND_VERT = /* glsl */ `
+  uniform float uBaseLat;
+  uniform float uBelow;
+  uniform float uAbove;
+  uniform float uHalfSpan;
+  uniform float uR;
+  varying vec2 vUv;
+  void main() {
+    vUv = position.xy;
+    float lat = uBaseLat - uBelow + position.y * (uBelow + uAbove);
+    float a = (position.x * 2.0 - 1.0) * uHalfSpan;
+    float cl = cos(lat);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(uR * vec3(cl * sin(a), sin(lat), cl * cos(a)), 1.0);
+  }
+`;
+const BAND_FRAG = /* glsl */ `
+  precision highp float;
+  uniform float uAlpha;
+  uniform vec3 uColor;
+  uniform float uEndFrac;
+  varying vec2 vUv;
+  void main() {
+    float across = 1.0 - smoothstep(0.0, 1.0, abs(vUv.y * 2.0 - 1.0));
+    float along = smoothstep(0.0, uEndFrac, min(vUv.x, 1.0 - vUv.x));
+    float a = uAlpha * across * across * along;
+    if (a < 0.004) discard;
+    gl_FragColor = vec4(uColor * a, a);
+  }
+`;
+
+/** One drawn strip: a row of a phrase set (`set` >= 0: it takes its turn) or a fixed row (`set` -1). Built once, all of them, ahead of time. */
+interface Variant {
+  row: number;
+  set: number;
+  piece: CaptionPiece;
+  /** Where it is now (rewritten in place as the camera tilts). */
+  line: CaptionLine;
+  mesh: Mesh;
+  material: ShaderMaterial;
+  /** The dimming band of the row (mode `bands`): turned with the row. */
+  band: Mesh;
+  bandMaterial: ShaderMaterial;
+}
+
 interface Built {
-  sizeKey: string;
-  font: CaptionFont;
-  layout: CaptionLayout;
-  meshes: Mesh[];
-  starts: number[];
+  /** The solver's piece of each row: the widest variant's box (so the row's chord is the worst case of the sets). */
+  pieces: CaptionPiece[];
+  /** The cap height each row is meant to have before the CSS-px floor (it follows the planet's size: `replan`). */
+  nominal: number[];
+  places: Placement[];
+  variants: Variant[];
+  /** How many rows take turns (the first ones); the rest are fixed. */
+  slotRows: number;
+  /** The static fit of the block (`fitScale`: 1 unless a row would not fit its chord inside the band). */
+  scale: number;
+  key: string;
 }
 
 export interface CaptionState {
-  font: CaptionFont;
-  wanted: CaptionFont;
-  capCells: number;
   built: boolean;
   phase: string;
-  lines: { text: string; theta: number; visible: boolean; halfSpanDeg: number; lambdaDeg: number }[];
-  capR: number;
+  /** The caption canvas's opacity now (a fade runs it from 1 to 0). */
+  opacity: number;
+  wrapped: boolean;
+  scale: number;
+  viewLat: number;
+  /** The latitude the rows' parallels are centred on: always the equator (0): they are fixed, whatever the camera does. */
+  parallelsFor: number;
+  capCells: number;
+  seed: number | null;
+  lines: { text: string; parent: number; theta: number; visible: boolean; halfSpanDeg: number; baseLat: number; capR: number; side: number; styles: string[] }[];
+  /**
+   * The phrase sets that take turns: how many, which one the first row shows, whether any row is on its way in or out of its set (a swap is on),
+   * the first row's cycle count, the side each row came in from (`lastIn`) and goes out by (`lastOut`) in its current cycle.
+   */
+  cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number; lastOut: number[]; lastIn: number[] };
+  /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
+  baselines: number[];
   texture: { width: number; height: number }[];
+  colors: { face: number[]; accent: number[]; outline: number[]; side: number[] };
 }
 
 /**
- * One load per face of the page, for the page's life: `document.fonts` keeps what is added (a rebuild for another size must not add the same file
- * again). The promise settles when the face is usable or has failed (a failed face is the system face: the lines are set in it rather than not at all).
+ * Where the crisp canvas lays itself (CSS px, on the stage): a window of the globe's own canvas round the planet (the caption never leaves it:
+ * a quarter of the pixels of the whole canvas, and multisampled), and the globe's edge mask, offset to follow.
  */
-const FACE_LOADS = new Map<string, Promise<void>>();
-function loadFace(family: string, url: string, weight: number): Promise<void> {
-  const key = `${family}|${weight}|${url}`;
-  let p = FACE_LOADS.get(key);
-  if (!p) {
-    p = (async () => {
-      try {
-        const face = new FontFace(family, `url(${url})`, { weight: String(weight), display: "block" });
-        document.fonts.add(face);
-        await face.load();
-      } catch {
-        // the face did not come
+export interface CaptionRect {
+  w: number;
+  h: number;
+  left: number;
+  top: number;
+  mask: string;
+  /** The globe canvas's own size, and where the window is in it: the mask's frame. */
+  full: { w: number; h: number };
+  at: { x: number; y: number };
+}
+
+/** The second canvas: its own renderer and scene, with the planet in it as a depth-only sphere. Throws when no second context can be had. */
+class CrispCanvas {
+  readonly scene = new Scene();
+  private renderer: WebGLRenderer;
+  private lost = false;
+  private shown = false;
+  /** What was last written to the canvas and its style: a frame writes only what changed (a size change clears the buffer and re-runs layout). */
+  private last = { w: -1, h: -1, dpr: -1, left: NaN, top: NaN, mask: "", pos: "", size: "" };
+
+  constructor(host: HTMLElement, onRestore: () => void) {
+    this.renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
+    this.renderer.setClearColor(0x000000, 0);
+    const el = this.renderer.domElement;
+    el.setAttribute("aria-hidden", "true");
+    // (above the hero's text plate, which is a wash over the lower half of the planet for the hero's own text: under it the caption would
+    // fade to nothing at the bottom; below the credits, the panel and the header. The canvas takes no pointer events.)
+    Object.assign(el.style, { position: "absolute", pointerEvents: "none", display: "block", visibility: "hidden", zIndex: "15" } satisfies Partial<CSSStyleDeclaration>);
+    host.append(el);
+    el.addEventListener("webglcontextlost", (e) => {
+      e.preventDefault();
+      this.lost = true;
+      this.hide();
+    });
+    el.addEventListener("webglcontextrestored", () => {
+      // Three re-creates its GL state and re-uploads textures, geometry and programs lazily on the next render; the clear colour is part of
+      // what it drops, and the size is kept by the canvas itself. A frame is asked for: nothing else would draw the lines again.
+      this.renderer.setClearColor(0x000000, 0);
+      this.last.w = -1;
+      this.lost = false;
+      onRestore();
+    });
+    // The planet, in the depth buffer only: what is behind it is not drawn.
+    const globe = new Mesh(new SphereGeometry(OCCLUDER_RADIUS, 96, 48), new MeshBasicMaterial({ colorWrite: false }));
+    globe.renderOrder = -1;
+    this.scene.add(globe);
+  }
+
+  render(camera: PerspectiveCamera, rect: CaptionRect, dpr: number): void {
+    if (this.lost) return;
+    const r = this.renderer;
+    const el = r.domElement;
+    const L = this.last;
+    const w = Math.round(rect.w);
+    const h = Math.round(rect.h);
+    if (w !== L.w || h !== L.h || dpr !== L.dpr) {
+      // (setPixelRatio re-runs setSize: only when something changed; the drawing buffer is floor(size * ratio) and nothing here compares otherwise)
+      r.setPixelRatio(dpr);
+      r.setSize(w, h, false);
+      L.w = w;
+      L.h = h;
+      L.dpr = dpr;
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+    }
+    if (rect.left !== L.left) {
+      el.style.left = `${rect.left}px`;
+      L.left = rect.left;
+    }
+    if (rect.top !== L.top) {
+      el.style.top = `${rect.top}px`;
+      L.top = rect.top;
+    }
+    const pos = `${-rect.at.x}px ${-rect.at.y}px`;
+    const size = `${rect.full.w}px ${rect.full.h}px`;
+    if (rect.mask !== L.mask || pos !== L.pos || size !== L.size) {
+      for (const [k, v] of [["mask-image", rect.mask], ["mask-position", pos], ["mask-size", size], ["mask-repeat", "no-repeat"]] as const) {
+        el.style.setProperty(k, v);
+        el.style.setProperty(`-webkit-${k}`, v);
       }
-    })();
-    FACE_LOADS.set(key, p);
+      L.mask = rect.mask;
+      L.pos = pos;
+      L.size = size;
+    }
+    r.render(this.scene, camera);
+    if (!this.shown) {
+      el.style.visibility = "";
+      this.shown = true;
+    }
+  }
+
+  hide(): void {
+    if (!this.shown) return;
+    this.renderer.domElement.style.visibility = "hidden";
+    this.shown = false;
+  }
+
+  /**
+   * The canvas fades out: a CSS opacity transition, run by the compositor (no JS and no frame of its own: the canvas goes on being drawn with the
+   * camera while it fades, so the words stay locked to the globe). `restore` puts it back at once for the next entrance.
+   */
+  fadeOut(ms: number): void {
+    const el = this.renderer.domElement;
+    el.style.transition = `opacity ${ms}ms linear`;
+    el.style.opacity = "0";
+  }
+
+  restore(): void {
+    const el = this.renderer.domElement;
+    el.style.transition = "none";
+    el.style.opacity = "1";
+  }
+
+  /** The canvas's opacity now (checks). */
+  get opacity(): number {
+    return Number(getComputedStyle(this.renderer.domElement).opacity);
+  }
+
+  get maxAnisotropy(): number {
+    return this.renderer.capabilities.getMaxAnisotropy();
+  }
+
+  dispose(): void {
+    this.scene.traverse((o) => {
+      const m = o as Mesh;
+      if (m.isMesh) {
+        m.geometry.dispose();
+        (m.material as MeshBasicMaterial).dispose();
+      }
+    });
+    this.renderer.dispose();
+    this.renderer.forceContextLoss();
+    this.renderer.domElement.remove();
+  }
+}
+
+/**
+ * One load per style, shared by the builds (`document.fonts` keeps what is added: a retry must not add the same file again). The promise says
+ * whether the face is usable within `FONT_WAIT_MS`; a style whose face is not falls back (`CAPTION_FALLBACK_STYLE`) so the texture is never drawn
+ * in a stand-in that then changes. A NEGATIVE answer is never kept: the next build asks again (and the layer asks once more after a build that
+ * used a fallback, `buildLines`), so a slow network costs the face a late arrival and not the page's life.
+ */
+const STYLE_LOADS = new Map<CaptionStyleKey, Promise<boolean>>();
+const ADDED_FACES = new Map<CaptionStyleKey, FontFace>();
+const FONT_WAIT_MS = 3000;
+
+const SAMPLE = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz .,;:!?'·-";
+
+async function tryLoadStyle(style: CaptionStyleKey): Promise<boolean> {
+  const st = CAPTION_STYLES[style];
+  const face = CAPTION_FACES[st.face];
+  try {
+    if (typeof document === "undefined" || !document.fonts) return false;
+    if (face.url) {
+      let added = ADDED_FACES.get(style);
+      if (!added) {
+        added = new FontFace(face.family.replace(/"/g, ""), `url(${face.url})`, { weight: String(st.weight), style: st.italic ? "italic" : "normal", display: "block" });
+        ADDED_FACES.set(style, added);
+        document.fonts.add(added);
+      }
+      try {
+        await added.load();
+        return true;
+      } catch {
+        // (a face that failed is taken out, so the retry makes a new one)
+        document.fonts.delete(added);
+        ADDED_FACES.delete(style);
+        return false;
+      }
+    }
+    const font = captionFont(style, 64);
+    await document.fonts.load(font, SAMPLE);
+    return document.fonts.check(font, SAMPLE);
+  } catch {
+    return false;
+  }
+}
+
+function loadStyle(style: CaptionStyleKey): Promise<boolean> {
+  let p = STYLE_LOADS.get(style);
+  if (!p) {
+    let timer = 0;
+    const timeout = new Promise<boolean>((resolve) => {
+      timer = window.setTimeout(() => resolve(false), FONT_WAIT_MS);
+    });
+    p = Promise.race([tryLoadStyle(style), timeout]).then((ok) => {
+      window.clearTimeout(timer);
+      if (!ok) STYLE_LOADS.delete(style);
+      return ok;
+    });
+    STYLE_LOADS.set(style, p);
   }
   return p;
 }
@@ -85,105 +446,265 @@ function loadFace(family: string, url: string, weight: number): Promise<void> {
 export class CaptionLayer {
   private motion = new CaptionMotion();
   private built: Built | null = null;
-  private material: ShaderMaterial;
   private textures: CanvasTexture[] = [];
-  private geometries: BufferGeometry[] = [];
-  /** The per-line materials (clones over the shared shader): each is disposed with its line. */
-  private materials: ShaderMaterial[] = [];
+  private texSizes: { width: number; height: number }[] = [];
+  /** The three colours of the theme's caption, shared by every strip's material. */
+  private face = { value: [1, 1, 1] as number[] };
+  private outline = { value: [0, 0, 0] as number[] };
+  private side = { value: [0, 0, 0] as number[] };
+  private accent = { value: [0, 0, 1] as number[] };
+  /** The far slices (layer below this) that carry the text colour in mode `edge` (0: none). */
+  private edgeLayer = { value: 0 };
+  private sideMode: "page" | "mix" | "edge" = CAPTION.colors.sideMode;
+  private theme!: GlobeTheme;
+  /** The dimming's colour (the page's), its strength for the scheme, and the mode (`CAPTION.dim.mode`; a check may change it). */
+  private dimColor = { value: [1, 1, 1] as number[] };
+  private dimAlpha = 0;
+  private dimMode: "ellipse" | "bands" | "none" = CAPTION.dim.mode;
+  /** The block's ellipse (one quad, mode `ellipse`) and its uniforms. */
+  private ellipse: Mesh | null = null;
+  private ellipseU = { uCentre: { value: [0, 0] as number[] }, uRadii: { value: [1, 1] as number[] }, uDisc: { value: 0.1 }, uAlpha: { value: 0 }, uColor: this.dimColor };
+  /** Whether a build that used a fallback face has asked once more for the real one. */
+  private retried = false;
   /** A build that threw (a canvas context refused, ...): the caption is not there and asks for no frames. */
   private failed = false;
-  private vE = new Vector3();
-  private vN = new Vector3();
-  private vC = new Vector3();
-  /** The basis and turns the meshes were last placed with: a frame that changes none of them does nothing. */
-  private placed: { key: number[]; thetas: number[] } | null = null;
-  private allHidden = false;
   private disposed = false;
   private want = false;
   private reduced: boolean;
-  private lastThetas: number[] = [];
-  private tmp = new Matrix4();
-  private basisM = new Matrix4();
-  private axis = new Vector3();
-  private texSizes: { width: number; height: number }[] = [];
-  /** The art cell (CSS px) and the planet's radius at the lowest zoom (CSS px): what decides which face reads and how big a bitmap pixel is. */
-  private sizing: { cell: number; r: number } | null = null;
   private token = 0;
-  private capCells = 0;
+  private crisp: CrispCanvas;
+  private tmp = new Matrix4();
+  private lastThetas: number[] = [];
+  private allHidden = false;
+  private anyVisible = false;
+  /** The art cell, the planet's radius at the lowest zoom (CSS px) and the camera's distance there: what decides the cap heights and where an entrance starts. */
+  private sizing: { cell: number; r: number; d: number } | null = null;
+  private viewLat = 28;
+  /** The strip every line shares (`unitBand`). */
+  private unit: BufferGeometry | null = null;
+  /** Checks only: the shell's radius, in place of `CAPTION.radius` (1.001 puts the caption on the surface, over the graticule's own parallels). */
+  private radius: number | null = null;
+  /** The key of the build in flight (a frame that sees the layout out of date must not start the same build again). */
+  private building: string | null = null;
+  /** The phrase set each row shows now (of those that take turns): the cycle it is in, modulo the sets; refreshed every frame. */
+  private rowSet: number[] = [];
+  private rowCycle: number[] = [];
+  private paused = false;
 
+  /** Throws when the second WebGL canvas cannot be had: the page then has no caption (the hero's how-to line shows). */
   constructor(
-    private scene: Scene,
     private opts: {
-      phrases: readonly string[];
-      font: CaptionFont;
+      /** What it says: phrase sets that take turns in the upper rows, and the rows that stay under them. */
+      content: CaptionContent;
+      /** The element the caption's canvas goes into (the globe's stage). */
+      host: HTMLElement;
       theme: GlobeTheme;
       reduced: boolean;
       maxAnisotropy: number;
-      /** A face arrived and the lines are built: a frame is wanted. */
+      /** The lines are built, or a swap is to begin: a frame is wanted. */
       onChange(): void;
     },
   ) {
     this.reduced = opts.reduced;
-    this.material = new ShaderMaterial({
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      uniforms: { uMap: { value: null }, uInk: { value: [1, 1, 1] }, uBack: { value: [0, 0, 0] } },
-      side: FrontSide,
-      depthTest: true,
-      depthWrite: true,
-      transparent: false,
-    });
+    this.motion.continuous = !opts.reduced;
+    this.crisp = new CrispCanvas(opts.host, () => opts.onChange());
+    // Each entrance draws the sides the lines come in from at random, from a seed of the session.
+    this.motion.seed = (Math.random() * 0x7fffffff) | 0;
     this.setTheme(opts.theme);
   }
 
-  /**
-   * Where the caption will be seen: the art cell and the planet's radius at the lowest zoom, CSS px (the renderer tells at start and when the
-   * viewport changes). The face is the first of the chain from the one asked for whose strokes are at least a cell wide at that size; the
-   * lines are built when it is known and again only when the choice changes.
-   */
-  setSizing(cell: number, r: number): void {
-    if (this.disposed || !(cell > 0) || !(r > 0)) return;
-    this.sizing = { cell, r };
-    this.capCells = (CAPTION.capR * r) / cell;
-    const font = legibleFont(this.opts.font, this.capCells);
-    if (this.built?.font === font && this.built.sizeKey === this.sizeKey(font)) {
-      // what is built is what is wanted: a build for another face that is still on its way must not land on top of it
-      this.token++;
-      return;
-    }
-    void this.build(font);
+  private makeMaterial(map: CanvasTexture, radius: number): ShaderMaterial {
+    return new ShaderMaterial({
+      vertexShader: VERT,
+      fragmentShader: FRAG,
+      uniforms: {
+        uMap: { value: map },
+        uFace: this.face,
+        uOutline: this.outline,
+        uSide: this.side,
+        uAccent: this.accent,
+        uEdgeLayer: this.edgeLayer,
+        uBaseLat: { value: 0 },
+        uBelow: { value: 0 },
+        uAbove: { value: 0 },
+        uHalfSpan: { value: 0 },
+        uR: { value: radius },
+        uDepth: { value: CAPTION.depth },
+      },
+      // Both sides: past the shell's horizon a row is seen from behind (its glyphs mirrored, as a ring of type round a planet is), curls back
+      // towards the planet and goes behind its body (the occluder in the depth buffer); it never vanishes in the open.
+      side: DoubleSide,
+      depthTest: true,
+      depthWrite: true,
+      // NOT alpha-to-coverage: it wrote each sample's own partial alpha (the frontmost slice's edge texel), which left the thickness translucent
+      // (the owner saw the globe's linework through it). The slices are drawn back to front and blended over one another, premultiplied: where
+      // anything opaque is behind, the result is opaque, and only the silhouette's edge is partial.
+      transparent: false,
+      blending: CustomBlending,
+      blendEquation: AddEquation,
+      blendSrc: OneFactor,
+      blendDst: OneMinusSrcAlphaFactor,
+    });
   }
 
   /**
-   * What a build depends on besides the face: only the bitmap face's scale does (a pixel of the face is a whole number of art cells), so the
-   * other faces are not rebuilt when the size moves.
+   * Where the caption will be seen: the art cell, the planet's radius at the lowest zoom (CSS px) and the camera's distance there (the renderer
+   * tells at start and when the viewport changes). The lines are built when it is known and again only when what they depend on changes.
    */
-  private sizeKey(font: CaptionFont): string {
-    return font === "bitmap" && this.sizing ? `${Math.round(this.capCells)}` : "";
+  setSizing(cell: number, r: number, d: number): void {
+    if (this.disposed || !(cell > 0) || !(r > 0) || !(d > 1)) return;
+    const prev = this.sizing;
+    this.sizing = { cell, r, d };
+    if (!this.built) {
+      void this.build();
+      return;
+    }
+    // (the texture does not depend on the size: only the parallels and the floor of the letters' size do)
+    if (!prev || prev.r !== r || prev.d !== d || prev.cell !== cell) this.replan();
+  }
+
+  /** The planet's size or the camera's distance changed: the letters' floor and the parallels are worked out again; no texture is made again. */
+  private replan(): void {
+    const b = this.built;
+    const sizing = this.sizing;
+    if (!b || !sizing) return;
+    const floorCap = CAPTION.minCapPx / sizing.r;
+    b.pieces.forEach((p, i) => {
+      p.cap = Math.max(b.nominal[i]!, floorCap);
+    });
+    for (const v of b.variants) v.piece.cap = b.pieces[v.row]!.cap;
+    this.place();
+    this.motion.setStarts(
+      b.pieces.map((_, r) => this.rowStart(r)),
+      b.pieces.map((_, r) => r),
+    );
+    this.opts.onChange();
+  }
+
+  /** Checks only: lay the lines on a shell of this radius (null: the tuned one); the lines are built again. */
+  setRadius(r: number | null): void {
+    this.radius = r;
+    if (this.built) this.replan();
+    else void this.build();
+  }
+
+  /** Checks and captures: the seed of the sides the lines come in from (null: all from the east), drawn again at once. */
+  setSeed(seed: number | null): void {
+    this.motion.reseed(seed);
   }
 
   setTheme(theme: GlobeTheme): void {
-    const u = this.material.uniforms;
-    u.uInk!.value = [...theme.ink];
-    u.uBack!.value = [...theme.background];
+    this.theme = theme;
+    const c = captionColors(theme, this.sideMode);
+    this.face.value = [...c.face];
+    this.outline.value = [...c.outline];
+    this.side.value = [...c.side];
+    this.accent.value = [...c.accent];
+    this.edgeLayer.value = this.sideMode === "edge" ? (CAPTION.colors.edgeSlices - 0.5) / (CAPTION.slices - 1) : 0;
+    this.dimColor.value = [...theme.background];
+    const dark = 0.2126 * theme.background[0] + 0.7152 * theme.background[1] + 0.0722 * theme.background[2] < 0.5;
+    this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
+  }
+
+  /** The roll stands still (the energy pass's hold): the clock stops, the loops end, the composition stays. */
+  setFrozen(on: boolean): void {
+    this.motion.frozen = on;
+  }
+
+  /**
+   * The vertical extent of everything the caption draws, in the camera's tangent space (planet radii at the focal length) for a camera at
+   * latitude `lat`: the rows' top and bottom edges over their whole parallels (the orbit takes a row all the way round, so every longitude
+   * counts) and the dimming's ellipse. The second canvas is sized to it (`ENERGY.captionWindow` `band`). Null before the strips exist.
+   */
+  extentTan(lat: number): { top: number; bottom: number } | null {
+    const b = this.built;
+    const sizing = this.sizing;
+    if (!b || !sizing || b.pieces.length === 0) return null;
+    const r = this.radius ?? CAPTION.radius;
+    let top = -Infinity;
+    let bottom = Infinity;
+    for (let i = 0; i < b.pieces.length; i++) {
+      const pl = b.places[i]!;
+      const pc = b.pieces[i]!;
+      const up = Math.min(89.5, pl.baseLat + (pl.capR * pc.box.aboveCaps) / r / DEG_);
+      const dn = Math.max(-89.5, pl.baseLat - (pl.capR * pc.box.belowCaps) / r / DEG_);
+      for (let a = -Math.PI; a <= Math.PI + 1e-9; a += Math.PI / 12) {
+        top = Math.max(top, shellY(a, up, lat, sizing.d, r));
+        bottom = Math.min(bottom, shellY(a, dn, lat, sizing.d, r));
+      }
+    }
+    if (this.dimMode === "ellipse" && this.dimAlpha > 0) {
+      const c = this.ellipseU.uCentre.value[1]!;
+      const ry = this.ellipseU.uRadii.value[1]!;
+      top = Math.max(top, c + ry);
+      bottom = Math.min(bottom, c - ry);
+    }
+    return { top, bottom };
+  }
+
+  /** Checks and captures: the dimming's mode (null: the tuned one). The strips are made for every mode, so it is a switch and no rebuild. */
+  setDimMode(mode: "ellipse" | "bands" | "none" | null): void {
+    this.dimMode = mode ?? CAPTION.dim.mode;
+    this.opts.onChange();
+  }
+
+  /** Checks and captures: the thickness's look (`page`, `mix`, `edge`; null: the tuned one). */
+  setSideMode(mode: "page" | "mix" | "edge" | null): void {
+    this.sideMode = mode ?? CAPTION.colors.sideMode;
+    this.setTheme(this.theme);
+    this.opts.onChange();
   }
 
   setReduced(on: boolean): void {
     this.reduced = on;
+    // (still, at the centre, the first phrase set: no roll, no turns)
+    this.motion.continuous = !on;
     if (on) this.motion.settle(this.want);
+    this.opts.onChange();
+  }
+
+  /**
+   * The page cannot be looked at (the tab is hidden, the globe is not drawn, the context is lost): the roll and the phrase sets stand still (the
+   * clock advances only when a frame is drawn, by at most `drift.maxStepMs`) and they go on from where they were when it can be.
+   */
+  setPaused(on: boolean): void {
+    this.paused = on;
   }
 
   /** The showcase begins (`now`: the clock reading) or, before the first frame exists, `null`: the entrance then starts with the first frame. */
   show(now: number | null): void {
     this.want = true;
+    this.crisp.restore();
+    // every showing begins with the first phrase set, whole (the entrance restarts the clock)
     if (this.reduced) this.motion.settle(true);
     else this.motion.enter(now);
   }
 
-  hide(now: number): void {
+  /**
+   * The showcase ends. By default the caption FADES (an interaction's exit: only the canvas's opacity changes, the lines keep following the
+   * camera); `"orbit"` sends the lines on round behind the planet instead (kept for a caption that cycles its words). Reduced motion: gone at once.
+   * Once the fade is over nothing of the caption runs: no placement (the parallels are solved again by the first frame of the next showing, when
+   * the camera's tilt has changed meanwhile), no render call, no depth pass. The roll is frozen where it is for the fade (the clock stands still
+   * in a fade), so the words fade where they were.
+   */
+  hide(now: number, exit: CaptionExit = "fade"): void {
     this.want = false;
-    if (this.reduced) this.motion.settle(false);
-    else this.motion.leave(now);
+    if (this.reduced) {
+      this.motion.settle(false);
+      this.crisp.hide();
+      return;
+    }
+    this.motion.leave(now, exit);
+    if (exit === "fade" && this.motion.phase === "fade") this.crisp.fadeOut(CAPTION.fadeMs);
+  }
+
+  /**
+   * The globe is not drawn for a while (the street map owns the view): every timed thing runs to its end now, so nothing of the caption asks for a
+   * frame (`animating` and `drifting` are false while it lasts): an entrance is in place (or the caption is gone, when the showcase is off). The
+   * roll's clock goes on from where it was when the globe is drawn again.
+   */
+  settle(): void {
+    this.motion.settle(this.want);
   }
 
   /** Checks and captures: hold the entrance at `ms` after its start; null lets it run (or rest) again. */
@@ -196,10 +717,14 @@ export class CaptionLayer {
     this.motion.pinnedAngle = deg === null ? null : (deg * Math.PI) / 180;
   }
 
-  /** Something is moving: the frame loop must keep going. */
+  /** The entrance or the orbit exit is under way: full frames (the globe's own loop) are wanted. */
   get animating(): boolean {
-    // Nothing to turn before the lines exist (the face is still coming, or the build failed): no frames are asked for.
     return this.built !== null && !this.failed && this.motion.animating;
+  }
+
+  /** The rows are in and rolling (or turning over to the next phrase set): the caption's own capped loop draws it, nothing else. */
+  get drifting(): boolean {
+    return this.built !== null && !this.failed && !this.disposed && this.motion.drifting && this.visible;
   }
 
   get isBuilt(): boolean {
@@ -207,84 +732,279 @@ export class CaptionLayer {
   }
 
   /**
-   * Per frame, after the camera is current: turn each line to where the clock has it and put it in the view's frame. `now` is the clock the
+   * Checks and captures: carry on at the start of the first row's exit now (the rows then leave, one `staggerMs` after another, and the next
+   * phrase set comes in). Returns whether there is a next set to come in.
+   */
+  swapNow(now: number): boolean {
+    const b = this.built;
+    if (!b || b.slotRows < 1 || this.opts.content.sets.length < 2 || this.reduced || !this.want) return false;
+    const { n } = this.motion.cycle(now, 0);
+    this.motion.seek(Math.max(0, n) * cycleMs() + CAPTION.enter.ms + CAPTION.cycle.dwellMs);
+    this.opts.onChange();
+    return true;
+  }
+
+  /* ------------------------------ per frame ------------------------------ */
+
+  /**
+   * Per frame, after the camera is current: turn every line to where the clock has it. `lon` and `lat` are the view's longitude and latitude
+   * (degrees: the lines are centred on the view's meridian; their parallels are FIXED, on the equator's side, and never move for the camera's
+   * tilt: `lat` is only the camera's, for what is hidden and for where the dimming sits), `d` the camera's distance, `now` the clock the
    * entrance runs on (the same one `show` and `hide` were given).
    */
-  sync(basis: ViewBasis, now: number): void {
+  sync(d: number, lon: number, lat: number, now: number): void {
+    this.viewLat = lat;
     const b = this.built;
     if (!b || this.failed) return;
     if (this.motion.waiting) this.motion.begin(now, CAPTION.enter.loadDelayMs);
-    const n = b.meshes.length;
+    // A fade changes the canvas's opacity only (a CSS transition, run by the compositor): the lines go on following the camera exactly as at rest
+    // (zoom, drag, tilt: the same uniforms and one render a frame the globe draws anyway), and when it is over the caption is hidden.
+    this.motion.tick(now);
+    const hiddenNow = this.motion.phase === "hidden" && this.motion.pinned === null && this.motion.pinnedAngle === null;
     // Hidden (the showcase is off and the lines have gone): every mesh is hidden once, and then there is nothing to do, whatever the camera does.
-    if (this.motion.phase === "hidden" && this.motion.pinned === null && this.motion.pinnedAngle === null) {
+    if (hiddenNow) {
       if (!this.allHidden) {
-        for (const m of b.meshes) m.visible = false;
+        for (const v of b.variants) v.mesh.visible = v.band.visible = false;
+        if (this.ellipse) this.ellipse.visible = false;
         this.allHidden = true;
-        this.placed = null;
-        this.lastThetas.length = n;
-        for (let i = 0; i < n; i++) this.lastThetas[i] = b.starts[i]!;
+        this.anyVisible = false;
+        this.lastThetas.length = b.pieces.length;
+        for (let r = 0; r < b.pieces.length; r++) this.lastThetas[r] = this.rowStart(r) * this.motion.side(r);
       }
       return;
     }
     this.allHidden = false;
-    const d = basis.d;
-    const e = basis.east;
-    const nn = basis.north;
-    const c = basis.c;
-    this.lastThetas.length = n;
-    let changed = this.placed === null;
-    const key = this.placed?.key ?? new Array<number>(10).fill(0);
-    const next = [e[0], e[1], e[2], nn[0], nn[1], nn[2], c[0], c[1], c[2], d];
-    for (let k = 0; k < 10; k++) {
-      if (key[k] !== next[k]) changed = true;
-      key[k] = next[k]!;
+    const rows = b.pieces.length;
+    const rowTheta = this.lastThetas;
+    rowTheta.length = rows;
+    this.rowSet.length = rows;
+    this.rowCycle.length = rows;
+    const nSets = Math.max(1, this.opts.content.sets.length);
+    for (let r = 0; r < rows; r++) {
+      rowTheta[r] = this.motion.angle(now, r, this.rowStart(r));
+      // the phrase set a row shows is the cycle it is in (modulo the sets): the row leaves, and the next set comes in on the same parallel
+      const n = this.motion.continuous && r < b.slotRows ? this.motion.cycle(now, r).n : 0;
+      this.rowCycle[r] = Math.max(0, n);
+      this.rowSet[r] = Math.max(0, n) % nSets;
     }
-    const thetas = this.placed?.thetas ?? new Array<number>(n).fill(NaN);
-    for (let i = 0; i < n; i++) {
-      const theta = this.motion.angle(now, i, b.starts[i]!);
-      if (thetas[i] !== theta) changed = true;
-      thetas[i] = theta;
-      this.lastThetas[i] = theta;
-    }
-    this.placed = { key, thetas };
-    // At rest with the camera still (the showcase is on and nothing moves): the meshes are where they were.
-    if (!changed) return;
-    // the view's frame as a matrix: its columns are east, north and the direction to the camera, in the globe's frame
-    this.vE.set(e[0], e[1], e[2]);
-    this.vN.set(nn[0], nn[1], nn[2]);
-    this.vC.set(c[0], c[1], c[2]);
-    this.basisM.makeBasis(this.vE, this.vN, this.vC);
-    const { A } = bandFrame();
-    this.axis.set(A[0], A[1], A[2]);
-    for (let i = 0; i < n; i++) {
-      const mesh = b.meshes[i]!;
-      const theta = thetas[i]!;
-      const hidden = lineHidden(theta, b.layout.lines[i]!, d);
-      mesh.visible = !hidden;
+    let any = false;
+    const bands = this.dimMode === "bands" && this.dimAlpha > 0;
+    let presence = 0;
+    for (const v of b.variants) {
+      let theta = 0;
+      let on = false;
+      let start = 0;
+      if (v.set < 0) {
+        theta = rowTheta[v.row]!;
+        start = this.rowStart(v.row);
+        on = true;
+      } else if (v.set === this.rowSet[v.row]) {
+        theta = rowTheta[v.row]!;
+        start = this.rowStart(v.row);
+        on = true;
+      }
+      const hidden = !on || lineHidden(theta, v.line, d, lat);
+      v.mesh.visible = !hidden;
+      v.band.visible = false;
       if (hidden) continue;
-      this.tmp.makeRotationAxis(this.axis, theta);
-      mesh.matrix.multiplyMatrices(this.basisM, this.tmp);
-      mesh.matrixWorldNeedsUpdate = true;
+      any = true;
+      const p = dimPresence(theta, start);
+      presence += p;
+      // The earth's axis is y: a line's own meridian is the view's (`lon`), turned by the entrance's `theta` (east positive, west negative).
+      this.tmp.makeRotationY((lon * Math.PI) / 180 + theta);
+      v.mesh.matrix.copy(this.tmp);
+      v.mesh.matrixWorldNeedsUpdate = true;
+      if (bands && p > 0.01) {
+        v.band.visible = true;
+        v.band.matrix.copy(this.tmp);
+        v.band.matrixWorldNeedsUpdate = true;
+        v.bandMaterial.uniforms.uAlpha!.value = this.dimAlpha * p;
+      }
     }
+    // The block's ellipse: its strength is the mean presence of the rows (a row that is on its way in or out is half of one).
+    if (this.ellipse) {
+      const e = this.dimMode === "ellipse" && this.dimAlpha > 0 ? presence / Math.max(1, b.pieces.length) : 0;
+      this.ellipse.visible = e > 0.01;
+      if (this.ellipse.visible) this.updateEllipse(lat);
+      this.ellipseU.uAlpha.value = this.dimAlpha * Math.min(1, e);
+      this.ellipseU.uDisc.value = 1 / Math.sqrt(Math.max(1.0001, d * d - 1));
+    }
+    this.anyVisible = any;
+  }
+
+  /** How far behind the planet row `r` (its widest variant) starts, for its parallel now. */
+  private rowStart(r: number): number {
+    const b = this.built!;
+    const pl = b.places[r]!;
+    return entranceStart({ baseLat: pl.baseLat, halfSpan: pl.halfSpan }, this.viewLat, this.sizing?.d ?? 16);
+  }
+
+  /**
+   * Put the rows on their fixed parallels (`placeRows`, at the static fit `fitScale`) and hand every strip its uniforms. Runs when the strips are
+   * built and when the planet's size or the camera's distance changes: never for the camera's tilt.
+   */
+  private place(): void {
+    const b = this.built;
+    const sizing = this.sizing;
+    if (!b || !sizing) return;
+    b.scale = fitScale(b.pieces, sizing.d, minScaleFor(b.pieces, sizing.r));
+    placeRows(b.pieces, sizing.d, b.scale, b.places);
+    const r = this.radius ?? CAPTION.radius;
+    for (const v of b.variants) {
+      const pl = b.places[v.row]!;
+      // the row's parallel and size, the strip's own width: a set's row is as wide as its words
+      lineOf(v.piece, { ...pl, halfSpan: spanOf(v.piece.box.widthEm, pl.capR, pl.baseLat) / 2 }, v.line);
+      const u = v.material.uniforms;
+      u.uBaseLat!.value = (v.line.baseLat * Math.PI) / 180;
+      u.uBelow!.value = v.line.below;
+      u.uAbove!.value = v.line.above;
+      u.uHalfSpan!.value = v.line.halfSpan;
+      u.uR!.value = r;
+      // the band: the row's strip, widened (the falloff reaches `bandReach` half heights across, a little beyond the words along)
+      const bu = v.bandMaterial.uniforms;
+      const mid = (v.line.above - v.line.below) / 2;
+      const half = ((v.line.above + v.line.below) / 2) * CAPTION.dim.bandReach;
+      bu.uBaseLat!.value = u.uBaseLat!.value + mid;
+      bu.uBelow!.value = half;
+      bu.uAbove!.value = half;
+      bu.uHalfSpan!.value = v.line.halfSpan * 1.12 + half;
+    }
+    this.updateEllipse(this.viewLat);
+  }
+
+  /**
+   * The ellipse's centre and radii (tangent space of a camera on the axis: what `shellXY` and `shellY` return) from the block's ink: the widest
+   * row's ends and the top and bottom edges over the middle, for the camera at latitude `lat` (the fixed parallels move on the screen with the
+   * camera's tilt; the ellipse follows them: four rows of trigonometry a frame, only while it is drawn).
+   */
+  private updateEllipse(lat: number): void {
+    const b = this.built;
+    const sizing = this.sizing;
+    if (!b || !sizing || b.pieces.length === 0) return;
+    const r = this.radius ?? CAPTION.radius;
+    const n = b.pieces.length;
+    let halfW = 0;
+    const xy: [number, number] = [0, 0];
+    for (let i = 0; i < n; i++) {
+      const pl = b.places[i]!;
+      halfW = Math.max(halfW, Math.abs(shellXY(Math.min(pl.halfSpan, Math.PI / 2), pl.baseLat, lat, sizing.d, r, xy)[0]));
+    }
+    const f = b.pieces[0]!;
+    const l = b.pieces[n - 1]!;
+    const topLat = b.places[0]!.baseLat + (b.places[0]!.capR * f.box.aboveCaps) / r / DEG_;
+    const botLat = b.places[n - 1]!.baseLat - (b.places[n - 1]!.capR * l.box.belowCaps) / r / DEG_;
+    const top = shellY(0, Math.min(89.5, topLat), lat, sizing.d, r);
+    const bottom = shellY(0, Math.max(-89.5, botLat), lat, sizing.d, r);
+    const hh = Math.max(1e-4, (top - bottom) / 2);
+    const hw = Math.max(1e-4, halfW);
+    const k = Math.SQRT2 * (1 + CAPTION.dim.reach);
+    this.ellipseU.uCentre.value = [0, (top + bottom) / 2];
+    this.ellipseU.uRadii.value = [hw * k, hh * k];
+  }
+
+  /** Whether any line is in view now (as of the last `sync`): the renderer draws the second canvas only then (one flag, no work at rest or hidden). */
+  get visible(): boolean {
+    return this.anyVisible && this.built !== null && !this.failed;
+  }
+
+  /** Draw the caption over the globe's frame. */
+  renderCrisp(camera: PerspectiveCamera, rect: CaptionRect, dpr: number): void {
+    if (!this.anyVisible || !this.built || this.failed) {
+      this.crisp.hide();
+      return;
+    }
+    this.crisp.render(camera, rect, Math.min(dpr, ENERGY.captionDpr));
+  }
+
+  /**
+   * The two ends of the line the widest on the screen, in the globe's frame where the line is now (positions at its baseline, turned as the mesh
+   * is): for the checks that measure the caption's size on the screen. Null when no line is in view.
+   */
+  widestEnds(): { left: [number, number, number]; right: [number, number, number] } | null {
+    const b = this.built;
+    if (!b) return null;
+    let best: Variant | null = null;
+    for (const v of b.variants) if (v.mesh.visible && (!best || v.line.halfSpan > best.line.halfSpan)) best = v;
+    if (!best) return null;
+    const line = best.line;
+    const m = best.mesh.matrix.elements;
+    const at = (a: number): [number, number, number] => {
+      const p = parallelPoint(a, line.baseLat, this.radius ?? CAPTION.radius);
+      return [m[0]! * p[0] + m[4]! * p[1] + m[8]! * p[2], m[1]! * p[0] + m[5]! * p[1] + m[9]! * p[2], m[2]! * p[0] + m[6]! * p[1] + m[10]! * p[2]];
+    };
+    return { left: at(-line.halfSpan), right: at(line.halfSpan) };
+  }
+
+  /**
+   * The edges of every strip in view, in the globe's frame as drawn (the top edge and the bottom edge of the ink box, `samples` + 1 points each):
+   * for the checks that measure the caption's real layout on the screen (clearances between rows, where the block sits).
+   */
+  edges(samples = 16): { row: number; top: [number, number, number][]; bottom: [number, number, number][]; base: [number, number, number][] }[] {
+    const b = this.built;
+    if (!b) return [];
+    const out: { row: number; top: [number, number, number][]; bottom: [number, number, number][]; base: [number, number, number][] }[] = [];
+    for (const v of b.variants) {
+      if (!v.mesh.visible) continue;
+      const m = v.mesh.matrix.elements;
+      const r = this.radius ?? CAPTION.radius;
+      const turn = (p: [number, number, number]): [number, number, number] => [m[0]! * p[0] + m[4]! * p[1] + m[8]! * p[2], m[1]! * p[0] + m[5]! * p[1] + m[9]! * p[2], m[2]! * p[0] + m[6]! * p[1] + m[10]! * p[2]];
+      const top: [number, number, number][] = [];
+      const bottom: [number, number, number][] = [];
+      const base: [number, number, number][] = [];
+      for (let k = 0; k <= samples; k++) {
+        const a = (-1 + (2 * k) / samples) * v.line.halfSpan;
+        top.push(turn(parallelPoint(a, v.line.baseLat + (v.line.above * 180) / Math.PI, r)));
+        bottom.push(turn(parallelPoint(a, v.line.baseLat - (v.line.below * 180) / Math.PI, r)));
+        base.push(turn(parallelPoint(a, v.line.baseLat, r)));
+      }
+      out.push({ row: v.row, top, bottom, base });
+    }
+    return out;
+  }
+
+  /** The globe is not drawn (the street map owns the view): the second canvas must not show a stale frame. */
+  hideCrisp(): void {
+    this.crisp.hide();
   }
 
   state(): CaptionState {
     const b = this.built;
+    const shown = (b?.variants ?? []).filter((v) => v.set < 0 || v.set === (this.rowSet[v.row] ?? 0));
+    const slot = b?.slotRows ?? 0;
+    const inSides: number[] = [];
+    const outSides: number[] = [];
+    for (let r = 0; r < slot; r++) {
+      const side = this.motion.sideAt(this.rowCycle[r] ?? 0, r);
+      inSides.push(side);
+      outSides.push(-side);
+    }
+    const phases = [...Array(slot).keys()].map((r) => this.motion.cycle(0, r).local);
+    const swapping = this.motion.continuous && phases.some((l, r) => (this.rowCycle[r] ?? 0) > 0 && l < CAPTION.enter.ms + 1e-9) || phases.some((l) => l > CAPTION.enter.ms + CAPTION.cycle.dwellMs);
     return {
-      font: b?.font ?? this.opts.font,
-      wanted: this.opts.font,
-      capCells: this.capCells,
       built: b !== null,
       phase: this.motion.phase,
-      lines: (b?.layout.lines ?? []).map((l, i) => ({
-        text: l.text,
-        theta: this.lastThetas[i] ?? 0,
-        visible: b?.meshes[i]?.visible ?? false,
-        halfSpanDeg: (l.halfSpan * 180) / Math.PI,
-        lambdaDeg: (l.lambda * 180) / Math.PI,
+      opacity: this.crisp.opacity,
+      wrapped: false,
+      scale: b?.scale ?? 1,
+      viewLat: this.viewLat,
+      parallelsFor: 0,
+      capCells: this.sizing ? (CAPTION.capR * this.sizing.r) / this.sizing.cell : 0,
+      seed: this.motion.seed,
+      lines: shown.map((v) => ({
+        text: v.line.text,
+        parent: v.row,
+        theta: this.lastThetas[v.row] ?? 0,
+        visible: v.mesh.visible,
+        halfSpanDeg: (v.line.halfSpan * 180) / Math.PI,
+        baseLat: v.line.baseLat,
+        capR: v.line.capR,
+        side: this.motion.side(v.row),
+        styles: [...new Set(v.line.runs.map((r) => r.style ?? "plain"))],
       })),
-      capR: b?.layout.capR ?? 0,
+      cycle: { sets: this.opts.content.sets.length, current: this.rowSet[0] ?? 0, swapping, waiting: false, paused: this.paused, swaps: this.rowCycle[0] ?? 0, lastOut: outSides, lastIn: inSides },
+      baselines: shown.map((v) => v.line.baseLat),
       texture: this.texSizes,
+      colors: { face: this.face.value, accent: this.accent.value, outline: this.outline.value, side: this.side.value },
     };
   }
 
@@ -293,30 +1013,45 @@ export class CaptionLayer {
     this.disposed = true;
     this.token++;
     this.release();
-    this.material.dispose();
+    this.unit?.dispose();
+    this.unit = null;
+    this.ellipse?.geometry.dispose();
+    (this.ellipse?.material as ShaderMaterial | undefined)?.dispose();
+    this.ellipse = null;
+    this.crisp.dispose();
     this.built = null;
   }
 
-  /** Take the lines out of the scene and free what they hold (geometry, texture, the per-line material). */
+  /** Take the strips out of the scene and free what they hold (texture, per-strip material). */
   private release(): void {
-    for (const m of this.built?.meshes ?? []) this.scene.remove(m);
-    for (const g of this.geometries) g.dispose();
+    for (const v of this.built?.variants ?? []) {
+      this.crisp.scene.remove(v.mesh);
+      this.crisp.scene.remove(v.band);
+      v.material.dispose();
+      v.bandMaterial.dispose();
+    }
     for (const t of this.textures) t.dispose();
-    for (const m of this.materials) m.dispose();
-    this.geometries = [];
     this.textures = [];
-    this.materials = [];
     this.texSizes = [];
-    this.placed = null;
     this.allHidden = false;
+    this.anyVisible = false;
   }
 
   /* ------------------------------ building ------------------------------ */
 
-  private async build(font: CaptionFont): Promise<void> {
+  private keyFor(): string {
+    // The texture depends on the words and the faces only (a size class of its own, `texCap`): never on the planet's size, the cell, the camera's
+    // distance or the shell's radius (a window resize used to rebuild every texture at each whole pixel of the radius).
+    return "texture";
+  }
+
+  private async build(): Promise<void> {
+    const key = this.keyFor();
+    if (this.building === key || this.built?.key === key) return;
+    this.building = key;
     const token = ++this.token;
     try {
-      await this.buildLines(font, token);
+      await this.buildLines(token);
     } catch {
       // Anything the browser refuses (a 2D context, a texture): the caption is not there, quietly, and it asks for no frames.
       if (token === this.token && !this.disposed) {
@@ -324,128 +1059,237 @@ export class CaptionLayer {
         this.built = null;
         this.failed = true;
       }
+    } finally {
+      if (this.building === key) this.building = null;
     }
   }
 
-  private async buildLines(font: CaptionFont, token: number): Promise<void> {
-    const spec = CAPTION_FONTS[font];
-    if (spec.url && typeof FontFace !== "undefined" && typeof document !== "undefined") await loadFace(spec.family, spec.url, spec.weight);
+  private async buildLines(token: number): Promise<void> {
+    if (!this.sizing) return;
+    const key = this.keyFor();
+    if (this.built?.key === key) return;
+    const content = this.opts.content;
+    // The faces first: the texture is drawn once and must not be drawn in a stand-in. A style whose face failed is drawn in its fallback style.
+    const used = new Set<CaptionStyleKey>();
+    for (const set of content.sets) for (const row of set) for (const r of row) used.add(r.style ?? "plain");
+    for (const row of content.fixed) for (const r of row) used.add(r.style ?? "plain");
+    const ok = new Map<CaptionStyleKey, CaptionStyleKey>();
+    await Promise.all(
+      [...used].map(async (style) => {
+        const loaded = await loadStyle(style);
+        ok.set(style, loaded ? style : (CAPTION_FALLBACK_STYLE[style] ?? "plain"));
+      }),
+    );
     if (this.disposed || token !== this.token) return;
+    // (capitals are the caption's drawing: the words the app gave, and the page's text, are as they were)
+    // (the calligraphic script is exempt: its capitals read badly all together, "Poetry" stays as the page spells it; so does its fallback's case)
+    const clean = (row: readonly CaptionRun[]): CaptionRun[] =>
+      row
+        .filter((r) => r.text.length > 0)
+        .map((r) => {
+          const asked = r.style ?? "plain";
+          const style = ok.get(asked) ?? "plain";
+          return { text: CAPTION.upper && CAPTION_STYLES[asked].face !== "script" ? r.text.toLocaleUpperCase("en") : r.text, style, ...(r.accent ? { accent: r.accent } : {}) } as CaptionRun;
+        });
+    const sets = content.sets.map((set) => set.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0)));
+    const fixed = content.fixed.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0));
+    const slotRows = sets.reduce((a, s) => Math.max(a, s.length), 0);
+    if (slotRows + fixed.length === 0) return;
     this.failed = false;
-    const texts = this.opts.phrases.map((p) => (spec.upper ? p.trim().toLocaleUpperCase("en") : p.trim())).filter((p) => p.length > 0);
-    if (texts.length === 0) return;
-    // The sheets first (they can throw): a rebuild replaces the lines only once the new ones are made.
-    const sheets = font === "bitmap" ? this.bitmapSheets(texts) : this.canvasSheets(font, texts);
-    const widths = sheets.map((s) => s.widthEm);
-    let capR: number = CAPTION.capR;
-    if (font === "bitmap" && this.sizing) {
-      // One pixel of the face is a whole number of art cells at the middle of the face (the map's own labels are drawn so), the largest that fits.
-      const { cell, r } = this.sizing;
-      for (let k = Math.max(1, Math.round((CAPTION.capR * r) / cell / FONT_CAP)); k >= 1; k--) {
-        const candidate = (FONT_CAP * k * cell) / r;
-        const l = layoutCaption(texts, widths, spec.capEm, spec.boxCaps, candidate);
-        capR = candidate;
-        if (Math.abs(l.capR - candidate) < 1e-9) break;
-      }
-    }
-    const layout = layoutCaption(texts, widths, spec.capEm, spec.boxCaps, capR);
-    this.release();
-    this.built = null;
-    const meshes: Mesh[] = [];
-    layout.lines.forEach((line, i) => {
-      const sheet = sheets[i]!;
-      const tex = new CanvasTexture(sheet.canvas);
-      tex.generateMipmaps = true;
-      tex.minFilter = LinearMipmapLinearFilter;
-      tex.magFilter = LinearFilter;
-      tex.anisotropy = this.opts.maxAnisotropy;
-      this.textures.push(tex);
-      this.texSizes.push({ width: sheet.canvas.width, height: sheet.canvas.height });
-      const bm = bandMesh(line, bandColumns(line), 2);
-      const g = new BufferGeometry();
-      g.setAttribute("position", new BufferAttribute(bm.positions, 3));
-      g.setAttribute("uv", new BufferAttribute(bm.uvs, 2));
-      g.setIndex(new BufferAttribute(bm.indices, 1));
-      this.geometries.push(g);
-      // one material per line (its own texture) over the shared shader
-      const mat = this.material.clone();
-      mat.uniforms = { uMap: { value: tex }, uInk: this.material.uniforms.uInk!, uBack: this.material.uniforms.uBack! };
-      this.materials.push(mat);
-      const mesh = new Mesh(g, mat);
-      mesh.matrixAutoUpdate = false;
-      mesh.frustumCulled = false;
-      mesh.visible = false;
-      mesh.renderOrder = 7; // after the globe's layers (the markers are 5, the outline 6): in front of them, behind nothing
-      this.scene.add(mesh);
-      meshes.push(mesh);
-    });
-    const starts = layout.lines.map((l) => entranceStart(l));
-    this.motion.setStarts(starts);
-    this.built = { font, layout, meshes, starts, sizeKey: this.sizeKey(font) };
-    if (this.want && this.reduced) this.motion.settle(true);
-    this.opts.onChange();
-  }
-
-  /** One canvas per line in a face of the page: keyline (red) then fill (green), at `CAPTION.texCap` texels a cap height. */
-  private canvasSheets(font: CaptionFont, texts: readonly string[]): { canvas: HTMLCanvasElement; widthEm: number }[] {
-    const spec = CAPTION_FONTS[font];
-    const emPx = CAPTION.texCap / spec.capEm;
-    const face = `${spec.weight} ${emPx}px "${spec.family}", system-ui, sans-serif`;
-    const outlinePx = CAPTION.outline * CAPTION.texCap;
-    const pad = Math.ceil(outlinePx * 2 + 4);
+    const emPx = CAPTION.texCap / CAPTION_FACE.capEm;
     const probe = document.createElement("canvas").getContext("2d");
-    if (probe) probe.font = face;
-    return texts.map((text) => {
-      if (!probe) throw new Error("no 2D context");
-      const advance = probe.measureText(text).width + spec.tracking * emPx * text.length;
-      const w = Math.ceil(advance + 2 * pad);
-      const h = Math.ceil(spec.boxCaps * CAPTION.texCap);
+    if (!probe) throw new Error("no 2D context");
+    const hasSpacing = "letterSpacing" in probe;
+    const outlinePx = CAPTION.outline * CAPTION.texCap;
+    const faceOf = (run: CaptionRun) => CAPTION_FACES[CAPTION_STYLES[run.style ?? "plain"].face];
+    const emboldenPx = (run: CaptionRun) => faceOf(run).embolden * CAPTION.texCap;
+    /** Set `c`'s font and spacing for a run; the advance of the run (tracking included) is what `measureText` says then. */
+    const setRun = (c: CanvasRenderingContext2D, run: CaptionRun) => {
+      const f = faceOf(run);
+      c.font = captionFont(run.style ?? "plain", emPx);
+      if (hasSpacing) (c as unknown as { letterSpacing: string }).letterSpacing = `${f.tracking * emPx * f.scale}px`;
+    };
+    const advance = (run: CaptionRun, m: TextMetrics) => m.width + (hasSpacing ? 0 : faceOf(run).tracking * emPx * faceOf(run).scale * run.text.length);
+    /**
+     * The ink of a piece, measured from the faces: where the words start and end on the baseline (a script overhangs its advance, an italic its
+     * first glyph's), how high and how low they go, and the room of the outline: the texture and the strip are made to that, not to the advance.
+     */
+    const boxPx = (runs: readonly CaptionRun[]) => {
+      let x = 0;
+      let minL = 0;
+      let maxR = 0;
+      let asc = 0;
+      let desc = 0;
+      let margin = 0;
+      const at: number[] = [];
+      for (const run of runs) {
+        setRun(probe, run);
+        const m = probe.measureText(run.text);
+        const f = faceOf(run);
+        at.push(x);
+        minL = Math.min(minL, x - m.actualBoundingBoxLeft);
+        maxR = Math.max(maxR, x + Math.max(advance(run, m), m.actualBoundingBoxRight));
+        asc = Math.max(asc, m.actualBoundingBoxAscent - f.dy * emPx);
+        desc = Math.max(desc, m.actualBoundingBoxDescent + f.dy * emPx);
+        margin = Math.max(margin, outlinePx + emboldenPx(run) / 2 + 3);
+        x += advance(run, m);
+      }
+      return { at, x0: margin - minL, width: maxR - minL + 2 * margin, above: Math.max(asc + margin, CAPTION.texCap * 1.05), below: desc + margin };
+    };
+    const boxOf = (runs: readonly CaptionRun[]) => {
+      const b = boxPx(runs);
+      return { widthEm: b.width / emPx, aboveCaps: b.above / CAPTION.texCap, belowCaps: b.below / CAPTION.texCap };
+    };
+    const measure = (r: CaptionRun) => {
+      setRun(probe, r);
+      return advance(r, probe.measureText(r.text)) / emPx;
+    };
+    // every strip there is: the rows of every phrase set and the fixed rows, each with its own texture; the solver sees each row as its widest
+    const rowsOf: { row: number; set: number; runs: CaptionRun[] }[] = [];
+    for (let s = 0; s < sets.length; s++) for (let r = 0; r < sets[s]!.length; r++) rowsOf.push({ row: r, set: s, runs: sets[s]![r]! });
+    fixed.forEach((runs, i) => rowsOf.push({ row: slotRows + i, set: -1, runs }));
+    const totalRows = slotRows + fixed.length;
+    const reps: CaptionRun[][] = [];
+    for (let r = 0; r < totalRows; r++) {
+      const cands = rowsOf.filter((x) => x.row === r);
+      reps.push(cands.reduce((best, c) => (boxOf(c.runs).widthEm > boxOf(best.runs).widthEm ? c : best)).runs);
+    }
+    const nominal = reps.map(() => CAPTION.capR);
+    const plan = planPieces({ rows: reps, caps: nominal, measure, box: boxOf, rPx: this.sizing.r });
+    // the representative boxes take the largest extent over the variants of the row (the solver's clearance must hold for any of them)
+    plan.pieces.forEach((p, r) => {
+      for (const c of rowsOf.filter((x) => x.row === r)) {
+        const b = boxOf(c.runs);
+        p.box = { widthEm: Math.max(p.box.widthEm, b.widthEm), aboveCaps: Math.max(p.box.aboveCaps, b.aboveCaps), belowCaps: Math.max(p.box.belowCaps, b.belowCaps) };
+      }
+    });
+    // The sheets first (they can throw): a rebuild replaces the strips only once the new ones are made.
+    const sheets = rowsOf.map((x) => {
+      const b = boxPx(x.runs);
       const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = Math.ceil(b.width);
+      canvas.height = Math.ceil(b.above + b.below);
       const c = canvas.getContext("2d");
       if (!c) throw new Error("no 2D context");
-      c.font = face;
       c.textBaseline = "alphabetic";
       c.textAlign = "left";
       c.lineJoin = "round";
       c.miterLimit = 2;
-      const letterSpacing = (c as unknown as { letterSpacing?: string });
-      if ("letterSpacing" in c) letterSpacing.letterSpacing = `${spec.tracking * emPx}px`;
-      const baseline = h / 2 + CAPTION.texCap / 2;
-      c.lineWidth = outlinePx * 2;
-      c.strokeStyle = "rgb(255 0 0)";
-      c.strokeText(text, pad, baseline);
-      c.fillStyle = "rgb(0 255 0)";
-      c.fillText(text, pad, baseline);
-      return { canvas, widthEm: w / emPx };
+      // The words one after the other on one baseline. First the outline (red, drawn at twice its width: the half inside the letter is covered by
+      // the fill that follows), then the inside (green): the outline is outside the glyph, so the face keeps its whole area.
+      const baseline = b.above;
+      for (const pass of ["stroke", "fill"] as const) {
+        x.runs.forEach((run, k) => {
+          setRun(c, run);
+          const f = faceOf(run);
+          const px = b.x0 + b.at[k]!;
+          const py = baseline + f.dy * emPx;
+          if (pass === "stroke") {
+            c.lineWidth = outlinePx * 2 + emboldenPx(run);
+            c.strokeStyle = "rgb(255 0 0)";
+            c.strokeText(run.text, px, py);
+          } else {
+            // (the inside is green, or blue for the accent's word: the shader picks the colour by the stronger channel)
+            const inside = run.accent ? "rgb(0 0 255)" : "rgb(0 255 0)";
+            c.fillStyle = inside;
+            c.fillText(run.text, px, py);
+            if (f.embolden > 0) {
+              c.lineWidth = emboldenPx(run);
+              c.strokeStyle = inside;
+              c.strokeText(run.text, px, py);
+            }
+          }
+        });
+      }
+      return { canvas, box: boxOf(x.runs) };
     });
-  }
-
-  /** The repo's own pixel font, each of its pixels a square of a whole number of texels. */
-  private bitmapSheets(texts: readonly string[]): { canvas: HTMLCanvasElement; widthEm: number }[] {
-    const spec = CAPTION_FONTS.bitmap;
-    const k = Math.max(2, Math.round(CAPTION.texCap / FONT_CAP));
-    const emPx = 10 * k;
-    const padPx = 3; // font pixels: room for the keyline
-    const rows = Math.ceil(spec.boxCaps * FONT_CAP);
-    const baseline = Math.floor((rows + FONT_CAP) / 2);
-    return texts.map((text) => {
-      const m = measureText(text);
-      const wPx = m.w + 2 * padPx;
-      const canvas = document.createElement("canvas");
-      canvas.width = wPx * k;
-      canvas.height = rows * k;
-      const c = canvas.getContext("2d");
-      if (!c) throw new Error("no 2D context");
-      c.scale(k, k);
-      // a stroke is a pixel of the face and a little more: at one art cell a pixel the sampling would otherwise drop the thinnest strokes
-      const e = CAPTION.bitmapBold;
-      c.fillStyle = "rgb(255 0 0)";
-      forEachInk(text, padPx, baseline, (x, y) => c.fillRect(x - 1 - e, y - 1 - e, 3 + 2 * e, 3 + 2 * e));
-      c.fillStyle = "rgb(0 255 0)";
-      forEachInk(text, padPx, baseline, (x, y) => c.fillRect(x - e, y - e, 1 + 2 * e, 1 + 2 * e));
-      return { canvas, widthEm: (wPx * k) / emPx };
+    this.release();
+    this.built = null;
+    const anisotropy = Math.min(this.opts.maxAnisotropy, this.crisp.maxAnisotropy);
+    if (!this.unit) {
+      const unit = unitBand();
+      this.unit = new BufferGeometry();
+      this.unit.setAttribute("position", new BufferAttribute(unit.attributes, 3));
+      this.unit.setIndex(new BufferAttribute(unit.indices, 1));
+    }
+    const radius = this.radius ?? CAPTION.radius;
+    const variants: Variant[] = rowsOf.map((x, i) => {
+      const { canvas, box } = sheets[i]!;
+      const tex = new CanvasTexture(canvas);
+      tex.generateMipmaps = true;
+      tex.minFilter = LinearMipmapLinearFilter;
+      tex.magFilter = LinearFilter;
+      tex.anisotropy = anisotropy;
+      this.textures.push(tex);
+      this.texSizes.push({ width: canvas.width, height: canvas.height });
+      const material = this.makeMaterial(tex, radius);
+      const mesh = new Mesh(this.unit!, material);
+      mesh.matrixAutoUpdate = false;
+      mesh.frustumCulled = false;
+      mesh.visible = false;
+      mesh.renderOrder = 7;
+      this.crisp.scene.add(mesh);
+      const piece: CaptionPiece = { runs: x.runs, text: runsText(x.runs), parent: x.row, cap: plan.pieces[x.row]!.cap, box };
+      // the row's dimming band (mode `bands`): the same strip, on the planet's surface, widened; max-blended so overlapping bands never add
+      const bandMaterial = new ShaderMaterial({
+        vertexShader: BAND_VERT,
+        fragmentShader: BAND_FRAG,
+        uniforms: {
+          uBaseLat: { value: 0 },
+          uBelow: { value: 0 },
+          uAbove: { value: 0 },
+          uHalfSpan: { value: 0 },
+          uR: { value: OCCLUDER_RADIUS + 0.004 },
+          uAlpha: { value: 0 },
+          uColor: this.dimColor,
+          uEndFrac: { value: 0.35 },
+        },
+        side: FrontSide,
+        depthTest: true,
+        depthWrite: false,
+        transparent: false,
+        blending: CustomBlending,
+        blendEquation: MaxEquation,
+        blendSrc: OneFactor,
+        blendDst: OneFactor,
+      });
+      const band = new Mesh(this.unit!, bandMaterial);
+      band.matrixAutoUpdate = false;
+      band.frustumCulled = false;
+      band.visible = false;
+      band.renderOrder = -0.5;
+      this.crisp.scene.add(band);
+      return { row: x.row, set: x.set, piece, line: {} as CaptionLine, mesh, material, band, bandMaterial };
     });
+    if (!this.ellipse) {
+      const quad = new BufferGeometry();
+      quad.setAttribute("position", new BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
+      const m = new ShaderMaterial({ vertexShader: DIM_VERT, fragmentShader: DIM_FRAG, uniforms: this.ellipseU, depthTest: false, depthWrite: false, transparent: false, side: DoubleSide });
+      this.ellipse = new Mesh(quad, m);
+      this.ellipse.frustumCulled = false;
+      this.ellipse.renderOrder = -0.5;
+      this.ellipse.visible = false;
+      this.crisp.scene.add(this.ellipse);
+    }
+    this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, key };
+    this.place();
+    this.motion.setFixedFrom(slotRows);
+    this.motion.setStarts(
+      plan.pieces.map((_, r) => this.rowStart(r)),
+      plan.pieces.map((_, r) => r),
+    );
+    if (this.want && this.reduced) this.motion.settle(true);
+    this.opts.onChange();
+    // A face that did not arrive in time is drawn in its fallback now; it is asked for once more, and the strips are made again when it comes.
+    const missing = [...ok].filter(([style, used]) => style !== used).map(([style]) => style);
+    if (missing.length && !this.retried) {
+      this.retried = true;
+      void Promise.all(missing.map(loadStyle)).then((all) => {
+        if (all.every(Boolean) && !this.disposed && this.built) {
+          this.built.key = "stale";
+          void this.build();
+        }
+      });
+    }
   }
 }

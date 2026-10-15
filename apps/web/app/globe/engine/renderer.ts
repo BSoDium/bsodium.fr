@@ -11,7 +11,7 @@
  *   hidden or the GL context is lost nothing is scheduled; the first frame after recovery repaints.
  * - Imperative and framework-free: React only owns the lifecycle (see ../globe-canvas.tsx).
  */
-import { ColorManagement, Color, PerspectiveCamera, WebGLRenderer } from "three";
+import { ColorManagement, Color, PerspectiveCamera, Vector3, WebGLRenderer } from "three";
 import type { Polylines } from "@catalyst/geodata";
 import type { GlobePlace, GlobeRoute } from "../types";
 import type { GlobeTheme } from "./colors";
@@ -21,6 +21,7 @@ import { groupFitZoom, radiusFitZoom } from "./framing";
 import {
   DEG,
   FOV_DEG,
+  cameraDistance,
   clamp,
   fitZoom,
   silhouetteRadiusPx,
@@ -53,11 +54,11 @@ import { liftFor } from "./lift";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
-import { type CaptionFont, SHOWCASE_STATE } from "./caption";
+import { SHOWCASE_STATE, bandLat, inBand, shellWindowFactor, type CaptionContent } from "./caption";
 import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
-import { INSET_EASE, RING, SKY, TUNING } from "./tuning";
+import { CAPTION, ENERGY, INSET_EASE, RING, SKY, START_VIEW, TUNING } from "./tuning";
 import { fromViewState } from "./view";
 import { markerShown } from "./visibility";
 import { perfEnd, perfStart } from "./perf";
@@ -107,9 +108,8 @@ export interface RendererOptions {
    * (`?no-ring`): no ring, and the lowest zoom is the whole-globe fit.
    */
   ringText?: string;
-  /** The lines of the caption that wraps the planet (engine/caption.ts), and the face they are set in; absent or empty: no caption. */
-  captionPhrases?: readonly string[];
-  captionFont?: CaptionFont;
+  /** The lines of the caption that floats over the planet (engine/caption.ts): each a list of words in styles; absent or empty: no caption. */
+  captionPhrases?: CaptionContent;
   /** CSS px of the container's bottom that the app covers at start (`GlobeProps.coverBottom`); the planet is lifted clear of them as far as there is room. */
   coverBottom?: number;
   /** The home screen starts at rest: the caption is in and the boxes and labels are out from the first frame (`GlobeProps.showcase`). */
@@ -141,7 +141,7 @@ export class GlobeRenderer {
   private gl: WebGLRenderer;
   private globe: GlobeScene;
   private camera = new PerspectiveCamera(FOV_DEG, 1, 0.05, 20);
-  private view: ViewState = { lon: 15, lat: 28, zoom: 0 };
+  private view: ViewState = { lon: START_VIEW.lon, lat: START_VIEW.lat, zoom: 0 };
   private width = 1;
   private height = 1;
   private bufW = 1;
@@ -161,6 +161,9 @@ export class GlobeRenderer {
    * what is wanted now; `showcaseActive` whether this page has a showcase at all (a ring, and not a debug page without `?showcase`).
    */
   private showcaseOn = false;
+  /** Whether the caption is wanted AND shown now (the showcase is on and the camera's latitude is in its band) and the camera's latitude glide towards the band, if any. */
+  private captionOn = false;
+  private latSnap: { from: number; to: number; t0: number } | null = null;
   private showcaseActive = false;
   /** A press began while the showcase was on: its tap is not a click on a box nobody could see (cleared a moment after the press ends). */
   private inertPress = false;
@@ -247,7 +250,7 @@ export class GlobeRenderer {
     this.gl = new WebGLRenderer({
       antialias: false,
       alpha: false,
-      powerPreference: "high-performance",
+      powerPreference: ENERGY.gpu,
       preserveDrawingBuffer: false,
     });
     this.gl.setPixelRatio(1);
@@ -270,20 +273,27 @@ export class GlobeRenderer {
     if (opts.ringText && RING_STATE.enabled) this.ring = new RingLayer(opts.container, opts.ringText, opts.theme, this.reduced);
     this.showcaseActive = !!this.ring && SHOWCASE_STATE.enabled;
     this.cover = Math.max(0, opts.coverBottom ?? 0);
-    if (this.showcaseActive && opts.captionPhrases && opts.captionPhrases.length > 0) {
-      this.caption = new CaptionLayer(this.globe.scene, {
-        phrases: opts.captionPhrases,
-        font: opts.captionFont ?? "jacquard",
-        theme: opts.theme,
-        reduced: this.reduced,
-        maxAnisotropy: this.gl.capabilities.getMaxAnisotropy(),
-        onChange: () => this.requestRender(),
-      });
+    if (this.showcaseActive && opts.captionPhrases && opts.captionPhrases.sets.length + opts.captionPhrases.fixed.length > 0) {
+      try {
+        this.caption = new CaptionLayer({
+          content: opts.captionPhrases,
+          host: opts.container,
+          theme: opts.theme,
+          reduced: this.reduced,
+          maxAnisotropy: this.gl.capabilities.getMaxAnisotropy(),
+          onChange: () => this.requestRender(),
+        });
+      } catch {
+        // No second WebGL context: the caption is not there, and neither is the showcase (the page is the one without it: boxes and the how-to line).
+        this.caption = null;
+        this.showcaseActive = false;
+      }
     }
     if (opts.showcase && this.showcaseActive) {
       // The home screen opens in its showcase: the boxes are out from the first frame (nothing fades), and the caption comes in with the first frame.
       this.showcaseOn = true;
-      this.lod.setSuppressed(true);
+      this.lod.setSuppressed(true, true);
+      this.captionOn = true;
       this.caption?.show(null);
     }
     this.setTheme(opts.theme);
@@ -299,6 +309,20 @@ export class GlobeRenderer {
       this.cleanups.push(() => window.removeEventListener(type, this.onInput, { capture: true }));
     }
     this.cleanups.push(() => window.clearTimeout(this.spinTimer));
+    // The energy pass: what makes the resting home screen stand still (docs/performance.md, "Energy").
+    this.listen(window, "blur", () => this.setBlurred(true));
+    this.listen(window, "focus", () => this.setBlurred(false));
+    if (typeof IntersectionObserver !== "undefined") {
+      const io = new IntersectionObserver((entries) => {
+        const last = entries[entries.length - 1];
+        if (last) this.setOffscreen(!last.isIntersecting);
+      });
+      io.observe(opts.container);
+      this.cleanups.push(() => io.disconnect());
+    }
+    this.cleanups.push(() => window.clearTimeout(this.freezeTimer));
+    this.cleanups.push(() => window.clearTimeout(this.paceTimer));
+    this.armFreeze();
     this.listen(this.canvas, "webglcontextlost", () => this.onContextLost());
     this.listen(this.canvas, "webglcontextrestored", () => this.onContextRestored());
     this.cleanups.push(attachControls(this.canvas, opts.container, this.controlsHost()));
@@ -387,7 +411,7 @@ export class GlobeRenderer {
     const fit = fitZoom(free, h, TUNING.fitMargin);
     const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h }));
     this.ring.setLayout(silhouetteRadiusPx(floor, h));
-    this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h));
+    this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h), cameraDistance(floor, this.bufH * this.pixel));
   }
 
   /**
@@ -469,10 +493,12 @@ export class GlobeRenderer {
     const s = this.start;
     // The home screen opens fully zoomed OUT (the lowest zoom: the fit when there is no ring): the ring and the caption are there from the first frame.
     // The world view is the whole-globe fit on a page without the showcase, as before it.
-    if (!s) return { lon: 15, lat: 28, zoom: this.showcaseActive ? this.minZoom : this.fit };
+    // (a showcase at the start holds the latitude inside the caption's band: the caption is there from the first frame, nothing glides)
+    if (!s) return { lon: START_VIEW.lon, lat: START_VIEW.lat, zoom: this.showcaseActive ? this.minZoom : this.fit };
     if (s.fitRadiusKm !== undefined) return { lon: s.lon, lat: s.lat, zoom: Math.max(this.fit, this.fitZoomFor(s.fitRadiusKm)) };
     if (s.zoom01 === null) return { lon: s.lon, lat: s.lat, zoom: TUNING.selectZoom };
-    return fromViewState({ lon: s.lon, lat: s.lat, zoom: s.zoom01, street: s.street }, this.fit, TUNING.maxZoom);
+    const v = fromViewState({ lon: s.lon, lat: s.lat, zoom: s.zoom01, street: s.street }, this.fit, TUNING.maxZoom);
+    return this.showcaseOn ? { ...v, lat: bandLat(v.lat) } : v;
   }
 
   /** The animated inset now (CSS px). */
@@ -551,13 +577,18 @@ export class GlobeRenderer {
   setSuspended(on: boolean) {
     if (on === this.suspended) return;
     this.suspended = on;
+    this.caption?.setPaused(this.hidden || this.lost || this.suspended);
+    // Nothing of the caption may keep the frame loop alive while the street map owns the view: its timed things run to their end now.
+    if (on) this.caption?.settle();
     this.noteActivity();
     // A suspended canvas keeps its last frame, which is stale as soon as the camera moves: it must not show through the
     // street map's dissolving edge (the inset fade) or anywhere else. Made transparent here (NOT `visibility: hidden`: the
     // canvas is the pointer target at every scale and a hidden element gets no pointer events), shown again by the next drawn
     // frame (renderNow), never before: a canvas that never drew is black.
-    if (on) this.canvas.style.opacity = "0";
-    else this.requestRender();
+    if (on) {
+      this.canvas.style.opacity = "0";
+      this.caption?.hideCrisp();
+    } else this.requestRender();
   }
   isSuspended() {
     return this.suspended;
@@ -571,6 +602,7 @@ export class GlobeRenderer {
   setView(v: Partial<ViewState>) {
     this.noteActivity();
     this.flight = null;
+    this.latSnap = null;
     this.velocity = STILL;
     this.view = this.clampView({ ...this.view, ...v });
     this.requestRender();
@@ -581,6 +613,7 @@ export class GlobeRenderer {
     this.noteChange();
     const beyond = o?.beyondLimit === true;
     const to = this.clampView({ ...this.view, ...v }, beyond);
+    this.latSnap = null;
     if (this.reduced) {
       this.flight = null;
       this.velocity = STILL;
@@ -920,8 +953,11 @@ export class GlobeRenderer {
 
   private setHidden(hidden: boolean) {
     this.hidden = hidden;
+    this.caption?.setPaused(this.hidden || this.lost || this.suspended);
     this.noteActivity();
     if (hidden) {
+      if (this.capRaf) window.clearTimeout(this.capRaf);
+      this.capRaf = 0;
       window.clearTimeout(this.spinTimer);
       this.spinTimer = 0;
       this.cancelFrame();
@@ -929,11 +965,14 @@ export class GlobeRenderer {
     } else if (this.dirty) {
       this.dirty = false;
       this.requestRender();
-    }
+    } else this.armCaption();
   }
 
   private onContextLost() {
     this.lost = true;
+    this.caption?.setPaused(true);
+    // (the second canvas must not sit over the context-lost notice with its last frame)
+    this.caption?.hideCrisp();
     this.noteActivity();
     this.cancelFrame();
     this.dirty = true;
@@ -945,6 +984,7 @@ export class GlobeRenderer {
     // That reset also drops the clear colour, so it is set again.
     this.gl.setClearColor(new Color(...this.theme.background), 1);
     this.lost = false;
+    this.caption?.setPaused(this.hidden || this.suspended);
     this.noteActivity();
     this.opts.onContextChange(false);
     this.dirty = false;
@@ -995,6 +1035,16 @@ export class GlobeRenderer {
       this.velocity = step.velocity;
       if (!isStill(this.velocity)) more = true;
     }
+    if (this.latSnap) {
+      const a = this.latSnap;
+      const t = clamp((now - a.t0) / CAPTION.band.snapMs, 0, 1);
+      const e = 1 - (1 - t) ** 3;
+      this.view = this.clampView({ ...this.view, lat: a.from + (a.to - a.from) * e });
+      if (t >= 1) this.latSnap = null;
+      else more = true;
+    }
+    if (this.showcaseOn) this.guardCaption(now);
+    if (this.latSnap) more = true;
     if (this.globe.routes.advance(now)) more = true;
     return more;
   }
@@ -1005,7 +1055,7 @@ export class GlobeRenderer {
   private spinCtx: SpinContext = { reduced: false, hidden: false, lost: false, suspended: false, selected: false, focused: false, inset: 0, zoom: 0, minZoom: 0, busy: false };
   private spinContext(): SpinContext {
     const c = this.spinCtx;
-    c.reduced = this.reduced;
+    c.reduced = this.reduced || this.held;
     c.hidden = this.hidden;
     c.lost = this.lost;
     c.suspended = this.suspended;
@@ -1032,6 +1082,65 @@ export class GlobeRenderer {
   private noteActivity() {
     this.spin.activity(performance.now());
     this.armSpin();
+    if (this.idleFrozen) {
+      this.idleFrozen = false;
+      this.applyHold();
+    }
+    this.armFreeze();
+  }
+
+  /* ------------------------------ the energy pass's hold ------------------------------ */
+
+  private idleFrozen = false;
+  private blurred = false;
+  private offscreen = false;
+  private freezeTimer = 0;
+  private paceTimer = 0;
+
+  /** Whether everything that moves at rest (the roll, the ring's turn, the idle rotation) stands still now. */
+  private get held(): boolean {
+    const saveData = ENERGY.holdOnSaveData && typeof navigator !== "undefined" && (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    return this.idleFrozen || (ENERGY.holdWhenBlurred && this.blurred) || (ENERGY.holdWhenOffscreen && this.offscreen) || saveData;
+  }
+
+  /** `ENERGY.idleFreezeMs` without an input: the hold begins. Re-armed by every input. */
+  private armFreeze() {
+    window.clearTimeout(this.freezeTimer);
+    this.freezeTimer = 0;
+    if (!(ENERGY.idleFreezeMs > 0) || this.disposed) return;
+    this.freezeTimer = window.setTimeout(() => {
+      this.freezeTimer = 0;
+      this.idleFrozen = true;
+      this.applyHold();
+    }, ENERGY.idleFreezeMs);
+  }
+
+  private setBlurred(on: boolean) {
+    if (on === this.blurred) return;
+    this.blurred = on;
+    this.applyHold();
+  }
+
+  private setOffscreen(on: boolean) {
+    if (on === this.offscreen) return;
+    this.offscreen = on;
+    this.applyHold();
+  }
+
+  /** Hand the hold to the caption, the ring and the idle rotation (a frame is asked for when they may go on). */
+  private applyHold() {
+    const h = this.held;
+    this.caption?.setFrozen(h);
+    this.ring?.setFrozen(h);
+    if (h) {
+      this.spin.settle(performance.now());
+      if (this.capRaf) window.clearTimeout(this.capRaf);
+      this.capRaf = 0;
+    } else {
+      this.armSpin();
+      this.armCaption();
+      this.requestRender();
+    }
   }
 
   /** A change that is not an input (a place selected or focused from the URL or the list, the inset, a flight, the zoom limit): the idle clock restarts and a turning globe coasts to rest. */
@@ -1107,15 +1216,22 @@ export class GlobeRenderer {
     if (this.disposed || this.hidden || this.lost) return;
     const now = performance.now();
     // The rotation's own frame chain follows the display (a frame per refresh) but not faster than `SPIN.minFrameMs`: a frame that nothing else asked for is skipped when it is too soon.
-    if (!this.forced && this.spin.spinning && !spinFrameDue(now, this.lastTickAt)) {
-      this.raf = requestAnimationFrame(this.tick);
+    if (!this.forced && this.spin.spinning && !spinFrameDue(now, this.lastTickAt, { ...SPIN, minFrameMs: Math.max(SPIN.minFrameMs, ENERGY.spinFrameMs) })) {
+      // (paced by a timer: no wake at the display's rate for a frame that is not due)
+      if (!this.paceTimer) {
+        const wait = Math.max(4, Math.max(SPIN.minFrameMs, ENERGY.spinFrameMs) - (now - this.lastTickAt));
+        this.paceTimer = window.setTimeout(() => {
+          this.paceTimer = 0;
+          this.chainSpin();
+        }, wait);
+      }
       return;
     }
     this.forced = false;
     this.lastTickAt = now;
     const flying = this.flight !== null;
     const moving = this.advance(now);
-    const fading = this.caption?.animating ?? false;
+    const fading = !this.suspended && (this.caption?.animating ?? false);
     if (moving) this.spin.settle(now); // a flight, inertia or the inset slide is camera motion: not idle (a turning globe coasts to rest)
     // The flight has just landed exactly on its target: whatever is left of the coasting is dropped, so the camera stays on it.
     if (flying && this.flight === null) this.spin.activity(now);
@@ -1129,6 +1245,107 @@ export class GlobeRenderer {
     else if (this.spin.spinning) this.chainSpin();
     else this.armSpin();
   };
+
+  /**
+   * The crisp caption (a canvas of its own over the globe's, same camera): drawn into a window round the planet only (the lines never leave the
+   * shell's disc), by the same camera narrowed to that window (`setViewOffset` composed with the lift and the inset's shift). Nothing in pixel mode.
+   */
+  /**
+   * The caption's own frame loop, for the steady roll only (`CaptionLayer.drifting`): at most one frame every `CAPTION.drift.frameMs` (30 a second,
+   * like the ring's own clock), and a frame that draws NOTHING but the caption (the globe's canvas keeps its last frame, no labels, no tree): the
+   * camera has not moved or a full frame would have been asked for. It stands down for a full frame that is pending (that one draws the caption
+   * too) and stops entirely while the tab is hidden, the context is lost, the street map owns the view or nothing is drawn.
+   */
+  private capRaf = 0;
+  private capDrawnAt = 0;
+  private capFrames = 0;
+  /** JS ms spent in the caption's own frames (checks). */
+  private capMs = 0;
+  private lastBasis: { d: number; lon: number; lat: number } | null = null;
+
+  private armCaption() {
+    const c = this.caption;
+    if (!c || this.capRaf || this.disposed || this.hidden || this.lost || this.suspended || !this.lastBasis) return;
+    if (!c.drifting) return;
+    // (a timer at the caption's own rate: a frame it would not draw is no wake)
+    this.capRaf = window.setTimeout(this.captionTick, Math.max(4, ENERGY.captionFrameMs - (performance.now() - this.capDrawnAt)));
+  }
+
+  private captionTick = () => {
+    this.capRaf = 0;
+    const c = this.caption;
+    if (!c || this.disposed || this.hidden || this.lost || this.suspended || !this.sized || !c.drifting) return;
+    if (this.raf) {
+      // (a full frame is pending: it advances and draws the caption itself)
+      this.armCaption();
+      return;
+    }
+    const now = performance.now();
+    if (now - this.capDrawnAt >= ENERGY.captionFrameMs - 4) {
+      this.capDrawnAt = now;
+      const b = this.lastBasis!;
+      c.sync(b.d, b.lon, b.lat, now);
+      this.renderCrispCaption();
+      this.capFrames++;
+      this.capMs += performance.now() - now;
+    }
+    this.armCaption();
+  };
+
+  private captionRect = { w: 0, h: 0, left: 0, top: 0, mask: "", full: { w: 0, h: 0 }, at: { x: 0, y: 0 } };
+  private renderCrispCaption() {
+    const caption = this.caption;
+    if (!caption) return;
+    // Hidden, or nothing in view: no window, no view offset, no projection update (the canvas is hidden once and left alone).
+    if (!caption.visible) {
+      caption.hideCrisp();
+      return;
+    }
+    const P = this.pixel;
+    const cw = this.bufW * P;
+    const ch = this.bufH * P;
+    // The window covers the SHELL's silhouette, not a fixed share of the planet's (the shell is above the surface: a row near the limb is
+    // farther from the centre than the planet is wide; a window cut through it shows as a vertical edge on the letters).
+    const dist = cameraDistance(this.drawView().zoom, ch);
+    const R = silhouetteRadiusPx(this.drawView().zoom, ch) * shellWindowFactor(dist) * 1.03 + 4;
+    const cx = cw / 2 - this.shiftBuf * P;
+    const cy = ch / 2 - this.liftBuf * P;
+    // The window: the planet's whole box (`planet`) or only its horizontal reach by the caption's own vertical band (`band`: the rows' edges over
+    // their whole parallels and the dimming's reach: a third to a half of the pixels, the rows stay centred on the equator).
+    let wy0 = cy - R;
+    let wy1 = cy + R;
+    if (ENERGY.captionWindow === "band" && this.lastBasis) {
+      const e = caption.extentTan(this.drawView().lat);
+      if (e) {
+        const perTan = silhouetteRadiusPx(this.drawView().zoom, ch) * Math.sqrt(Math.max(1.0001, this.lastBasis.d * this.lastBasis.d - 1));
+        const pad = 6;
+        wy0 = Math.max(wy0, cy - e.top * perTan - pad);
+        wy1 = Math.min(wy1, cy - e.bottom * perTan + pad);
+      }
+    }
+    const x0 = Math.max(0, Math.floor(cx - R));
+    const y0 = Math.max(0, Math.floor(wy0));
+    const x1 = Math.min(cw, Math.ceil(cx + R));
+    const y1 = Math.min(ch, Math.ceil(wy1));
+    if (x1 - x0 < 1 || y1 - y0 < 1) return;
+    const cam = this.camera;
+    cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf + x0 / P, this.liftBuf + y0 / P, (x1 - x0) / P, (y1 - y0) / P);
+    cam.updateProjectionMatrix();
+    const rect = this.captionRect;
+    rect.w = x1 - x0;
+    rect.h = y1 - y0;
+    rect.left = this.canvasLeft + x0;
+    rect.top = this.canvasTop + y0;
+    rect.mask = this.canvas.style.maskImage;
+    rect.full.w = cw;
+    rect.full.h = ch;
+    rect.at.x = x0;
+    rect.at.y = y0;
+    caption.renderCrisp(cam, rect, window.devicePixelRatio || 1);
+    if (this.shiftBuf || this.liftBuf) cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf, this.liftBuf, this.bufW, this.bufH);
+    else cam.clearViewOffset();
+    cam.updateProjectionMatrix();
+  }
 
   /** Synchronous render (also used by resize and by the measurement hooks). */
   renderNow() {
@@ -1149,6 +1366,8 @@ export class GlobeRenderer {
     // and left the area outside it stale, which the CSS edge-fade mask then revealed.
     const t0 = performance.now();
     this.gl.render(this.globe.scene, this.camera);
+    // The caption (a canvas of its own over the globe's, same camera and rectangle).
+    this.renderCrispCaption();
     this.lastRenderMs = performance.now() - t0;
     this.frames++;
     if (this.canvas.style.opacity === "0") this.canvas.style.opacity = "";
@@ -1159,6 +1378,7 @@ export class GlobeRenderer {
     // Whoever drew this frame (the tick, a resize, a check), the transitions run to their end, and the idle rotation's chain (cancelled above) goes on.
     if (this.lod.animating || this.globe.animating || (this.caption?.animating ?? false) || this.opts.labelsAnimating?.()) this.keepGoing(false);
     else if (this.spin.spinning) this.chainSpin();
+    this.armCaption();
   }
 
   /**
@@ -1168,7 +1388,7 @@ export class GlobeRenderer {
   private syncRing() {
     const ring = this.ring;
     if (!ring) return;
-    const alpha = ringAlpha(this.view.zoom, this.fit, this.minZoom);
+    const alpha = this.ringPresence();
     if (alpha <= 0 && !ring.isShown) return;
     const P = this.pixel;
     const ch = this.bufH * P;
@@ -1182,12 +1402,22 @@ export class GlobeRenderer {
     });
   }
 
+  /**
+   * How present the flat ring is: its zoom's alpha, taken away by the overlay's own presence (the boxes and labels, `LodTree.overlayAlpha`: the same
+   * timed value, in the same frames, that fades them in), so the ring and the labels cross-fade and are never on the planet together. On a page
+   * without the showcase (a debug page, `?no-ring` has no ring at all) the ring is a function of the zoom alone, as it was.
+   */
+  private ringPresence(): number {
+    const a = ringAlpha(this.view.zoom, this.fit, this.minZoom);
+    return this.showcaseActive ? a * (1 - this.lod.overlayAlpha) : a;
+  }
+
   /** The ring's state (checks): shown, tone, glyphs, size of its canvas; null when there is none. */
   ringState() {
     const ring = this.ring;
     if (!ring) return null;
-    const alpha = ringAlpha(this.view.zoom, this.fit, this.minZoom);
-    return { ...ring.state(), zoomAlpha: alpha, fit: this.fit, floor: this.minZoom, silhouettePx: silhouetteRadiusPx(this.view.zoom, this.bufH * this.pixel) };
+    const alpha = this.ringPresence();
+    return { ...ring.state(), overlay: this.lod.overlayAlpha, zoomAlpha: ringAlpha(this.view.zoom, this.fit, this.minZoom), presence: alpha, fit: this.fit, floor: this.minZoom, silhouettePx: silhouetteRadiusPx(this.view.zoom, this.bufH * this.pixel) };
   }
 
   /** Checks and captures: hold the caption's entrance at `ms` after its start (null releases it) and draw. */
@@ -1202,6 +1432,111 @@ export class GlobeRenderer {
     this.requestRender();
   }
 
+  /**
+   * The real layout of the caption on the screen now, projected through the camera as drawn (CSS px, container coordinates): per row the top and
+   * bottom edge of its ink box, the planet's centre and radius. The checks measure the clearances between rows and where the block sits from it.
+   */
+  captionProbe() {
+    const c = this.caption;
+    if (!c) return null;
+    const cam = this.camera;
+    const P = this.pixel;
+    const toPx = (v: [number, number, number]) => {
+      const p = new Vector3(v[0], v[1], v[2]).project(cam);
+      return [((p.x + 1) / 2) * this.bufW * P + this.canvasLeft, ((1 - p.y) / 2) * this.bufH * P + this.canvasTop] as [number, number];
+    };
+    const ch = this.bufH * P;
+    return {
+      rows: c.edges().map((e) => ({ row: e.row, top: e.top.map(toPx), bottom: e.bottom.map(toPx), base: e.base.map(toPx) })),
+      centre: [(this.bufW * P) / 2 - this.shiftBuf * P + this.canvasLeft, ch / 2 - this.liftBuf * P + this.canvasTop],
+      radius: silhouetteRadiusPx(this.drawView().zoom, ch),
+      zoom: this.view.zoom,
+      lat: this.view.lat,
+      fit: this.fit,
+      floor: this.minZoom,
+      viewport: [this.width, this.height],
+    };
+  }
+
+  /** The silhouette's radius in px from the camera as it was last drawn (so a measure against `project` is from one and the same frame). */
+  private silhouetteFromCamera(): number {
+    const d = this.camera.position.length();
+    const f = (this.bufH * this.pixel) / 2 / Math.tan((FOV_DEG * Math.PI) / 360);
+    return f / Math.sqrt(Math.max(1.0001, d * d - 1));
+  }
+
+  /**
+   * Where the widest line of the caption is on the screen now (CSS px, container coordinates), and the planet's silhouette radius: the checks'
+   * measure that the words are locked to the globe (their width goes with its radius, in a fade as at rest). Null without a caption.
+   */
+  captionExtent() {
+    const c = this.caption;
+    if (!c) return null;
+    const ends = c.widestEnds();
+    if (!ends) return null;
+    const cam = this.camera;
+    const P = this.pixel;
+    const toPx = (v: [number, number, number]) => {
+      const p = new Vector3(v[0], v[1], v[2]).project(cam);
+      return { x: ((p.x + 1) / 2) * this.bufW * P + this.canvasLeft, y: ((1 - p.y) / 2) * this.bufH * P + this.canvasTop };
+    };
+    const a = toPx(ends.left);
+    const b = toPx(ends.right);
+    return { left: a, right: b, width: Math.hypot(b.x - a.x, b.y - a.y), chord: Math.abs(b.x - a.x), radiusPx: this.silhouetteFromCamera(), zoom: this.view.zoom, lat: this.view.lat, lon: this.view.lon };
+  }
+
+  /** How the caption leaves when the showcase ends: a fade (the page's own exit), or the orbit (kept: a caption that cycles its words uses it; the checks compare the two). */
+  private captionExit: "fade" | "orbit" = "fade";
+
+  setCaptionExit(exit: "fade" | "orbit") {
+    this.captionExit = exit;
+  }
+
+  /** Checks and captures: begin the next swap of the caption's phrase sets now (the timer does it on the page). Returns whether one began. */
+  swapCaption(): boolean {
+    const began = this.caption?.swapNow(performance.now()) ?? false;
+    if (began) this.requestRender();
+    return began;
+  }
+
+  /** Checks and measurements: set the energy knobs (`ENERGY`) now; the idle rotation's frame period follows. */
+  setEnergy(patch: Partial<typeof ENERGY>) {
+    Object.assign(ENERGY, patch);
+    SPIN.minFrameMs = ENERGY.spinFrameMs;
+    this.armFreeze();
+    this.applyHold();
+    this.requestRender();
+  }
+
+  /** Checks and captures: the ring's highlight ("blue", "ink", "none"; null: the tuned one). */
+  setRingHighlight(mode: "blue" | "ink" | "none" | null) {
+    this.ring?.setHighlight(mode);
+  }
+
+  /** Checks and captures: the thickness's look ("page", "mix", "edge"; null: the tuned one). */
+  setCaptionSide(mode: "page" | "mix" | "edge" | null) {
+    this.caption?.setSideMode(mode);
+    this.requestRender();
+  }
+
+  /** Checks and captures: the dimming behind the words ("ellipse", "bands", "none"; null: the tuned one). */
+  setCaptionDim(mode: "ellipse" | "bands" | "none" | null) {
+    this.caption?.setDimMode(mode);
+    this.requestRender();
+  }
+
+  /** Checks and captures: the seed of the sides the caption's lines come in from (null: all from the east); drawn again at once. */
+  setCaptionSeed(seed: number | null) {
+    this.caption?.setSeed(seed);
+    this.requestRender();
+  }
+
+  /** Checks only: lay the caption on a shell of this radius (null: the tuned one). */
+  setCaptionRadius(r: number | null) {
+    this.caption?.setRadius(r);
+    this.requestRender();
+  }
+
   /** Whether there is a caption (the page has the showcase and the app gave it lines). */
   hasCaption(): boolean {
     return this.caption !== null;
@@ -1211,7 +1546,7 @@ export class GlobeRenderer {
   captionState() {
     const c = this.caption;
     if (!c) return null;
-    return { ...c.state(), showcase: this.showcaseOn, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
+    return { ...c.state(), showcase: this.showcaseOn, captionFrames: this.capFrames, captionMs: this.capMs, drifting: c.drifting, band: { shown: this.captionOn, snapping: this.latSnap !== null, deg: CAPTION.band.deg }, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
   }
 
   /* ------------------------------ showcase ------------------------------ */
@@ -1240,8 +1575,56 @@ export class GlobeRenderer {
   private applyShowcase() {
     this.lod.setSuppressed(this.showcaseOn);
     const now = performance.now();
-    if (this.showcaseOn) this.caption?.show(now);
-    else this.caption?.hide(now);
+    if (this.showcaseOn) this.guardCaption(now);
+    else {
+      this.latSnap = null;
+      this.captionOn = false;
+      this.caption?.hide(now, this.captionExit);
+    }
+    if (this.suspended) this.caption?.settle();
+    this.requestRender();
+  }
+
+  /** Where a camera outside the band glides to: its nearest edge, or the equator (`CAPTION.band.snapTo`). */
+  private snapTarget(lat: number): number {
+    return CAPTION.band.snapTo === "equator" ? 0 : bandLat(lat);
+  }
+
+  /**
+   * The caption needs the camera inside its latitude band (`CAPTION.band`: the rows are fixed parallels about the equator). While the showcase is
+   * on: a camera outside the band glides its latitude (only: never the longitude, the zoom is the page's) to the band's nearest edge, ease-out,
+   * and the entrance starts when it has landed (`show` is not called before); a camera that leaves the band under a caption (a flight) fades
+   * it, and it comes back, entering again, once the camera is in the band. A gesture ends the showcase (`dropShowcase`), which drops the glide.
+   * Runs every frame (a few comparisons) and when the showcase changes.
+   */
+  private guardCaption(now: number) {
+    const caption = this.caption;
+    if (!caption || !this.showcaseOn) return;
+    const lat = this.view.lat;
+    if (this.captionOn) {
+      if (!inBand(lat, CAPTION.band.hysteresisDeg)) {
+        this.captionOn = false;
+        caption.hide(now, "fade");
+      }
+      return;
+    }
+    if (this.latSnap || this.flight !== null) return; // (the glide, or somebody else's flight, is under way: wait for it)
+    if (inBand(lat)) {
+      this.captionOn = true;
+      caption.show(now);
+      this.requestRender();
+      return;
+    }
+    if (this.reduced) {
+      this.view = this.clampView({ ...this.view, lat: this.snapTarget(lat) });
+      this.captionOn = true;
+      caption.show(now);
+      this.requestRender();
+      return;
+    }
+    this.noteChange();
+    this.velocity = STILL;
+    this.latSnap = { from: lat, to: this.snapTarget(lat), t0: now };
     this.requestRender();
   }
 
@@ -1251,8 +1634,10 @@ export class GlobeRenderer {
     const cam = this.camera;
     cam.fov = FOV_DEG;
     cam.aspect = this.bufW / this.bufH;
-    cam.near = Math.max(0.02, b.d - 1.05);
-    cam.far = b.d + 1.05;
+    // (the caption's shell is above the planet: its nearest point must be inside the near plane)
+    const reach = this.caption ? CAPTION.radius + 0.05 : 1.05;
+    cam.near = Math.max(0.02, b.d - reach);
+    cam.far = b.d + reach;
     cam.position.set(b.c[0] * b.d, b.c[1] * b.d, b.c[2] * b.d);
     cam.up.set(b.north[0], b.north[1], b.north[2]);
     cam.lookAt(0, 0, 0);
@@ -1265,7 +1650,8 @@ export class GlobeRenderer {
     cam.updateMatrixWorld();
     const now = performance.now();
     this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced);
-    this.caption?.sync(b, now);
+    this.lastBasis = { d: b.d, lon: v.lon, lat: v.lat };
+    this.caption?.sync(b.d, v.lon, v.lat, now);
     this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf, lift: this.liftBuf }, now, this.reduced);
   }
 

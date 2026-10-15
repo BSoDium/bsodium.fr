@@ -17,22 +17,23 @@ import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView, resolveBackTarget,
 import { panelInset } from "~/lib/layout";
 import { readPathsPref, writePathsPref } from "~/lib/paths-pref";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
-import { SITE, SITE_CALL } from "~/lib/site";
+import { SITE, siteCaption, type KindCounts } from "~/lib/site";
 
 /** The sections the no-script text lists, in the order of the header (the names and addresses are `lib/sections.ts`'s). */
 const NOSCRIPT_KINDS = ["project", "article", "artwork", "poem"] as const;
 
 /** The words of the globe's ring of type: the site's identity (name, role, fields, place), the same constant the head tags and the hero read. */
 const RING_PHRASES = ringPhrases(SITE);
-/** The caption that wraps the planet with it: what to do (it replaces the hero's how-to line while the globe has the caption). */
-const CAPTION_PHRASES = [...SITE_CALL];
-const NO_PHRASES: readonly string[] = [];
+/** The caption that floats over the planet with it: what the site is and what to do (it replaces the hero's how-to line while the globe has the caption). */
+const NO_PHRASES = { sets: [], fixed: [] } as const;
 
 export async function loader() {
   // `tiles` is the street map's tile source configuration (CATALYST_TILES_* read at request time, see
   // docs/street-architecture.md). The globe hands over to the street map with it (docs/web-architecture.md).
   const projection = await getProjection();
-  return { ...buildPlaceIndex(projection), tiles: getTilesConfig() };
+  // How much of each kind there is (the caption's third phrase set): the projection's own collections.
+  const counts: KindCounts = { project: projection.projects.length, article: projection.articles.length, artwork: projection.artworks.length, poem: projection.poems.length };
+  return { ...buildPlaceIndex(projection), tiles: getTilesConfig(), counts };
 }
 
 /** The place index never changes between navigations inside the shell. */
@@ -47,7 +48,9 @@ export function shouldRevalidate() {
  * in the full-screen container: the panel widens over the SAME globe, which stays mounted and keeps its view.
  */
 export default function Shell({ loaderData }: Route.ComponentProps) {
-  const { places, globePlaces, groups, routes, tiles } = loaderData;
+  const { places, globePlaces, groups, routes, tiles, counts } = loaderData;
+  // The caption's rows (built once: the globe reads them once, when it is created).
+  const captionPhrases = useMemo(() => siteCaption(counts), [counts]);
   const globeGroups = useMemo(() => toGlobeGroups(groups), [groups]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -150,7 +153,7 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
               tiles={tiles}
               attribution={AttributionSlot}
               ringPhrases={RING_PHRASES}
-              captionPhrases={empty ? NO_PHRASES : CAPTION_PHRASES}
+              captionPhrases={empty ? NO_PHRASES : captionPhrases}
               showcase={hero.showcase}
               onOrbit={setOrbit}
               onSelect={select}

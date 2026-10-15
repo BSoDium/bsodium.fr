@@ -91,22 +91,28 @@ The ring of type that circles the planet's disc when the globe is zoomed out bel
 
 Light scheme: kept (dark specks of 11 and 24 levels below the page colour on 251), because at those values it reads as the same barely-there haze as the dark one and the stipple does not compete with the boxes; `?no-sky` is the off switch.
 
-### Caption (the home screen's call to action)
+### Caption (the home screen's words over the planet)
 
-The caption that wraps the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Orbiting type") is drawn in the globe's own art-pixel pass, so it holds exactly two colours of the theme: the ink and, for the keyline that separates it from the coastlines under it, the page colour. No tone of its own, no alpha.
+The rows that float over the planet on the home screen (`CAPTION` in `app/globe/engine/tuning.ts`; web-architecture.md, "Caption on the sphere"): the reading serif (Newsreader, the intro's own face, no file of its own) in medium and heavy weights and a heavy italic, the code face (JetBrains Mono, the page's own) for "Software" and an ornate copperplate script (Imperial Script) for "Poetry", set in the **secondary text tone** with two words at most in **BSoD Blue** (the one palette), inside a **contour** (a thin outline outside the glyph) and a short **thickness** on the Z axis (a stack of slices towards the planet) in a **mid tone** between the page and the text: a cut-out of the globe's linework. All solid; the colours are uniforms (`captionColors`), so a theme change is no rebuild.
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `radius` | 1.022 | the shell the lines wrap, in planet radii (the coastlines and the outline are at 1) |
-| `capR`, `leading` | 0.16, 1.75 | cap height in planet radii; distance between baselines in cap heights |
-| `leanDeg`, `centreDeg` | -16, 26 | the lines' axis leans away from the viewer (they arch); the block's centre is this far above the view's centre; no roll |
-| `maxSpanDeg` | 120 | the most a line may span round the planet (the cap height shrinks to it) |
-| `enter` | from 100 degrees, 1000 ms, stagger 140 ms, 350 ms after load | each line comes round from behind the planet with an ease-out-expo |
-| `leaveMs` | 200 | leaving is quick, on behind the planet the other way |
-| `outline`, `texCap` | 0.09, 64 | the keyline in cap heights; texels in a cap height |
-| `cut`, `lodBias`, `bitmapBold` | 0.35, -0.7, 0.18 | the shader's coverage threshold and sharpening, and the bitmap face's weight |
+| `radius`, `depth`, `slices` | 1.25, 0.016, 28 | the shell the front faces float on, in planet radii (the coastlines and the graticule are at 1); the thickness towards the planet and the slices that make it |
+| `capR` | 0.084 | cap height in planet radii of EVERY row (one size for the rows that take turns and the call to action: the hierarchy is the weight and the face); the block shrinks together where a chord needs it |
+| `upper`, `tracking` | true, serif 0.05 / mono 0.03 / script 0 | the words are drawn in capitals (the caption only; the script face is exempt: "Poetry" keeps its case) and tracked by this many ems on top of each face's own spacing |
+| `dim` | ellipse, alpha 0.55 / 0.55, reach 0.55, bandReach 1.9 | the faint page-colour shade behind the words (mode `ellipse`, `bands` or `none`); strength at the middle per scheme |
+| `rows.stepCaps` | 1.7 | the rows are on FIXED parallels centred on the equator, this many cap heights from baseline to baseline at the ends (the middle ones moved so the baselines are equally far apart on the screen at `band.loadLat`) |
+| `band` | 10 degrees, snap 800 ms, hysteresis 1.5, `snapTo` edge | the camera latitude the caption needs: outside it the latitude glides (only) to the nearest edge (or the equator) before the entrance; the page opens at `START_VIEW` (lon 0, lat 0) |
+| `maxHalfWidth`, `hardSpanDeg`, `visibleFraction`, `minScale` | 1.04, 160, 0.85, 0.2 | a row's half width over the silhouette's radius at most; the most a row spans round its parallel; how near the shell's horizon its ends may go; the least scale of the static fit |
+| `minCapPx` | 12 | the smallest letter, CSS px (a block may go to three quarters of it at an extreme tilt on a small planet) |
+| `outline`, `texCap` | 0.05, 96 | the outline in cap heights (outside the glyph, so the face keeps its area); texels in a cap height |
+| `colors` | text #595959 / #a3a3a3, accent #0076d4 / #70b4ff, `outlineMix` 42 % / 37 %, `sideMix` 34 % / 30 % | the letters are the secondary text tone (`--muted-foreground`); at most two words on screen (and the first numeral of a counts row) take BSoD Blue (`--palette-blue-600` light, `-400` dark: 4.5:1 and 9.1:1); the contour is a mid tone from the page toward the text (1.9:1 and 2.0:1 against the page, 3.5:1 and 4.0:1 against the face), the thickness a step closer (1.7:1). All alpha 1 |
+| `enter` | from 100 degrees, 900 ms, stagger 450 ms, 250 ms after load | each row comes round from behind the planet from a random side with an ease-out-expo |
+| `cycle` | dwell 5500 ms (the roll), exit 480 ms | the roll's duration (constant speed through the centre) and the orbit exit that follows it (an ease-in that starts at the roll's speed); the next set enters the same way |
+| `drift` | amp 8 degrees, frame 32 ms, max step 64 ms | half the roll (along the row's parallel), the least time between the caption's own capped frames (30 a second), the largest step of its clock |
+| `fadeMs`, `leaveMs` | 180, 200 | the interaction's exit is an opacity fade of the canvas; the orbit exit (kept) takes `leaveMs` |
 
-Faces (`CAPTION_FONTS`, chosen with `?orbit-font=jacquard|pixelify|bitmap`, default `jacquard`): Jacquard 24 (SIL OFL 1.1, a pixel blackletter; `public/fonts/jacquard-24-1.002-latin-400.woff2`, 18.9 kB, Basic Latin subset of google/fonts `ofl/jacquard24/Jacquard24-Regular.ttf`, 313.6 kB), Pixelify Sans at weight 700 (SIL OFL 1.1; `pixelify-sans-1.000-latin-700.woff2`, 3.9 kB, instanced and subset from google/fonts `ofl/pixelifysans/PixelifySans[wght].ttf`, 79.2 kB), and the map's own bitmap font (`engine/pixel-font`, no file). The licence of each is `LICENSE-<name>.txt` beside it. A face that would have strokes under a cell at the page's art-cell size falls back along that chain (`legibleFont`: Jacquard needs a cap height of 13 cells, Pixelify 12, the bitmap font 7); on a 390 px phone (2 px cell, a 60-cell planet) every face but the bitmap one is under it.
+Faces (`CAPTION_FACES`, `CAPTION_STYLES`): `plain` Newsreader 500, `heavy` 800, `heavy-italic` 800 italic, `mono` JetBrains Mono 700 (scaled 0.88 to the serif's caps), `script` Imperial Script 400 (scaled 1.0, thickened 0.05 caps; SIL OFL 1.1, `public/fonts/imperial-script-1.010-latin-400.woff2`, 19.7 kB, Basic Latin + Latin-1 subset of google/fonts `ofl/imperialscript/ImperialScript-Regular.ttf` (154.8 kB), `kern` only; the licence is `LICENSE-imperial-script.txt` beside it; loaded by the globe with the `FontFace` API only when a caption has a word in it). A face that fails falls back (the script to the heavy italic serif).
 
 ### Map card and credits line
 

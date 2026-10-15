@@ -213,3 +213,51 @@ describe("hero machine", () => {
     m.stop();
   });
 });
+
+describe("a place or an entry opens and closes: the hero never shows its resting state on the way back", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** Every state the machine passes through (what a render could have shown), from a listener. */
+  function watch(m: HeroMachine): string[] {
+    const seen: string[] = [`${m.getSnapshot().state}/${m.getSnapshot().world}`];
+    m.subscribe(() => seen.push(`${m.getSnapshot().state}/${m.getSnapshot().world}`));
+    return seen;
+  }
+
+  it("opening a place from the resting hero goes straight to collapsed; closing it with the view still zoomed in stays collapsed (no rest, no timer)", () => {
+    const m = createHeroMachine();
+    const seen = watch(m);
+    m.setWorld(false); // the panel opens: the shell says the view is not the world view
+    expect(m.getSnapshot()).toEqual({ state: "collapsed", world: false });
+    // the panel closes: the view is still the place's, so nothing changes
+    m.setWorld(false);
+    vi.advanceTimersByTime(HERO_IDLE_MS * 3);
+    expect(m.getSnapshot()).toEqual({ state: "collapsed", world: false });
+    expect(seen).toEqual(["rest/true", "collapsed/false"]);
+    m.stop();
+  });
+
+  it("closing it with the view back at the world view returns to rest only after the idle delay, never at once", () => {
+    const m = createHeroMachine();
+    m.setWorld(false);
+    const seen = watch(m);
+    m.setWorld(true); // the view is the world view again (and the panel is closed)
+    expect(m.getSnapshot().state).toBe("collapsed");
+    vi.advanceTimersByTime(HERO_IDLE_MS - 1);
+    expect(m.getSnapshot().state).toBe("collapsed");
+    vi.advanceTimersByTime(1);
+    expect(m.getSnapshot().state).toBe("rest");
+    expect(seen).toEqual(["collapsed/false", "collapsed/true", "rest/true"]);
+    m.stop();
+  });
+
+  it("a hero that was collapsed when the place opened comes back collapsed too", () => {
+    const m = createHeroMachine();
+    m.interact();
+    m.setWorld(false);
+    m.setWorld(false);
+    expect(m.getSnapshot()).toEqual({ state: "collapsed", world: false });
+    m.stop();
+  });
+});

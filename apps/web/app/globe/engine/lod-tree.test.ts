@@ -1007,4 +1007,56 @@ describe("suppression: the home screen's caption replaces every box and label", 
     t.advance(2);
     expect(t.count).toBe(0);
   });
+
+  it("has one overlay value for the whole of it, run by the same clock and ease as a node's own opacity (the flat ring follows it)", () => {
+    const t = new LodTree(germany());
+    const cam = camAt(10, 50.5, 2.7);
+    t.alphas(cam);
+    expect(t.overlayAlpha).toBe(1);
+    // the page's first state is out: it begins there, nothing fades in the first frame
+    const first = new LodTree(germany());
+    first.setSuppressed(true, true);
+    expect(first.overlayAlpha).toBe(0);
+    expect(first.animating).toBe(false);
+    // out, timed: 0 at the start, falling by the nodes' own smoothstep over `FADE_MS`, never past it
+    t.update({ ...cam, zoom: cam.zoom + 1e-9 }, -1, -1, false);
+    t.advance(1000);
+    t.setSuppressed(true);
+    expect(t.animating).toBe(true);
+    t.update({ ...cam, zoom: cam.zoom + 2e-9 }, -1, -1, false);
+    t.advance(1016);
+    const early = t.overlayAlpha;
+    expect(early).toBeLessThan(1);
+    expect(early).toBeGreaterThan(0.5);
+    t.advance(1032);
+    t.advance(1048);
+    t.advance(1064);
+    t.advance(1080);
+    t.advance(1096);
+    t.advance(1112);
+    t.advance(1128);
+    t.advance(1144);
+    t.advance(1160);
+    t.advance(1176);
+    t.advance(1192);
+    t.advance(1208);
+    t.advance(1224);
+    expect(t.overlayAlpha).toBe(0);
+    // and back, with the nodes: one clock
+    t.setSuppressed(false);
+    t.update({ ...cam, zoom: cam.zoom + 3e-9 }, -1, -1, false);
+    run(t, 10_000);
+    expect(t.overlayAlpha).toBe(1);
+  });
+
+  it("is instant under reduced motion", () => {
+    const t = new LodTree(germany());
+    const cam = camAt(10, 50.5, 2.7);
+    t.alphas(cam, true);
+    t.setSuppressed(true);
+    t.update({ ...cam, zoom: cam.zoom + 1e-9 }, -1, -1, true);
+    t.advance(1);
+    t.advance(2);
+    expect(t.overlayAlpha).toBe(0);
+  });
 });

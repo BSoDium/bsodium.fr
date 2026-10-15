@@ -16,7 +16,7 @@ import { FadeArray, clockStep } from "./fade";
 import { borderLevel, bordersWanted } from "./palette";
 import type { ViewBasis } from "./geo";
 import { zoomToRadiusPx } from "./geo";
-import { graticuleSegments, polylinesToSegments } from "./geometry";
+import { GRATICULE_STEP_DEG, graticuleSegments, polylinesToSegments } from "./geometry";
 import { OCCLUDER_RADIUS, lineMaterial, occluderMaterial, silhouetteMaterial } from "./materials";
 import { RouteLayer } from "./route-layer";
 import { SKY_STATE, viewToGalactic } from "./sky";
@@ -71,7 +71,7 @@ export class GlobeScene {
 
     // Each layer is drawn in a fixed order (renderOrder) over the disc: grid, borders, coast, routes, horizon outline,
     // markers (last, so nothing can draw over a marker).
-    this.add(new LineSegments(this.track(segmentGeometry(graticuleSegments(15, 3))), this.graticule), 1);
+    this.add(new LineSegments(this.track(segmentGeometry(graticuleSegments(GRATICULE_STEP_DEG, 3))), this.graticule), 1);
     this.bordersLines = new LineSegments(this.track(segmentGeometry(polylinesToSegments(data.borders, 1))), this.borders);
     this.add(this.bordersLines, 2);
     this.add(new LineSegments(this.track(segmentGeometry(polylinesToSegments(data.coastlines, 1))), this.coast), 3);

@@ -21,6 +21,9 @@
 // wheel    real wheel events: zoom out reaches the floor, the app's view reports zoom 0 (the world view: the hero keeps its rules), zoom in fades it
 // cost     per-frame JS cost of a ring frame at the floor and a full minute-less run's share of a frame budget
 // mobile   390x844@3 touch: pinch-free, the same, with the ring inside the screen
+// overlay  with the showcase (the home screen) the ring gives way to the boxes and labels: it is full at rest in the world view (as on main), fades out
+//          with them the moment they come back (the same value and clock as their own opacity), stays away while they are there, and is back at rest;
+//          reduced motion: at once; without the showcase (a debug page) the ring is a function of the zoom alone, as above
 import { launch, open, waitGlobe, DESKTOP, MOBILE, sleep } from "./_lib.mjs";
 
 const only = process.argv.slice(2);
@@ -236,7 +239,8 @@ try {
     expect("it asked for no GL frame and no camera tick", s1.frames === s0.frames && s1.ticks === s0.ticks && s1.clears === s0.clears, { s0, s1 });
     const repaints = s1.ring.frames - s0.ring.frames;
     const hz = repaints / dt;
-    expect("it repaints at most 30 times a second", hz <= 31.5 && hz > 15, { hz, repaints });
+    // (round 9, the energy pass: 15 a second, `ENERGY.ringFrameMs` 64: the ring turns 3 degrees a second, one pixel a repaint at the largest ring)
+    expect("it repaints at most 30 times a second (15 a second since the energy pass)", hz <= 31.5 && hz > 10, { hz, repaints });
     note(`ring repaints ${hz.toFixed(1)}/s, ${(s1.ring.totalMs - s0.ring.totalMs).toFixed(1)} ms of JS in ${dt.toFixed(1)} s (${((s1.ring.totalMs - s0.ring.totalMs) / repaints).toFixed(2)} ms a frame), ${s1.ring.glyphs} glyphs`);
     // The planet's own idle rotation is independent: with the rotation allowed (shortened delay) the ring's rate does not change.
     await ctx.close();
@@ -340,6 +344,57 @@ try {
     await ctx.close();
   }
 
+  if (run("overlay")) {
+    note("overlay");
+    const URL_SHOW = "/?globe-debug&no-street&ring&showcase";
+    {
+      const { page, ctx, logs } = await openRing(browser, DESKTOP, URL_SHOW);
+      await sleep(800);
+      const at = await ring(page);
+      expect("at rest in the world view the ring is shown at full strength (main's)", at.shown && at.presence === at.zoomAlpha && at.overlay === 0 && at.presence > 0.99, at);
+      // the showcase ends (a gesture): the boxes and labels come back, and the ring leaves with them, in the same frames
+      await page.evaluate(() => window.__globeDebug.showcase(false));
+      const samples = [];
+      for (let i = 0; i < 24; i++) {
+        samples.push(await ring(page));
+        await sleep(12);
+      }
+      const hidden = samples.at(-1);
+      expect("the ring is gone with the overlay's fade-in (presence 0, not shown)", hidden.presence === 0 && !hidden.shown, hidden);
+      expect("its presence is one minus the overlay's own value in every frame (one clock)", samples.every((r) => Math.abs(r.presence - r.zoomAlpha * (1 - r.overlay)) < 1e-9), samples.slice(0, 3));
+      let mono = true;
+      for (let i = 1; i < samples.length; i++) if (samples[i].presence > samples[i - 1].presence + 1e-9) mono = false;
+      expect("it only goes down (never flashes back)", mono, samples.map((r) => +r.presence.toFixed(2)));
+      await sleep(400);
+      const still = await ring(page);
+      expect("and stays away while the boxes and labels are there", !still.shown && still.presence === 0, still);
+      // back at rest: the other way
+      await page.evaluate(() => window.__globeDebug.showcase(true));
+      await sleep(700);
+      const back = await ring(page);
+      expect("the ring is back when the showcase is", back.shown && back.presence > 0.99, back);
+      expect("no console warning or error", logs.length === 0, logs);
+      await ctx.close();
+    }
+    {
+      // reduced motion: at once, both ways
+      const { page, ctx } = await openRing(browser, { ...DESKTOP, reducedMotion: "reduce" }, URL_SHOW);
+      await sleep(600);
+      await page.evaluate(() => window.__globeDebug.showcase(false));
+      await sleep(80);
+      const r = await ring(page);
+      expect("reduced motion: the ring is gone at once with the boxes", !r.shown && r.presence === 0, r);
+      await ctx.close();
+    }
+    {
+      // no showcase (a debug page): the ring is a function of the zoom alone
+      const { page, ctx } = await openRing(browser, DESKTOP);
+      const n = await nums(page);
+      const r = await goto(page, n.min);
+      expect("without the showcase the overlay does not touch the ring", r.presence === r.zoomAlpha && r.shown, r);
+      await ctx.close();
+    }
+  }
   if (run("mobile")) {
     note("mobile");
     const { page, ctx, logs } = await openRing(browser, MOBILE);

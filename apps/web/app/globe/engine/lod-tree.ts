@@ -310,6 +310,12 @@ export class LodTree {
    */
   readonly life: FadeArray;
   readonly mask: FadeArray;
+  /**
+   * How present the overlay (boxes and labels) is as a WHOLE, one timed value: the same primitive, duration and ease as every node's own
+   * opacity, started by the same call (`setSuppressed`), so whatever should leave while the overlay arrives (the flat ring of type) can follow
+   * it exactly. 1 = the overlay is wanted, 0 = suppressed.
+   */
+  private readonly overlay: FadeArray;
   /** Side in CSS px of a node's TRUE box (a place: its extent without the minimum; a group: the union of its places' drawn boxes, without the padding). */
   readonly side: Float64Array;
   /** Visible places below a group (a group's rectangle wraps only these). */
@@ -527,6 +533,8 @@ export class LodTree {
     this.fillAlpha = new Float32Array(n);
     this.life = new FadeArray(n);
     this.mask = new FadeArray(n);
+    this.overlay = new FadeArray(1);
+    this.overlay.snap(0, true);
     this.side = new Float64Array(n);
     this.fillOn = new Uint8Array(n);
     this.want = new Uint8Array(n);
@@ -672,10 +680,18 @@ export class LodTree {
    * go OFF (or back to what the cut wants) and each runs to it by its own timed opacity (engine/fade.ts), so the overlay cross-fades with
    * whatever replaces it and a node that is mostly gone takes no click (`pickAlpha`). The cut itself is untouched: nothing is re-planned.
    */
-  setSuppressed(on: boolean): void {
+  setSuppressed(on: boolean, snap = false): void {
     if (on === this.suppressed) return;
     this.suppressed = on;
     this.keyValid = false;
+    // (`snap`: the page's first state: the overlay begins out, nothing fades in the first frame)
+    if (snap) this.overlay.snap(0, !on);
+    else this.overlay.set(0, !on);
+  }
+
+  /** The overlay's presence as a whole, 0..1 (`overlay`): eased like a node's opacity, run by the same clock. */
+  get overlayAlpha(): number {
+    return this.overlay.value(0);
   }
 
   get isSuppressed(): boolean {
@@ -684,7 +700,7 @@ export class LodTree {
 
   /** True while some transition (a node, a mask) has not reached its target: the host's frame loop must keep going. */
   get animating(): boolean {
-    return this.life.moving || this.mask.moving;
+    return this.life.moving || this.mask.moving || this.overlay.moving;
   }
 
   /**
@@ -699,6 +715,7 @@ export class LodTree {
     if (moved) {
       this.life.step(dt, instant);
       this.mask.step(dt, instant);
+      this.overlay.step(dt, instant);
     }
     if (moved || this.rebuild) this.build();
     return this.animating;
@@ -708,6 +725,7 @@ export class LodTree {
   settle(): void {
     this.life.settle();
     this.mask.settle();
+    this.overlay.settle();
     this.build();
   }
 

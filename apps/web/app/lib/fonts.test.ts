@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { CAPTION_FACES } from "~/globe/engine/caption";
 import { describe, expect, it } from "vitest";
-import { CAPTION_FONTS } from "~/globe/engine/caption";
 import { DISPLAY_FONT_URL, FONT_DIR, FONT_FILES } from "./fonts";
 
 const css = readFileSync(new URL("../app.css", import.meta.url), "utf8");
@@ -145,26 +145,24 @@ describe("type roles", () => {
   });
 });
 
-describe("the caption's two extra faces (loaded by the globe only when the page asks for them, not declared in the stylesheet)", () => {
-  it("are real woff2 subsets of Basic Latin next to their OFL licence, versioned in the name (the year-long immutable cache), small", () => {
-    for (const [key, licence] of [
-      ["jacquard", "jacquard-24"],
-      ["pixelify", "pixelify-sans"],
-    ] as const) {
-      const url = CAPTION_FONTS[key].url!;
-      const file = publicFile(url.slice(1));
-      expect(existsSync(file), url).toBe(true);
-      expect(readFileSync(file).toString("latin1", 0, 4), url).toBe("wOF2");
-      expect(statSync(file).size, url).toBeLessThan(30 * 1024);
-      expect(url, url).toMatch(/-\d+\.\d+-latin-\d+\.woff2$/);
-      const text = readFileSync(publicFile(`fonts/LICENSE-${licence}.txt`), "utf8");
-      expect(text, licence).toContain("SIL Open Font License, Version 1.1");
-      expect(text, licence).toMatch(/^Copyright /);
-    }
+describe("the caption's one extra face (loaded by the globe only when the page's caption has a word in it, not declared in the stylesheet)", () => {
+  it("is a real woff2 subset of Basic Latin next to its OFL licence, versioned in the name (the year-long immutable cache), small", () => {
+    const url = CAPTION_FACES.script.url;
+    expect(url).toMatch(/^\/fonts\/imperial-script-\d+\.\d+-latin-400\.woff2$/);
+    const file = publicFile(url.slice(1));
+    expect(existsSync(file), url).toBe(true);
+    expect(readFileSync(file).toString("latin1", 0, 4), url).toBe("wOF2");
+    expect(statSync(file).size, url).toBeLessThan(30 * 1024);
+    const text = readFileSync(publicFile("fonts/LICENSE-imperial-script.txt"), "utf8");
+    expect(text).toContain("SIL Open Font License, Version 1.1");
+    expect(text).toMatch(/^Copyright /);
   });
 
-  it("are not in the stylesheet: no page pays for them", () => {
-    expect(css).not.toMatch(/jacquard|pixelify/i);
+  it("is not in the stylesheet: no page pays for it, and the caption's other faces are the page's own (Newsreader, JetBrains Mono)", () => {
+    expect(css).not.toMatch(/imperial/i);
+    expect(CAPTION_FACES.serif.url).toBeNull();
+    expect(CAPTION_FACES.mono.url).toBeNull();
+    expect(css).toContain('font-family: "JetBrains Mono Variable"');
+    expect(css).toContain('font-family: "Newsreader Variable"');
   });
 });
-

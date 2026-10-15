@@ -3,10 +3,9 @@
  * React component talks to; it is imported dynamically so that `three` stays in its own client chunk.
  */
 import type { Polylines } from "@catalyst/geodata";
-import { isFitView, type GlobeInitialView, type GlobePlace, type GlobeProps, type GlobeRoute, type GlobeViewState } from "../types";
+import { isFitView, type GlobeCaption, type GlobeInitialView, type GlobePlace, type GlobeProps, type GlobeRoute, type GlobeViewState } from "../types";
 import { readTheme } from "./colors";
 import { BoxScene } from "./box-scene";
-import type { CaptionFont } from "./caption";
 import { placeFraming } from "./framing";
 import type { LodTree } from "./lod-tree";
 import { GlobeRenderer, type RendererOptions, type StartView } from "./renderer";
@@ -54,9 +53,8 @@ interface GlobeOptions {
   pickOverride?: RendererOptions["pickOverride"];
   /** The line of the ring of type (see `RendererOptions.ringText`); absent = no ring. */
   ringText?: string;
-  /** The lines of the caption that wraps the planet and the face they are set in (see `RendererOptions.captionPhrases`). */
-  captionPhrases?: readonly string[];
-  captionFont?: CaptionFont;
+  /** The lines of the caption that floats over the planet (see `RendererOptions.captionPhrases`). */
+  captionPhrases?: GlobeCaption;
   /** See `GlobeProps.coverBottom` and `GlobeProps.showcase`: read at creation. */
   coverBottom?: number;
   showcase?: boolean;
@@ -119,6 +117,26 @@ export interface GlobeDebug {
   pinCaption(ms: number | null): void;
   /** Hold every caption line at `deg` degrees east of its place (null releases it): the limb close-ups. */
   pinCaptionAngle(deg: number | null): void;
+  /** Lay the caption on a shell of this radius (1.001: on the surface, over the graticule's parallels; null: the tuned one): the alignment check. */
+  captionRadius(r: number | null): void;
+  /** The seed of the sides the caption's lines come in from, per entrance (null: all from the east): captures and checks. */
+  captionSeed(seed: number | null): void;
+  /** Begin the next swap of the caption's phrase sets now (the page's timer does it after a dwell): captures and checks. */
+  captionSwap(): boolean;
+  /** The real layout of the caption on the screen (the rows' top and bottom edges through the camera, the planet's centre and radius): the measurements. */
+  captionProbe(): ReturnType<GlobeRenderer["captionProbe"]>;
+  /** How the caption leaves when the showcase ends: "fade" (the page's) or "orbit" (kept for words that cycle; the measurements compare them). */
+  captionExit(exit: "fade" | "orbit"): void;
+  /** Where the caption's widest line is on the screen and the planet's radius there (checks: the words are locked to the globe, in a fade as at rest). */
+  captionExtent(): ReturnType<GlobeRenderer["captionExtent"]>;
+  /** The dimming behind the caption's words: "ellipse", "bands", "none" (null: the tuned `CAPTION.dim.mode`): the comparison captures. */
+  captionDim(mode: "ellipse" | "bands" | "none" | null): void;
+  /** The thickness's look: "page", "mix" or "edge" (null: the tuned one): the comparison captures. */
+  captionSide(mode: "page" | "mix" | "edge" | null): void;
+  /** The ring of type's highlight: "blue", "ink" or "none" (null: the tuned one). */
+  ringHighlight(mode: "blue" | "ink" | "none" | null): void;
+  /** The energy knobs (`ENERGY`): set for measurements. */
+  energy(patch: Record<string, unknown>): void;
   /** Turn the showcase (the caption in, the boxes out) on or off as the app's hero would (checks and the perf scenarios). */
   showcase(on: boolean): void;
   /** Set the earth rotation angle in degrees (moves the sky against the earth) and draw. */
@@ -253,7 +271,6 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         pickOverride: opts.pickOverride,
         ringText: opts.ringText,
         captionPhrases: opts.captionPhrases,
-        captionFont: opts.captionFont,
         coverBottom: opts.coverBottom,
         showcase: opts.showcase,
         onSelect: opts.onSelect,
@@ -363,6 +380,16 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       showcase: (on) => renderer.setShowcase(on),
       pinCaption: (ms) => renderer.pinCaption(ms),
       pinCaptionAngle: (deg) => renderer.pinCaptionAngle(deg),
+      captionRadius: (r) => renderer.setCaptionRadius(r),
+      captionSeed: (seed) => renderer.setCaptionSeed(seed),
+      captionSwap: () => renderer.swapCaption(),
+      captionProbe: () => renderer.captionProbe(),
+      captionExit: (exit) => renderer.setCaptionExit(exit),
+      captionDim: (mode) => renderer.setCaptionDim(mode),
+      captionSide: (mode) => renderer.setCaptionSide(mode),
+      ringHighlight: (mode) => renderer.setRingHighlight(mode),
+      energy: (patch) => renderer.setEnergy(patch as never),
+      captionExtent: () => renderer.captionExtent(),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),
       info: () => renderer.renderInfo(),

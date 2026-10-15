@@ -51,7 +51,8 @@ export const SPIN_DEFAULTS: Readonly<SpinConfig> = {
   easeInMs: 3000,
   stopMs: 1000,
   unzoomedSlack: 0.15,
-  maxStepMs: 100,
+  // (the largest step must exceed the paced frame period, `ENERGY.spinFrameMs` 100 and a timer's jitter: a step clipped to it would turn slower)
+  maxStepMs: 250,
   minFrameMs: 0,
 };
 

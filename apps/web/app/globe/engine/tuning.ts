@@ -133,52 +133,129 @@ export const SKY = {
  */
 export const LIFT = { gapPx: 14, marginPx: 14 } as const;
 
+/** Where the camera starts when the page gives no view: no tilt, centred on the point (lon 0, lat 0). Inside the caption's band by construction. */
+export const START_VIEW = { lon: 0, lat: 0 } as const;
+
 /** `cubic-bezier` control points of the app's standard easing (`--ease-standard`). */
 export const INSET_EASE = [0.2, 0, 0, 1] as const;
 
 /**
  * The caption (engine/caption.ts, engine/caption-layer.ts; docs/web-architecture.md, "Orbiting type"): the home screen's call to action, lines of
- * display type that wrap a sphere a little larger than the globe INSIDE the globe's own scene, so they are drawn in the art-pixel pass (the same
- * cells and palette), depth-tested (the planet hides their far side) and back-face culled (a letter past the horizon vanishes, it never mirrors).
- * The lines are bands of constant latitude of the VIEW's frame, centred on the central meridian, stacked one under the other.
+ * outlined serif type that FLOAT over the planet on a shell well above its surface, each on a real parallel of the globe (so each has that
+ * parallel's tilt and curvature in the camera's orientation), thick (extruded towards the planet in the outline's colour), centred on the central
+ * meridian, stacked one under the other. Drawn crisp at the device's resolution in a second canvas that is still depth-tested against the
+ * planet (the art-pixel pass is not an option: an outlined serif is unreadable at its cell size).
  *
  * Sizes in planet radii (1 = the sphere's radius), angles in degrees. Everything that can be tuned by eye is here.
  */
 export const CAPTION = {
-  /** The shell, a little above the surface (and above the coastlines and the outline, which are drawn at 1). */
-  radius: 1.022,
-  /** Cap height of the type, in planet radii: the face's own cap-height ratio sets the em from it. */
-  capR: 0.16,
-  /** Distance between the baselines of two lines, in cap heights. */
-  leading: 1.75,
+  /** The shell the letters' FRONT face is on: floating, clearly above the surface (the orbit). The extrusion goes down towards the planet from it. */
+  radius: 1.25,
   /**
-   * The lines' axis leans away from the viewer by this much, which makes them arch (the reference's lines bend down towards the limbs); no roll:
-   * the bands are horizontal at the central meridian. `centreDeg`: the block's centre is this far above the view's centre, as seen on the shell.
+   * Cap height of EVERY row, in planet radii: one size for the rows that take turns and for the call to action (the hierarchy is the weight and
+   * the face, not the size). Four rows are in view at once; the whole block shrinks together when a row would not fit the chord of its parallel
+   * (`fitScale`).
    */
-  leanDeg: -16,
-  centreDeg: 26,
-  /** The most the caption may span round the planet, degrees (a long phrase shrinks to it). */
-  maxSpanDeg: 120,
+  capR: 0.084,
   /**
-   * The entrance: each line starts hidden behind the planet (`fromDeg` east of the central meridian, plus the line's own half-width so that all of
-   * it is past the horizon), travels round the sphere to its place with `easeOutExpo`, `ms` in all, line i starting `staggerMs` after line i - 1 (on load, `loadDelayMs`
-   * later still: the page's own fade-in goes first).
-   * Leaving is quick: it goes on behind the planet the other way in `leaveMs` (ease-in).
+   * The words are set in capitals (the caption's drawing only: the page's text and the accessible text are as the app wrote them; the script face
+   * is exempt and keeps its case) and tracked:
+   * `tracking` is added to each face's own letter spacing (ems of the face). Capitals set tight read as a block; a little air reads as a line.
    */
-  enter: { fromDeg: 100, ms: 1000, staggerMs: 140, loadDelayMs: 350 },
+  upper: true,
+  tracking: { serif: 0.05, mono: 0.03, script: 0 },
+  /**
+   * Where the rows sit (engine/caption.ts `rowLatitudes`): on FIXED parallels, centred on the equator and uniformly spaced, `stepCaps` cap heights
+   * from one baseline to the next; nothing recomputes them per camera tilt. A row spans at most `hardSpanDeg` of its parallel and no farther than
+   * `visibleFraction` of the shell's horizon from the view's axis for any camera inside the band (the whole block is shrunk, statically, when
+   * one would not fit: `fitScale`; the shell's radius is what is raised first).
+   */
+  rows: { stepCaps: 1.7 },
+  /** A row's half width on the screen is at most this share of the planet's silhouette radius: the words stay over the planet, off the page's own text. */
+  maxHalfWidth: 1.04,
+  hardSpanDeg: 160,
+  visibleFraction: 0.85,
+  /** The least scale the whole block is shrunk to. */
+  minScale: 0.2,
+  /** The smallest cap height a letter may have, CSS px. */
+  minCapPx: 12,
+  /**
+   * The camera latitude the caption needs: it is shown only while |latitude| is inside `deg` of the equator. Before it comes back (the idle
+   * delay, a return to rest) a camera outside the band glides its LATITUDE ONLY (never the longitude, the zoom is the page's) to the nearest
+   * edge in `snapMs`, ease-out, and only then does the entrance start; a camera that leaves the band under the caption (a flight) fades it,
+   * and the caption is back `hysteresisDeg` inside. `snapTo`: the nearest edge of the band (`edge`) or the equator (`equator`). The page opens
+   * at `START_VIEW` (no tilt, centred on lon 0, lat 0: the equator is a horizontal line through the disc's middle).
+   */
+  band: { deg: 10, snapMs: 800, hysteresisDeg: 1.5, snapTo: "edge" as "edge" | "equator" },
+  /**
+   * The rows that take turns, and what a row does between entering and leaving (engine/caption.ts `rowX`): it enters (`enter`), then ROLLS through
+   * the central meridian at a constant speed for `dwellMs`, from `drift.ampDeg` before it to as much after it (2 amp over the dwell: 2.9 degrees a
+   * second at 8 and 5.5 s), then accelerates and leaves round the orbit in `exitMs` (an ease-in that starts at the roll's speed), and the next
+   * phrase set comes in the same way. The direction is the side the row came in from; every row has its own, drawn at random per cycle; the stagger
+   * of the entrances (`enter.staggerMs`) goes on for ever, so the block shears gently. A row that stays (the call to action) swings about the
+   * centre with the same amplitude and twice the period instead of leaving. Reduced motion: still, at the centre.
+   */
+  cycle: { dwellMs: 5500, exitMs: 480 },
+  /**
+   * The roll's amplitude (half of it, degrees of longitude along the row's parallel), the least time between two drawn frames of the caption's own
+   * loop while only the roll moves (30 a second, like the ring's; a full frame, which draws the globe too, is never asked for by the roll) and the
+   * largest step of its clock (a stalled frame must not make a row jump).
+   */
+  drift: { ampDeg: 8, frameMs: 32, maxStepMs: 64 },
+  /** The thickness of the letters, in planet radii (towards the planet from the front face), and the number of slices stacked to make it. */
+  depth: 0.016,
+  slices: 28,
+  /**
+   * The entrance: each line starts hidden behind the planet (`fromDeg` of longitude from the central meridian at least, and as far as its parallel
+   * needs to be hidden), on a side of its own drawn at random per entrance (west or east along its parallel), travels round the sphere to its
+   * place with `easeOutExpo`, `ms` in all, line i starting `staggerMs` after line i - 1 (on load, `loadDelayMs` later still: the page's own
+   * fade-in goes first). Leaving is quick: it goes on behind the planet the same way in `leaveMs`.
+   */
+  enter: { fromDeg: 100, ms: 900, staggerMs: 450, loadDelayMs: 250 },
+  /**
+   * Leaving. The interaction's exit is a FADE of the caption's canvas (`fadeMs`, a CSS opacity transition on the compositor: no geometry and
+   * no texture while it runs, the lines keep following the camera); the orbit exit (the lines go on round behind the planet the same way,
+   * `leaveMs`, ease-in) stays available for a caption whose words change (`CaptionLayer.hide(now, "orbit")`).
+   */
+  fadeMs: 180,
   leaveMs: 200,
-  /** The keyline round the letters, in cap heights (page colour: it separates them from the coastlines under them). */
-  outline: 0.09,
+  /** The outline's width, in cap heights: drawn OUTSIDE the glyph, so the face keeps its whole area (the inside is the face's colour). */
+  outline: 0.05,
   /**
-   * Sampling. The shader draws a texel as ink where its coverage is at least `cut` (under a half: strokes survive being squeezed to a cell, they
-   * thicken a little rather than drop out) and looks `lodBias` levels sharper than the screen asks (negative: sharper). `bitmapBold`: the bitmap
-   * face's pixels are drawn this much larger on each side, in its own pixels.
+   * Colours, all solid (alpha 1). The letters are text-coloured; the contour and the thickness are a MID TONE from the page colour towards the
+   * text colour (a cut-out: the globe's linework stops at a halo round every glyph). `text` is the secondary text tone (`--muted-foreground` of
+   * app.css: #595959 light, #a3a3a3 dark; 6.8:1 and 7.9:1 against the page). `accent` is BSoD Blue, the caption's one palette, used sparingly (two
+   * words on screen at most), a palette step that is not glaring: `--palette-blue-600` on the light page (#0076d4, 4.5:1) and `--palette-blue-400`
+   * on the dark (#70b4ff, 9.1:1) (feat/palettes, PR #289: copied here, re-point to the tokens when it merges). `outlineMix` is the contour's
+   * share of the way from the page colour to the text colour (2.0:1 against the page in both schemes, 3.5 to 3.7:1 against the face), `sideMix`
+   * the thickness's (a step closer to the page: 1.7:1). `sideMode`: `page` (the exact page colour for both), `mix` (by those shares), `edge`
+   * (the thickness as in `mix` with a thin text-coloured line on the far `edgeSlices` slices).
    */
-  cut: 0.35,
-  lodBias: -0.7,
-  bitmapBold: 0.18,
-  /** Texture: texels in a cap height (the sampling is at the art cell, so this only has to be a couple of texels per cell on a big screen). */
-  texCap: 64,
+  colors: {
+    text: { light: "#595959", dark: "#a3a3a3" },
+    accent: { light: "#0076d4", dark: "#70b4ff" },
+    sideMode: "mix" as "page" | "mix" | "edge",
+    outlineMix: { light: 0.42, dark: 0.37 },
+    sideMix: { light: 0.34, dark: 0.3 },
+    edgeSlices: 2,
+  },
+  /** Sampling: the shader looks `lodBias` levels sharper than the screen asks (negative: sharper). Texture: texels in a cap height. */
+  lodBias: -0.5,
+  texCap: 96,
+  /**
+   * The dimming behind the words: a faint "reverse shadow" in the PAGE's colour that lowers the globe's own linework (coastlines, graticule,
+   * borders) where the words sit, drawn in the caption's canvas between the planet and the letters (so only over the planet: the ring, the labels
+   * and the page are never touched) and gone with the words (it follows their entrance, swap and fade). `mode`: `ellipse` one soft ellipse
+   * about the whole block (a screen-space falloff, one quad), `bands` one soft band per row on its own parallel (it follows the row round the
+   * orbit), `none`. `alpha` is the strength at the middle (per scheme: a dark page's linework is dimmer to start with), `reach` how far past the
+   * block's ink the falloff goes to zero (a fraction of the block's half size), `bandReach` the same for a band, in the row's own half height.
+   */
+  dim: {
+    mode: "ellipse" as "ellipse" | "bands" | "none",
+    alpha: { light: 0.55, dark: 0.55 },
+    reach: 0.55,
+    bandReach: 1.9,
+  },
 } as const;
 
 /**
@@ -211,6 +288,12 @@ export const RING = {
   /** Between the phrases (and after the last, which closes the loop). */
   separator: " \u00b7 ",
   /**
+   * Highlights (sparing): the first `phrases` phrases of the line (the name, by the order of `ringPhrases`) are picked out. `mode`: `blue` the caption's
+   * BSoD Blue (`CAPTION.colors.accent`, faded with the ring by the same tone staircase), `ink` the page's full ink instead of the ring's softened
+   * coast tone, at `inkWeight`, `none` as before. The layout, the geometry and the spacing never depend on it (a monospace: the advance is the same).
+   */
+  highlight: { mode: "blue" as "blue" | "ink" | "none", phrases: 1, inkWeight: 700 },
+  /**
    * Zoom range. `floorBelowFit`: the lowest zoom is at least this many zoom levels below the whole-globe fit (0.5 levels = the globe 0.71 times its fit
    * size), and lower still when the ring does not fit the free area with `fitMargin` of it left empty (never on a screen with a 4:3 or wider
    * shape). `fade`: the ring's strength by the way from the fit (0) to the lowest zoom (1): gone up to `from`, full from `to`, a smoothstep
@@ -225,3 +308,35 @@ export const RING = {
   /** Largest device pixel ratio the ring's canvas is drawn at (the type is crisp at 2; a phone's 3 would cost 2.25 times the pixels). */
   maxDpr: 2,
 } as const;
+
+/**
+ * The energy knobs of the home screen's resting animation (round 9, "energy pass"; docs/performance.md): how often each thing that moves at rest
+ * is drawn, how sharp the caption's canvas is while it rolls, how big its window is, and when everything stops. MUTABLE module state (like
+ * `SPIN`): the measurements in `scripts/perf/energy.mjs` set them through `__globeDebug.energy(patch)`; the values here are the shipped ones.
+ *
+ * - `captionFrameMs`: least time between two drawn frames of the caption's own loop while only the roll moves (50: 20 a second; a row moves 2.9
+ *   degrees a second, a third of a pixel a frame on the planet's width).
+ * - `ringFrameMs`: the ring's own clock (64: 15 a second; it turns 3 degrees a second, one pixel a frame at the largest ring).
+ * - `spinFrameMs`: the idle rotation's frame period (100: 10 a second; it moves one art pixel every 1.35 s: a frame changes nothing visible
+ *   in between), paced by a timer and not by the display's refresh.
+ * - `captionDpr`: the most the caption's canvas is drawn at (1.5: its glyphs are large; the window is a quarter of the stage's pixels).
+ * - `captionWindow`: `band` sizes the second canvas to the caption's bounding band (the rows, the roll's ends and the dimming's reach) and
+ *   not to the planet's whole box; `planet` is the box of the earlier rounds.
+ * - `idleFreezeMs`: after this long with no input the roll, the ring's turn and the idle rotation stop (the composition stays; any input, the
+ *   tab coming back to the front or the globe coming back into view starts them again). 0: never.
+ * - `holdWhenBlurred`, `holdWhenOffscreen`, `holdOnSaveData`: the same stop when the window has lost focus, the globe is scrolled out of
+ *   view, or the browser says the data saver is on.
+ * - `gpu`: the context's `powerPreference` (creation time).
+ */
+export const ENERGY = {
+  captionFrameMs: 50,
+  ringFrameMs: 64,
+  spinFrameMs: 100,
+  captionDpr: 1.5,
+  captionWindow: "band" as "band" | "planet",
+  idleFreezeMs: 30000,
+  holdWhenBlurred: true,
+  holdWhenOffscreen: true,
+  holdOnSaveData: true,
+  gpu: "low-power" as "low-power" | "high-performance" | "default",
+};
