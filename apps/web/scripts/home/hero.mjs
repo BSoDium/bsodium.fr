@@ -53,9 +53,18 @@ const VIEWPORTS = FIT_SIZES.map(([width, height]) => {
 /** The name is stacked (the family name under the given name) under 48 rem, except on a phone on its side (480 px and up, 34 rem tall at most). */
 const isStacked = (width, height) => width < 768 && !(width >= 480 && height <= 544);
 const IDLE_QUERY = "?globe-debug&hero-idle=1500";
-const PATHS = ["/software", "/articles", "/artworks", "/poetry"];
+const SECTION_PATHS = ["/software", "/articles", "/artworks", "/poetry"];
+/**
+ * The rows: the four sections and, when the projection has a career document, a fifth, "Career" (docs/career-page.md). The demo content
+ * and the owner's preview have one (the default); set HERO_CAREER=0 against content that has none (the committed `published` projection).
+ */
+const CAREER_ROW = process.env.HERO_CAREER !== "0";
+const PATHS = CAREER_ROW ? [...SECTION_PATHS, "/career"] : SECTION_PATHS;
 /** The rows' names: the poems' section is "Poetry". */
-const LABELS = ["Software", "Articles", "Artworks", "Poetry"];
+const LABELS = CAREER_ROW ? ["Software", "Articles", "Artworks", "Poetry", "Career"] : ["Software", "Articles", "Artworks", "Poetry"];
+/** The header's links when it is not hidden: the sections, then "Career" when there is one. */
+const HEADER_PATHS = PATHS;
+const ROW_COUNT = PATHS.length;
 
 async function newPage(contextOptions, { colorScheme = "dark", reducedMotion = "no-preference" } = {}) {
   const ctx = await browser.newContext({ ...contextOptions, colorScheme, reducedMotion });
@@ -166,9 +175,9 @@ async function layoutChecks(page, label) {
   ok(!/<header/.test(html) && !/data-slot="search-trigger/.test(html), "SSR: there is no header at rest on the home page");
   ok((html.match(/<nav aria-label="Primary"/g) ?? []).length === 1 && /<nav aria-label="Primary" class="hero-list">/.test(html), "SSR: the hero's list is the page's one Primary navigation (the places list is the other landmark)");
   const hrefs = [...html.matchAll(/class="hero-row"[^>]*href="([^"]+)"|href="([^"]+)"[^>]*class="hero-row"/g)].map((m) => m[1] ?? m[2]);
-  ok(JSON.stringify(hrefs) === JSON.stringify(PATHS), `SSR: the four lists, in order (${hrefs.join(" ")})`);
+  ok(JSON.stringify(hrefs) === JSON.stringify(PATHS), `SSR: the lists, in order (${hrefs.join(" ")})`);
   const labels = [...html.matchAll(/class="hero-row"[^>]*href="[^"]+"[^>]*><span>([^<]+)<|href="[^"]+"[^>]*class="hero-row"[^>]*><span>([^<]+)</g)].map((m) => m[1] ?? m[2]);
-  ok(JSON.stringify(labels) === JSON.stringify(LABELS), `SSR: the four rows are named ${LABELS.join(", ")} (${labels.join(", ")})`);
+  ok(JSON.stringify(labels) === JSON.stringify(LABELS), `SSR: the rows are named ${LABELS.join(", ")} (${labels.join(", ")})`);
   ok((html.match(/<h1[ >]/g) ?? []).length === 1, "SSR: exactly one h1");
 }
 
@@ -216,7 +225,7 @@ async function layoutChecks(page, label) {
   ok((await page.locator("header").count()) === 0, "desktop: no header element at rest");
   ok((await page.locator("nav[aria-label=Primary]").count()) === 1 && (await page.locator("nav[aria-label=Primary]").getAttribute("class")) === "hero-list", "desktop: exactly one Primary navigation, the hero's list");
   ok((await page.locator("[data-slot=hero-search]").innerText()).includes("Search places and entries"), "desktop: the search line is labelled");
-  ok((await page.locator(".hero-row").evaluateAll((as) => as.map((a) => a.getAttribute("href")))).join() === PATHS.join(), "desktop: the four rows link to the lists");
+  ok((await page.locator(".hero-row").evaluateAll((as) => as.map((a) => a.getAttribute("href")))).join() === PATHS.join(), "desktop: the rows link to the lists");
   const pe = await page.evaluate(() => ({
     root: getComputedStyle(document.querySelector("[data-slot=landing-hero]")).pointerEvents,
     block: getComputedStyle(document.querySelector(".hero-block")).pointerEvents,
@@ -253,7 +262,7 @@ async function layoutChecks(page, label) {
   ok((await page.locator(".hero-mini-name").evaluate((e) => getComputedStyle(e).visibility)) === "hidden", "desktop: the ghost line is never painted");
   // the rows are hidden now: the header takes the sections back, so the visitor is never left without a way to the lists
   const collapsedLinks = await page.locator("header a").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
-  ok(JSON.stringify(collapsedLinks) === JSON.stringify(["/", ...PATHS]), `desktop: collapsed, the header shows Globe and the four sections (${collapsedLinks.join(" ")})`);
+  ok(JSON.stringify(collapsedLinks) === JSON.stringify(["/", ...PATHS]), `desktop: collapsed, the header shows Globe and the sections (${collapsedLinks.join(" ")})`);
   ok((await page.locator("nav[aria-label=Primary]:visible").count()) === 1, "desktop: collapsed, still exactly one primary navigation (the header's)");
   const hdr = await page.evaluate(() => {
     const k = document.querySelector("header [data-slot=search-trigger] kbd");
@@ -351,7 +360,9 @@ for (const [name, options] of VIEWPORTS) {
     // the first gesture: a touch tap or a drag on the globe's stage where neither the hero's text nor a place marker is (the upper right:
     // a tap on a marker would open its place, which is a different state)
     const blockTop = await page.evaluate(() => document.querySelector(".hero-block").getBoundingClientRect().top);
-    const gx = options.viewport.width * 0.92, gy = Math.max(8, Math.min(options.viewport.height * 0.25, blockTop - 8));
+    // A touch tap is adjusted by the engine to the nearest link within a finger's reach (about 24 px): with the fifth row (the career page)
+    // the list's top edge is that near the top of a short window, so the tap goes at least 32 px above the block.
+    const gx = options.viewport.width * 0.92, gy = Math.max(8, Math.min(options.viewport.height * 0.25, blockTop - (options.hasTouch ? 32 : 8)));
     ok(
       await page.evaluate(([x, y]) => !document.elementFromPoint(x, y)?.closest(".landing-hero a, .landing-hero button"), [gx, gy]),
       `${label}: the globe is reachable above the block (no hero control at ${Math.round(gx)}, ${Math.round(gy)})`,
@@ -426,9 +437,9 @@ for (const width of [320, 360, 390, 430]) {
   }
   const at = stops.indexOf("button[hero-search]");
   ok(at > 0, `keyboard: Tab reaches the hero's search line (${stops.slice(0, 12).join(" > ")})`);
-  ok(JSON.stringify(stops.slice(at + 1, at + 5)) === JSON.stringify(PATHS.map((p) => `a ${p}`)), `keyboard: then the four lists, in order (${stops.slice(at + 1, at + 5).join(", ")})`);
+  ok(JSON.stringify(stops.slice(at + 1, at + 1 + ROW_COUNT)) === JSON.stringify(PATHS.map((p) => `a ${p}`)), `keyboard: then the lists, in order (${stops.slice(at + 1, at + 1 + ROW_COUNT).join(", ")})`);
   ok(!stops.includes("button[search-trigger]"), "keyboard: at rest there is no header search in the order: the hero's search line is the first control after the skip links");
-  ok(stops.slice(at + 5).some((s) => s !== "none"), "keyboard: focus moves on past the hero");
+  ok(stops.slice(at + 1 + ROW_COUNT).some((s) => s !== "none"), "keyboard: focus moves on past the hero");
 
   await page.evaluate(() => document.activeElement?.blur());
   await page.keyboard.press("Control+k");
@@ -602,7 +613,7 @@ for (const width of [320, 360, 390, 430]) {
   ok(state.hint === "Start from a list.", `no scripts: the how-to line only says to start from a list (${JSON.stringify(state.hint)})`);
   ok(!/Pick a point/.test(state.text), "no scripts: nothing on the page tells the visitor to pick a point on the globe");
   ok(!state.search, "no scripts: the search line (a script) is not drawn");
-  ok(state.rows === 4, `no scripts: the four lists are links that work (${state.rows})`);
+  ok(state.rows === ROW_COUNT, `no scripts: the lists are links that work (${state.rows})`);
   await page.screenshot({ path: `${OUT_DIR}/hero-no-script-1440.png` });
   await page.goto(`${BASE_URL}/articles`);
   const triggers = await page.evaluate(() => ["search-trigger"].map((s) => { const e = document.querySelector(`[data-slot=${s}]`); return !!e && getComputedStyle(e).display !== "none"; }));

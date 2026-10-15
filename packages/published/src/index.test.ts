@@ -108,6 +108,8 @@ describe("published package", () => {
       if (e.cover) srcs.add(e.cover.src);
       for (const b of e.body ?? []) if (b.type === "image") srcs.add(b.src);
     }
+    // the career's portrait is a demo file too (a hand-drawn SVG kept by the generator, not one of its images)
+    if (demo.career?.portrait) srcs.add(demo.career.portrait.src);
     expect(srcs.size).toBeGreaterThanOrEqual(30);
     for (const src of srcs) {
       expect(src.startsWith("/media/demo/"), src).toBe(true);
@@ -178,6 +180,8 @@ describe("career", () => {
     expect(roles.some((r) => r.place !== undefined) && roles.some((r) => r.place === undefined)).toBe(true);
     expect(roles.some((r) => r.highlights.length === 0)).toBe(true);
     expect(career.availability).toEqual({ text: "Open to example opportunities", asOf: "2026-09" });
+    // the portrait is an abstract drawing in the demo's media folder, with its real size
+    expect(career.portrait).toMatchObject({ src: "/media/demo/portrait-example.svg", width: 800, height: 1000 });
     expect(career.education.length).toBeGreaterThanOrEqual(2);
     expect(career.education.some((e) => e.place !== undefined)).toBe(true);
     expect(career.languages.some((l) => l.label !== undefined) && career.languages.some((l) => l.label === undefined)).toBe(true);

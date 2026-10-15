@@ -319,6 +319,7 @@ A curriculum vitae as data, for the page recruiters read. It is **one optional t
   "title": "Career",
   "summary": "Frontend engineer who builds interfaces for map-heavy and data-heavy products.",
   "updated": "2026-09",
+  "portrait": { "src": "/media/demo/portrait-example.svg", "alt": "An abstract halftone portrait ...", "width": 800, "height": 1000 },
   "availability": { "text": "Open to example opportunities", "asOf": "2026-09" },
   "roles": [
     {
@@ -350,6 +351,7 @@ A curriculum vitae as data, for the page recruiters read. It is **one optional t
 | `summary` | 1 to 500, one line | The profile statement, plain text. |
 | `updated` | `YYYY-MM` | When the owner last reviewed the document. Authored, never the clock of the export. |
 | `availability` | optional `{ text, asOf }` | A dated "open to work" statement: `text` 1 to 120, one line of plain text; `asOf` `YYYY-MM`, authored, when the owner last confirmed it. Shown with its date so it cannot silently go stale; absent = the document says nothing. Nothing else belongs in it (a contact detail is not a field). |
+| `portrait` | optional `{ src, alt, width, height }` | A picture of the owner at the head of the page. `src` a `/media/` path of plain file names (the private export names it `/media/career/portrait.<hash>.<ext>`; the page's own image rules apply: raster in production, the demo uses an SVG), `alt` 1 to 200, one line, required (and checked for contact details like every career text), `width` and `height` positive integers, both required (the page reserves the box from them: no layout shift). Strict: no caption, no credit, no other key. Absent = the page has no picture. It is never the share image (`og:image`) and never in the structured data. Additive in schema version 1; the contract field is named `portrait`, not `photo`. |
 | `roles` | 1 to 8, **most recent first by `start`** | See below. |
 | `education` | 0 to 4 | See below. Authored order (the main degree before an exchange year, say). |
 | `languages` | 0 to 6 | `name` (1 to 30), `level` (1 to 12: `C2`, `B1`, `Native`), `label?` (1 to 30: `Native`, `Upper-intermediate`). Names unique (case-insensitive). |
@@ -364,17 +366,17 @@ Rules the JSON Schema cannot express (zod in `packages/schemas`, re-implemented 
 
 **Contact details typed as text are refused too.** Property names are not the only door: every career text and every URL is also checked by value, in the zod schema and again by the private export (so it fails closed before anything is published). An e-mail-like string (`a@b.tld`, `name [at] domain`, `name (at) domain`, `name at domain dot org`), a phone-like number (international `+CC ...`, `00CC ...`, national grouped forms such as `06 12 34 56 78`, `415 555 2671`, `123-456-789`, parenthesised area codes, ten plain digits) and, in `links[].url` and `orgUrl`, a contact-channel address (`mailto:`, `tel:`, `sms:`, `skype:`, `wa.me`, `whatsapp.com`, `t.me`, `signal.me`, an e-mail address in the query) are validation errors that name the field. Dates, year ranges, percentages and version numbers are not mistaken for phone numbers (tests include the owner's real document). This is a heuristic for accidents, not a guarantee: the owner still reviews the publication PR.
 
-**Size.** Bounded by the limits, which a test turns into the true maximum: every list full, every optional field present, every text at its limit and made of 3-byte characters, every URL at its limit. That maximum is 56.5 KB of UTF-8 (22 KB in plain ASCII), under the 60,000-character cap of one entry's body, and the test asserts it stays under 60 KB. The owner's real document is 5.0 KB compact (about 2 KB gzip), the demo's 3.1 KB. It is part of the bundled projection, so it is paid for in the same three places as an entry's body ("Payload size and cost").
+**Size.** Bounded by the limits, which a test turns into the true maximum: every list full, every optional field present, every text at its limit and made of 3-byte characters, every URL at its limit. That maximum is about 57.5 KB of UTF-8 (22 KB in plain ASCII; the portrait adds under 1 KB), under the 60,000-character cap of one entry's body, and the test asserts it stays under 60 KB. The owner's real document is 5.0 KB compact (about 2 KB gzip), the demo's 3.1 KB. It is part of the bundled projection, so it is paid for in the same three places as an entry's body ("Payload size and cost").
 
 **Deployment order.** A strict consumer rejects an unknown top-level key, so the key must be known **before** a projection that carries it is merged, exactly as `sensitive` was:
 
-1. Merge the public change that adds `career` to the schema, the generated JSON Schema and the API's types (this repo). Both Vercel projects redeploy and accept a projection with or without the key (the web app validates the projection through the same schema; it has no page for `career` yet). Nothing visible changes: the committed projection has no `career`.
+1. Merge the public change that adds `career` to the schema, the generated JSON Schema and the API's types (this repo). Both Vercel projects redeploy and accept a projection with or without the key (the web app validates the projection through the same schema; its page, `/career`, answers 404 while there is no career). Nothing visible changes: the committed projection has no `career`.
 2. The private repo's first gate is the public repo's generated schema: the `publish` workflow's "Refresh contract schema" step copies the **public default branch's** `published.schema.json` over `contract/` before validating, so a publication run sees the new key as soon as step 1 is merged. The committed copy in the private repo only matters for local runs and tests (refresh it with `cp`, and `pnpm test` compares it with a public checkout when `CATALYST_PUBLIC_REPO` is set; the private CI checks the public repo out and sets it). Before step 1 is merged, the first gate (ajv, `additionalProperties: false`) fails closed on a document with `status: published`: a publication PR cannot even be opened.
 3. Only then set `status: published` on `content/career/index.md`. The publication PR carries `career` in `projection.json`; merging it is the publication.
 
 Rolling back is setting `status: unpublished` (or `draft`) in the private repo and merging the next publication PR: the key disappears, which every consumer already accepts.
 
-All of this is **additive in schema version 1**: `career` is a new optional top-level key, `schemaVersion` stays `1`, a projection without it is valid and `EMPTY_PROJECTION` does not carry it. `@catalyst/published` has `getCareer(mode)` for code without a projection at hand; the career page, when it exists, will read `projection.career` (no code in `apps/web` references it yet). The types are exported from `apps/api/src/contract.ts` (`PublishedCareer` and its parts).
+All of this is **additive in schema version 1**: `career` is a new optional top-level key, `schemaVersion` stays `1`, a projection without it is valid and `EMPTY_PROJECTION` does not carry it. `@catalyst/published` has `getCareer(mode)` for code without a projection at hand; the career page (`/career`, [career-page.md](career-page.md)) reads `projection.career`. The types are exported from `apps/api/src/contract.ts` (`PublishedCareer` and its parts).
 
 ## Configuration
 
