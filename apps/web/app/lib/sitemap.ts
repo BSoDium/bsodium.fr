@@ -1,5 +1,6 @@
 /** `sitemap.xml` and `robots.txt` bodies. Pure: the resource routes read the projection and the site URL, these only format. */
 import type { PublishedProjection } from "@catalyst/schemas";
+import { CAREER_PATH } from "./career";
 import { COLLECTIONS, CONTENT_KINDS, KIND_PATHS, entryPath, placePath } from "./entries";
 
 export interface SitemapUrl {
@@ -15,12 +16,14 @@ const xmlEscape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").
 const url = (origin: string, path: string) => `${origin}${path === "/" ? "/" : path.split("/").map(encodeURIComponent).join("/")}`;
 
 /**
- * The URLs of the site: the home page, the four list pages, every entry and every place of the projection. `lastmod` is the authored
+ * The URLs of the site: the home page, the four list pages, the career page when there is one, every entry and every place of the projection. `lastmod` is the authored
  * date when there is one (an entry's `date`, a place's latest of `dates.end` / `dates.start`): the content carries no edit time.
  */
 export function sitemapUrls(projection: PublishedProjection, origin: string): SitemapUrl[] {
   const out: SitemapUrl[] = [{ loc: url(origin, "/") }];
   for (const kind of CONTENT_KINDS) out.push({ loc: url(origin, KIND_PATHS[kind]) });
+  // The career page exists only while the projection has the document; its date is the month the owner reviewed it.
+  if (projection.career) out.push({ loc: url(origin, CAREER_PATH), lastmod: projection.career.updated });
   for (const kind of CONTENT_KINDS) {
     for (const item of projection[COLLECTIONS[kind]]) {
       out.push({ loc: url(origin, entryPath(kind, item.slug)), ...(item.date ? { lastmod: item.date } : {}) });

@@ -24,6 +24,8 @@ export default [
   route("articles", "routes/articles.tsx"),
   route("artworks", "routes/artworks.tsx"),
   route("poetry", "routes/poetry.tsx"),
+  // The career page: a singleton document of the projection, not a content kind; the loader answers 404 while there is none.
+  route("career", "routes/career.tsx"),
   // The sections' former addresses, before they were named "Poetry" (`/poems`) and "Software" (`/projects`): permanent redirects, query kept
   // (lib/legacy-paths.ts; the names are one table, lib/sections.ts).
   route("poems", "routes/legacy-poems.ts", { id: "legacy-poems" }),

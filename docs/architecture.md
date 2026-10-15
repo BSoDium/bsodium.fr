@@ -50,7 +50,7 @@ The API serves the complete projection (bodies included) at `/v1/projection`, **
 
 ## The career document
 
-One more optional piece of content rides in the projection: `career`, a curriculum vitae as data for the page recruiters read (roles, education, languages, skill groups, links; no email, phone number or street address, by schema). It is a **singleton**, not an entry kind: authored in the private vault as `content/career/index.md`, exported as an additive, optional top-level key (schema version 1 stays), absent while the document is a draft. It is served inside `GET /v1/projection` like everything else, with no new endpoint. Shape, limits and the order in which the contract and the first publication must go out: [api-contract.md](api-contract.md#the-career-document-career); mapping from the vault: [content-entry-model.md](content-entry-model.md), section 7.
+One more optional piece of content rides in the projection: `career`, a curriculum vitae as data for the page recruiters read (roles, education, languages, skill groups, links; no email, phone number or street address, by schema). It is a **singleton**, not an entry kind: authored in the private vault as `content/career/index.md`, exported as an additive, optional top-level key (schema version 1 stays), absent while the document is a draft. It is served inside `GET /v1/projection` like everything else, with no new endpoint. Shape, limits and the order in which the contract and the first publication must go out: [api-contract.md](api-contract.md#the-career-document-career); mapping from the vault: [content-entry-model.md](content-entry-model.md), section 7; the page that shows it: [career-page.md](career-page.md).
 
 ## Deployables
 
