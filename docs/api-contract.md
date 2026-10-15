@@ -78,7 +78,7 @@ Liveness plus a summary of what is loaded. `200` when content is valid, `503` ot
   "ok": true,
   "schemaVersion": 1,
   "content": "demo",
-  "counts": { "places": 18, "groups": 8, "routes": 1, "projects": 4, "articles": 5, "artworks": 5, "poems": 4 }
+  "counts": { "places": 18, "groups": 8, "routes": 4, "projects": 4, "articles": 5, "artworks": 5, "poems": 4 }
 }
 ```
 
@@ -181,8 +181,33 @@ The full place with `related` resolved to `{ kind, slug, title }` and its group 
 Explicitly curated routes; stops are place slugs in travel order. Routes are never inferred.
 
 ```json
-[{ "id": "demo-route-vietnam", "title": "Demo route (curated stop order)", "stops": ["hanoi", "hue", "ho-chi-minh-city"] }]
+[{ "id": "demo-route-vietnam", "title": "Demo route (curated stop order)", "stops": ["hanoi", "hue", "ho-chi-minh-city"],
+   "legs": [{ "mode": "rail", "polyline": "..." }, { "mode": "flight" }] }]
 ```
+
+#### Route legs (`routes[].legs`, optional, additive in schema version 1)
+
+`legs` says how each leg of a route is travelled and, optionally, the path it follows. Absent: every leg is the geodesic arc between its two stops, as before. Where present it is positional: `legs[i]` is the leg between `stops[i]` and `stops[i + 1]`, so `legs.length === stops.length - 1`. No timestamps, durations or speeds ride along (order is the only time).
+
+| Field | Meaning |
+| --- | --- |
+| `mode` | `road`, `rail`, `ferry`, `flight`, `walk` or `unknown`. Picks the line style on the map (solid, dashed with ticks, dotted, lifted dotted arc, fine dots, dashed arc) and the noun of the place panel's "Journeys" list. |
+| `polyline` | Optional. Encoded polyline, precision 5 (the "Google polyline" algorithm: `[lat, lon]` pairs, deltas in 1e-5 degrees, characters `?` to `~`). Absent: the leg is drawn as the geodesic arc between its stops. Never on a `flight` (an arc costs nothing). |
+
+Checks (schema, `parsePublishedProjection`; the private export must enforce the same numbers, they are exported as `ROUTE_LEG_LIMITS`):
+
+| Rule | Limit |
+| --- | --- |
+| `legs.length` | `stops.length - 1` |
+| characters of one polyline | 16,000 (`charsPerLeg`) |
+| decoded points: per leg / per route / in the whole projection | 2,000 / 12,000 / 60,000 (`pointsPerLeg`, `pointsPerRoute`, `pointsTotal`) |
+| first and last point | within 3 km of the leg's stops (`endpointToleranceKm`) |
+| consecutive points | less than 200 km apart (`maxJumpKm`) |
+| a `flight` | carries no `polyline` |
+
+Size: the spike's pre-baked legs simplified at 50 m average about 145 points per leg (about 0.9 per km), 5 to 7 characters per point; the archive came to 75 to 110 KB gzipped. The limits keep the true worst case under 0.5 MB raw. The web app decodes each polyline once and derives its own simplification levels; nothing about levels is in the contract. `/v1/routes` and `/v1/projection` serve legs as authored.
+
+**Private repo:** `packages/schemas/published.schema.json` is the generated contract (`pnpm --filter @catalyst/schemas build:contract`). Its copy in the private repo is byte-identical and must be copied over after this lands (the rollout order stays: public contract and renderer first, then the private schema copy, then the export). The JSON Schema cannot express the cross-checks (endpoint distance, jump, totals): the private validator re-implements them from `ROUTE_LEG_LIMITS` and `decodePolyline5` (exported by `@catalyst/schemas`).
 
 ### Entries: `projects`, `articles`, `artworks`, `poems`
 

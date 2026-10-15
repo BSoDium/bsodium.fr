@@ -41,6 +41,8 @@ export interface StreetMapOptions {
    */
   lod?: LodTree;
   routes: readonly GlobeRoute[];
+  /** The "Paths" layer: false hides every path (default true). */
+  paths?: boolean;
   selectedSlug: string | null;
   focusedSlug: string | null;
   reducedMotion: boolean;
@@ -137,6 +139,8 @@ export interface StreetMap {
   flyTo(view: Partial<StreetView>, options?: FlyOptions): void;
   /** Highlight the selected place. `fly` also moves the camera there (zoom: given, else at least 14.5; a jump under reduced motion). */
   setSelected(slug: string | null, options?: { fly?: boolean; zoom?: number }): void;
+  /** The "Paths" layer on or off. */
+  setPaths(on: boolean): void;
   setFocused(slug: string | null): void;
   /** Highlight (or clear) the group under the pointer. */
   setHovered(slug: string | null): void;

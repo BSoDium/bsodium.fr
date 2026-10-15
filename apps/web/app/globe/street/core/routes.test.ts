@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { angularDistance } from "../../engine/geo";
-import { greatCircle, routeFeatures, splitAtAntimeridian } from "./routes";
+import { encodePolyline5 } from "../../paths/polyline";
+import { greatCircle, legFeatures, legKeysAt, splitAtAntimeridian } from "./routes";
 
 describe("greatCircle", () => {
   it("keeps both ends exact and steps at most `step` degrees", () => {
@@ -40,19 +41,48 @@ describe("splitAtAntimeridian", () => {
   });
 });
 
-describe("routeFeatures", () => {
-  const route = { id: "r1", title: "Route", points: [{ lat: 10.78, lon: 106.7 }, { lat: 16.46, lon: 107.59 }, { lat: 21.03, lon: 105.85 }] };
-  it("makes one feature per route with at least two stops, through every stop in order", () => {
-    const fc = routeFeatures([route, { id: "lonely", title: "x", points: [{ lat: 0, lon: 0 }] }, { id: "none", title: "y", points: [] }]);
-    expect(fc.features).toHaveLength(1);
-    const f = fc.features[0]!;
-    expect(f.properties).toEqual({ id: "r1" });
-    const line = f.geometry.coordinates[0]!;
-    expect(line[0]).toEqual([106.7, 10.78]);
-    expect(line[line.length - 1]).toEqual([105.85, 21.03]);
-    expect(line).toContainEqual([107.59, 16.46]);
+describe("legFeatures", () => {
+  const points = [{ lat: 10.78, lon: 106.7 }, { lat: 16.46, lon: 107.59 }, { lat: 21.03, lon: 105.85 }];
+  const route = { id: "r1", title: "Route", points };
+  it("makes one feature per leg, keyed by route and position, through the stops in order", () => {
+    const fc = legFeatures([route, { id: "lonely", title: "x", points: [{ lat: 0, lon: 0 }] }, { id: "none", title: "y", points: [] }]);
+    expect(fc.features).toHaveLength(2);
+    expect(fc.features.map((f) => f.properties)).toEqual([
+      { id: "r1", key: "r1:0", mode: "unknown" },
+      { id: "r1", key: "r1:1", mode: "unknown" },
+    ]);
+    const first = fc.features[0]!.geometry.coordinates[0]!;
+    expect(first[0]).toEqual([106.7, 10.78]);
+    expect(first[first.length - 1]).toEqual([107.59, 16.46]);
   });
-  it("draws nothing for no routes", () => {
-    expect(routeFeatures([]).features).toEqual([]);
+  it("follows a leg's polyline and tags its mode; a flight's polyline is ignored (an arc)", () => {
+    const pl = encodePolyline5([106.7, 10.78, 106.9, 13.2, 107.59, 16.46]);
+    const fc = legFeatures([{ ...route, legs: [{ mode: "rail", polyline: pl }, { mode: "flight", polyline: pl }] }]);
+    expect(fc.features[0]!.properties).toEqual({ id: "r1", key: "r1:0", mode: "rail" });
+    expect(fc.features[0]!.geometry.coordinates[0]).toEqual([[106.7, 10.78], [106.9, 13.2], [107.59, 16.46]]);
+    expect(fc.features[1]!.properties!.mode).toBe("flight");
+    expect(fc.features[1]!.geometry.coordinates[0]!.length).toBeGreaterThan(3);
+  });
+  it("skips a leg between the same place twice and draws nothing for no routes", () => {
+    expect(legFeatures([{ id: "x", title: "x", points: [points[0]!, points[0]!, points[1]!] }]).features.map((f) => f.properties!.key)).toEqual(["x:1"]);
+    expect(legFeatures([]).features).toEqual([]);
+  });
+  it("splits a leg across the antimeridian", () => {
+    const fc = legFeatures([{ id: "pac", title: "p", points: [{ lat: -17, lon: 178 }, { lat: -18, lon: -176 }] }]);
+    expect(fc.features[0]!.geometry.coordinates).toHaveLength(2);
+  });
+});
+
+describe("legKeysAt", () => {
+  const route = { id: "r", title: "R", points: [{ lat: 1, lon: 1 }, { lat: 2, lon: 2 }, { lat: 3, lon: 3 }] };
+  const other = { id: "o", title: "O", points: [{ lat: 2, lon: 2 }, { lat: 5, lon: 5 }] };
+  it("is the leg that arrives and the one that leaves, on every route through the place", () => {
+    expect(legKeysAt([route, other], { lat: 2, lon: 2 })).toEqual(["r:0", "r:1", "o:0"]);
+    expect(legKeysAt([route], { lat: 1, lon: 1 })).toEqual(["r:0"]);
+    expect(legKeysAt([route], { lat: 3, lon: 3 })).toEqual(["r:1"]);
+  });
+  it("is empty for no place or a place on no route", () => {
+    expect(legKeysAt([route], undefined)).toEqual([]);
+    expect(legKeysAt([route], { lat: 9, lon: 9 })).toEqual([]);
   });
 });

@@ -51,6 +51,10 @@ Not done (decided): latin-ext font subsets, the 1 px border; windows under 320 x
 
 Done: the cream paper and the warm night of the reading surface are gone: entries and lists sit on the page's own near-white and near-black (`docs/design-tokens.md`, "Reading surface"); BSoD blue is the call to action (the primary button's fill, hover and pressed a step deeper), the link in running text, the focus ring, the selection, the current header item's underline and the chosen filter's rule; the "Open host" bar on an entry is the primary button (a marginalia rule had painted it as a muted link: 3.2:1); a control's edge is 3:1; a contrast audit of the tokens (`contrast-audit.test.ts`) and of every rendered page in both schemes at two sizes with hover, focus and pressed states (`apps/web/scripts/contrast/audit.mjs`). The page colours themselves did not change (`#fbfbfb` / `#0a0a0a`), so `THEME_COLORS`, the manifest's `theme_color` / `background_color` (the dark page: a manifest cannot vary by scheme; a test keeps them equal to `--background`) already match the new palette; the share image's colours (near-black, off-white, one blue) match it too, but `og.svg` and `og-default.png` themselves changed in this release (Warsaw, SOFTWARE); the print rule now also makes the primary fill and the focus ring ink.
 
+## Travel paths, public side (branch `feat/paths-render`, 2026-10-15)
+
+Contract `routes[].legs` (mode and optional polyline5), limits `ROUTE_LEG_LIMITS`, faint-everywhere/ink-on-selection renderer on both maps, Paths switch, Journeys list. Read [paths.md](paths.md). The private repo must copy `packages/schemas/published.schema.json` and enforce `ROUTE_LEG_LIMITS` (decoder exported as `decodePolyline5`) before exporting legs. Demo routes: `apps/web/scripts/paths/make-demo-legs.mjs` regenerates the fictional legs. Not done: mode colours (palettes), real data, Safari and phone checks.
+
 ## Where the details are
 
 | Topic | Doc |

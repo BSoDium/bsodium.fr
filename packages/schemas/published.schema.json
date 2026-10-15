@@ -304,6 +304,36 @@
               "maxLength": 80,
               "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
             }
+          },
+          "legs": {
+            "maxItems": 199,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "road",
+                    "rail",
+                    "ferry",
+                    "flight",
+                    "walk",
+                    "unknown"
+                  ]
+                },
+                "polyline": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 16000,
+                  "pattern": "^[?-~]+$"
+                }
+              },
+              "required": [
+                "mode"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [

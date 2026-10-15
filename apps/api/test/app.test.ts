@@ -87,7 +87,7 @@ describe("endpoints (demo content)", () => {
       ok: true,
       schemaVersion: 1,
       content: "demo",
-      counts: { places: 18, groups: 8, routes: 1, projects: 4, articles: 5, artworks: 5, poems: 4 },
+      counts: { places: 18, groups: 8, routes: 4, projects: 4, articles: 5, artworks: 5, poems: 4 },
     });
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
@@ -231,6 +231,14 @@ describe("endpoints (demo content)", () => {
   it("GET /v1/routes", async () => {
     const demo = loadDemoProjection();
     expect(z.array(publishedRouteSchema).parse(await (await demoApp().request("/v1/routes")).json())).toEqual(demo.routes);
+  });
+
+  it("GET /v1/routes serves the legs of every route as authored (mode, optional polyline), one per consecutive pair of stops", async () => {
+    const routes = z.array(publishedRouteSchema).parse(await (await demoApp().request("/v1/routes")).json());
+    const withLegs = routes.filter((r) => r.legs);
+    expect(withLegs.length).toBeGreaterThanOrEqual(3);
+    for (const r of withLegs) expect(r.legs!.length).toBe(r.stops.length - 1);
+    expect(routes.flatMap((r) => r.legs ?? []).some((l) => l.polyline)).toBe(true);
   });
 
   it("GET /v1/projects, /v1/articles, /v1/artworks, /v1/poems return strict SUMMARIES (no body), in authored order", async () => {
@@ -698,7 +706,7 @@ describe("snapshot", () => {
       ...LISTS.flatMap((k) => demo[k].map((i) => `/v1/${k}/${i.slug}`)),
     ];
     expect([...entries.keys()].sort()).toEqual([...expected].sort());
-    expect(counts).toEqual({ places: 18, groups: 8, routes: 1, projects: 4, articles: 5, artworks: 5, poems: 4 });
+    expect(counts).toEqual({ places: 18, groups: 8, routes: 4, projects: 4, articles: 5, artworks: 5, poems: 4 });
   });
 
   it("an entry with no optional field serialises to exactly its required fields (no null, no undefined keys)", () => {

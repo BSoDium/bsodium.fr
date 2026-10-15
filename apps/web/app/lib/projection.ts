@@ -12,6 +12,7 @@ import type {
   PublishedProjection,
 } from "@catalyst/schemas";
 import { countryName, stripCountry } from "~/globe/engine/country-names";
+import { journeysOf, type Journey } from "~/lib/journeys";
 import { bboxExtentsKm, bboxFitRadiusKm } from "~/globe/engine/framing";
 import type { GlobeEntryRef, GlobeGroup, GlobePlace, GlobeRoute } from "~/globe/types";
 import { formatDates, type FormattedDates } from "./dates";
@@ -141,7 +142,10 @@ export function resolveRoutes(projection: PublishedProjection): GlobeRoute[] {
       const place = bySlug.get(slug);
       return place ? [{ lat: place.coordinates.lat, lon: place.coordinates.lon }] : [];
     });
-    return points.length >= 2 ? [{ id: route.id, title: route.title, points }] : [];
+    if (points.length < 2) return [];
+    // Legs are positional: they only mean something when every stop resolved (the contract guarantees it; a stale one is dropped).
+    const legs = route.legs && points.length === route.stops.length ? { legs: route.legs.map((l) => ({ mode: l.mode, ...(l.polyline ? { polyline: l.polyline } : {}) })) } : {};
+    return [{ id: route.id, title: route.title, points, ...legs }];
   });
 }
 
@@ -164,6 +168,8 @@ export interface PlaceDetailData {
   images: PublishedImage[];
   /** The entries linked to the place (its `related` and the entries' `placeSlugs`, each once), grouped by kind. Summaries: no body. */
   entries: EntryGroup[];
+  /** The legs of the routes next to the place as sentences (`lib/journeys.ts`): the text twin of the paths on the map. */
+  journeys: Journey[];
 }
 
 /** Full place with its linked entries resolved. Unresolvable references are dropped. */
@@ -182,6 +188,7 @@ export function getPlaceDetail(projection: PublishedProjection, slug: string): P
     body: place.body,
     images: place.images,
     entries: entriesOfPlace(projection, place.slug),
+    journeys: journeysOf(projection, place.slug, (p) => stripCountry(p.name, p.countryCode)),
   };
 }
 
