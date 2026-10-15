@@ -69,7 +69,7 @@ import {
   type Placement,
 } from "./caption";
 import { OCCLUDER_RADIUS } from "./materials";
-import { CAPTION } from "./tuning";
+import { CAPTION, ENERGY } from "./tuning";
 
 const DEG_ = Math.PI / 180;
 
@@ -110,14 +110,18 @@ const FRAG = /* glsl */ `
   uniform vec3 uFace;
   uniform vec3 uOutline;
   uniform vec3 uSide;
+  uniform vec3 uAccent;
+  uniform float uEdgeLayer;
   varying vec2 vUv;
   varying float vLayer;
   void main() {
     vec4 t = texture2D(uMap, vUv, ${CAPTION.lodBias.toFixed(2)});
     if (t.a < 0.02) discard;
     bool front = vLayer > 0.999;
-    // the inside is green, the outline red
-    vec3 col = front ? (t.g > t.r ? uFace : uOutline) : uSide;
+    // the inside is green (the text tone) or blue (the accent: a word picked out); the red channel is the outline
+    float inside = t.g + t.b;
+    vec3 face = t.b > t.g ? uAccent : uFace;
+    vec3 col = front ? (inside > t.r ? face : uOutline) : (vLayer < uEdgeLayer ? uFace : uSide);
     // Premultiplied output, blended "over" (see the material): the glyph's inside is exactly 1, so an interior pixel is exactly opaque whatever
     // stacks behind it; only an edge is partly transparent (and then properly premultiplied: no bright fringe).
     float a = smoothstep(0.1, 0.9, t.a);
@@ -237,7 +241,7 @@ export interface CaptionState {
   /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
   baselines: number[];
   texture: { width: number; height: number }[];
-  colors: { face: number[]; outline: number[]; side: number[] };
+  colors: { face: number[]; accent: number[]; outline: number[]; side: number[] };
 }
 
 /**
@@ -448,6 +452,11 @@ export class CaptionLayer {
   private face = { value: [1, 1, 1] as number[] };
   private outline = { value: [0, 0, 0] as number[] };
   private side = { value: [0, 0, 0] as number[] };
+  private accent = { value: [0, 0, 1] as number[] };
+  /** The far slices (layer below this) that carry the text colour in mode `edge` (0: none). */
+  private edgeLayer = { value: 0 };
+  private sideMode: "page" | "mix" | "edge" = CAPTION.colors.sideMode;
+  private theme!: GlobeTheme;
   /** The dimming's colour (the page's), its strength for the scheme, and the mode (`CAPTION.dim.mode`; a check may change it). */
   private dimColor = { value: [1, 1, 1] as number[] };
   private dimAlpha = 0;
@@ -513,6 +522,8 @@ export class CaptionLayer {
         uFace: this.face,
         uOutline: this.outline,
         uSide: this.side,
+        uAccent: this.accent,
+        uEdgeLayer: this.edgeLayer,
         uBaseLat: { value: 0 },
         uBelow: { value: 0 },
         uAbove: { value: 0 },
@@ -583,18 +594,64 @@ export class CaptionLayer {
   }
 
   setTheme(theme: GlobeTheme): void {
-    const c = captionColors(theme);
+    this.theme = theme;
+    const c = captionColors(theme, this.sideMode);
     this.face.value = [...c.face];
     this.outline.value = [...c.outline];
     this.side.value = [...c.side];
+    this.accent.value = [...c.accent];
+    this.edgeLayer.value = this.sideMode === "edge" ? (CAPTION.colors.edgeSlices - 0.5) / (CAPTION.slices - 1) : 0;
     this.dimColor.value = [...theme.background];
     const dark = 0.2126 * theme.background[0] + 0.7152 * theme.background[1] + 0.0722 * theme.background[2] < 0.5;
     this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
   }
 
+  /** The roll stands still (the energy pass's hold): the clock stops, the loops end, the composition stays. */
+  setFrozen(on: boolean): void {
+    this.motion.frozen = on;
+  }
+
+  /**
+   * The vertical extent of everything the caption draws, in the camera's tangent space (planet radii at the focal length) for a camera at
+   * latitude `lat`: the rows' top and bottom edges over their whole parallels (the orbit takes a row all the way round, so every longitude
+   * counts) and the dimming's ellipse. The second canvas is sized to it (`ENERGY.captionWindow` `band`). Null before the strips exist.
+   */
+  extentTan(lat: number): { top: number; bottom: number } | null {
+    const b = this.built;
+    const sizing = this.sizing;
+    if (!b || !sizing || b.pieces.length === 0) return null;
+    const r = this.radius ?? CAPTION.radius;
+    let top = -Infinity;
+    let bottom = Infinity;
+    for (let i = 0; i < b.pieces.length; i++) {
+      const pl = b.places[i]!;
+      const pc = b.pieces[i]!;
+      const up = Math.min(89.5, pl.baseLat + (pl.capR * pc.box.aboveCaps) / r / DEG_);
+      const dn = Math.max(-89.5, pl.baseLat - (pl.capR * pc.box.belowCaps) / r / DEG_);
+      for (let a = -Math.PI; a <= Math.PI + 1e-9; a += Math.PI / 12) {
+        top = Math.max(top, shellY(a, up, lat, sizing.d, r));
+        bottom = Math.min(bottom, shellY(a, dn, lat, sizing.d, r));
+      }
+    }
+    if (this.dimMode === "ellipse" && this.dimAlpha > 0) {
+      const c = this.ellipseU.uCentre.value[1]!;
+      const ry = this.ellipseU.uRadii.value[1]!;
+      top = Math.max(top, c + ry);
+      bottom = Math.min(bottom, c - ry);
+    }
+    return { top, bottom };
+  }
+
   /** Checks and captures: the dimming's mode (null: the tuned one). The strips are made for every mode, so it is a switch and no rebuild. */
   setDimMode(mode: "ellipse" | "bands" | "none" | null): void {
     this.dimMode = mode ?? CAPTION.dim.mode;
+    this.opts.onChange();
+  }
+
+  /** Checks and captures: the thickness's look (`page`, `mix`, `edge`; null: the tuned one). */
+  setSideMode(mode: "page" | "mix" | "edge" | null): void {
+    this.sideMode = mode ?? CAPTION.colors.sideMode;
+    this.setTheme(this.theme);
     this.opts.onChange();
   }
 
@@ -856,7 +913,7 @@ export class CaptionLayer {
       this.crisp.hide();
       return;
     }
-    this.crisp.render(camera, rect, Math.min(dpr, 2));
+    this.crisp.render(camera, rect, Math.min(dpr, ENERGY.captionDpr));
   }
 
   /**
@@ -947,7 +1004,7 @@ export class CaptionLayer {
       cycle: { sets: this.opts.content.sets.length, current: this.rowSet[0] ?? 0, swapping, waiting: false, paused: this.paused, swaps: this.rowCycle[0] ?? 0, lastOut: outSides, lastIn: inSides },
       baselines: shown.map((v) => v.line.baseLat),
       texture: this.texSizes,
-      colors: { face: this.face.value, outline: this.outline.value, side: this.side.value },
+      colors: { face: this.face.value, accent: this.accent.value, outline: this.outline.value, side: this.side.value },
     };
   }
 
@@ -1032,7 +1089,7 @@ export class CaptionLayer {
         .map((r) => {
           const asked = r.style ?? "plain";
           const style = ok.get(asked) ?? "plain";
-          return { text: CAPTION.upper && CAPTION_STYLES[asked].face !== "script" ? r.text.toLocaleUpperCase("en") : r.text, style } as CaptionRun;
+          return { text: CAPTION.upper && CAPTION_STYLES[asked].face !== "script" ? r.text.toLocaleUpperCase("en") : r.text, style, ...(r.accent ? { accent: r.accent } : {}) } as CaptionRun;
         });
     const sets = content.sets.map((set) => set.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0)));
     const fixed = content.fixed.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0));
@@ -1132,11 +1189,13 @@ export class CaptionLayer {
             c.strokeStyle = "rgb(255 0 0)";
             c.strokeText(run.text, px, py);
           } else {
-            c.fillStyle = "rgb(0 255 0)";
+            // (the inside is green, or blue for the accent's word: the shader picks the colour by the stronger channel)
+            const inside = run.accent ? "rgb(0 0 255)" : "rgb(0 255 0)";
+            c.fillStyle = inside;
             c.fillText(run.text, px, py);
             if (f.embolden > 0) {
               c.lineWidth = emboldenPx(run);
-              c.strokeStyle = "rgb(0 255 0)";
+              c.strokeStyle = inside;
               c.strokeText(run.text, px, py);
             }
           }

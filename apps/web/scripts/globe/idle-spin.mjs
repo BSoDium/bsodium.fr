@@ -187,7 +187,8 @@ try {
     const fps = (t1.frames - t0.frames) / 4;
     const rafPerSec = (t1.raf - t0.raf) / 4;
     console.log(`     redraws: ${fps.toFixed(1)} frames/s, ${rafPerSec.toFixed(1)} rAF calls/s while turning (the display's refresh: 60 here)`);
-    expect("redrawn on every display refresh (one frame and one rAF call per refresh, not a timer's few a second)", fps >= 40 && fps <= 125 && rafPerSec >= 40 && rafPerSec <= 125, { fps, rafPerSec });
+    // (round 9, the energy pass: the rotation moves one art pixel every 1.35 s, so it is redrawn at `ENERGY.spinFrameMs` (10 a second), paced by a timer; a frame per display refresh drew the whole globe 60 times a second for nothing)
+    expect("redrawn at the paced rate, about 10 a second (not a frame per display refresh)", fps >= 6 && fps <= 14 && rafPerSec <= 30, { fps, rafPerSec });
     // the cost of one frame, the same JS the loop runs
     const cost = await page.evaluate(() => {
       const d = window.__globeDebug;
@@ -226,11 +227,11 @@ try {
     // the picture cannot change by whole art pixels per frame: it is a redraw on every display refresh in which the features cross their
     // art-pixel boundaries at different times, a few dozen pixels each, and no step between two pictures is longer than a few frames.
     const longest = Math.max(...a.gaps);
-    expect(`no step longer than 80 ms between two pictures (longest ${longest.toFixed(0)} ms)`, a.gaps.length > 100 && longest <= 80, { longest, n: a.gaps.length });
-    expect(`the picture changes at least 25 times a second (${(a.shown.length / 8).toFixed(1)}/s)`, a.shown.length / 8 >= 25, a.shown.length);
+    expect(`no step longer than 250 ms between two pictures (longest ${longest.toFixed(0)} ms)`, a.gaps.length > 40 && longest <= 250, { longest, n: a.gaps.length });
+    expect(`the picture changes at least 7 times a second (${(a.shown.length / 8).toFixed(1)}/s)`, a.shown.length / 8 >= 7, a.shown.length);
     expect(`every drawn frame changes the picture (the redraws are not wasted: ${a.shown.length} of ${a.frames.length})`, a.shown.length >= 0.95 * a.frames.length, { shown: a.shown.length, frames: a.frames.length });
-    // no frame-rate ceiling: one frame per display refresh (60 Hz here), never skipped by `SPIN.minFrameMs`
-    expect(`one frame per display refresh: ${(a.frames.length / 8).toFixed(1)} a second, no gap over 25 ms between drawn frames (longest ${Math.max(...a.frameGaps).toFixed(0)} ms)`, a.frames.length / 8 >= 55 && Math.max(...a.frameGaps) <= 25, { n: a.frames.length });
+    // paced (round 9, the energy pass): `ENERGY.spinFrameMs` 100, a timer's frame every 100 to 130 ms, none of them skipped or wasted
+    expect(`paced frames: ${(a.frames.length / 8).toFixed(1)} a second, no gap over 250 ms between drawn frames (longest ${Math.max(...a.frameGaps).toFixed(0)} ms)`, a.frames.length / 8 >= 6 && a.frames.length / 8 <= 14 && Math.max(...a.frameGaps) <= 250, { frames: a.frames.length });
     const msPerArtPx = (1000 * info.inset.pixel) / (info.spin.degPerSec * (Math.PI / 180) * a.R);
     console.log(`     the disc's centre crosses an art pixel every ${msPerArtPx.toFixed(0)} ms (one turn in ${(360 / info.spin.degPerSec / 60).toFixed(0)} min)`);
     expect("slow enough for the labels: the disc's centre needs at least 0.8 s per art pixel (at most 0.3 deg/s at 1440x900)", msPerArtPx >= 800, info);
@@ -315,7 +316,7 @@ try {
         const bound = (v0 * SPIN_STOP) / 3000;
         const zero = coast.findIndex((f) => f.speed === 0);
         console.log(`     (${easedFor} ms in) coasting from ${v0.toFixed(2)} deg/s: ${coast.length} frames, turned ${moved.toFixed(3)} deg afterwards (the profile's integral is ${bound.toFixed(3)}), stopped after ${zero >= 0 ? Math.round(coast[zero].t - coast[0].t) : "?"} ms`);
-        expect(`(${easedFor} ms in) a focus change makes it coast: the speed only goes down from the first frame, to exactly zero`, speeds.length > 20 && speeds.every((v, i) => i === 0 || v <= speeds[i - 1]) && speeds[1] < speeds[0] && speeds.at(-1) === 0, { v0, speeds: speeds.slice(0, 5), end: speeds.slice(-3) });
+        expect(`(${easedFor} ms in) a focus change makes it coast: the speed only goes down from the first frame, to exactly zero`, speeds.length > 6 && speeds.every((v, i) => i === 0 || v <= speeds[i - 1]) && speeds[1] < speeds[0] && speeds.at(-1) === 0, { v0, speeds: speeds.slice(0, 5), end: speeds.slice(-3) });
         expect(`(${easedFor} ms in) ...it keeps turning by about the profile's integral (inertia, no freeze) and not more`, Math.abs(moved - bound) <= 0.1 * bound + 0.05, { moved, bound, v0 });
         expect(`(${easedFor} ms in) ...it has stopped within the coasting time, blocked by the focus, drawing nothing more`, !end.spin.spinning && end.spin.blockedBy === "place-focused", end);
         const f0 = end.frames;

@@ -19,7 +19,7 @@
  */
 import type { GlobeTheme } from "./colors";
 import { GlyphBuffer, placeGlyphs, ringLayout, ringPhase, ringTone, type RingLayout } from "./ring";
-import { RING } from "./tuning";
+import { CAPTION, ENERGY, RING } from "./tuning";
 
 export interface RingFrame {
   /** Centre of the planet on the container, CSS px. */
@@ -104,6 +104,9 @@ export class RingLayer {
   private lastMs = 0;
   private totalMs = 0;
   private atlases = new Map<number, Atlas>();
+  /** The line's characters before this index are the highlighted phrases (0: none). */
+  private hlEnd = 0;
+  private hlMode: "blue" | "ink" | "none" = RING.highlight.mode;
   private atlasDpr = 0;
   private codes: number[];
   private allocW = 0;
@@ -112,9 +115,12 @@ export class RingLayer {
   private cssTop = 0;
   private dpr = 1;
   private disposed = false;
+  /** The energy pass's hold: the ring stands still (no loop, its clock stops) and is drawn only when the camera moves it. */
+  private frozen = false;
 
   constructor(host: HTMLElement, text: string, theme: GlobeTheme, reduced: boolean) {
     this.text = text;
+    this.hlEnd = this.highlightEnd();
     this.codes = [...new Set([...text].map((c) => c.charCodeAt(0)).filter((c) => c !== 32))];
     this.theme = theme;
     this.reduced = reduced;
@@ -147,10 +153,36 @@ export class RingLayer {
     this.redraw();
   }
 
+  /** The end (character index) of the highlighted phrases of the line: the first `RING.highlight.phrases` of them (0: none). */
+  private highlightEnd(): number {
+    let at = 0;
+    for (let n = 0; n < RING.highlight.phrases; n++) {
+      const next = this.text.indexOf(RING.separator, at);
+      if (next < 0) return this.text.length;
+      at = n === RING.highlight.phrases - 1 ? next : next + RING.separator.length;
+    }
+    return at;
+  }
+
+  /** Checks and captures: the highlight's look (`blue`, `ink`, `none`; null: the tuned one). */
+  setHighlight(mode: "blue" | "ink" | "none" | null): void {
+    this.hlMode = mode ?? RING.highlight.mode;
+    this.atlases.clear();
+    this.redraw();
+  }
+
   setTheme(theme: GlobeTheme): void {
     this.theme = theme;
     this.atlases.clear();
     this.redraw();
+  }
+
+  /** The ring stands still (the energy pass's hold) or turns again. */
+  setFrozen(on: boolean): void {
+    if (on === this.frozen) return;
+    this.frozen = on;
+    if (on) this.stopLoop();
+    else this.wake();
   }
 
   setReduced(on: boolean): void {
@@ -224,25 +256,27 @@ export class RingLayer {
   };
 
   private wantsLoop(): boolean {
-    return this.shown && !this.reduced && !this.hidden && !this.disposed;
+    return this.shown && !this.reduced && !this.hidden && !this.disposed && !this.frozen;
   }
 
   private wake(): void {
     if (this.raf || !this.wantsLoop()) return;
     this.lastAt = performance.now();
-    this.raf = requestAnimationFrame(this.loop);
+    // (a timer at the ring's own rate, not an animation frame at the display's: a frame it would not draw is a wake for nothing)
+    this.raf = window.setTimeout(this.loop, ENERGY.ringFrameMs);
   }
 
   private stopLoop(): void {
-    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.raf) window.clearTimeout(this.raf);
     this.raf = 0;
   }
 
-  private loop = (now: number) => {
+  private loop = () => {
     this.raf = 0;
     if (!this.wantsLoop()) return;
-    if (now - this.drawnAt >= RING.frameMs - 2) this.draw(now, true);
-    this.raf = requestAnimationFrame(this.loop);
+    const now = performance.now();
+    if (now - this.drawnAt >= ENERGY.ringFrameMs - 4) this.draw(now, true);
+    this.raf = window.setTimeout(this.loop, Math.max(4, ENERGY.ringFrameMs - (performance.now() - this.drawnAt)));
   };
 
   /* ------------------------------ drawing ------------------------------ */
@@ -260,28 +294,48 @@ export class RingLayer {
   }
 
   /** The atlas of one palette tone: every character of the line, upright, in that grey, at the device's resolution. */
-  private atlas(level: number, dpr: number): Atlas | null {
-    const have = this.atlases.get(level);
+  private atlas(level: number, dpr: number, hl = false): Atlas | null {
+    const key = level * 2 + (hl ? 1 : 0);
+    const have = this.atlases.get(key);
     if (have) return have;
     const canvas = document.createElement("canvas");
     canvas.width = Math.ceil(CELL_W * this.codes.length * dpr);
     canvas.height = Math.ceil(CELL_H * dpr);
     const c = canvas.getContext("2d");
     if (!c) return null;
-    const rgb = this.theme.ramp[level]!;
+    let rgb: readonly number[] = this.theme.ramp[level]!;
+    let weight: number = RING.type.weight;
+    if (hl) {
+      // a highlight is faded with the ring by the same tone staircase: its strength is the level's share of the ring's top tone
+      const ramp = this.theme.ramp;
+      const top = Math.max(1, ringTone(1, ramp.length));
+      const f = Math.min(1, level / top);
+      const page = ramp[0]!;
+      const to = this.hlMode === "blue" ? this.accent() : ramp[ramp.length - 1]!;
+      rgb = [page[0]! + (to[0]! - page[0]!) * f, page[1]! + (to[1]! - page[1]!) * f, page[2]! + (to[2]! - page[2]!) * f];
+      if (this.hlMode === "ink") weight = RING.highlight.inkWeight;
+    }
     c.scale(dpr, dpr);
-    c.font = `${RING.type.weight} ${ATLAS_EM}px ${this.family}`;
+    c.font = `${weight} ${ATLAS_EM}px ${this.family}`;
     c.textAlign = "center";
     c.textBaseline = "alphabetic";
-    c.fillStyle = `rgb(${Math.round(rgb[0] * 255)} ${Math.round(rgb[1] * 255)} ${Math.round(rgb[2] * 255)})`;
+    c.fillStyle = `rgb(${Math.round(rgb[0]! * 255)} ${Math.round(rgb[1]! * 255)} ${Math.round(rgb[2]! * 255)})`;
     const col = new Map<number, number>();
     this.codes.forEach((code, i) => {
       col.set(code, i);
       c.fillText(String.fromCharCode(code), i * CELL_W + CELL_W / 2, CELL_H / 2 + BASELINE * ATLAS_EM);
     });
     const atlas = { canvas, col };
-    this.atlases.set(level, atlas);
+    this.atlases.set(key, atlas);
     return atlas;
+  }
+
+  /** The blue of the highlight for the theme's scheme, 0..1. */
+  private accent(): [number, number, number] {
+    const bg = this.theme.background;
+    const dark = 0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2] < 0.5;
+    const h = (dark ? CAPTION.colors.accent.dark : CAPTION.colors.accent.light).slice(1);
+    return [parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255, parseInt(h.slice(4, 6), 16) / 255];
   }
 
   private redraw(): void {
@@ -309,7 +363,7 @@ export class RingLayer {
     if (turn || !this.reduced) {
       // The clock runs while the ring is on and moving; a stalled frame cannot jump it.
       const dt = Math.min(now - this.lastAt, RING.maxStepMs);
-      if (!this.reduced && dt > 0) this.clock += dt;
+      if (!this.reduced && !this.frozen && dt > 0) this.clock += dt;
       this.lastAt = now;
     }
     this.phase = ringPhase(this.clock);
@@ -359,21 +413,25 @@ export class RingLayer {
     ctx.clearRect(0, 0, this.allocW, this.allocH);
     // The atlas cell is drawn at `ATLAS_EM`; a letter is `g.em`. The cell's centre is the capital's centre: each letter turns about it to its
     // angle (clockwise from twelve o'clock), its top pointing away from the planet.
-    const atlas = this.atlas(Math.min(level, levels - 1), dpr);
+    const lv = Math.min(level, levels - 1);
+    const atlas = this.atlas(lv, dpr);
     if (!atlas) return;
+    const hlAtlas = this.hlMode !== "none" && this.hlEnd > 0 ? this.atlas(lv, dpr, true) : null;
     const m = (dpr * g.em) / ATLAS_EM;
     const ox = -left * dpr;
     const oy = -top * dpr;
     const cw = CELL_W * dpr;
     const ch = CELL_H * dpr;
     for (let i = 0; i < g.count; i++) {
-      const col = atlas.col.get(g.code[i]!);
+      const hl = hlAtlas !== null && g.idx[i]! < this.hlEnd;
+      const at = hl ? hlAtlas! : atlas;
+      const col = at.col.get(g.code[i]!);
       if (col === undefined) continue;
       const a = g.angle[i]!;
       const c = Math.cos(a) * m;
       const sn = Math.sin(a) * m;
       ctx.setTransform(c, sn, -sn, c, g.x[i]! * dpr + ox, g.y[i]! * dpr + oy);
-      ctx.drawImage(atlas.canvas, col * cw, 0, cw, ch, -CELL_W / 2, -CELL_H / 2, CELL_W, CELL_H);
+      ctx.drawImage(at.canvas, col * cw, 0, cw, ch, -CELL_W / 2, -CELL_H / 2, CELL_W, CELL_H);
     }
   }
 }

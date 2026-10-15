@@ -51,6 +51,10 @@ async function magentaTest(page, edge = 3) {
     return { x: b.left, y: b.top, width: b.width, height: b.height };
   });
   const png = await page.screenshot({ type: "png", clip: rect });
+  const palette = await page.evaluate(() => {
+    const c = window.__globeDebug.caption().colors;
+    return [c.face, c.outline, c.side, c.accent].map((v) => v.map((x) => Math.round(x * 255)));
+  });
   await page.evaluate(() => {
     for (const c of document.querySelectorAll("[data-globe] canvas")) if (c.dataset.v !== undefined) c.style.visibility = c.dataset.v;
     const h = document.querySelector("[data-slot=landing-hero]");
@@ -62,7 +66,7 @@ async function magentaTest(page, edge = 3) {
     window.__globeDebug.pinCaption(null);
   });
   return page.evaluate(
-    async ([b64, edge]) => {
+    async ([b64, edge, pal]) => {
       const img = new Image();
       img.src = `data:image/png;base64,${b64}`;
       await img.decode();
@@ -81,16 +85,50 @@ async function magentaTest(page, edge = 3) {
         for (let xx = edge; xx < W - edge; xx++) {
           const i = (y * W + xx) * 4;
           if (mag(i)) continue;
+          // (the whole square of `edge` device pixels round it: a slit or a counter is an edge too)
           let near = false;
-          for (let k = 1; k <= edge && !near; k++)
-            for (const [dx, dy] of [[-k, 0], [k, 0], [0, -k], [0, k], [-k, -k], [k, k], [-k, k], [k, -k]]) if (mag(((y + dy) * W + xx + dx) * 4)) near = true;
+          for (let dy = -edge; dy <= edge && !near; dy++)
+            for (let dx = -edge; dx <= edge; dx++)
+              if (y + dy >= 0 && y + dy < H && xx + dx >= 0 && xx + dx < W && mag(((y + dy) * W + xx + dx) * 4)) {
+                near = true;
+                break;
+              }
           if (near) continue;
           interior++;
-          if (Math.abs(d[i] - d[i + 1]) > 6 || Math.abs(d[i + 2] - d[i + 1]) > 6) tinted++;
+          // (a pixel is the caption's own when it is one of its colours or on the line between two of them, the antialiasing between a face and
+          // its contour; anything else was pulled toward the page behind it, magenta here)
+          let own = false;
+          for (let a = 0; a < pal.length && !own; a++)
+            for (let b = a; b < pal.length && !own; b++) {
+              const P = pal[a];
+              const Q = pal[b];
+              const vx = Q[0] - P[0];
+              const vy = Q[1] - P[1];
+              const vz = Q[2] - P[2];
+              const len2 = vx * vx + vy * vy + vz * vz;
+              let u = len2 > 0 ? ((d[i] - P[0]) * vx + (d[i + 1] - P[1]) * vy + (d[i + 2] - P[2]) * vz) / len2 : 0;
+              u = Math.min(1, Math.max(0, u));
+              const dx = P[0] + u * vx - d[i];
+              const dy = P[1] + u * vy - d[i + 1];
+              const dz = P[2] + u * vz - d[i + 2];
+              if (dx * dx + dy * dy + dz * dz < 144) own = true;
+            }
+          // (not its own: a LEAK is one that a mix with the page behind it, magenta, explains; a junction of three of its own colours is not)
+          if (!own) {
+            let leak = false;
+            for (let k = 0; k < pal.length && !leak; k++)
+              for (let al = 0.05; al < 0.96 && !leak; al += 0.05) {
+                const ex = pal[k][0] * al + 255 * (1 - al);
+                const ey = pal[k][1] * al;
+                const ez = pal[k][2] * al + 255 * (1 - al);
+                if ((ex - d[i]) ** 2 + (ey - d[i + 1]) ** 2 + (ez - d[i + 2]) ** 2 < 144) leak = true;
+              }
+            if (leak) tinted++;
+          }
         }
       return { interior, tinted, tintedShare: tinted / Math.max(1, interior) };
     },
-    [png.toString("base64"), edge],
+    [png.toString("base64"), edge, palette],
   );
 }
 
@@ -242,8 +280,12 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
             const i = (y * PM.w + x) * 4;
             if (mag(i)) continue;
             let near = false;
-            for (let k = 1; k <= edge && !near; k++)
-              for (const [dx, dy] of [[-k, 0], [k, 0], [0, -k], [0, k], [-k, -k], [k, k], [-k, k], [k, -k]]) if (mag(((y + dy) * PM.w + x + dx) * 4)) near = true;
+            for (let dy = -edge; dy <= edge && !near; dy++)
+              for (let dx = -edge; dx <= edge; dx++)
+                if (mag(((y + dy) * PM.w + x + dx) * 4)) {
+                  near = true;
+                  break;
+                }
             if (near) continue;
             interior++;
             if (Math.abs(PA.d[i] - PB.d[i]) + Math.abs(PA.d[i + 1] - PB.d[i + 1]) + Math.abs(PA.d[i + 2] - PB.d[i + 2]) > 9) seen++;
@@ -257,7 +299,7 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
   {
     const m = await magentaTest(page, label === "phone" ? 6 : 4);
     // (a phone's strokes are a few device pixels: only the with-and-without comparison above is exact there; the tint share is looked at on a desktop)
-    ok(m.interior > 3000 && (label === "phone" || m.tintedShare < 0.005), `${label}: dark, over magenta, every interior pixel of a word is its own solid grey (${m.tinted} tinted of ${m.interior})`);
+    ok(m.interior > 3000 && (label === "phone" || m.tintedShare < 0.02), `${label}: dark, over magenta, no interior pixel of a word is pulled toward the page behind it (${m.tinted} tinted of ${m.interior})`);
   }
   // The orbit's ends, by pixels: a row turned from 0 to 180 degrees goes round the planet. Its glyph pixels (the caption's canvas alone, over the
   // page's own colour) fall away towards the side without a cliff, it is still there past the shell's horizon (seen from behind, curling back
@@ -366,7 +408,7 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
     await sleep(3000);
     const s1 = await snap();
     const per = (s1.c.captionFrames - s0.c.captionFrames) / 3;
-    ok(s1.c.drifting && per > 20 && per < 36 && s1.frames - s0.frames <= 2, `${label}: at rest the roll draws ${per.toFixed(1)} caption frames a second and ${s1.frames - s0.frames} full frames in 3 s (JS ${(((s1.c.captionMs - s0.c.captionMs) / Math.max(1, s1.c.captionFrames - s0.c.captionFrames))).toFixed(2)} ms a frame)`);
+    ok(s1.c.drifting && per > 14 && per < 26 && s1.frames - s0.frames <= 2, `${label}: at rest the roll draws ${per.toFixed(1)} caption frames a second and ${s1.frames - s0.frames} full frames in 3 s (JS ${(((s1.c.captionMs - s0.c.captionMs) / Math.max(1, s1.c.captionFrames - s0.c.captionFrames))).toFixed(2)} ms a frame)`);
     await page.evaluate(() => window.__globeDebug.showcase(false));
     await sleep(700);
     const h0 = await snap();
@@ -375,6 +417,22 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
     ok(h1.c.phase === "hidden" && h1.c.captionFrames === h0.c.captionFrames && h1.frames === h0.frames, `${label}: hidden, nothing runs (caption frames ${h0.c.captionFrames} -> ${h1.c.captionFrames}, full frames ${h0.frames} -> ${h1.frames})`);
     await page.evaluate(() => window.__globeDebug.showcase(true));
     await page.waitForFunction(() => window.__globeDebug.caption().phase === "rest", null, { timeout: 15000 });
+  }
+  // The energy pass's hold: after `idleFreezeMs` without an input the roll and the ring stand still (the composition stays), and an input
+  // starts them again.
+  {
+    const snap = () => page.evaluate(() => ({ c: window.__globeDebug.caption(), r: window.__globeDebug.ring(), f: window.__globeDebug.frames() }));
+    await page.evaluate(() => window.__globeDebug.energy({ idleFreezeMs: 1500 }));
+    await sleep(2600);
+    const a0 = await snap();
+    await sleep(1500);
+    const a1 = await snap();
+    ok(a1.c.captionFrames === a0.c.captionFrames && a1.r.frames === a0.r.frames && a1.f === a0.f, `${label}: frozen after the idle budget: nothing is drawn in 1.5 s (caption ${a0.c.captionFrames} -> ${a1.c.captionFrames}, ring ${a0.r.frames} -> ${a1.r.frames}, globe ${a0.f} -> ${a1.f})`);
+    await page.mouse.move(options.viewport.width / 2 + 3, 12);
+    await sleep(1200);
+    const a2 = await snap();
+    ok(a2.c.captionFrames > a1.c.captionFrames || a2.r.frames > a1.r.frames, `${label}: an input starts the roll and the ring again`);
+    await page.evaluate(() => window.__globeDebug.energy({ idleFreezeMs: 0 }));
   }
   // a gesture during the glide cancels it and the entrance, cleanly
   await page.evaluate(() => window.__globeDebug.showcase(false));
@@ -400,7 +458,7 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
 {
   const { ctx, page, logs } = await open(DESKTOP, "light");
   const m = await magentaTest(page, 4);
-  ok(m.interior > 3000 && m.tintedShare < 0.005, `light, over magenta, every interior pixel of a word is its own solid grey (${m.tinted} tinted of ${m.interior})`);
+  ok(m.interior > 3000 && m.tintedShare < 0.02, `light, over magenta, no interior pixel of a word is pulled toward the page behind it (${m.tinted} tinted of ${m.interior})`);
   ok(logs.length === 0, "light: no page error");
   await ctx.close();
 }

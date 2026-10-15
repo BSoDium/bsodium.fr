@@ -220,13 +220,25 @@ export const CAPTION = {
   fadeMs: 180,
   leaveMs: 200,
   /** The outline's width, in cap heights: drawn OUTSIDE the glyph, so the face keeps its whole area (the inside is the face's colour). */
-  outline: 0.04,
+  outline: 0.05,
   /**
-   * Colours, from the globe's own palette (engine/colors.ts), all solid (alpha 1): the face is the page colour itself in both schemes (a hole in
-   * the globe's linework, read by its outline), the outline the coastline's tone pushed `outlineMix` of the way to the ink, the extrusion
-   * `sideMix` of the way from the face to the outline (a calmer tone of its own, between the two). Greys only.
+   * Colours, all solid (alpha 1). The letters are text-coloured; the contour and the thickness are a MID TONE from the page colour towards the
+   * text colour (a cut-out: the globe's linework stops at a halo round every glyph). `text` is the secondary text tone (`--muted-foreground` of
+   * app.css: #595959 light, #a3a3a3 dark; 6.8:1 and 7.9:1 against the page). `accent` is BSoD Blue, the caption's one palette, used sparingly (two
+   * words on screen at most), a palette step that is not glaring: `--palette-blue-600` on the light page (#0076d4, 4.5:1) and `--palette-blue-400`
+   * on the dark (#70b4ff, 9.1:1) (feat/palettes, PR #289: copied here, re-point to the tokens when it merges). `outlineMix` is the contour's
+   * share of the way from the page colour to the text colour (2.0:1 against the page in both schemes, 3.5 to 3.7:1 against the face), `sideMix`
+   * the thickness's (a step closer to the page: 1.7:1). `sideMode`: `page` (the exact page colour for both), `mix` (by those shares), `edge`
+   * (the thickness as in `mix` with a thin text-coloured line on the far `edgeSlices` slices).
    */
-  colors: { outlineMix: { light: 0.6, dark: 0.45 }, sideMix: { light: 0.3, dark: 0.5 } },
+  colors: {
+    text: { light: "#595959", dark: "#a3a3a3" },
+    accent: { light: "#0076d4", dark: "#70b4ff" },
+    sideMode: "mix" as "page" | "mix" | "edge",
+    outlineMix: { light: 0.42, dark: 0.37 },
+    sideMix: { light: 0.34, dark: 0.3 },
+    edgeSlices: 2,
+  },
   /** Sampling: the shader looks `lodBias` levels sharper than the screen asks (negative: sharper). Texture: texels in a cap height. */
   lodBias: -0.5,
   texCap: 96,
@@ -276,6 +288,12 @@ export const RING = {
   /** Between the phrases (and after the last, which closes the loop). */
   separator: " \u00b7 ",
   /**
+   * Highlights (sparing): the first `phrases` phrases of the line (the name, by the order of `ringPhrases`) are picked out. `mode`: `blue` the caption's
+   * BSoD Blue (`CAPTION.colors.accent`, faded with the ring by the same tone staircase), `ink` the page's full ink instead of the ring's softened
+   * coast tone, at `inkWeight`, `none` as before. The layout, the geometry and the spacing never depend on it (a monospace: the advance is the same).
+   */
+  highlight: { mode: "blue" as "blue" | "ink" | "none", phrases: 1, inkWeight: 700 },
+  /**
    * Zoom range. `floorBelowFit`: the lowest zoom is at least this many zoom levels below the whole-globe fit (0.5 levels = the globe 0.71 times its fit
    * size), and lower still when the ring does not fit the free area with `fitMargin` of it left empty (never on a screen with a 4:3 or wider
    * shape). `fade`: the ring's strength by the way from the fit (0) to the lowest zoom (1): gone up to `from`, full from `to`, a smoothstep
@@ -290,3 +308,35 @@ export const RING = {
   /** Largest device pixel ratio the ring's canvas is drawn at (the type is crisp at 2; a phone's 3 would cost 2.25 times the pixels). */
   maxDpr: 2,
 } as const;
+
+/**
+ * The energy knobs of the home screen's resting animation (round 9, "energy pass"; docs/performance.md): how often each thing that moves at rest
+ * is drawn, how sharp the caption's canvas is while it rolls, how big its window is, and when everything stops. MUTABLE module state (like
+ * `SPIN`): the measurements in `scripts/perf/energy.mjs` set them through `__globeDebug.energy(patch)`; the values here are the shipped ones.
+ *
+ * - `captionFrameMs`: least time between two drawn frames of the caption's own loop while only the roll moves (50: 20 a second; a row moves 2.9
+ *   degrees a second, a third of a pixel a frame on the planet's width).
+ * - `ringFrameMs`: the ring's own clock (64: 15 a second; it turns 3 degrees a second, one pixel a frame at the largest ring).
+ * - `spinFrameMs`: the idle rotation's frame period (100: 10 a second; it moves one art pixel every 1.35 s: a frame changes nothing visible
+ *   in between), paced by a timer and not by the display's refresh.
+ * - `captionDpr`: the most the caption's canvas is drawn at (1.5: its glyphs are large; the window is a quarter of the stage's pixels).
+ * - `captionWindow`: `band` sizes the second canvas to the caption's bounding band (the rows, the roll's ends and the dimming's reach) and
+ *   not to the planet's whole box; `planet` is the box of the earlier rounds.
+ * - `idleFreezeMs`: after this long with no input the roll, the ring's turn and the idle rotation stop (the composition stays; any input, the
+ *   tab coming back to the front or the globe coming back into view starts them again). 0: never.
+ * - `holdWhenBlurred`, `holdWhenOffscreen`, `holdOnSaveData`: the same stop when the window has lost focus, the globe is scrolled out of
+ *   view, or the browser says the data saver is on.
+ * - `gpu`: the context's `powerPreference` (creation time).
+ */
+export const ENERGY = {
+  captionFrameMs: 50,
+  ringFrameMs: 64,
+  spinFrameMs: 100,
+  captionDpr: 1.5,
+  captionWindow: "band" as "band" | "planet",
+  idleFreezeMs: 30000,
+  holdWhenBlurred: true,
+  holdWhenOffscreen: true,
+  holdOnSaveData: true,
+  gpu: "low-power" as "low-power" | "high-performance" | "default",
+};

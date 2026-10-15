@@ -170,6 +170,8 @@ export interface GlobeCaption {
 export interface GlobeCaptionSpan {
   text: string;
   style?: "plain" | "heavy" | "heavy-italic" | "mono" | "script";
+  /** In the blue text tone (the caption's one palette) instead of the secondary text tone: sparingly, and weight or face is the other carrier (colour is never the only one). */
+  accent?: "blue";
 }
 
 export interface GlobeProps {

@@ -58,7 +58,7 @@ import { SHOWCASE_STATE, bandLat, inBand, shellWindowFactor, type CaptionContent
 import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
-import { CAPTION, INSET_EASE, RING, SKY, START_VIEW, TUNING } from "./tuning";
+import { CAPTION, ENERGY, INSET_EASE, RING, SKY, START_VIEW, TUNING } from "./tuning";
 import { fromViewState } from "./view";
 import { markerShown } from "./visibility";
 import { perfEnd, perfStart } from "./perf";
@@ -252,7 +252,7 @@ export class GlobeRenderer {
     this.gl = new WebGLRenderer({
       antialias: false,
       alpha: false,
-      powerPreference: "high-performance",
+      powerPreference: ENERGY.gpu,
       preserveDrawingBuffer: false,
     });
     this.gl.setPixelRatio(1);
@@ -311,6 +311,20 @@ export class GlobeRenderer {
       this.cleanups.push(() => window.removeEventListener(type, this.onInput, { capture: true }));
     }
     this.cleanups.push(() => window.clearTimeout(this.spinTimer));
+    // The energy pass: what makes the resting home screen stand still (docs/performance.md, "Energy").
+    this.listen(window, "blur", () => this.setBlurred(true));
+    this.listen(window, "focus", () => this.setBlurred(false));
+    if (typeof IntersectionObserver !== "undefined") {
+      const io = new IntersectionObserver((entries) => {
+        const last = entries[entries.length - 1];
+        if (last) this.setOffscreen(!last.isIntersecting);
+      });
+      io.observe(opts.container);
+      this.cleanups.push(() => io.disconnect());
+    }
+    this.cleanups.push(() => window.clearTimeout(this.freezeTimer));
+    this.cleanups.push(() => window.clearTimeout(this.paceTimer));
+    this.armFreeze();
     this.listen(this.canvas, "webglcontextlost", () => this.onContextLost());
     this.listen(this.canvas, "webglcontextrestored", () => this.onContextRestored());
     this.cleanups.push(attachControls(this.canvas, opts.container, this.controlsHost()));
@@ -916,7 +930,7 @@ export class GlobeRenderer {
     this.caption?.setPaused(this.hidden || this.lost || this.suspended);
     this.noteActivity();
     if (hidden) {
-      if (this.capRaf) cancelAnimationFrame(this.capRaf);
+      if (this.capRaf) window.clearTimeout(this.capRaf);
       this.capRaf = 0;
       window.clearTimeout(this.spinTimer);
       this.spinTimer = 0;
@@ -1015,7 +1029,7 @@ export class GlobeRenderer {
   private spinCtx: SpinContext = { reduced: false, hidden: false, lost: false, suspended: false, selected: false, focused: false, inset: 0, zoom: 0, minZoom: 0, busy: false };
   private spinContext(): SpinContext {
     const c = this.spinCtx;
-    c.reduced = this.reduced;
+    c.reduced = this.reduced || this.held;
     c.hidden = this.hidden;
     c.lost = this.lost;
     c.suspended = this.suspended;
@@ -1042,6 +1056,65 @@ export class GlobeRenderer {
   private noteActivity() {
     this.spin.activity(performance.now());
     this.armSpin();
+    if (this.idleFrozen) {
+      this.idleFrozen = false;
+      this.applyHold();
+    }
+    this.armFreeze();
+  }
+
+  /* ------------------------------ the energy pass's hold ------------------------------ */
+
+  private idleFrozen = false;
+  private blurred = false;
+  private offscreen = false;
+  private freezeTimer = 0;
+  private paceTimer = 0;
+
+  /** Whether everything that moves at rest (the roll, the ring's turn, the idle rotation) stands still now. */
+  private get held(): boolean {
+    const saveData = ENERGY.holdOnSaveData && typeof navigator !== "undefined" && (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    return this.idleFrozen || (ENERGY.holdWhenBlurred && this.blurred) || (ENERGY.holdWhenOffscreen && this.offscreen) || saveData;
+  }
+
+  /** `ENERGY.idleFreezeMs` without an input: the hold begins. Re-armed by every input. */
+  private armFreeze() {
+    window.clearTimeout(this.freezeTimer);
+    this.freezeTimer = 0;
+    if (!(ENERGY.idleFreezeMs > 0) || this.disposed) return;
+    this.freezeTimer = window.setTimeout(() => {
+      this.freezeTimer = 0;
+      this.idleFrozen = true;
+      this.applyHold();
+    }, ENERGY.idleFreezeMs);
+  }
+
+  private setBlurred(on: boolean) {
+    if (on === this.blurred) return;
+    this.blurred = on;
+    this.applyHold();
+  }
+
+  private setOffscreen(on: boolean) {
+    if (on === this.offscreen) return;
+    this.offscreen = on;
+    this.applyHold();
+  }
+
+  /** Hand the hold to the caption, the ring and the idle rotation (a frame is asked for when they may go on). */
+  private applyHold() {
+    const h = this.held;
+    this.caption?.setFrozen(h);
+    this.ring?.setFrozen(h);
+    if (h) {
+      this.spin.settle(performance.now());
+      if (this.capRaf) window.clearTimeout(this.capRaf);
+      this.capRaf = 0;
+    } else {
+      this.armSpin();
+      this.armCaption();
+      this.requestRender();
+    }
   }
 
   /** A change that is not an input (a place selected or focused from the URL or the list, the inset, a flight, the zoom limit): the idle clock restarts and a turning globe coasts to rest. */
@@ -1117,8 +1190,15 @@ export class GlobeRenderer {
     if (this.disposed || this.hidden || this.lost) return;
     const now = performance.now();
     // The rotation's own frame chain follows the display (a frame per refresh) but not faster than `SPIN.minFrameMs`: a frame that nothing else asked for is skipped when it is too soon.
-    if (!this.forced && this.spin.spinning && !spinFrameDue(now, this.lastTickAt)) {
-      this.raf = requestAnimationFrame(this.tick);
+    if (!this.forced && this.spin.spinning && !spinFrameDue(now, this.lastTickAt, { ...SPIN, minFrameMs: Math.max(SPIN.minFrameMs, ENERGY.spinFrameMs) })) {
+      // (paced by a timer: no wake at the display's rate for a frame that is not due)
+      if (!this.paceTimer) {
+        const wait = Math.max(4, Math.max(SPIN.minFrameMs, ENERGY.spinFrameMs) - (now - this.lastTickAt));
+        this.paceTimer = window.setTimeout(() => {
+          this.paceTimer = 0;
+          this.chainSpin();
+        }, wait);
+      }
       return;
     }
     this.forced = false;
@@ -1161,7 +1241,8 @@ export class GlobeRenderer {
     const c = this.caption;
     if (!c || this.capRaf || this.disposed || this.hidden || this.lost || this.suspended || !this.lastBasis) return;
     if (!c.drifting) return;
-    this.capRaf = requestAnimationFrame(this.captionTick);
+    // (a timer at the caption's own rate: a frame it would not draw is no wake)
+    this.capRaf = window.setTimeout(this.captionTick, Math.max(4, ENERGY.captionFrameMs - (performance.now() - this.capDrawnAt)));
   }
 
   private captionTick = () => {
@@ -1174,7 +1255,7 @@ export class GlobeRenderer {
       return;
     }
     const now = performance.now();
-    if (now - this.capDrawnAt >= CAPTION.drift.frameMs - 2) {
+    if (now - this.capDrawnAt >= ENERGY.captionFrameMs - 4) {
       this.capDrawnAt = now;
       const b = this.lastBasis!;
       c.sync(b.d, b.lon, b.lat, now);
@@ -1203,10 +1284,23 @@ export class GlobeRenderer {
     const R = silhouetteRadiusPx(this.drawView().zoom, ch) * shellWindowFactor(dist) * 1.03 + 4;
     const cx = cw / 2 - this.shiftBuf * P;
     const cy = ch / 2 - this.liftBuf * P;
+    // The window: the planet's whole box (`planet`) or only its horizontal reach by the caption's own vertical band (`band`: the rows' edges over
+    // their whole parallels and the dimming's reach: a third to a half of the pixels, the rows stay centred on the equator).
+    let wy0 = cy - R;
+    let wy1 = cy + R;
+    if (ENERGY.captionWindow === "band" && this.lastBasis) {
+      const e = caption.extentTan(this.drawView().lat);
+      if (e) {
+        const perTan = silhouetteRadiusPx(this.drawView().zoom, ch) * Math.sqrt(Math.max(1.0001, this.lastBasis.d * this.lastBasis.d - 1));
+        const pad = 6;
+        wy0 = Math.max(wy0, cy - e.top * perTan - pad);
+        wy1 = Math.min(wy1, cy - e.bottom * perTan + pad);
+      }
+    }
     const x0 = Math.max(0, Math.floor(cx - R));
-    const y0 = Math.max(0, Math.floor(cy - R));
+    const y0 = Math.max(0, Math.floor(wy0));
     const x1 = Math.min(cw, Math.ceil(cx + R));
-    const y1 = Math.min(ch, Math.ceil(cy + R));
+    const y1 = Math.min(ch, Math.ceil(wy1));
     if (x1 - x0 < 1 || y1 - y0 < 1) return;
     const cam = this.camera;
     cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf + x0 / P, this.liftBuf + y0 / P, (x1 - x0) / P, (y1 - y0) / P);
@@ -1377,6 +1471,26 @@ export class GlobeRenderer {
     const began = this.caption?.swapNow(performance.now()) ?? false;
     if (began) this.requestRender();
     return began;
+  }
+
+  /** Checks and measurements: set the energy knobs (`ENERGY`) now; the idle rotation's frame period follows. */
+  setEnergy(patch: Partial<typeof ENERGY>) {
+    Object.assign(ENERGY, patch);
+    SPIN.minFrameMs = ENERGY.spinFrameMs;
+    this.armFreeze();
+    this.applyHold();
+    this.requestRender();
+  }
+
+  /** Checks and captures: the ring's highlight ("blue", "ink", "none"; null: the tuned one). */
+  setRingHighlight(mode: "blue" | "ink" | "none" | null) {
+    this.ring?.setHighlight(mode);
+  }
+
+  /** Checks and captures: the thickness's look ("page", "mix", "edge"; null: the tuned one). */
+  setCaptionSide(mode: "page" | "mix" | "edge" | null) {
+    this.caption?.setSideMode(mode);
+    this.requestRender();
   }
 
   /** Checks and captures: the dimming behind the words ("ellipse", "bands", "none"; null: the tuned one). */

@@ -870,31 +870,42 @@ describe("faces, styles and colours", () => {
     expect(CAPTION_FALLBACK_STYLE.script).toBe("heavy-italic");
   });
 
-  it("takes its colours from the globe's own palette, greys only, all solid: the face is exactly the page colour, the outline the coast grey pushed to the ink, the side a calmer tone between", () => {
+  it("is text-coloured letters in a mid-tone contour and thickness, all solid: the face the secondary text tone, a picked-out word BSoD Blue", () => {
     const light = { background: [0.984, 0.984, 0.984], ink: [0.039, 0.039, 0.039], coast: [0.56, 0.56, 0.56], outline: [0.9, 0.9, 0.9], grid: [0.8, 0.8, 0.8], ramp: [] } as never;
     const dark = { background: [0.039, 0.039, 0.039], ink: [0.96, 0.96, 0.96], coast: [0.38, 0.38, 0.38], outline: [0.1, 0.1, 0.1], grid: [0.2, 0.2, 0.2], ramp: [] } as never;
     const l = captionColors(light);
     const d = captionColors(dark);
-    // monochrome: every channel the same, and there is no accent
-    for (const c of [l.face, l.outline, l.side, d.face, d.outline, d.side]) expect(c[0]).toBeCloseTo(c[1]!, 9);
-    expect(Object.keys(l).sort()).toEqual(["face", "outline", "side"]);
-    // the face IS the page's colour in both schemes (the inside of a letter is a hole in the linework, solid)
-    expect([...l.face]).toEqual([0.984, 0.984, 0.984]);
-    expect([...d.face]).toEqual([0.039, 0.039, 0.039]);
-    // the outline reads against the page (at least 4.5:1) in both
+    expect(Object.keys(l).sort()).toEqual(["accent", "face", "outline", "side"]);
     const lum = (c: readonly number[]) => {
       const f = (v: number) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
       return 0.2126 * f(c[0]!) + 0.7152 * f(c[1]!) + 0.0722 * f(c[2]!);
     };
     const ratio = (a: readonly number[], b: readonly number[]) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
-    expect(ratio(l.outline, l.face)).toBeGreaterThan(4.5);
-    expect(ratio(d.outline, d.face)).toBeGreaterThan(4.5);
-    // the side is a tone of its own, between the face and the outline, in both schemes, and calmer than the outline
-    expect(l.side[0]).toBeLessThan(l.face[0]);
-    expect(l.side[0]).toBeGreaterThan(l.outline[0]);
-    expect(d.side[0]).toBeGreaterThan(d.face[0]);
-    expect(d.side[0]).toBeLessThan(d.outline[0]);
-    expect(ratio(l.side, l.face)).toBeLessThan(ratio(l.outline, l.face));
-    expect(ratio(d.side, d.face)).toBeLessThan(ratio(d.outline, d.face));
+    for (const [t, bg] of [[l, [0.984, 0.984, 0.984]], [d, [0.039, 0.039, 0.039]]] as const) {
+      // the face is a grey text tone, legible; the blue is legible for large letters (3:1 or more) and is blue
+      expect(t.face[0]).toBeCloseTo(t.face[1]!, 9);
+      expect(ratio(t.face, bg)).toBeGreaterThan(4.5);
+      expect(ratio(t.accent, bg)).toBeGreaterThan(3);
+      expect(t.accent[2]).toBeGreaterThan(t.accent[0] + 0.2);
+      // the contour reads against the page (1.8 to 2.3:1) and is clearly less strong than the letters; the thickness a step closer to the page
+      expect(ratio(t.outline, bg)).toBeGreaterThan(1.8);
+      expect(ratio(t.outline, bg)).toBeLessThan(2.3);
+      expect(ratio(t.outline, t.face)).toBeGreaterThan(3);
+      expect(ratio(t.side, bg)).toBeGreaterThan(1.5);
+      expect(ratio(t.side, bg)).toBeLessThan(ratio(t.outline, bg));
+    }
+    // the dark scheme's blue is soft (not glaring): not the 500 step, a lighter, calmer one
+    expect(d.accent[0]).toBeGreaterThan(0.3);
+    // mode `page`: the exact page colour for both
+    const p = captionColors(light, "page");
+    expect([...p.outline]).toEqual([0.984, 0.984, 0.984]);
+    expect([...p.side]).toEqual([...p.outline]);
+  });
+
+  it("keeps the accent on a run through the cut of a phrase (a word picked out stays picked out)", () => {
+    const line: CaptionRun[] = [{ text: "A " }, { text: "personal archive", style: "heavy", accent: "blue" }, { text: ", organised around " }, { text: "places", style: "heavy", accent: "blue" }, { text: "." }];
+    const cut = splitRuns(line, (r) => r.text.length)!;
+    expect(cut[0]!.find((r) => r.style === "heavy")!.accent).toBe("blue");
+    expect(cut[1]!.find((r) => r.style === "heavy")!.accent).toBe("blue");
   });
 });

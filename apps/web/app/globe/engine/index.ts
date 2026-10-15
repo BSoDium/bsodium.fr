@@ -131,6 +131,12 @@ export interface GlobeDebug {
   captionExtent(): ReturnType<GlobeRenderer["captionExtent"]>;
   /** The dimming behind the caption's words: "ellipse", "bands", "none" (null: the tuned `CAPTION.dim.mode`): the comparison captures. */
   captionDim(mode: "ellipse" | "bands" | "none" | null): void;
+  /** The thickness's look: "page", "mix" or "edge" (null: the tuned one): the comparison captures. */
+  captionSide(mode: "page" | "mix" | "edge" | null): void;
+  /** The ring of type's highlight: "blue", "ink" or "none" (null: the tuned one). */
+  ringHighlight(mode: "blue" | "ink" | "none" | null): void;
+  /** The energy knobs (`ENERGY`): set for measurements. */
+  energy(patch: Record<string, unknown>): void;
   /** Turn the showcase (the caption in, the boxes out) on or off as the app's hero would (checks and the perf scenarios). */
   showcase(on: boolean): void;
   /** Set the earth rotation angle in degrees (moves the sky against the earth) and draw. */
@@ -373,6 +379,9 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       captionProbe: () => renderer.captionProbe(),
       captionExit: (exit) => renderer.setCaptionExit(exit),
       captionDim: (mode) => renderer.setCaptionDim(mode),
+      captionSide: (mode) => renderer.setCaptionSide(mode),
+      ringHighlight: (mode) => renderer.setRingHighlight(mode),
+      energy: (patch) => renderer.setEnergy(patch as never),
       captionExtent: () => renderer.captionExtent(),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),

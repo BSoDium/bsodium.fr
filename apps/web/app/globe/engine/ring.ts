@@ -135,6 +135,8 @@ export class GlyphBuffer {
   angle = new Float32Array(0);
   /** UTF-16 code of the character. */
   code = new Uint16Array(0);
+  /** Index of the character in the line (`k mod length`): which phrase a glyph is in. */
+  idx = new Uint16Array(0);
   /** Glyphs in the buffer. */
   count = 0;
   /** The em of every glyph, CSS px (all the same). */
@@ -155,6 +157,7 @@ export class GlyphBuffer {
     this.y = new Float32Array(cap);
     this.angle = new Float32Array(cap);
     this.code = new Uint16Array(cap);
+    this.idx = new Uint16Array(cap);
   }
 }
 
@@ -196,6 +199,7 @@ export function placeGlyphs(out: GlyphBuffer, p: PlaceArgs): number {
     out.y[n] = p.cy - radius * Math.cos(a);
     out.angle[n] = a;
     out.code[n] = code;
+    out.idx[n] = k % L;
     n++;
   }
   out.minX = p.cx - radius;

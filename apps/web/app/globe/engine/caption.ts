@@ -31,9 +31,14 @@ export type CaptionFaceKey = "serif" | "mono" | "script";
 export type CaptionStyleKey = "plain" | "heavy" | "heavy-italic" | "mono" | "script";
 
 /** A stretch of a line in one style (the app's words: engine/types `GlobeCaptionSpan` is the same shape). */
+/** The caption has ONE palette: BSoD Blue, used sparingly. */
+export type CaptionHue = "blue";
+
 export interface CaptionRun {
   text: string;
   style?: CaptionStyleKey;
+  /** In a palette's pastel text tone, not the secondary text tone. */
+  accent?: CaptionHue;
 }
 
 /** What the caption says: phrase sets that take turns in the upper rows, each set a few rows, and the rows under them that stay (the call to action). */
@@ -80,23 +85,33 @@ export const CAPTION_FACE = {
   below: 0.55,
 } as const;
 
+/** `#rrggbb` as 0..1 channels. */
+const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
+
 /**
- * The colours of the caption for a theme, all from the globe's own palette: the face is the page colour tinted towards the ink, the outline the
- * coastline's tone pushed towards the ink, the side a grey between the face and the outline. Greys only (monochrome), quieter than the name
- * (which is the full ink), clearly readable against the linework in both schemes.
+ * The colours of the caption for a theme, all solid (alpha 1). The look (round 9): the letters are TEXT-coloured (the secondary text tone:
+ * `face`; the few words in blue: `accent`) inside a contour and a thickness that are a MID TONE between the page and the text (`outline`, then
+ * `side` one step closer to the page): present, clearly less strong than the letters, opaque, so a glyph is cut out of the globe's linework
+ * by a halo that gives it depth.
  */
-export function captionColors(theme: GlobeTheme): {
+export function captionColors(theme: GlobeTheme, sideMode: "page" | "mix" | "edge" = CAPTION.colors.sideMode): {
   face: readonly [number, number, number];
+  accent: readonly [number, number, number];
   outline: readonly [number, number, number];
   side: readonly [number, number, number];
 } {
   const lum = (c: readonly number[]) => 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
   const dark = lum(theme.background) < 0.5;
   const mix = (a: readonly number[], b: readonly number[], t: number): [number, number, number] => [a[0]! + (b[0]! - a[0]!) * t, a[1]! + (b[1]! - a[1]!) * t, a[2]! + (b[2]! - a[2]!) * t];
-  // The face is the PAGE's own colour in both schemes (solid): the letters are an outline and a thickness round a hole in the globe's linework.
-  const face: [number, number, number] = [theme.background[0], theme.background[1], theme.background[2]];
-  const outline = mix(theme.coast, theme.ink, dark ? CAPTION.colors.outlineMix.dark : CAPTION.colors.outlineMix.light);
-  return { face, outline, side: mix(face, outline, dark ? CAPTION.colors.sideMix.dark : CAPTION.colors.sideMix.light) };
+  const face = hex(dark ? CAPTION.colors.text.dark : CAPTION.colors.text.light);
+  const accent = hex(dark ? CAPTION.colors.accent.dark : CAPTION.colors.accent.light);
+  const page: [number, number, number] = [theme.background[0], theme.background[1], theme.background[2]];
+  const k = dark ? 0 : 1;
+  const outlineMix = [CAPTION.colors.outlineMix.dark, CAPTION.colors.outlineMix.light][k]!;
+  const sideMix = [CAPTION.colors.sideMix.dark, CAPTION.colors.sideMix.light][k]!;
+  const outline = sideMode === "page" ? page : mix(page, face, outlineMix);
+  const side = sideMode === "page" ? page : mix(page, face, sideMix);
+  return { face, accent, outline, side };
 }
 
 /** The face asked of the system when a face could not be had: the handwriting is the one that can fail (its file), and the heavy italic serif stands in for it. */
@@ -185,11 +200,12 @@ export const runsText = (runs: readonly CaptionRun[]): string => runs.map((r) =>
 interface Token {
   text: string;
   style: CaptionStyleKey | undefined;
+  accent: CaptionHue | undefined;
 }
 
 const tokenize = (runs: readonly CaptionRun[]): Token[] => {
   const out: Token[] = [];
-  for (const r of runs) for (const m of r.text.matchAll(/\S+\s*|\s+/g)) out.push({ text: m[0], style: r.style });
+  for (const r of runs) for (const m of r.text.matchAll(/\S+\s*|\s+/g)) out.push({ text: m[0], style: r.style, accent: r.accent });
   return out;
 };
 
@@ -198,8 +214,8 @@ const toRuns = (tokens: readonly Token[]): CaptionRun[] => {
   const out: CaptionRun[] = [];
   for (const t of tokens) {
     const last = out[out.length - 1];
-    if (last && last.style === t.style) last.text += t.text;
-    else out.push(t.style ? { text: t.text, style: t.style } : { text: t.text });
+    if (last && last.style === t.style && last.accent === t.accent) last.text += t.text;
+    else out.push({ text: t.text, ...(t.style ? { style: t.style } : {}), ...(t.accent ? { accent: t.accent } : {}) });
   }
   if (out.length) {
     out[0]!.text = out[0]!.text.replace(/^\s+/, "");
@@ -778,6 +794,8 @@ export class CaptionMotion {
   private fixedFrom = Infinity;
   /** The roll goes on at rest (false under reduced motion: the final composition, still). */
   continuous = true;
+  /** The clock stands still (the energy pass: no input for a long while, a blurred window, a globe out of view): the composition stays as it is. */
+  frozen = false;
   private starts: number[] = [];
   /** An `in` that waits for the first frame (the time starts when something is there to see). */
   private pending = false;
@@ -864,7 +882,7 @@ export class CaptionMotion {
    */
   tick(now: number): void {
     if (this.phase === "fade" && now - this.t0 >= CAPTION.fadeMs) this.phase = "hidden";
-    if (this.lastNow >= 0 && (this.phase === "in" || this.phase === "rest") && !this.pending) {
+    if (this.lastNow >= 0 && (this.phase === "in" || this.phase === "rest") && !this.pending && !this.frozen) {
       this.clock += Math.min(Math.max(now - this.lastNow, 0), CAPTION.drift.maxStepMs);
       this.ticked = true;
     }
@@ -967,12 +985,12 @@ export class CaptionMotion {
   /** Something is moving (the frame loop must keep going). */
   get animating(): boolean {
     // (a pending entrance is not a frame loop: nothing moves until the first frame has given it a clock)
-    return this.pinned === null && this.pinnedAngle === null && ((this.phase === "in" && !this.pending) || this.phase === "out");
+    return this.pinned === null && this.pinnedAngle === null && ((this.phase === "in" && !this.pending && !this.frozen) || this.phase === "out");
   }
 
   /** The steady roll is on: the rows are in and moving (a slower, capped frame loop of the caption's own: `CAPTION.drift.frameMs`). */
   get drifting(): boolean {
-    return this.pinned === null && this.pinnedAngle === null && this.phase === "rest" && this.continuous;
+    return this.pinned === null && this.pinnedAngle === null && this.phase === "rest" && this.continuous && !this.frozen;
   }
 }
 

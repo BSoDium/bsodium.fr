@@ -44,6 +44,8 @@ export const DEFAULT_SITE_URL = "https://v2.bsodium.fr";
 export interface CaptionSpan {
   text: string;
   style?: "plain" | "heavy" | "heavy-italic" | "mono" | "script";
+  /** In the blue text tone (the caption's one palette, sparingly: at most two words on screen); weight or face carries it too. */
+  accent?: "blue";
 }
 
 /** How each section's name is set in the caption: the code section in the mono face, the poems in a handwriting, the others in the heavy serif. */
@@ -53,6 +55,7 @@ const SECTION_CAPTION_STYLE = {
   artwork: "heavy-italic",
   poem: "script",
 } as const satisfies Record<keyof typeof SECTIONS, NonNullable<CaptionSpan["style"]>>;
+
 
 /** The words a caption row can be set in: heavy for the ones to highlight, the section kinds' own faces (see `SECTION_CAPTION_STYLE`). */
 type CaptionRow = readonly CaptionSpan[];
@@ -69,8 +72,8 @@ export type KindCounts = Record<keyof typeof SECTIONS, number>;
 const KINDS = Object.keys(SECTIONS) as (keyof typeof SECTIONS)[];
 
 /** `n` of a kind in its own noun (singular or plural: "1 poem", "5 poems"), the number picked out. */
-const countSpans = (kind: keyof typeof SECTIONS, n: number): CaptionSpan[] => [
-  { text: String(n), style: "heavy" },
+const countSpans = (kind: keyof typeof SECTIONS, n: number, accent = false): CaptionSpan[] => [
+  { text: String(n), style: "heavy", ...(accent ? { accent: "blue" as const } : {}) },
   { text: ` ${n === 1 ? SECTIONS[kind].noun.one : SECTIONS[kind].noun.many}` },
 ];
 
@@ -94,13 +97,13 @@ export function siteCaption(counts?: KindCounts | null): SiteCaption {
   };
   const sets: CaptionRow[][] = [
     [
-      [{ text: "A " }, { text: "personal archive", style: "heavy" }, { text: "," }],
-      [{ text: "organised around " }, { text: "places", style: "heavy" }, { text: "." }],
+      [{ text: "A " }, { text: "personal archive", style: "heavy", accent: "blue" }, { text: "," }],
+      [{ text: "organised around " }, { text: "places", style: "heavy", accent: "blue" }, { text: "." }],
     ],
     [names(0, 1), names(2, 3)],
   ];
   if (counts && KINDS.every((k) => Number.isFinite(counts[k]) && counts[k] >= 0) && KINDS.some((k) => counts[k] > 0)) {
-    const row = (a: number, b: number): CaptionRow => [...countSpans(KINDS[a]!, counts[KINDS[a]!]), { text: " \u00b7 " }, ...countSpans(KINDS[b]!, counts[KINDS[b]!])];
+    const row = (a: number, b: number): CaptionRow => [...countSpans(KINDS[a]!, counts[KINDS[a]!], true), { text: " \u00b7 " }, ...countSpans(KINDS[b]!, counts[KINDS[b]!])];
     sets.push([row(0, 1), row(2, 3)]);
   }
   return {
