@@ -836,6 +836,10 @@ Owner: a skybox around the earth in the globe view, like Google Earth's Milky Wa
 
 Not verified: Safari / iOS and any GPU but the M4's (the GLSL uses 3.00 ES features: array constants and integer vector bitwise `&`, which every WebGL2 implementation must support), a real phone's frame time, real reduced motion in a browser (Chromium's emulation only).
 
+### Travel paths (2026-10-15)
+
+Every route leg is drawn faintly on the globe and the street map, the selected place's legs in ink: one instanced draw call on the globe, one GeoJSON source and a few filtered layers on the street map, a "Paths" switch and a "Journeys" list in the place panel. Details, numbers and limits: [paths.md](paths.md). `engine/route-layer.ts` (`RouteLayer`) replaced the per-route lines; `routeBuffers`, `routesForPlace` and `isRouteStop` are gone. Debug: `?globe-debug&paths-stress=N`, `__globeDebug.pathStats()`.
+
 ### Ring of type (2026-10-13, experiment; flat version 2026-10-13)
 
 Owner: a ring of small spinning type that circles the planet when the globe is zoomed far out. Round 1 built it as a tilted ring in the globe's perspective (a near arc, a small mirrored far arc hidden behind the planet); the owner's reference was 2D, so round 2 (this) is **a flat circle of text concentric with the planet's disc**: the circle of the globe's silhouette, a little larger, the letters' baselines on it and their tops pointing outward, running clockwise, all one size, facing the viewer, none hidden (the reference's dashed square frame is not built). Code: the pure maths in `engine/ring.ts` (tests `ring.test.ts`), the 2D canvas layer in `engine/ring-layer.ts`, the tuned numbers in `RING` (`engine/tuning.ts`, ONE block), the words in `app/globe/ring-text.ts` (`RING_PHRASES`: the one constant file; `lib/site.ts` is not imported, the globe imports nothing from the app, and the engine only receives the joined string through `createHandover({ ringText })`); browser check `scripts/globe/ring.mjs`, perf scenarios `ring-rest` and `ring-wheel` (`scripts/perf/scenarios.mjs`).

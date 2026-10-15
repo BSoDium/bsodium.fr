@@ -82,6 +82,18 @@ export function PlaceDetail({ place }: { place: PlaceDetailData }) {
             ))}
           </Stack>
         )}
+        {place.journeys.length > 0 && (
+          <section aria-labelledby="place-journeys" data-slot="place-journeys">
+            <Stack gap={3}>
+              <SectionHeader as="h2" id="place-journeys" title="Journeys" meta={place.journeys.length} />
+              <ul className="m-0 flex list-none flex-col gap-1 p-0 text-base text-pretty">
+                {place.journeys.map((journey) => (
+                  <li key={journey.text}>{journey.text}</li>
+                ))}
+              </ul>
+            </Stack>
+          </section>
+        )}
         {count > 0 && (
           <section aria-label="Entries" data-slot="place-entries">
             <Stack gap={8}>

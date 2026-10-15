@@ -28,8 +28,8 @@ import { INK_THRESHOLD, SOLID_FROM } from "./core/art-line";
 import { cellCssFor, cellDevicePx, EasedValue, revealRadiusDevice } from "./core/pixel";
 import { isPmtilesUrl, type SourceDescriptor } from "./core/source-descriptor";
 import { TileSourceManager, type SourceId, type TileStatus } from "./core/tile-source-manager";
-import { routeFeatures } from "./core/routes";
-import { isRouteStop, routesForPlace } from "../engine/geometry";
+import { legFeatures, legKeysAt } from "./core/routes";
+import { LEG_MODES, MODE_STYLE } from "../paths/modes";
 import { Compositor, type OutputSize } from "./gl/compositor";
 import type { WarpCamera } from "./core/warp";
 import { buildPalette } from "./core/palette";
@@ -39,7 +39,7 @@ import { createTileNetwork } from "./net/tile-protocols";
 import { probeSource, type ProbeConfig, type ProbeOutcome } from "./net/probe";
 import { HudLayer } from "./overlay/hud-layer";
 import { LayerSwitch, switchRules, type SwitchView } from "./style/layer-switch";
-import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, WORLD_PLACEHOLDER_BELOW, applyCell, buildStreetStyle, graticule, hasPlaceholder, seaFrom, type StyleTiles } from "./style/street-style";
+import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, buildStreetStyle, focusFilter, graticule, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
 import { STREET_TUNING } from "./tuning";
 import type { AnimateOptions, FlyOptions, RevealOptions, StreetDebug, StreetMap, StreetMapOptions, StreetView } from "./types";
 
@@ -180,15 +180,39 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
 
   let world: { coastlines: GeoJSON.FeatureCollection; borders: GeoJSON.FeatureCollection } = opts.world ?? { coastlines: EMPTY_FC, borders: EMPTY_FC };
   const grid = graticule(15, 3);
-  // Curated routes are drawn only while the selected place is one of their stops (engine/geometry.ts `routesForPlace`).
-  const routesOf = (slug: string | null) => routeFeatures(routesForPlace(opts.routes, slug ? opts.places.find((p) => p.slug === slug) : undefined));
-  let routes = routesOf(opts.selectedSlug);
-  // The stops of the shown routes are drawn at any zoom (the route would otherwise run between missing markers).
+  // Every leg of every route is one source, built once; the selected place's legs are the keys the focus layers filter on (`setFilter`).
+  const legs = legFeatures(opts.routes);
+  const placeBySlug = (slug: string | null) => (slug ? opts.places.find((p) => p.slug === slug) : undefined);
+  let focusKeys = legKeysAt(opts.routes, placeBySlug(opts.selectedSlug));
+  let pathsOn = opts.paths !== false;
+  const applyFocus = () => {
+    for (const mode of LEG_MODES) {
+      for (const id of [routeLayerId("routes-focus", mode), ...(MODE_STYLE[mode].tick ? [routeLayerId("routes-focus", mode, true)] : [])]) {
+        if (map.getLayer(id)) map.setFilter(id, focusFilter(mode, focusKeys));
+      }
+    }
+  };
+  const applyPathsVisible = () => {
+    for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", pathsOn ? "visible" : "none");
+  };
+  // The places at the far ends of the lit legs are drawn at any zoom (a lit leg would otherwise run between missing markers).
   let lodRef: LodTree;
-  const syncRouteStops = (slug: string | null) =>
-    lodRef.setExtraForced(
-      routesForPlace(opts.routes, slug ? opts.places.find((p) => p.slug === slug) : undefined).flatMap((r) => opts.places.filter((p) => isRouteStop(r, p)).map((p) => lodRef.indexOf(p.slug))),
-    );
+  const syncRouteStops = (slug: string | null) => {
+    const place = placeBySlug(slug);
+    const forced: number[] = [];
+    if (place) {
+      for (const route of opts.routes) {
+        route.points.forEach((p, i) => {
+          if (p.lat !== place.lat || p.lon !== place.lon) return;
+          for (const q of [route.points[i - 1], route.points[i + 1]]) {
+            const other = q && opts.places.find((x) => x.lat === q.lat && x.lon === q.lon);
+            if (other) forced.push(lodRef.indexOf(other.slug));
+          }
+        });
+      }
+    }
+    lodRef.setExtraForced(forced);
+  };
   const descriptors: Partial<Record<SourceId, SourceDescriptor>> = {};
 
   // ---- tile network + source manager ----------------------------------------------------------------------------
@@ -245,7 +269,9 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
       coastlines: world.coastlines,
       borders: world.borders,
       graticule: grid,
-      routes,
+      routes: legs,
+      focusKeys,
+      pathsVisible: pathsOn,
       projection: opts.projection ?? "globe",
       cellCss: mapCell(),
       visible: layerSwitch.visibleIds(),
@@ -732,12 +758,17 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     setSelected(slug, o) {
       selected = slug;
       hud.setSelected(slug);
-      routes = routesOf(slug);
+      focusKeys = legKeysAt(opts.routes, placeBySlug(slug));
       syncRouteStops(slug);
-      (map.getSource("routes") as { setData?(d: unknown): void } | undefined)?.setData?.(routes);
+      applyFocus();
       const place = slug ? places.get(slug) : undefined;
       if (place && o?.fly) map_.flyTo({ lon: placeFraming(place).lon, lat: placeFraming(place).lat, zoom: o.zoom ?? Math.max(map.getZoom(), 14.5) });
       else map.triggerRepaint();
+    },
+    setPaths(on) {
+      pathsOn = on;
+      applyPathsVisible();
+      map.triggerRepaint();
     },
     setFocused(slug) {
       focused = slug;

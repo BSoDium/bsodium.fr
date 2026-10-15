@@ -33,7 +33,7 @@ import {
   type ViewBasis,
   type ViewState,
 } from "./geo";
-import { isRouteStop, routesForPlace } from "./geometry";
+import { placeKey } from "../paths/network";
 import { clampInset, fadeMask, freeWidth, insetShiftBuf } from "./inset";
 import {
   createFlight,
@@ -202,7 +202,6 @@ export class GlobeRenderer {
   private cleanups: (() => void)[] = [];
 
   private places: readonly GlobePlace[];
-  private routes: readonly GlobeRoute[];
   private placeBySlug = new Map<string, GlobePlace>();
   private selected: string | null = null;
   private focused: string | null = null;
@@ -241,7 +240,6 @@ export class GlobeRenderer {
     this.start = start;
     this.theme = opts.theme;
     this.places = opts.places;
-    this.routes = opts.routes;
     this.lod = opts.lod;
     this.nodeScreen = new NodeScreen(opts.lod.size);
     for (const p of opts.places) this.placeBySlug.set(p.slug, p);
@@ -658,22 +656,39 @@ export class GlobeRenderer {
     this.requestRender();
   }
 
-  /** The routes through the selected place: the only ones drawn (engine/geometry.ts `routesForPlace`). */
-  private selectedRoutes(): GlobeRoute[] {
-    return routesForPlace(this.routes, this.selected ? this.placeBySlug.get(this.selected) : undefined);
-  }
-
+  /**
+   * The selected place's legs (the ones that arrive at it and leave it, on every route through it) go to full ink with the draw-on;
+   * every other leg stays faint (engine/route-layer.ts). The same call serves the first selection and a change of it: the geometry is
+   * never rebuilt, only the state of the legs.
+   */
   private selectRoute(slug: string | null, animate: boolean) {
-    const routes = this.selectedRoutes();
-    this.globe.routes.show(new Set(routes.map((r) => r.id)), animate && !this.reduced && !!slug, performance.now());
+    const place = slug ? this.placeBySlug.get(slug) : undefined;
+    this.globe.routes.select(place ? placeKey(place.lat, place.lon) : null, animate && !this.reduced && !!slug, performance.now());
     this.refreshMarkers();
     this.requestRender();
   }
 
+  /** The places at the far ends of the lit legs are drawn at any zoom, so a lit leg never runs between missing markers. */
   private refreshMarkers() {
     const stops = new Set<string>();
-    for (const route of this.selectedRoutes()) for (const p of this.places) if (isRouteStop(route, p)) stops.add(p.slug);
+    const net = this.globe.routes.network;
+    for (const id of this.globe.routes.litLegs()) {
+      const leg = net.legs[id]!;
+      for (const key of [leg.fromKey, leg.toKey]) {
+        const slug = this.placeByKey().get(key);
+        if (slug) stops.add(slug);
+      }
+    }
     this.lod.setExtraForced([...stops].map((slug) => this.lod.indexOf(slug)));
+  }
+
+  private keyIndex: Map<string, string> | null = null;
+  private placeByKey(): Map<string, string> {
+    if (!this.keyIndex) {
+      this.keyIndex = new Map();
+      for (const p of this.places) this.keyIndex.set(placeKey(p.lat, p.lon), p.slug);
+    }
+    return this.keyIndex;
   }
 
   /* ------------------------------ projection / picking ------------------------------ */
@@ -780,9 +795,20 @@ export class GlobeRenderer {
     this.drawnBoxes = boxes;
   }
 
-  /** Ids of the routes drawn now: only those through the selected place (checks). */
+  /** Ids of the routes with a lit leg now: only those through the selected place (checks). */
   routesShown(): string[] {
     return this.globe.routes.shown();
+  }
+
+  /** The "Paths" layer: every leg of every route (the lit ones included) is drawn or not. */
+  setPathsVisible(on: boolean) {
+    this.globe.routes.setEnabled(on);
+    this.requestRender();
+  }
+
+  /** Buffer sizes, level and counts of the paths layer (measurement). */
+  pathStats() {
+    return this.globe.routes.stats();
   }
 
   /** The globe layers' timed state (checks): the borders' fade value now and whether it is going to / at the on state. */
@@ -969,7 +995,7 @@ export class GlobeRenderer {
       this.velocity = step.velocity;
       if (!isStill(this.velocity)) more = true;
     }
-    if (this.globe.routes.advance(now, zoomToRadiusPx(this.view.zoom))) more = true;
+    if (this.globe.routes.advance(now)) more = true;
     return more;
   }
 

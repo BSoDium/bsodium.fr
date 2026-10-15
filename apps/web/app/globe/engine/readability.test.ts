@@ -52,6 +52,14 @@ for (const scheme of ["light", "dark"] as const) {
       // the labels' translucent plate (below) is computed against `peak`; a route in full ink is louder and is a thin line a plate keeps clear of
       expect(contrast(ink, bg)).toBeGreaterThan(contrast(peak, bg));
     });
+    it("paths: the faint tone (the `coast` level, never an alpha) holds 3:1 against the page for graphics (WCAG 1.4.11), below the box at rest; the selected legs' ink is louder still", () => {
+      const faint = ramp[roleLevel("coast")]!;
+      expect(contrast(faint, bg)).toBeGreaterThanOrEqual(3);
+      expect(contrast(peak, bg)).toBeGreaterThan(contrast(faint, bg));
+      expect(contrast(ink, bg)).toBeGreaterThan(contrast(faint, bg));
+      // the fade-in steps through solid palette levels, each one a real colour of the ramp (no blend with the page)
+      for (let level = 1; level <= roleLevel("coast"); level++) expect(ramp[level]).toBeDefined();
+    });
     it("a selected label (page colour on a solid ink plate) is opaque, so its ratio does not depend on the map", () => {
       expect(contrast(bg, fg)).toBeGreaterThanOrEqual(15);
     });

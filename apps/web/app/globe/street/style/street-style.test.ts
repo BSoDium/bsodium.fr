@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { expInterp } from "../core/art-line";
+import { THIN_INK, expInterp } from "../core/art-line";
 import { roleLevel } from "../../engine/palette";
-import { ERASE, MAX_LEVELS } from "../core/palette";
-import { BORDER_TILE_MINZOOM, DEFAULT_HANDOFF, SPECS, WORLD_PLACEHOLDER_BELOW, borderHandoff, hasPlaceholder, buildStreetStyle, graticule, layerIds, linePaint, type Schema } from "./street-style";
+import { ERASE, MAX_LEVELS, lineColor } from "../core/palette";
+import { BORDER_TILE_MINZOOM, DEFAULT_HANDOFF, ROUTE_LAYER_IDS, SPECS, WORLD_PLACEHOLDER_BELOW, borderHandoff, hasPlaceholder, buildStreetStyle, graticule, layerIds, linePaint, focusFilter, type Schema } from "./street-style";
 import { decodeLevel, evalFilter, levelOfPaint } from "./probe";
 
 const empty: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -64,15 +64,50 @@ describe("buildStreetStyle", () => {
         expect(Object.keys(s.sources).filter((k) => (s.sources[k] as { type: string }).type === "vector")).toEqual(["tiles"]);
         expect((s.sources.tiles as { tiles: string[] }).tiles[0]).toMatch(/^cat-p1:\/\//);
       });
-      it("draws routes over the roads with an erasing halo underneath, and under the world lines", () => {
+      it("draws the paths over the roads, faint under focus, under the world lines, with no halo", () => {
         const ids = layerIds(s);
-        expect(ids.indexOf("routes-halo")).toBeLessThan(ids.indexOf("routes-line"));
-        expect(ids.indexOf("routes-line")).toBeGreaterThan(ids.indexOf("building-outline"));
-        expect(ids.indexOf("routes-line")).toBeLessThan(ids.indexOf("world-coast"));
-        const halo = s.layers.find((l) => l.id === "routes-halo") as { paint: Record<string, unknown> };
-        expect(halo.paint["line-color"]).toBe(ERASE);
-        const line = s.layers.find((l) => l.id === "routes-line") as { paint: Record<string, unknown> };
-        expect((line.paint["line-dasharray"] as number[])[0]).toBeGreaterThanOrEqual(1.42);
+        expect(ids).not.toContain("routes-halo");
+        for (const id of ROUTE_LAYER_IDS) expect(ids, id).toContain(id);
+        expect(ids.indexOf("routes-faint")).toBeGreaterThan(ids.indexOf("building-outline"));
+        expect(ids.indexOf("routes-focus-unknown")).toBeLessThan(ids.indexOf("world-coast"));
+        expect(ids.indexOf("routes-faint-walk")).toBeLessThan(ids.indexOf("routes-focus"));
+      });
+      it("authors every path in art pixels: one cell wide, thin ink, solid-colour tones, dashes of at least 1.42 widths", () => {
+        const cell = 3;
+        for (const id of ROUTE_LAYER_IDS) {
+          const l = s.layers.find((x) => x.id === id) as { paint: Record<string, unknown> };
+          const tick = id.endsWith("-tick");
+          expect(l.paint["line-width"], id).toBe((tick ? 3 : 1) * cell);
+          expect(l.paint["line-opacity"], id).toBe(tick ? 1 : THIN_INK);
+          const dash = l.paint["line-dasharray"] as number[] | undefined;
+          if (dash && !tick) expect(dash[0], id).toBeGreaterThanOrEqual(1.42);
+        }
+        const color = (id: string) => (s.layers.find((x) => x.id === id) as unknown as { paint: Record<string, string> }).paint["line-color"];
+        expect(color("routes-faint")).toBe(lineColor(roleLevel("coast")));
+        expect(color("routes-focus")).toBe(lineColor(roleLevel("ink")));
+      });
+      it("pins the pattern of each mode to the table the globe's shader reads", () => {
+        const dash = (id: string) => (s.layers.find((x) => x.id === id) as { paint: Record<string, unknown> }).paint["line-dasharray"];
+        expect(dash("routes-faint")).toBeUndefined();
+        expect(dash("routes-faint-rail")).toEqual([4, 2]);
+        expect(dash("routes-faint-ferry")).toEqual([1.5, 2.5]);
+        expect(dash("routes-faint-flight")).toEqual([1.5, 3.5]);
+        expect(dash("routes-faint-walk")).toEqual([1.5, 1.5]);
+        expect(dash("routes-faint-unknown")).toEqual([4, 3]);
+        // the tick: 1 cell of a 3-cell wide line, every 6 cells
+        const t = dash("routes-faint-rail-tick") as number[];
+        expect(t.reduce((a, b) => a + b, 0) * 3).toBeCloseTo(6);
+      });
+      it("selects by filter: a focus layer keeps the keys given, a faint layer only its mode", () => {
+        const sel = buildStreetStyle({ schema, tiles: TILES, coastlines: empty, borders: empty, graticule: empty, routes: empty, focusKeys: ["r:0", "r:3"] });
+        const f = (id: string) => (sel.layers.find((x) => x.id === id) as { filter: unknown }).filter;
+        expect(JSON.stringify(f("routes-focus-rail"))).toContain('"r:0","r:3"');
+        expect(f("routes-focus")).toEqual(focusFilter("road", ["r:0", "r:3"]));
+        expect(JSON.stringify(f("routes-faint-rail"))).not.toContain("key");
+      });
+      it("starts every path hidden when the switch is off", () => {
+        const off = buildStreetStyle({ schema, tiles: TILES, coastlines: empty, borders: empty, graticule: empty, routes: empty, pathsVisible: false });
+        for (const id of ROUTE_LAYER_IDS) expect((off.layers.find((x) => x.id === id) as { layout?: { visibility?: string } }).layout?.visibility, id).toBe("none");
       });
       it("never references glyphs or sprites and uses no symbol layers", () => {
         expect(JSON.stringify(s)).not.toMatch(/glyphs|sprite|text-field|icon-image/);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { decodePolyline5, haversineKm } from "./polyline";
 
 /**
  * The published content contract.
@@ -157,6 +158,55 @@ export const publishedPlaceSchema = z
   .strict();
 
 /**
+ * How a leg of a route is travelled. It only picks the line style of the map (a solid line, a dashed rail, a dotted
+ * ferry, a lifted dotted flight, fine dots for a walk); `unknown` is drawn as the geodesic arc.
+ */
+export const legModeSchema = z.enum(["road", "rail", "ferry", "flight", "walk", "unknown"]);
+
+/**
+ * Limits of the optional per-leg geometry of a route. Exported for the private repo's validator, which must enforce the
+ * very same numbers (the schema copy there is byte-identical: `published.schema.json`).
+ *
+ * Sizing: the spike's pre-baked legs simplified at 50 m average about 145 points (about 0.9 points per km) and
+ * 5 to 7 characters per point, so a typical leg is 1 KB and the whole archive 75 to 110 KB gzipped; the limits leave
+ * room for about 4 times that and keep the TRUE worst case (every leg at its limit) below 0.5 MB.
+ */
+export const ROUTE_LEG_LIMITS = {
+  /** A route has at most 200 stops, so at most 199 legs. */
+  legsPerRoute: 199,
+  /** Decoded points of one leg. */
+  pointsPerLeg: 2_000,
+  /** Characters of one leg's polyline: 8 per point is the worst case of a coordinate step of up to 200 km. */
+  charsPerLeg: 16_000,
+  /** Decoded points of one route (all legs). */
+  pointsPerRoute: 12_000,
+  /** Decoded points of the whole projection (all routes). */
+  pointsTotal: 60_000,
+  /** The first and last point of a leg lie within this distance of the leg's stops. */
+  endpointToleranceKm: 3,
+  /** No two consecutive points of a leg are farther apart than this. */
+  maxJumpKm: 200,
+} as const;
+
+const polylineCharsSchema = z
+  .string()
+  .min(1)
+  .max(ROUTE_LEG_LIMITS.charsPerLeg)
+  .regex(/^[?-~]+$/, "an encoded polyline (precision 5): characters from ? to ~ only");
+
+/** One leg between two consecutive stops. Without a polyline the leg is drawn as the geodesic arc between its stops. */
+export const publishedLegSchema = z
+  .object({
+    mode: legModeSchema,
+    /**
+     * Encoded polyline, precision 5, `[lat, lon]` deltas (docs/api-contract.md, "Route legs"). Never on a `flight`
+     * (an arc costs nothing). The first and last point are within `ROUTE_LEG_LIMITS.endpointToleranceKm` of the stops.
+     */
+    polyline: polylineCharsSchema.optional(),
+  })
+  .strict();
+
+/**
  * An explicitly curated route: an ordered list of published places. Routes are
  * never inferred; if it is not here, no line is drawn.
  */
@@ -165,8 +215,45 @@ export const publishedRouteSchema = z
     id: slugSchema,
     title: z.string().trim().min(1).max(120),
     stops: z.array(slugSchema).min(2).max(200),
+    /**
+     * Additive in schema version 1. One entry per consecutive pair of stops, so `stops.length - 1` entries; absent
+     * means every leg is a geodesic arc. Order is positional only: no timestamps, no durations.
+     */
+    legs: z.array(publishedLegSchema).max(ROUTE_LEG_LIMITS.legsPerRoute).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((route, ctx) => {
+    if (!route.legs) return;
+    if (route.legs.length !== route.stops.length - 1) {
+      ctx.addIssue({ code: "custom", path: ["legs"], message: `legs must have one entry per consecutive pair of stops (${route.stops.length - 1}), got ${route.legs.length}` });
+    }
+    let total = 0;
+    route.legs.forEach((leg, i) => {
+      if (leg.polyline === undefined) return;
+      if (leg.mode === "flight") {
+        ctx.addIssue({ code: "custom", path: ["legs", i, "polyline"], message: "a flight is drawn as an arc and carries no polyline" });
+        return;
+      }
+      const pts = decodePolyline5(leg.polyline);
+      if (!pts) {
+        ctx.addIssue({ code: "custom", path: ["legs", i, "polyline"], message: "not a valid precision-5 polyline of at least 2 points" });
+        return;
+      }
+      total += pts.length;
+      if (pts.length > ROUTE_LEG_LIMITS.pointsPerLeg) {
+        ctx.addIssue({ code: "custom", path: ["legs", i, "polyline"], message: `at most ${ROUTE_LEG_LIMITS.pointsPerLeg} points per leg, got ${pts.length}` });
+      }
+      for (let k = 1; k < pts.length; k++) {
+        if (haversineKm(pts[k - 1]!, pts[k]!) > ROUTE_LEG_LIMITS.maxJumpKm) {
+          ctx.addIssue({ code: "custom", path: ["legs", i, "polyline"], message: `consecutive points ${ROUTE_LEG_LIMITS.maxJumpKm} km apart or more (point ${k})` });
+          break;
+        }
+      }
+    });
+    if (total > ROUTE_LEG_LIMITS.pointsPerRoute) {
+      ctx.addIssue({ code: "custom", path: ["legs"], message: `at most ${ROUTE_LEG_LIMITS.pointsPerRoute} points per route, got ${total}` });
+    }
+  });
 
 // --- Entries (projects, articles, artworks, poems) ------------------------------------------------------------------------
 
@@ -780,6 +867,8 @@ export const publishedProjectionSchema = projectionShape.superRefine((p, ctx) =>
   });
 
   const routeIds = new Set<string>();
+  const coordsBySlug = new Map(p.places.map((pl) => [pl.slug, [pl.coordinates.lat, pl.coordinates.lon] as const]));
+  let totalPoints = 0;
   p.routes.forEach((route, i) => {
     if (routeIds.has(route.id)) {
       ctx.addIssue({ code: "custom", path: ["routes", i, "id"], message: `duplicate route id "${route.id}"` });
@@ -790,7 +879,26 @@ export const publishedProjectionSchema = projectionShape.superRefine((p, ctx) =>
         ctx.addIssue({ code: "custom", path: ["routes", i, "stops", j], message: `unknown place "${s}"` });
       }
     });
+    // Leg geometry: its ends sit at the stops (the legs themselves were checked with the route).
+    route.legs?.forEach((leg, j) => {
+      if (leg.polyline === undefined || leg.mode === "flight") return;
+      const pts = decodePolyline5(leg.polyline);
+      if (!pts) return;
+      totalPoints += pts.length;
+      const from = coordsBySlug.get(route.stops[j] ?? "");
+      const to = coordsBySlug.get(route.stops[j + 1] ?? "");
+      const tol = ROUTE_LEG_LIMITS.endpointToleranceKm;
+      if (from && haversineKm(pts[0]!, from) > tol) {
+        ctx.addIssue({ code: "custom", path: ["routes", i, "legs", j, "polyline"], message: `starts more than ${tol} km from "${route.stops[j]}"` });
+      }
+      if (to && haversineKm(pts[pts.length - 1]!, to) > tol) {
+        ctx.addIssue({ code: "custom", path: ["routes", i, "legs", j, "polyline"], message: `ends more than ${tol} km from "${route.stops[j + 1]}"` });
+      }
+    });
   });
+  if (totalPoints > ROUTE_LEG_LIMITS.pointsTotal) {
+    ctx.addIssue({ code: "custom", path: ["routes"], message: `at most ${ROUTE_LEG_LIMITS.pointsTotal} leg points in the projection, got ${totalPoints}` });
+  }
 
   p.places.forEach((place, i) => {
     place.related.forEach((r, j) => {
@@ -816,6 +924,8 @@ export type GroupKind = z.infer<typeof groupKindSchema>;
 export type PublishedGroup = z.infer<typeof publishedGroupSchema>;
 export type PublishedPlace = z.infer<typeof publishedPlaceSchema>;
 export type PublishedRoute = z.infer<typeof publishedRouteSchema>;
+export type PublishedLeg = z.infer<typeof publishedLegSchema>;
+export type LegMode = z.infer<typeof legModeSchema>;
 export type PublishedContentItem = z.infer<typeof publishedContentItemSchema>;
 export type PublishedCover = z.infer<typeof publishedCoverSchema>;
 export type PublishedMetaEntry = z.infer<typeof publishedMetaEntrySchema>;

@@ -1,7 +1,6 @@
 /** Pure vertex-buffer builders (plain typed arrays, no three.js) so they can be unit tested in node. */
 import type { Polylines } from "@catalyst/geodata";
-import type { GlobePlace, GlobeRoute } from "../types";
-import { DEG, lonLatToVec3, sampleRoute } from "./geo";
+import { DEG, lonLatToVec3 } from "./geo";
 
 /**
  * Longest straight chord (degrees of arc) a polyline segment may have on the sphere. A GL line is a straight chord
@@ -79,63 +78,4 @@ export function graticuleSegments(stepDeg: number, sampleDeg: number): Float32Ar
     }
   }
   return Float32Array.from(pts);
-}
-
-/**
- * GL lines are one buffer pixel wide, so a route is emitted four times with 1-pixel offsets
- * (0,0) (1,0) (0,1) (1,1): a 2x2 px stroke that reads heavier than the coastline.
- */
-const STROKE_OFFSETS = [0, 0, 1, 0, 0, 1, 1, 1] as const;
-
-export interface RouteBuffers {
-  /** Segment pairs, xyz, lifted above the surface. */
-  position: Float32Array;
-  /** Cumulative arc length (radians) at each segment vertex. */
-  distance: Float32Array;
-  /** Pixel offset (x, y) per vertex. */
-  offset: Float32Array;
-  /** Total arc length in radians. */
-  length: number;
-}
-
-/** Great-circle arcs through the route's curated points, in order. Nothing else is ever connected. */
-export function routeBuffers(route: GlobeRoute): RouteBuffers {
-  const sampled = sampleRoute(
-    route.points.map((p) => [p.lon, p.lat] as const),
-    { stepDeg: 0.4, heightPerRadian: 0.12 },
-  );
-  const n = sampled.positions.length / 3;
-  const segs = Math.max(0, n - 1);
-  const position = new Float32Array(segs * 6 * 4);
-  const distance = new Float32Array(segs * 2 * 4);
-  const offset = new Float32Array(segs * 4 * 4);
-  for (let k = 0; k < 4; k++) {
-    const ox = STROKE_OFFSETS[k * 2]!;
-    const oy = STROKE_OFFSETS[k * 2 + 1]!;
-    for (let i = 0; i < segs; i++) {
-      const s = k * segs + i;
-      position.set(sampled.positions.subarray(i * 3, i * 3 + 6), s * 6);
-      distance[s * 2] = sampled.distance[i]!;
-      distance[s * 2 + 1] = sampled.distance[i + 1]!;
-      offset.set([ox, oy, ox, oy], s * 4);
-    }
-  }
-  return { position, distance, offset, length: sampled.length };
-}
-
-const SAME_POINT_DEG = 1e-6;
-
-/** A place is on a route when it is one of the route's resolved stop points. */
-export function isRouteStop(route: GlobeRoute, place: Pick<GlobePlace, "lat" | "lon">): boolean {
-  return route.points.some(
-    (p) => Math.abs(p.lat - place.lat) < SAME_POINT_DEG && Math.abs(p.lon - place.lon) < SAME_POINT_DEG,
-  );
-}
-
-/**
- * The curated routes that pass through a place: the ONLY routes drawn. A route is shown while one of its stops is the
- * selected place, and never otherwise (no route is visible on the world view or while nothing is selected).
- */
-export function routesForPlace(routes: readonly GlobeRoute[], place: Pick<GlobePlace, "lat" | "lon"> | undefined): GlobeRoute[] {
-  return place ? routes.filter((r) => isRouteStop(r, place)) : [];
 }

@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { createHandover, type HandoverDebug, type HandoverHandle, type Notice } from "./handover/controller";
 import { HANDOVER } from "./handover/maths";
 import { casesHierarchy, stressHierarchy } from "./engine/lod-stress";
+import { stressRoutes } from "./paths/stress";
 import { applyDebugLevels } from "./engine/palette";
 import { applySpinFlags } from "./engine/idle-spin";
 import { applySkyFlags } from "./engine/sky";
@@ -87,6 +88,13 @@ function noGroupsForTests(): boolean {
 const groupsForTests = () => debugEnabled() && noGroupsForTests();
 
 /** Test-only: `?lod-stress=N` replaces the hierarchy by a synthetic one of about N nodes (performance checks). */
+/** Debug only: `?paths-stress=N` replaces the routes with N synthetic legs (paths/stress.ts), for measuring the paths layer. */
+function pathsStressCount(): number {
+  const v = new URLSearchParams(location.search).get("paths-stress");
+  const n = v ? Number(v) : 0;
+  return Number.isFinite(n) && n > 0 ? Math.min(20000, Math.floor(n)) : 0;
+}
+
 function lodStressCount(): number {
   try {
     const n = Number(new URLSearchParams(location.search).get("lod-stress"));
@@ -111,6 +119,7 @@ export default function GlobeCanvas({
   places,
   groups,
   routes,
+  paths = true,
   selectedSlug,
   focusedSlug,
   initialView,
@@ -145,9 +154,9 @@ export default function GlobeCanvas({
   const tilesKey = tiles && !(debugEnabled() && streetDisabledForTests()) ? JSON.stringify(tiles) : "";
   const viewRef = useRef(initialView);
   const appliedSelection = useRef(selectedSlug);
-  const latest = useRef({ selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, captionPhrases, showcase, onOrbit, onSelect, onViewChange, onInteract });
+  const latest = useRef({ paths, selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, captionPhrases, showcase, onOrbit, onSelect, onViewChange, onInteract });
   useEffect(() => {
-    latest.current = { selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, captionPhrases, showcase, onOrbit, onSelect, onViewChange, onInteract };
+    latest.current = { paths, selectedSlug, focusedSlug, reducedMotion, insetRight, ringPhrases, captionPhrases, showcase, onOrbit, onSelect, onViewChange, onInteract };
   });
 
   // `onInteract`: a gesture that starts ON the globe (its stage holds the canvas; the labels and the street map ignore the pointer, the
@@ -196,7 +205,8 @@ export default function GlobeCanvas({
           streetRoot,
           places: synthetic ? synthetic.places : places,
           groups: synthetic ? synthetic.groups : groupsForTests() ? [] : groups,
-          routes,
+          routes: debugEnabled() && pathsStressCount() ? stressRoutes(pathsStressCount(), places[0] ? { lat: places[0].lat, lon: places[0].lon } : undefined) : routes,
+          paths: now.paths,
           coastlines: geo.coastlines,
           borders: geo.borders,
           initialView: viewRef.current,
@@ -281,6 +291,10 @@ export default function GlobeCanvas({
     appliedSelection.current = selectedSlug;
     handle.setSelected(selectedSlug, true);
   }, [selectedSlug]);
+
+  useEffect(() => {
+    handleRef.current?.setPaths(paths);
+  }, [paths, status]);
 
   useEffect(() => {
     handleRef.current?.setFocused(focusedSlug);

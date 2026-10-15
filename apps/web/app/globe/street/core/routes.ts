@@ -1,10 +1,12 @@
 /**
- * Curated routes as map geometry. Only the routes in the `routes` option are ever drawn, between their ordered stops
- * (the same `GlobeRoute` shape the globe takes). At street scale the lines lie on the ground: great-circle
- * polylines, split at the antimeridian so they never wrap across the whole map.
+ * Curated routes as map geometry: the legs of the routes in the `routes` option, between their ordered stops (the same
+ * `GlobeRoute` shape the globe takes). At street scale the lines lie on the ground: the legs' own polylines, or great-circle
+ * polylines where a leg has none, split at the antimeridian so they never wrap across the whole map.
  */
 import type { GlobeRoute } from "../../types";
 import { lonLatToVec3, vec3ToLonLat, DEG } from "../../engine/geo";
+import { isLegMode } from "../../paths/modes";
+import { decodePolyline5 } from "../../paths/polyline";
 
 type LonLat = [number, number];
 
@@ -66,23 +68,52 @@ export function splitAtAntimeridian(points: readonly LonLat[]): LonLat[][] {
   return parts.filter((part) => part.length > 1);
 }
 
-/** All routes as one MultiLineString feature per route (one `id` property each). */
-export function routeFeatures(routes: readonly GlobeRoute[], stepDeg = 0.5): GeoJSON.FeatureCollection<GeoJSON.MultiLineString> {
+/** The key of a leg in the street map's source and filters: the route and the position of the leg in it. */
+export const legKey = (routeId: string, legIndex: number): string => `${routeId}:${legIndex}`;
+
+/**
+ * The keys of the legs next to a place: the one that arrives at it and the one that leaves it, on every route through it (the
+ * same legs the globe lights, `engine/route-layer.ts`). `[]` for no place.
+ */
+export function legKeysAt(routes: readonly GlobeRoute[], place: { lat: number; lon: number } | undefined): string[] {
+  if (!place) return [];
+  const keys: string[] = [];
+  for (const route of routes) {
+    route.points.forEach((p, i) => {
+      if (p.lat !== place.lat || p.lon !== place.lon) return;
+      if (i > 0) keys.push(legKey(route.id, i - 1));
+      if (i + 1 < route.points.length) keys.push(legKey(route.id, i));
+    });
+  }
+  return keys;
+}
+
+/**
+ * Every leg of every route as ONE feature each (`id`: the route, `key`: the leg, `mode`), on the ground: the decoded polyline
+ * when the leg has one, else the great-circle arc between its stops. Split at the antimeridian so no line wraps the map. This is the
+ * single source of the street map's path layers; selecting a place never changes it (the layers' filters do).
+ */
+export function legFeatures(routes: readonly GlobeRoute[], stepDeg = 0.5): GeoJSON.FeatureCollection<GeoJSON.MultiLineString> {
   const features: GeoJSON.Feature<GeoJSON.MultiLineString>[] = [];
   for (const route of routes) {
-    if (route.points.length < 2) continue;
-    const pts: LonLat[] = [];
-    for (let i = 0; i < route.points.length - 1; i++) {
+    for (let i = 0; i + 1 < route.points.length; i++) {
       const a = route.points[i]!;
       const b = route.points[i + 1]!;
-      const seg = greatCircle([a.lon, a.lat], [b.lon, b.lat], stepDeg);
-      pts.push(...(i === 0 ? seg : seg.slice(1)));
+      if (a.lat === b.lat && a.lon === b.lon) continue;
+      const spec = route.legs?.[i];
+      const mode = spec && isLegMode(spec.mode) ? spec.mode : "unknown";
+      let pts: LonLat[] | null = null;
+      if (spec?.polyline && mode !== "flight") {
+        const flat = decodePolyline5(spec.polyline);
+        if (flat) pts = Array.from({ length: flat.length / 2 }, (_, k) => [flat[k * 2]!, flat[k * 2 + 1]!] as LonLat);
+      }
+      pts ??= greatCircle([a.lon, a.lat], [b.lon, b.lat], stepDeg);
+      features.push({
+        type: "Feature",
+        properties: { id: route.id, key: legKey(route.id, i), mode },
+        geometry: { type: "MultiLineString", coordinates: splitAtAntimeridian(pts) },
+      });
     }
-    features.push({
-      type: "Feature",
-      properties: { id: route.id },
-      geometry: { type: "MultiLineString", coordinates: splitAtAntimeridian(pts) },
-    });
   }
   return { type: "FeatureCollection", features };
 }
