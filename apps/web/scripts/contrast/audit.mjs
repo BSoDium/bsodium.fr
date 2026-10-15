@@ -56,7 +56,8 @@ const searchPalette = (query) => async (page) => {
 const creditsDialog = async (page) => {
   await waitGlobe(page);
   await sleep(1500);
-  await page.click("[data-attribution] button");
+  // the card's "See more" from md up, the phone's "i" button below it (the other is display: none)
+  await page.click('[data-attribution="card"] button:visible, button[data-attribution="compact"]:visible');
   await page.waitForSelector("dialog[open]", { timeout: 5000 });
   await sleep(700);
   return "dialog[open]";

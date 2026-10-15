@@ -97,7 +97,7 @@ const LARGE = 3;
 const PAGE: Pair[] = [
   { use: "body text", fg: "--foreground", bg: ["--background", "--surface", "--accent"], min: BODY },
   { use: "secondary text and mono metadata", fg: "--muted-foreground", bg: ["--background", "--surface", "--accent"], min: TEXT },
-  { use: "the map credits line (page and surface only)", fg: "--subtle-foreground", bg: ["--background", "--surface"], min: TEXT },
+  { use: "the map credits line, and the info icon of its phone button, a 3:1 mark held to the same 4.5:1 (page and surface only)", fg: "--subtle-foreground", bg: ["--background", "--surface"], min: TEXT },
   { use: "a link in running text, a hovered tag, a hovered nav item, a key hint on hover", fg: "--signal-text", bg: ["--background", "--surface", "--accent"], min: TEXT },
   { use: "a link button's label (variant link)", fg: "--signal-text", bg: ["--background", "--surface"], min: TEXT },
   { use: "primary button label on its fill, at rest, hovered and pressed", fg: "--primary-foreground", bg: ["--primary", "--signal-hover", "--signal-active"], min: TEXT },

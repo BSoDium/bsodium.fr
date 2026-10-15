@@ -2736,8 +2736,8 @@ h1[tabindex="-1"]:focus-visible {
    * a wide screen it is one line that takes `--hero-span` of the viewport's width (72 %: deliberately NOT the full width between the
    * gutters; the size is that share of the width over `--hero-fit`, the name's width in em), never more than a third of the viewport's
    * height (a short window) nor 30 rem. Stacked (under 48 rem) the two halves are two lines and the longer one, the family name,
-   * fills the width between the gutters. The block rises by the credits line's height (the
-   * line is bottom right and sits at 8 to 30 px from the bottom) plus what the "y" hangs below the line box, so no letter is ever over it.
+   * fills the width between the gutters. The block rises by the credits' height (the
+   * card, or on a phone the 28 px "i" button, is bottom right and sits at 6 to 30 px from the bottom) plus what the "y" hangs below the line box, so no letter is ever over it.
    */
   .landing-hero {
     --hero-gutter: clamp(1rem, 3.9vw, 3.5rem);
@@ -2746,7 +2746,7 @@ h1[tabindex="-1"]:focus-visible {
     --hero-fit: 6.6;
     --hero-span: 0.72;
     --hero-size: min(calc(100vw * var(--hero-span) / var(--hero-fit)), 33vh, 30rem);
-    /* The credits line's top edge (0.5 rem + its card) and a little air; a phone's dev badge sits higher (below). */
+    /* The credits' top edge (0.5 rem + the card; the phone's "i" button tops out at 34 px) and a little air; a phone's dev badge sits higher (below). */
     --hero-clear: 2.25rem;
     --hero-fade: var(--duration-base) var(--ease-standard);
     position: absolute;
@@ -2758,7 +2758,7 @@ h1[tabindex="-1"]:focus-visible {
     pointer-events: none;
   }
 
-  /* Phones: the name stacks, the family name fills the width; the credits line takes the whole bottom edge and the dev-only content badge sits above it. */
+  /* Phones: the name stacks, the family name fills the width; the credits are the small "i" button bottom right (no card) and the dev-only content badge sits raised at the left. */
   @media (max-width: 47.99rem) {
     .landing-hero {
       /* The family name (the longer line, 4.57 em at 390 px, 4.7 on the smallest) fills the width between the gutters. */
@@ -3208,7 +3208,7 @@ h1[tabindex="-1"]:focus-visible {
    * The collapsed name's place, not a second copy of it: this line is the GHOST the two halves of the real name (`.hero-given`, `.hero-family`)
    * travel to and stay on (landing-hero.tsx `travelName`: it measures these boxes, never paints them). It is set like the big name (the same face, weights,
    * tracking, and the optical size pinned at the big name's 96, so it is the same drawing at another size) at `--hero-mini-size`: 44 px on a wide
-   * screen, 9.5 vw down to 28 px on a phone, so that it clears the credits line, the dev badge and the hint beside it from 320 px.
+   * screen, 9.5 vw down to 28 px on a phone, so that it clears the credits (card or "i" button), the dev badge and the hint beside it from 320 px.
    */
   .hero-mini-name {
     --hero-mini-size: clamp(1.75rem, 9.5vw, 2.75rem);

@@ -304,7 +304,7 @@ export default function GlobeCanvas({
       >
         {notice && status === "ready" ? "Street detail is unavailable right now." : null}
       </p>
-      {Attribution && <Attribution tiles={tilesKey ? (tiles ?? null) : null} insetRight={insetRight} reducedMotion={reducedMotion} />}
+      {Attribution && <Attribution tiles={tilesKey ? (tiles ?? null) : null} insetRight={insetRight} reducedMotion={reducedMotion} surface="globe" />}
       {(status === "unavailable" || status === "lost") && (
         <p
           role="status"

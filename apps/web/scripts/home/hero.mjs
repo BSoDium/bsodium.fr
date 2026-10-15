@@ -126,7 +126,8 @@ async function geometry(page) {
       add("name-family", el(".hero-family"), true);
       add("mini-hint", el(".hero-mini-hint"), true);
     }
-    const credits = el("[data-attribution]");
+    // the credits card from md up, the phone's compact "i" button below it (the other one is display: none)
+    const credits = [...document.querySelectorAll("[data-attribution]")].find((n) => n.getClientRects().length > 0) ?? null;
     const badge = el("[data-dev-content-badge]");
     return {
       state,
@@ -147,7 +148,7 @@ const hit = (a, b) => a.l < b.r - 0.5 && a.r > b.l + 0.5 && a.t < b.b - 0.5 && a
 async function layoutChecks(page, label) {
   const g = await geometry(page);
   ok(g.inks.length > 0, `${label}: the hero shows something (${g.inks.map((i) => i.name).join(", ")})`);
-  ok(g.credits !== null, `${label}: the credits line is there`);
+  ok(g.credits !== null, `${label}: the credits (card, or the phone's "i" button) are there`);
   if (g.credits) ok(!g.inks.some((i) => hit(i, g.credits)), `${label}: nothing of the hero covers the credits line`);
   if (g.badge) ok(!g.inks.some((i) => hit(i, g.badge)), `${label}: nothing of the hero covers the dev badge`);
   ok(

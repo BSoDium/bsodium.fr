@@ -88,6 +88,7 @@ Done: the cream paper and the warm night of the reading surface are gone: entrie
 
 ## Not verified
 
+- **The phone credits line and button on iOS Safari and real phones** (safe-area inset, the 44 px target by thumb, `<dialog>` focus return, whether a first tap on the map is read as the interaction that collapses the line). **OpenFreeMap's own terms** were not read (the spike only quotes their line), nor was the ODbL text beyond the Foundation's guidelines: whether a 5 s line then an "i" meets them is judged from the OSM guidelines only.
 - **Safari and iOS** (including `image-rendering: pixelated` on canvas and the ring's canvas atlas), **real phones** (the frame cost, and what a weak GPU does now that no governor lowers the density: it drops frames, not measured) and real printing of an entry.
 - **Reduced motion** with a real system setting: Chromium emulation only. **A real 120 Hz display and the battery** under the idle rotation.
 - **Vercel's merging of the `vercel.json` headers** with the ones the server sets (the same values are set twice on purpose), HSTS and the `*.vercel.app` robots behaviour on a real deployment, real link previews on social networks.
@@ -99,7 +100,7 @@ Done: the cream paper and the warm night of the reading surface are gone: entrie
 
 - Content model v2: D1 to D5 as recommended (private `docs/content-model-v2.md` section 9).
 - Boxes: dim at rest, hover changes colour only, selected changes colour and switches to a solid line; width never changes. Dashes anchored to one corner per edge; arm and gap scale with the box (kept).
-- Credits follow the tile configuration; the line is monospace with a middle dot before "See more".
+- Credits follow the tile configuration; the line is monospace with a middle dot before "See more". Below 768 px (the `md` line, the same as `useIsMobile`) the card is replaced by a short line shown at load beside a small "i" button, collapsing to the button alone after 5 s or on the first map interaction, once per page load per surface (in memory: a reload shows it again) (owner, 2026-10-14, branch `fix/mobile-credits`; shape set by the OSM Foundation's [Attribution Guidelines](https://osmfoundation.org/wiki/Licence/Attribution_Guidelines): not hidden behind an icon by default, collapse allowed after dismiss, interaction or five seconds, licence info findable via (i)). Details: [design-system.md](design-system.md) ("Map credits on a phone").
 - Vercel: v1 stays as is; v2 web and API are separate projects from this repo.
 - Bounding boxes: dynamic, OSM-derived, as few manual overrides as possible; routes skipped; GPU budgets accepted.
 - Groups: no peeks (owner, after seeing them: a group and the cities inside it must never be visible together). A group opens early into its most important children that fit and its box and label fade out exactly as they fade in; the rest come in as you zoom. The private design note `lod-importance-design.md` still describes the peeks (section 3, work packages W1 to W4): the client part is superseded by [web-architecture.md](web-architecture.md#opening-a-group-into-its-most-important-children-2026-10-08).
