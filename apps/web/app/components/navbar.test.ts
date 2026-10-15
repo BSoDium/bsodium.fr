@@ -7,8 +7,8 @@ import { SITE_NAME } from "~/lib/site";
 import { GESTURE_GUARD_MS, Navbar } from "./navbar";
 
 /** The navbar server-rendered at `url`; `shell` stands for the route that owns the globe (`routes/shell`). */
-async function render(url: string, { shell = true, heroResting }: { shell?: boolean; heroResting?: boolean } = {}): Promise<string> {
-  const routes = [{ id: shell ? "routes/shell" : "routes/list", path: "*", Component: () => createElement(Navbar, { heroResting }) }];
+async function render(url: string, { shell = true, heroResting, hasCareer }: { shell?: boolean; heroResting?: boolean; hasCareer?: boolean } = {}): Promise<string> {
+  const routes = [{ id: shell ? "routes/shell" : "routes/list", path: "*", Component: () => createElement(Navbar, { heroResting, hasCareer }) }];
   const handler = createStaticHandler(routes);
   const context = (await handler.query(new Request(`http://localhost${url}`))) as StaticHandlerContext;
   const router = createStaticRouter(handler.dataRoutes, context);
@@ -34,6 +34,23 @@ describe("Navbar", () => {
     expect(html.match(/aria-label="Primary"/g)).toHaveLength(1);
     // the search trigger follows the links in the DOM (so in the focus order)
     expect(html.indexOf('data-slot="search-trigger"')).toBeGreaterThan(html.indexOf('href="/poetry"'));
+  });
+
+  it("adds \"Career\" after the four sections when the projection has a career document, and says so on the header for the tighter tiers", async () => {
+    const html = await render("/articles", { shell: false, hasCareer: true });
+    const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
+    expect(links).toEqual([["/", "Globe"], ["/software", "Software"], ["/articles", "Articles"], ["/artworks", "Artworks"], ["/poetry", "Poetry"], ["/career", "Career"]]);
+    expect(html).toContain("data-career");
+    expect(html.indexOf('data-slot="search-trigger"')).toBeGreaterThan(html.indexOf('href="/career"'));
+    // the current page is marked
+    const current = await render("/career", { shell: false, hasCareer: true });
+    expect(current).toMatch(/<a [^>]*aria-current="page"[^>]*href="\/career"|<a [^>]*href="\/career"[^>]*aria-current="page"/);
+  });
+
+  it("has no career link, and no data-career, without a career document", async () => {
+    const html = await render("/articles", { shell: false });
+    expect(html).not.toContain("/career");
+    expect(html).not.toContain("data-career");
   });
 
   it("on the home page, while the hero is at rest, renders no header at all: its rows are the sections and its search line is the search", async () => {

@@ -288,6 +288,27 @@ section("copyright notice (poem, article, artwork: yes; software and lists: no)"
   }
 }
 
+// The career page exists only while the projection has the document (production has none until the owner publishes it): the sitemap says
+// which case this is, and each case is checked (docs/career-page.md). Nothing here fails a deployment that has no career.
+const hasCareer = paths.includes("/career");
+if (hasCareer) {
+  section("career page (the projection has a career document)");
+  const c = await document("/career", "/career", { ld: "ProfilePage" });
+  ok(title(c.body) === `Career · ${NAME}`, `/career: the title is "Career · name" (${title(c.body)})`);
+  ok((c.body.match(/<h1[ >]/g) ?? []).length === 1 && new RegExp(`<h1[^>]*>${NAME}</h1>`).test(c.body), "/career: one h1, the owner's name");
+  const visible = c.body.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
+  ok(!/mailto:|tel:|sms:/i.test(c.body) && !/@[A-Za-z0-9-]+\.[a-z]{2,}/.test(visible), "/career: no contact channel (no mailto, tel, e-mail address)");
+  ok(/og:image" content="[^"]*og-default\.png"/.test(c.body), "/career: the share image is the site's default (never the portrait)");
+  ok(paths.includes("/career") && /href="\/career"/.test((await text("/")).body), "/: the home page links to /career (the hero's fifth row, in the server HTML)");
+} else {
+  section("career page (no career document in the projection)");
+  const gone = await get("/career");
+  await gone.arrayBuffer();
+  ok(gone.status === 404, `/career: 404 while there is no career document (${gone.status})`);
+  ok(!/href="\/career"/.test((await text("/")).body), "/: no link to /career anywhere in the home page");
+  ok(!sm.body.includes("/career"), "sitemap.xml: no /career");
+}
+
 section("data responses (client navigations)");
 {
   const { res } = await text("/articles.data");

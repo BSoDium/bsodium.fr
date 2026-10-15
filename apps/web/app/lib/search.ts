@@ -4,14 +4,16 @@
  * folded, every word of the query must match, a word that starts a word of the title counts most.
  */
 import type { ContentKind, PublishedProjection } from "@catalyst/schemas";
+import { CAREER_LABEL, CAREER_PATH } from "./career";
 import { COLLECTIONS, CONTENT_KINDS, entryPath, KIND_LABELS, KIND_NOUNS, KIND_PLURALS, placePath } from "./entries";
 import { formatEntryDate } from "./dates";
 import { SECTIONS } from "./sections";
 
-export type SearchType = "place" | ContentKind;
+/** `career` is the one page of the site that is neither a place nor an entry (the curriculum vitae); present only when the projection has it. */
+export type SearchType = "place" | ContentKind | "career";
 
 /** The order of the groups of results. */
-export const SEARCH_TYPES = ["place", ...CONTENT_KINDS] as const satisfies readonly SearchType[];
+export const SEARCH_TYPES = ["place", ...CONTENT_KINDS, "career"] as const satisfies readonly SearchType[];
 
 export interface SearchItem {
   type: SearchType;
@@ -24,8 +26,8 @@ export interface SearchItem {
   keywords?: string;
 }
 
-export const SEARCH_LABELS: Record<SearchType, string> = { place: "Places", ...KIND_PLURALS };
-export const SEARCH_SINGULAR: Record<SearchType, string> = { place: "Place", ...KIND_LABELS };
+export const SEARCH_LABELS: Record<SearchType, string> = { place: "Places", ...KIND_PLURALS, career: CAREER_LABEL };
+export const SEARCH_SINGULAR: Record<SearchType, string> = { place: "Place", ...KIND_LABELS, career: CAREER_LABEL };
 
 /** Lowercase, accents removed (`Hué` -> `hue`, `Reykjavík` -> `reykjavik`), runs of other characters as one space. */
 export function foldText(text: string): string {
@@ -59,7 +61,24 @@ export function buildSearchIndex(projection: PublishedProjection): SearchItem[] 
       };
     }),
   );
-  return [...places, ...entries];
+  // The curriculum vitae: one row, found by its words (career, CV, resume, experience...), the employers and the skills it names.
+  const career = projection.career;
+  const careerRow: SearchItem[] = career
+    ? [
+        {
+          type: "career",
+          title: career.title,
+          href: CAREER_PATH,
+          keywords: [
+            "career about cv resume curriculum vitae experience education languages skills",
+            ...career.roles.map((r) => `${r.org} ${r.title}`),
+            ...career.education.map((e) => e.institution),
+            ...career.skills.flatMap((g) => g.items),
+          ].join(" "),
+        },
+      ]
+    : [];
+  return [...places, ...entries, ...careerRow];
 }
 
 interface Folded {
