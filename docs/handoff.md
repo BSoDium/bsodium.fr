@@ -59,6 +59,16 @@ Contract `routes[].legs` (mode and optional polyline5), limits `ROUTE_LEG_LIMITS
 
 Articles and projects: images stay in the flow of the text (wide, never upscaled, Le Monde / Guardian style captions with a muted credit), the text's "Fig. N" mentions link to them, a figure wider than it is drawn opens in a native dialog; the third column is gone. [design-system.md](design-system.md) ("Figures"), [web-architecture.md](web-architecture.md), `apps/web/scripts/entries/figures.mjs`, the contrast audit page `article-lightbox`. Also fixed on the way: a link to a part of an entry (`#fig-3`, a section's `#body-...`) now scrolls the panel on load. The demo article gained a 480 px figure (`fig-night-trains-ticket.svg`) and three mentions; the real articles need their figures captioned (and, if wanted, a credit in a last parenthesis) to be numbered, linkable and anchored. Not verified: Safari / iOS and a real touch device (Chrome emulation only).
 
+## Pages polish (branch `feat/pages-polish`, 2026-10-19, owner feedback, 3 items)
+
+| Change | Details |
+|---|---|
+| `/artworks`: an interlocking brick wall (1 / 2 / 3 / 4 columns by width, 10 px gap, natural ratios from the contract's cover size, caption plate on hover and focus, always under the picture on touch, DOM = reading order, no script) | [design-system.md](design-system.md) ("Artwork wall"), `lib/masonry.ts`, `components/entry/artwork-wall.tsx` |
+| `/poetry`: a 100 rem page, two columns from 44 rem, summary in the reading serif at 20 to 26 px in the ink, the mono line at 14 px | [design-system.md](design-system.md) ("Poetry list") |
+| Tag rows on phones: no native scrollbar, Spotify-style edge arrows (`ScrollRow`), 44 px, solid plate | [design-system.md](design-system.md) ("Scroll row") |
+
+Not verified: a real touch device (emulated touch only); Safari and Firefox (Chromium only: the layout needs container query units and `:has()`, both in current Safari and Firefox); the caption plate on a very tall picture on a short window.
+
 ## Where the details are
 
 | Topic | Doc |
