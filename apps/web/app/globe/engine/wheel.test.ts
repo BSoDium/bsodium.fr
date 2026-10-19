@@ -161,10 +161,11 @@ describe("WheelClassifier: pinch", () => {
     expect(c.classify(at(16, 0, 7, { ctrl: true })).kind).toBe("pinch");
   });
 
-  it("ctrl + a mouse wheel is a wheel", () => {
+  it("ctrl with a notch-looking delta (120 legacy units, 4.0002) is still a pinch: it must not take the 20x slower wheel gain", () => {
     const c = new WheelClassifier();
-    expect(c.classify(at(0, 0, -100, { ctrl: true, wheelDy: 120 })).kind).toBe("wheel");
-    expect(c.classify(at(500, 0, 3, { ctrl: true, mode: 1 })).kind).toBe("wheel");
+    expect(c.classify(at(0, 0, -100, { ctrl: true, wheelDy: 120, mode: 1 })).kind).toBe("wheel");
+    expect(c.classify(at(500, 0, 40, { ctrl: true, wheelDy: -120 })).kind).toBe("pinch");
+    expect(c.classify(at(600, 0, -MAC_TICK, { ctrl: true })).kind).toBe("pinch");
   });
 
   it("a pinch does not start a stream: a swipe right after it is classified afresh", () => {
@@ -274,11 +275,11 @@ describe("pinch calibration", () => {
     expect(total).toBeCloseTo(1, 1);
   });
 
-  it("at the shipped rate the same pinch is PINCH_ZOOM_RATE / 0.0144 levels, about 2.5", () => {
+  it("at the shipped rate the same pinch is PINCH_ZOOM_RATE / 0.0144 levels, about 8", () => {
     const total = chromePinch(3, 6).reduce((a, e) => a + zoomStep(e, "pinch"), 0);
     expect(total).toBeCloseTo(PINCH_ZOOM_RATE / PHYSICAL, 1);
-    expect(total).toBeGreaterThan(2);
-    expect(total).toBeLessThan(3);
+    expect(total).toBeGreaterThan(7);
+    expect(total).toBeLessThan(9);
   });
 
   it("a stream of 60 events of deltaY -3 to -12 with ctrlKey is all pinch and none is clamped", () => {
@@ -292,5 +293,18 @@ describe("pinch calibration", () => {
       total += d;
     }
     expect(total).toBeGreaterThan(5);
+  });
+});
+
+describe("effective pinch zoom", () => {
+  it("events of one frame add up: three events in a frame zoom as three events in three frames", () => {
+    const evs = [-4.2, -3.7, -5.1].map((dy) => at(0, 0, dy, { ctrl: true }));
+    expect(evs.reduce((a, e) => a + zoomStep(e, "pinch"), 0)).toBeCloseTo(13 * PINCH_ZOOM_RATE, 6);
+  });
+  it("two comfortable pinches (3 cm to 8 cm, 69 px a cm-third of deltaY) go from world to city", () => {
+    const px = (100 * Math.log(8 / 3)) / Math.LN2 / 1; // deltaY of a physical 3 -> 8 cm pinch, per Chromium's formula, in ln units * 100
+    const perPinch = 100 * Math.log(8 / 3) * PINCH_ZOOM_RATE;
+    expect(2 * perPinch).toBeGreaterThan(9);
+    expect(px).toBeGreaterThan(0);
   });
 });

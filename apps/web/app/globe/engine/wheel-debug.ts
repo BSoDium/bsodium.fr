@@ -14,6 +14,8 @@ export interface InputLogEntry {
   zoom?: number;
   /** Cumulative zoom change of the pinch in progress (levels). */
   cum?: number;
+  /** Wheel events seen in the frame of this one (so far). */
+  perFrame?: number;
   pan?: [number, number];
   t: number;
 }
@@ -56,14 +58,36 @@ export function inputKindOverride(): "wheel" | "swipe" | null {
   }
 }
 
-/** `?pinch-rate=N` (debug pages with `?input-debug`): levels a pixel of a trackpad pinch's deltaY, instead of `PINCH_ZOOM_RATE`. */
+/**
+ * `?pinch-rate=N` on ANY page (not only debug ones): levels a pixel of a trackpad pinch's deltaY instead of `PINCH_ZOOM_RATE`; kept in localStorage
+ * (`pinch-rate`) so the owner can A/B it across reloads. `?pinch-rate=reset` forgets it. Read at each pinch, so a change applies at once.
+ */
 export function pinchRateOverride(): number | null {
-  if (!inputDebugWanted()) return null;
-  const n = Number(new URLSearchParams(location.search).get("pinch-rate"));
-  return Number.isFinite(n) && n > 0 && n < 1 ? n : null;
+  try {
+    const q = new URLSearchParams(location.search).get("pinch-rate");
+    if (q === "reset") localStorage.removeItem("pinch-rate");
+    else if (q !== null && Number.isFinite(Number(q)) && Number(q) > 0 && Number(q) < 5) localStorage.setItem("pinch-rate", q);
+    const n = Number(localStorage.getItem("pinch-rate"));
+    return Number.isFinite(n) && n > 0 && n < 5 ? n : null;
+  } catch {
+    return null;
+  }
 }
 
 const f = (v: number | undefined, digits = 1) => (v === undefined ? "-" : Number.isInteger(v) ? String(v) : v.toFixed(digits));
+
+/** Events per animation frame and the zoom they gained over the last second, from the log's own entries. */
+function frameStats() {
+  const es = (window.__inputDebug?.entries ?? []).filter((e) => e.zoom !== undefined);
+  const last = es.at(-1);
+  if (!last) return { zoomPerSec: 0, max: 0, avg: 0 };
+  const recent = es.filter((e) => last.t - e.t <= 1000);
+  const span = Math.max(100, last.t - recent[0]!.t);
+  const frames = new Map<number, number>();
+  for (const e of recent) frames.set(Math.floor(e.t / 16.7), (frames.get(Math.floor(e.t / 16.7)) ?? 0) + 1);
+  const counts = [...frames.values()];
+  return { zoomPerSec: (recent.reduce((a, e) => a + (e.zoom ?? 0), 0) / span) * 1000, max: Math.max(...counts), avg: counts.reduce((a, c) => a + c, 0) / counts.length };
+}
 
 let shared: InputDebug | null = null;
 
@@ -102,7 +126,8 @@ export function inputDebug(): InputDebug | null {
         const out = e.zoom !== undefined ? ` zoom ${e.zoom >= 0 ? "+" : ""}${e.zoom.toFixed(3)}${e.cum !== undefined ? ` (pinch total ${e.cum >= 0 ? "+" : ""}${e.cum.toFixed(2)})` : ""}` : e.pan ? ` pan ${f(e.pan[0])},${f(e.pan[1])}` : "";
         return `${e.kind.padEnd(7)}${raw}${out}  ${e.reason}`;
       });
-      box.textContent = `input (${entries.length})\n${lines.join("\n")}`;
+      const st = frameStats();
+      box.textContent = `input (${entries.length})  effective zoom ${st.zoomPerSec >= 0 ? "+" : ""}${st.zoomPerSec.toFixed(2)} levels/s  wheel events per frame max ${st.max} avg ${st.avg.toFixed(1)}\n${lines.join("\n")}`;
     },
   };
   return shared;
