@@ -7,7 +7,7 @@
  * wherever the pointer is not on the map. Safari's `gesturestart` / `gesturechange` / `gestureend` (a trackpad pinch there; there is no ctrl-wheel) are
  * handled the same way, with the pinch's cumulative `scale` turned into steps.
  */
-import { inputDebug, inputKindOverride } from "./wheel-debug";
+import { inputDebug, inputKindOverride, pinchRateOverride } from "./wheel-debug";
 import { PENDING_MS, STREAM_GAP_MS, WheelClassifier, swipePan, zoomStep, type WheelSample } from "./wheel";
 import type { DragSample } from "./motion";
 
@@ -40,6 +40,15 @@ export function attachWheelInput(el: HTMLElement, handlers: WheelHandlers, timer
   let swipeSamples: DragSample[] = [];
   let lastT = Number.NEGATIVE_INFINITY;
   let gestureScale = 0;
+  const pinchRate = pinchRateOverride() ?? undefined;
+  let cum = 0;
+  let cumT = Number.NEGATIVE_INFINITY;
+  /** The running total of a pinch (a new one after 300 ms without a pinch step). */
+  const total = (d: number, t: number) => {
+    if (t - cumT > STREAM_GAP_MS) cum = 0;
+    cumT = t;
+    return (cum += d);
+  };
 
   const apply = (kind: "pinch" | "wheel" | "swipe", s: WheelSample, x: number, y: number, reason: string) => {
     if (kind === "swipe") {
@@ -57,8 +66,8 @@ export function attachWheelInput(el: HTMLElement, handlers: WheelHandlers, timer
       }, SWIPE_END_MS);
       return;
     }
-    const d = zoomStep(s, kind);
-    debug?.log({ kind, reason, sample: s, zoom: d, t: s.t });
+    const d = zoomStep(s, kind, pinchRate);
+    debug?.log({ kind, reason, sample: s, zoom: d, cum: kind === "pinch" ? total(d, s.t) : undefined, t: s.t });
     handlers.zoom(d, x, y);
   };
 
@@ -107,7 +116,7 @@ export function attachWheelInput(el: HTMLElement, handlers: WheelHandlers, timer
     if (!(gestureScale > 0) || !(g.scale > 0)) return;
     const d = Math.log2(g.scale / gestureScale);
     gestureScale = g.scale;
-    debug?.log({ kind: "gesture", reason: `Safari gesturechange scale ${g.scale.toFixed(3)}`, zoom: d, t: g.timeStamp });
+    debug?.log({ kind: "gesture", reason: `Safari gesturechange scale ${g.scale.toFixed(3)}`, zoom: d, cum: total(d, g.timeStamp), t: g.timeStamp });
     if (d) handlers.zoom(d, g.clientX, g.clientY);
   };
   const onGestureEnd = (e: Event) => {

@@ -176,7 +176,7 @@ try {
     await place(page, { lon: 10, lat: 20, zoom: 3 });
     const z0 = (await view(page)).zoom;
     const pinch = pinchStream(-1, 10, 2.5);
-    const want = pinch.reduce((a, e) => a - e.dy * 0.012, 0);
+    const want = pinch.reduce((a, e) => a - e.dy * 0.036, 0);
     await page.evaluate((ev) => window.__drive.stream(720, 450, ev), pinch);
     const z1 = (await view(page)).zoom;
     expect("ctrl-wheel (pinch) zooms in at the tuned speed", Math.abs(z1 - z0 - want) < 1e-6, { gained: z1 - z0, want });
@@ -470,7 +470,8 @@ try {
     await page.waitForTimeout(400);
     await page.evaluate((ev) => window.__drive.stream(1000, 300, ev), pinchStream(-1, 10, 2.5));
     const z1 = (await cam()).zoom;
-    expect("street: ctrl-wheel zooms in", z1 > z0 + 0.2, { z0, z1 });
+    const wantStreet = pinchStream(-1, 10, 2.5).reduce((a, e) => a - e.dy * 0.036, 0);
+    expect("street: ctrl-wheel zooms in at the same pinch rate as the globe (0.036 a px)", Math.abs(z1 - z0 - wantStreet) < 0.02, { gained: z1 - z0, wantStreet });
     await fixed("ctrl-wheel in");
     await page.waitForTimeout(400);
     await page.evaluate((ev) => window.__drive.stream(1000, 300, ev), mouseNotches(3, -100, 60));
