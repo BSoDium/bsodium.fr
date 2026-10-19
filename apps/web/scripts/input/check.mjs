@@ -176,7 +176,7 @@ try {
     await place(page, { lon: 10, lat: 20, zoom: 3 });
     const z0 = (await view(page)).zoom;
     const pinch = pinchStream(-1, 10, 2.5);
-    const want = pinch.reduce((a, e) => a - e.dy * 0.12, 0);
+    const want = pinch.reduce((a, e) => a - e.dy * 0.4, 0);
     await page.evaluate((ev) => window.__drive.stream(720, 450, ev), pinch);
     const z1 = (await view(page)).zoom;
     expect("ctrl-wheel (pinch) zooms in at the tuned speed", Math.abs(z1 - z0 - want) < 1e-6, { gained: z1 - z0, want });
@@ -290,7 +290,7 @@ try {
     const { page, logs } = await openHome();
     await place(page, { lon: 10, lat: 20, zoom: 2.9 });
     const slow = Array.from({ length: 14 }, (_, i) => ({ dy: -(1 + 1.5 * Math.sin((Math.PI * i) / 13)) - 0.3, ctrl: true, wait: 16 }));
-    const asked = slow.reduce((a, e) => a - e.dy * 0.12, 0);
+    const asked = slow.reduce((a, e) => a - e.dy * 0.4, 0);
     const z0 = (await view(page)).zoom;
     await page.evaluate((ev) => window.__drive.stream(720, 450, ev), slow);
     await page.waitForTimeout(300);
@@ -303,7 +303,7 @@ try {
       for (let i = 0; i < 6; i++) el.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true, clientX: 720, clientY: 450, deltaY: -4.5, ctrlKey: true }));
       return window.__handoverDebug.globe.view().zoom;
     });
-    expect("effective: six events in one task add up (applied before the next frame)", Math.abs(burst - 2.9 - 6 * 4.5 * 0.12) < 1e-6, { burst });
+    expect("effective: six events in one task add up (applied before the next frame)", Math.abs(burst - 2.9 - 6 * 4.5 * 0.4) < 1e-6, { burst });
     const stats = await page.evaluate(() => document.querySelector("[data-input-debug]")?.textContent ?? "");
     expect("effective: the overlay reports the effective zoom per second and events per frame", /levels\/s/.test(stats) && /per frame max/.test(stats), stats.slice(0, 160));
     // Two comfortable pinches reach a city from the world.
@@ -504,8 +504,8 @@ try {
     await page.waitForTimeout(400);
     await page.evaluate((ev) => window.__drive.stream(1000, 300, ev), pinchStream(-1, 10, 2.5));
     const z1 = (await cam()).zoom;
-    const wantStreet = pinchStream(-1, 10, 2.5).reduce((a, e) => a - e.dy * 0.12, 0);
-    expect("street: ctrl-wheel zooms in at the same pinch rate as the globe (0.12 a px)", Math.abs(z1 - z0 - wantStreet) < 0.02, { gained: z1 - z0, wantStreet });
+    const wantStreet = pinchStream(-1, 10, 2.5).reduce((a, e) => a - e.dy * 0.4, 0);
+    expect("street: ctrl-wheel zooms in at the same pinch rate as the globe (0.4 a px)", Math.abs(z1 - z0 - wantStreet) < 0.02, { gained: z1 - z0, wantStreet });
     await fixed("ctrl-wheel in");
     await page.waitForTimeout(400);
     await page.evaluate((ev) => window.__drive.stream(1000, 300, ev), mouseNotches(3, -100, 60));
