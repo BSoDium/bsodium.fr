@@ -396,6 +396,9 @@ export function headFocusFilter(keys: readonly string[]): ExpressionSpecificatio
   return ["in", ["get", "key"], ["literal", keys.length ? [...keys] : [NO_KEY]]] as unknown as ExpressionSpecification;
 }
 
+/** The graticule's dash, in line widths. */
+const GRATICULE_DASH = [1.5, 2.5] as const;
+
 /** Re-apply the art widths after the art cell size changed (viewport crossing 520 px, DPR change). */
 export function applyCell(map: MLMap, cellCss: number): void {
   for (const spec of SPECS) {
@@ -408,6 +411,38 @@ export function applyCell(map: MLMap, cellCss: number): void {
     if (id === ROUTE_HEAD_ID || id === ROUTE_HEAD_FOCUS_ID) map.setPaintProperty(id, "circle-radius", (id === ROUTE_HEAD_ID ? SPARK_RADIUS.faint : SPARK_RADIUS.lit) * cellCss);
     else map.setPaintProperty(id, "line-width", (id.endsWith("-tick") ? RAIL_TICK_WIDTH : 1) * cellCss);
   }
+}
+
+/**
+ * MapLibre sizes a dash from the tile's INTEGER zoom (`transform.tileZoom`) while the tile itself is drawn at the real one, so a dash of fixed
+ * length in line widths grows by up to 2x between two whole zoom levels and snaps back at the next (with `fadeDuration` 0 nothing hides it).
+ * The pattern is the art's: it must have the same length on screen at every zoom. So the arrays are scaled by 2^-(fraction of the zoom), in
+ * `DASH_STEPS` steps per level (a step changes the arrays, which is not free; the pass snaps to the cell anyway, so an eighth of a level is under it).
+ */
+export const DASH_STEPS = 8;
+/** The step of a zoom: 0 at a whole level, up to `DASH_STEPS` just before the next. */
+export const dashStepOf = (zoom: number): number => Math.round((zoom - Math.floor(zoom)) * DASH_STEPS);
+/** The factor to apply to every dash array at a step. */
+export const dashScaleOf = (step: number): number => 2 ** (-step / DASH_STEPS);
+
+/** Every dashed line layer with its array as designed (before the zoom's scale). */
+function dashedLayers(): Array<[string, readonly number[]]> {
+  const out: Array<[string, readonly number[]]> = [["graticule", GRATICULE_DASH]];
+  for (const spec of SPECS) if (spec.type === "line" && spec.dash) out.push([spec.id, spec.dash]);
+  for (const prefix of ROUTE_LAYER_PREFIXES) {
+    for (const mode of LEG_MODES) {
+      const dash = dashArray(mode);
+      if (dash) out.push([routeLayerId(prefix, mode), dash]);
+      if (MODE_STYLE[mode].tick) out.push([routeLayerId(prefix, mode, true), RAIL_TICK_DASH]);
+    }
+  }
+  return out;
+}
+
+/** Re-apply the dash arrays at a step (`dashStepOf(map.getZoom())`): the pattern keeps its length on screen. */
+export function applyDashScale(map: MLMap, step: number): void {
+  const k = dashScaleOf(step);
+  for (const [id, base] of dashedLayers()) if (map.getLayer(id)) map.setPaintProperty(id, "line-dasharray", base.map((v) => v * k) as never);
 }
 
 /** `layout.visibility` of a switched layer: on or off as the switch says (a style built for tests has them all on). */
@@ -517,7 +552,7 @@ export function buildStreetStyle(o: StreetStyleOptions): StyleSpecification {
   const grid: LayerSpecification = {
     id: "graticule", type: "line", source: "grid",
     layout: visibility("graticule", o.visible),
-    paint: { "line-color": lineColor(roleLevel("faint")), "line-opacity": THIN_INK, "line-width": cell, "line-dasharray": [1.5, 2.5] },
+    paint: { "line-color": lineColor(roleLevel("faint")), "line-opacity": THIN_INK, "line-width": cell, "line-dasharray": [...GRATICULE_DASH] },
   } as LayerSpecification;
   // The paths (see ROUTE_LAYER_PREFIXES).
   const routeLayers: LayerSpecification[] = [];

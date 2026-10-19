@@ -40,7 +40,7 @@ import { createTileNetwork } from "./net/tile-protocols";
 import { probeSource, type ProbeConfig, type ProbeOutcome } from "./net/probe";
 import { HudLayer } from "./overlay/hud-layer";
 import { LayerSwitch, switchRules, type SwitchView } from "./style/layer-switch";
-import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, buildStreetStyle, focusFilter, graticule, headFocusFilter, ROUTE_HEAD_FOCUS_ID, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
+import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, applyDashScale, buildStreetStyle, dashStepOf, focusFilter, graticule, headFocusFilter, ROUTE_HEAD_FOCUS_ID, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
 import { STREET_TUNING } from "./tuning";
 import type { AnimateOptions, FlyOptions, RevealOptions, StreetDebug, StreetMap, StreetMapOptions, StreetView } from "./types";
 
@@ -581,8 +581,20 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     const c = map.getCenter();
     for (const ch of layerSwitch.update(switchView(map.getZoom(), c.lat))) if (map.getLayer(ch.id)) map.setLayoutProperty(ch.id, "visibility", ch.visible ? "visible" : "none");
   };
+  // The dash arrays follow the zoom (street-style.ts `applyDashScale`): a style that was just set starts unscaled, so its step is forgotten.
+  let dashStep = -1;
+  const updateDashes = () => {
+    const step = dashStepOf(map.getZoom());
+    if (step === dashStep) return;
+    dashStep = step;
+    applyDashScale(map, step);
+  };
+  onMap("style.load", () => {
+    dashStep = -1;
+  });
   onMap("render", () => {
     renders++;
+    updateDashes();
     updatePlaceholder();
     updateLayers();
     if (active) syncOverlay();
