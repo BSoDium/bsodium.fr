@@ -15,6 +15,7 @@ import { ColorManagement, Color, PerspectiveCamera, Vector3, WebGLRenderer } fro
 import type { Polylines } from "@catalyst/geodata";
 import type { GlobePlace, GlobeRoute } from "../types";
 import type { GlobeTheme } from "./colors";
+import { anchorZoom, unprojectOffset } from "./anchor";
 import { attachControls, type ControlsHost, type PointerKind } from "./controls";
 import { watchDevicePixelRatio } from "./dpr";
 import { groupFitZoom, radiusFitZoom } from "./framing";
@@ -751,6 +752,14 @@ export class GlobeRenderer {
     return { x: p.x + this.canvasLeft, y: p.y + this.canvasTop };
   }
 
+  /** The surface point under a container CSS-px point for the CURRENT view (the inverse of `projectExact`; clamped to the limb when off the disc): measurement of the anchored zoom. */
+  unprojectExact(x: number, y: number): { lon: number; lat: number; onDisc: boolean } {
+    const P = this.pixel;
+    const cw = this.bufW * P;
+    const ch = this.bufH * P;
+    return unprojectOffset(this.view, ch, { u: x - this.canvasLeft - (cw / 2 - this.shiftBuf * P), v: ch / 2 - this.liftBuf * P - (y - this.canvasTop) });
+  }
+
   /** Container CSS px of the art pixel the marker is drawn in (its centre), and whether it is drawn. */
   project(lon: number, lat: number): ScreenPoint {
     const P = this.pixel;
@@ -880,7 +889,7 @@ export class GlobeRenderer {
         this.velocity = STILL;
       },
       panPixels: (dx, dy) => this.panPixels(dx, dy),
-      zoomBy: (d) => this.setView({ zoom: this.view.zoom + d }),
+      zoomAt: (d, x, y) => this.zoomAt(d, x, y),
       fling: (samples, now) => this.fling(samples, now),
       pickAt: (x, y, kind) => {
         if (this.inertPress || this.showcaseOn) return null;
@@ -903,6 +912,28 @@ export class GlobeRenderer {
     const r = zoomToRadiusPx(this.view.zoom);
     const cosLat = Math.max(0.15, Math.cos(this.view.lat * DEG));
     this.setView({ lon: this.view.lon - dx / (r * cosLat) / DEG, lat: this.view.lat + dy / r / DEG });
+  }
+
+  /**
+   * Zoom by `dLog2` levels with the point of the surface under the container-relative CSS-px point (x, y) held under it (engine/anchor.ts): the cursor's, or
+   * the midpoint of a pinch. The projection centre is the one the drawing uses (the inset's and the lift's shifts included), in the unified zoom that goes on
+   * past the globe into the street map, so the same step anchors at every scale and the street map, which only follows the camera, is anchored with it. When
+   * the centre cannot follow (past the poles), or the zoom cannot change, only the zoom does.
+   */
+  private zoomAt(dLog2: number, x: number, y: number) {
+    this.noteActivity();
+    const zoom = this.clampView({ ...this.view, zoom: this.view.zoom + dLog2 }).zoom;
+    if (zoom === this.view.zoom) {
+      // At a limit: still an input (the idle rotation stops, a flight ends), nothing moves.
+      this.setView({});
+      return;
+    }
+    const P = this.pixel;
+    const cw = this.bufW * P;
+    const ch = this.bufH * P;
+    const offset = { u: x - this.canvasLeft - (cw / 2 - this.shiftBuf * P), v: ch / 2 - this.liftBuf * P - (y - this.canvasTop) };
+    const next = anchorZoom(this.view, zoom, ch, offset);
+    this.setView(next ? { lon: next.lon, lat: next.lat, zoom } : { zoom });
   }
 
   private fling(samples: readonly DragSample[], now: number) {

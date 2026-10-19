@@ -17,6 +17,7 @@ import { Map as MLMap, setWorkerUrl, type StyleSpecification } from "maplibre-gl
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { readTheme, type GlobeTheme } from "../engine/colors";
 import { applyDebugLevels } from "../engine/palette";
+import { attachWheelInput } from "../engine/wheel-input";
 import { watchDevicePixelRatio } from "../engine/dpr";
 import { placeFraming } from "../engine/framing";
 import { INSET_EASE } from "../engine/tuning";
@@ -309,6 +310,25 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
   // MapLibre's stylesheet is not used, so what it would give the canvas container is set here.
   const canvasBox = map.getCanvasContainer();
   Object.assign(canvasBox.style, { position: "absolute", inset: "0", touchAction: "none", cursor: "grab" } satisfies Partial<CSSStyleDeclaration>);
+  // The standalone map takes the wheel the way the globe does (engine/wheel.ts): a pinch and a mouse wheel zoom about the pointer, a two-finger swipe pans. MapLibre's
+  // own wheel zoom is off (it zooms on any wheel); a touch screen's pinch stays MapLibre's, which already zooms about the midpoint of the fingers. Embedded, the host owns input.
+  let detachWheel: (() => void) | null = null;
+  if (!opts.embedded) {
+    map.scrollZoom.disable();
+    canvasBox.style.overscrollBehavior = "none";
+    detachWheel = attachWheelInput(canvasBox, {
+      begin: () => map.stop(),
+      zoom(dLog2, clientX, clientY) {
+        const r = canvasBox.getBoundingClientRect();
+        const at: [number, number] = [clientX - r.left, clientY - r.top];
+        const zoom = Math.min(map.getMaxZoom(), Math.max(map.getMinZoom(), map.getZoom() + dLog2));
+        if (zoom === map.getZoom()) return;
+        map.easeTo({ zoom, around: map.unproject(at), duration: 0, essential: true });
+      },
+      // The content follows the fingers: panBy moves the CENTRE, the other way.
+      pan: (dx, dy) => void map.panBy([-dx, -dy], { duration: 0 }),
+    });
+  }
   const mapCanvas = map.getCanvas();
   Object.assign(mapCanvas.style, { position: "absolute", left: "0", top: "0" } satisfies Partial<CSSStyleDeclaration>);
   // The canvas is decoration: no tab stop, no accessible name (the places list is the accessible path).
@@ -834,6 +854,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
       scheme.removeEventListener("change", onScheme);
       document.removeEventListener("visibilitychange", onVisibility);
       for (const [type, fn] of mapListeners) map.off(type as never, fn as never);
+      detachWheel?.();
       hud.dispose();
       compositor.dispose();
       map.remove();

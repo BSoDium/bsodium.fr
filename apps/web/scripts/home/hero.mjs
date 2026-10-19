@@ -71,6 +71,8 @@ const ROW_COUNT = PATHS.length;
 async function newPage(contextOptions, { colorScheme = "dark", reducedMotion = "no-preference" } = {}) {
   const ctx = await browser.newContext({ ...contextOptions, colorScheme, reducedMotion });
   const page = await ctx.newPage();
+  // `page.mouse.wheel` has no device signature at a scale factor of 2: say it is a mouse wheel (honoured on debug pages only, engine/wheel-debug.ts).
+  await page.addInitScript(() => sessionStorage.setItem("input-kind", "wheel"));
   const logs = [];
   page.on("console", (m) => {
     // (the motion library's own notice that reduced motion is on is information about the test's emulation, not a fault)

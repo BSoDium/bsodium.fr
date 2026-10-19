@@ -38,6 +38,9 @@ export async function open(browser, contextOptions, path = "/", { debug = true, 
   });
   page.on("pageerror", (e) => logs.push(`pageerror: ${e.message}`));
   if (debug) await page.addInitScript(() => sessionStorage.setItem("globe-debug", "1"));
+  // `page.mouse.wheel` carries no device signature (its legacy wheelDeltaY is 60 at a device scale factor of 2): the checks say what they emulate, a mouse wheel
+  // (engine/wheel-debug.ts `inputKindOverride`, debug pages only). INPUT_KIND=swipe or `auto` (unset the declaration) tries the other readings.
+  if (debug) await page.addInitScript((k) => k !== "auto" && sessionStorage.setItem("input-kind", k), process.env.INPUT_KIND ?? "wheel");
   // Debug pages have the sky OFF by default (their pixel assertions predate it); SKY=1 runs any check with it on.
   if (process.env.SKY === "1") await page.addInitScript(() => sessionStorage.setItem("sky", "1"));
   // ... and the ring of type OFF (the lowest zoom is the fit there); RING=1 runs any check with it on.
