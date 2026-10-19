@@ -1,7 +1,7 @@
 /**
  * Colour maths for the four palettes (docs/design-tokens.md, "Palettes"): sRGB hex to OKLCH (to check that every hue sits on the same
  * lightness ladder), colour-vision-deficiency simulation (Machado, Oliveira and Fernandes 2009, severity 1.0, in linear sRGB) and CIEDE2000.
- * Pure; used by `palette.test.ts` and shown on the dev styleguide. Not used at runtime by the site.
+ * Pure; used by `palette.test.ts`, `trail.test.ts` (the path trails' contrast and colour-vision checks) and shown on the dev styleguide. Not used at runtime by the site.
  */
 export const PALETTE_NAMES = ["blue", "green", "ocre", "violet"] as const;
 export type PaletteName = (typeof PALETTE_NAMES)[number];

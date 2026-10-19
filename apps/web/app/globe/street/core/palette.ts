@@ -15,12 +15,30 @@
  */
 import { CODE } from "./art-line";
 import { MAX_LEVELS, PALETTE_LEVELS, activeLevels, buildRamp, roleLevel, type Rgb, type Role } from "../../engine/palette";
+import { TRAIL_ENTRIES, schemeOf, trailColors, trailIndex } from "../../paths/trail";
 
 export { MAX_LEVELS, PALETTE_LEVELS, activeLevels, roleLevel };
 export type { Role };
 
+/**
+ * The palette's slots: the greys (`MAX_LEVELS`, the map's ramp) and after them the path trails' solid colours (`paths/trail.ts`: per palette
+ * the bands from tail to head, the lit head and the spark). A trail level is `TRAIL_LEVEL_BASE + trailIndex(...)`.
+ */
+export const TRAIL_LEVEL_BASE = MAX_LEVELS;
+export const PALETTE_CAPACITY = MAX_LEVELS + TRAIL_ENTRIES;
 /** One unit of the level encoding: level k is written as k / LEVEL_SCALE. */
-export const LEVEL_SCALE = MAX_LEVELS;
+export const LEVEL_SCALE = PALETTE_CAPACITY;
+/**
+ * MapLibre colour of a PATH line at a level: R = 1 and an opacity of 1, so the line OVERWRITES what is under it (a road it crosses, a fill)
+ * instead of blending its level with theirs (blended levels decode to other hues: the trail levels are hues, not greys), and B = `ROUTE_THIN`
+ * marks it as a one-pixel line the pass may thin although R is 1 (a wide line has B = 0). Twin: `routeThin` in gl/pixel-pass.ts.
+ */
+export const ROUTE_THIN = 128;
+export const routeColor = (level: number): string => `rgb(255,${byte(level / LEVEL_SCALE)},${ROUTE_THIN})`;
+/** Level of a trail colour: `band` 0 (tail) .. TRAIL_BANDS - 1 (head), or "lit" or "spark". */
+export const trailLevel = (palette: number, band: number | "lit" | "spark"): number => TRAIL_LEVEL_BASE + trailIndex(palette, band);
+/** Whether a level is a trail colour (the temporal ease does not slew these: a colour has no grey in between). */
+export const isTrailLevel = (level: number): boolean => level >= TRAIL_LEVEL_BASE;
 
 const byte = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255);
 
@@ -57,8 +75,10 @@ export interface Palette {
 }
 
 export function buildPalette(theme: PaletteTheme, n: number = activeLevels()): Palette {
-  const rgb = buildRamp(theme.background, theme.ink, n);
-  return { rgb, levels: rgb.length, limbLevel: limbLevel(rgb.length) };
+  const grey = buildRamp(theme.background, theme.ink, n);
+  // greys padded to their slots with the ink, then the trails: a trail's level is the same whatever the number of greys
+  const rgb: Rgb[] = [...grey, ...Array.from({ length: MAX_LEVELS - grey.length }, () => grey[grey.length - 1]!), ...trailColors(schemeOf(theme.background))];
+  return { rgb, levels: rgb.length, limbLevel: limbLevel(grey.length) };
 }
 
 /** Class code of the art cell as `readCodes` reports it: lines keep thin / solid, any other lit cell is a fill (`tone`). */

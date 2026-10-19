@@ -6,6 +6,7 @@
 import type { GlobeRoute } from "../../types";
 import { lonLatToVec3, vec3ToLonLat, DEG } from "../../engine/geo";
 import { isLegMode } from "../../paths/modes";
+import { paletteOf } from "../../paths/trail";
 import { decodePolyline5 } from "../../paths/polyline";
 
 type LonLat = [number, number];
@@ -95,7 +96,8 @@ export function legKeysAt(routes: readonly GlobeRoute[], place: { lat: number; l
  */
 export function legFeatures(routes: readonly GlobeRoute[], stepDeg = 0.5): GeoJSON.FeatureCollection<GeoJSON.MultiLineString> {
   const features: GeoJSON.Feature<GeoJSON.MultiLineString>[] = [];
-  for (const route of routes) {
+  routes.forEach((route, order) => {
+    const pal = paletteOf(route.palette ?? order);
     for (let i = 0; i + 1 < route.points.length; i++) {
       const a = route.points[i]!;
       const b = route.points[i + 1]!;
@@ -110,10 +112,25 @@ export function legFeatures(routes: readonly GlobeRoute[], stepDeg = 0.5): GeoJS
       pts ??= greatCircle([a.lon, a.lat], [b.lon, b.lat], stepDeg);
       features.push({
         type: "Feature",
-        properties: { id: route.id, key: legKey(route.id, i), mode },
+        properties: { id: route.id, key: legKey(route.id, i), mode, pal },
         geometry: { type: "MultiLineString", coordinates: splitAtAntimeridian(pts) },
       });
     }
-  }
+  });
+  return { type: "FeatureCollection", features };
+}
+
+/** One point per leg, at its destination (the head of the trail), with the leg's key and palette: the street map's sparks. */
+export function legHeads(routes: readonly GlobeRoute[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
+  routes.forEach((route, order) => {
+    const pal = paletteOf(route.palette ?? order);
+    for (let i = 0; i + 1 < route.points.length; i++) {
+      const a = route.points[i]!;
+      const b = route.points[i + 1]!;
+      if (a.lat === b.lat && a.lon === b.lon) continue;
+      features.push({ type: "Feature", properties: { key: legKey(route.id, i), pal }, geometry: { type: "Point", coordinates: [b.lon, b.lat] } });
+    }
+  });
   return { type: "FeatureCollection", features };
 }

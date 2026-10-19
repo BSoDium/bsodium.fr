@@ -3,6 +3,7 @@
  * `prefers-color-scheme` and any future token change reaches the globe without touching this code.
  */
 import { activeLevels, buildRamp, roleColor, roleLevel } from "./palette";
+import { schemeOf, trailColors, type TrailRgb, type TrailScheme } from "../paths/trail";
 
 export type Rgb = readonly [number, number, number];
 
@@ -24,6 +25,10 @@ export interface GlobeTheme {
   grid: Rgb;
   /** The shared grey ramp (engine/palette.ts): page colour ... ink. Borders step through it as they fade in. */
   ramp: readonly Rgb[];
+  /** "dark" when the page colour is dark: picks the steps of the path trails. */
+  scheme: TrailScheme;
+  /** The paths' colours for this scheme (globe/paths/trail.ts): per palette the trail bands, the lit head and the spark. */
+  trail: readonly TrailRgb[];
 }
 
 const byte = (v: string) => Math.min(255, Math.max(0, Number(v))) / 255;
@@ -102,5 +107,6 @@ export const outlineLevel = (levels: number): number => Math.max(1, roleLevel("f
 
 export function themeFromTokens(background: Rgb, ink: Rgb, levels: number = activeLevels()): GlobeTheme {
   const ramp = buildRamp(background, ink, levels);
-  return { background, ink, coast: roleColor(ramp, "coast"), outline: ramp[outlineLevel(levels)]!, grid: roleColor(ramp, "faint"), ramp };
+  const scheme = schemeOf(background);
+  return { background, ink, coast: roleColor(ramp, "coast"), outline: ramp[outlineLevel(levels)]!, grid: roleColor(ramp, "faint"), ramp, scheme, trail: trailColors(scheme) };
 }

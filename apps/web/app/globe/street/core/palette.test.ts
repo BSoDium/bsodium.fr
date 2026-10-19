@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CODE } from "./art-line";
-import { LEVEL_SCALE, PATTERN, buildPalette, codeOf, fillColor, lineColor } from "./palette";
+import { trailColors } from "../../paths/trail";
+import { LEVEL_SCALE, PALETTE_CAPACITY, TRAIL_LEVEL_BASE, PATTERN, buildPalette, codeOf, fillColor, lineColor } from "./palette";
 import { BOX_CONTRAST, BOX_CONTRAST_DARK, MAP_CONTRAST, MAP_CONTRAST_DARK, MAX_LEVELS, PALETTE_LEVELS, ROLES, bordersWanted, borderLevel, buildRamp, contrastRatio, coastLevel, mixOklab, peakLevel, rampLevel, roleLevel, srgbToOklab } from "../../engine/palette";
 import { decodeLevel, decodePattern } from "../style/probe";
 import { TUNING } from "../../engine/tuning";
@@ -142,7 +143,11 @@ describe("level encoding", () => {
   });
   it("builds the pass palette for a theme", () => {
     const p = buildPalette(light, 6);
-    expect(p.rgb.length).toBe(6);
+    // 6 greys padded to the grey slots, then the path trails' solid colours (paths/trail.ts)
+    expect(p.rgb.length).toBe(PALETTE_CAPACITY);
+    expect(p.rgb[5]).toEqual(p.rgb[TRAIL_LEVEL_BASE - 1]);
+    expect(p.rgb[TRAIL_LEVEL_BASE]).toEqual(trailColors("light")[0]);
+    expect(buildPalette(dark, 6).rgb[TRAIL_LEVEL_BASE]).toEqual(trailColors("dark")[0]);
     expect(p.limbLevel).toBe(roleLevel("soft", 6));
   });
   it("reports class codes: lines keep thin / solid whatever their level, other lit cells are fills", () => {

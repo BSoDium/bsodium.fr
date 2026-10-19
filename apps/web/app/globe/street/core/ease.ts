@@ -26,6 +26,7 @@
  * fill cell next to fill of the same tone was already there (the region just slid), a lit fill cell with none near is a tile that arrived.
  */
 import { MESH_STEP, NO_WARP, warpPoint, type WarpMesh } from "./warp";
+import { isTrailLevel } from "./palette";
 
 export const EASE = {
   /**
@@ -148,9 +149,12 @@ export function easeCell(f: EaseFrame, x: number, y: number): CellOut {
     const eRaw = lv(P, cols, rows, here[0], here[1]);
     const e = ln(P, cols, rows, here[0], here[1]) === 1 ? eRaw : 0;
     const R = f.radius;
-    if (t > 0 && tLine) {
+    if (t > 0 && tLine && isTrailLevel(t)) {
+      // a path trail's colour has no grey in between (the levels after the greys are hues): it is shown as it is
+      line = t;
+    } else if (t > 0 && tLine) {
       // the base: the line's own presented tone; with none, the fill tone the cell was showing (a road over a lake takes over from it, no dip)
-      let base = e > 0 ? e : pFill ? pHere : 0;
+      let base = e > 0 && !isTrailLevel(e) ? e : pFill ? pHere : 0;
       let best = Infinity;
       for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
         const o = oldCell(f, x + dx, y + dy);
@@ -164,6 +168,8 @@ export function easeCell(f: EaseFrame, x: number, y: number): CellOut {
         }
       }
       line = slew(base);
+    } else if (e > 0 && isTrailLevel(e)) {
+      line = 0; // a trail that is gone is gone at once
     } else if (e > 0) {
       let moved = false;
       for (let dy = -R; dy <= R && !moved; dy++) for (let dx = -R; dx <= R; dx++) {

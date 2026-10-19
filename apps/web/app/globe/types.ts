@@ -121,6 +121,11 @@ export interface GlobeRoute {
    * (a precision-5 polyline, docs/api-contract.md "Route legs"). Absent, or a leg without a polyline: the geodesic arc.
    */
   legs?: GlobeLeg[];
+  /**
+   * The trail palette (0 blue, 1 green, 2 ocre, 3 violet; `globe/paths/trail.ts`): the route's position among the published routes, modulo 4.
+   * Absent: its position in the list the globe was given.
+   */
+  palette?: number;
 }
 
 /** A leg of a route: the mode picks the line style, the polyline (when there is one) is the path it follows. */

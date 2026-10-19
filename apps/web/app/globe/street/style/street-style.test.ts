@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { THIN_INK, expInterp } from "../core/art-line";
+import { expInterp } from "../core/art-line";
 import { roleLevel } from "../../engine/palette";
-import { ERASE, MAX_LEVELS, lineColor } from "../core/palette";
-import { BORDER_TILE_MINZOOM, DEFAULT_HANDOFF, ROUTE_LAYER_IDS, SPECS, WORLD_PLACEHOLDER_BELOW, borderHandoff, hasPlaceholder, buildStreetStyle, graticule, layerIds, linePaint, focusFilter, type Schema } from "./street-style";
+import { ERASE, MAX_LEVELS, PALETTE_CAPACITY, TRAIL_LEVEL_BASE, lineColor, routeColor, trailLevel } from "../core/palette";
+import { PALETTE_COUNT, TRAIL_BANDS } from "../../paths/trail";
+import { BORDER_TILE_MINZOOM, DEFAULT_HANDOFF, ROUTE_LAYER_IDS, ROUTE_HEAD_ID, SPECS, gradientOf, routeGradientId, WORLD_PLACEHOLDER_BELOW, borderHandoff, hasPlaceholder, buildStreetStyle, graticule, layerIds, linePaint, focusFilter, type Schema } from "./street-style";
 import { decodeLevel, evalFilter, levelOfPaint } from "./probe";
 
 const empty: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -23,12 +24,16 @@ describe("buildStreetStyle", () => {
           const p = (l.paint ?? {}) as Record<string, unknown>;
           for (const k of ["line-color", "fill-color", "background-color"]) {
             if (p[k] === undefined) continue;
-            const colors = typeof p[k] === "string" ? [p[k] as string] : (p[k] as unknown[]).filter((v) => typeof v === "string" && v.startsWith("rgb")) as string[];
+            const flat = (v: unknown): string[] => (typeof v === "string" ? [v] : Array.isArray(v) ? v.flatMap(flat) : []);
+            const colors = flat(p[k]).filter((v) => v.startsWith("rgb"));
             for (const c of colors) {
               if (c === ERASE) continue;
-              expect(c, l.id).toMatch(/^rgb\((255,\d+,0|0,0,\d+)\)$/);
+              expect(c, l.id).toMatch(l.id.startsWith("routes-") ? /^rgb\(255,\d+,(0|128)\)$/ : /^rgb\((255,\d+,0|0,0,\d+)\)$/);
               expect(decodeLevel(c), l.id).toBeGreaterThanOrEqual(1);
-              expect(decodeLevel(c), l.id).toBeLessThan(MAX_LEVELS);
+              // the greys of the map, or (the paths only) a trail colour of the palette's later slots
+              expect(decodeLevel(c), l.id).toBeLessThan(l.id.startsWith("routes-") ? PALETTE_CAPACITY : MAX_LEVELS);
+              if (!l.id.startsWith("routes-")) expect(decodeLevel(c), l.id).toBeLessThan(TRAIL_LEVEL_BASE);
+              else expect(decodeLevel(c), l.id).toBeGreaterThanOrEqual(TRAIL_LEVEL_BASE); // a path is only ever drawn in a trail colour
             }
           }
         }
@@ -68,27 +73,51 @@ describe("buildStreetStyle", () => {
         const ids = layerIds(s);
         expect(ids).not.toContain("routes-halo");
         for (const id of ROUTE_LAYER_IDS) expect(ids, id).toContain(id);
-        expect(ids.indexOf("routes-faint")).toBeGreaterThan(ids.indexOf("building-outline"));
-        expect(ids.indexOf("routes-focus-unknown")).toBeLessThan(ids.indexOf("world-coast"));
+        expect(ids.indexOf(routeGradientId(0))).toBeGreaterThan(ids.indexOf("building-outline"));
+        // the paths are the top layers: they overwrite what they cross, so their level is read exactly (core/palette.ts routeColor)
+        expect(ids.indexOf("routes-focus-unknown")).toBeGreaterThan(ids.indexOf("world-coast"));
         expect(ids.indexOf("routes-faint-walk")).toBeLessThan(ids.indexOf("routes-focus"));
+        expect(ids.indexOf(ROUTE_HEAD_ID)).toBeGreaterThan(ids.indexOf("routes-focus-unknown"));
       });
       it("authors every path in art pixels: one cell wide, thin ink, solid-colour tones, dashes of at least 1.42 widths", () => {
         const cell = 3;
         for (const id of ROUTE_LAYER_IDS) {
           const l = s.layers.find((x) => x.id === id) as { paint: Record<string, unknown> };
+          if (id.startsWith(ROUTE_HEAD_ID)) {
+            expect(l.paint["circle-opacity"], id).toBe(1);
+            continue;
+          }
           const tick = id.endsWith("-tick");
           expect(l.paint["line-width"], id).toBe((tick ? 3 : 1) * cell);
-          expect(l.paint["line-opacity"], id).toBe(tick ? 1 : THIN_INK);
+          expect(l.paint["line-opacity"], id).toBe(1); // opaque: a path overwrites what it crosses; thin ones are marked by B instead of by R = 0.75
           const dash = l.paint["line-dasharray"] as number[] | undefined;
           if (dash && !tick) expect(dash[0], id).toBeGreaterThanOrEqual(1.42);
         }
-        const color = (id: string) => (s.layers.find((x) => x.id === id) as unknown as { paint: Record<string, string> }).paint["line-color"];
-        expect(color("routes-faint")).toBe(lineColor(roleLevel("coast")));
-        expect(color("routes-focus")).toBe(lineColor(roleLevel("ink")));
+      });
+      it("colours the faint roads by one gradient layer per palette (tail to head, solid bands) and every other mode by its palette's head band", () => {
+        const paint = (id: string) => (s.layers.find((x) => x.id === id) as unknown as { paint: Record<string, unknown>; filter: unknown }).paint;
+        for (let p = 0; p < PALETTE_COUNT; p++) {
+          const g = paint(routeGradientId(p));
+          expect(g["line-gradient"]).toEqual(gradientOf(p));
+          expect(g["line-color"]).toBeUndefined(); // line-gradient replaces the colour
+          expect(g["line-dasharray"]).toBeUndefined(); // MapLibre: line-gradient and line-dasharray cannot be combined
+          const stops = g["line-gradient"] as unknown[];
+          expect(stops[0]).toBe("step");
+          expect(stops[2]).toBe(routeColor(trailLevel(p, 0)));
+          expect(stops[stops.length - 1]).toBe(routeColor(trailLevel(p, TRAIL_BANDS - 1)));
+        }
+        const rail = JSON.stringify(paint("routes-faint-rail")["line-color"]);
+        for (let p = 0; p < PALETTE_COUNT; p++) expect(rail).toContain(routeColor(trailLevel(p, TRAIL_BANDS - 1)));
+        expect(JSON.stringify(paint("routes-focus")["line-color"])).toContain(routeColor(trailLevel(2, "lit")));
+        expect(JSON.stringify(paint(ROUTE_HEAD_ID)["circle-color"])).toContain(lineColor(trailLevel(3, "spark")));
+        // every dashed mode has no gradient
+        for (const id of ROUTE_LAYER_IDS) if (paint(id)["line-dasharray"]) expect(paint(id)["line-gradient"], id).toBeUndefined();
+        // the source carries line metrics, which line-gradient needs
+        expect((s.sources.routes as { lineMetrics?: boolean }).lineMetrics).toBe(true);
       });
       it("pins the pattern of each mode to the table the globe's shader reads", () => {
         const dash = (id: string) => (s.layers.find((x) => x.id === id) as { paint: Record<string, unknown> }).paint["line-dasharray"];
-        expect(dash("routes-faint")).toBeUndefined();
+        expect(dash("routes-focus")).toBeUndefined();
         expect(dash("routes-faint-rail")).toEqual([4, 2]);
         expect(dash("routes-faint-ferry")).toEqual([1.5, 2.5]);
         expect(dash("routes-faint-flight")).toEqual([1.5, 3.5]);
@@ -116,7 +145,7 @@ describe("buildStreetStyle", () => {
   }
   it("builds a tile-less style for the capped state: world data and routes only, coastline at every zoom", () => {
     const s = buildStreetStyle({ schema: "protomaps", tiles: null, coastlines: empty, borders: empty, graticule: empty, routes: empty });
-    expect(Object.keys(s.sources)).toEqual(["coast", "borders", "grid", "routes"]);
+    expect(Object.keys(s.sources)).toEqual(["coast", "borders", "grid", "routes", "heads"]);
     expect(s.layers.every((l) => !("source" in l) || l.source !== "tiles")).toBe(true);
     const coast = s.layers.find((l) => l.id === "world-coast") as { maxzoom: number };
     expect(coast.maxzoom).toBe(24);

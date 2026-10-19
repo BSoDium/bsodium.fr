@@ -1,6 +1,6 @@
-# Travel paths (2026-10-15)
+# Travel paths (2026-10-15, trails 2026-10-20)
 
-Every leg of every route is drawn faintly on both maps at all times; the legs next to the selected place go to full ink. The place panel lists the same legs as sentences. Contract: [api-contract.md](api-contract.md#route-legs-routeslegs-optional-additive-in-schema-version-1). Code: `apps/web/app/globe/paths/` (pure), `engine/route-layer.ts` + `engine/materials.ts` (`pathMaterial`) on the globe, `street/core/routes.ts` + `street/style/street-style.ts` on the street map, `lib/journeys.ts` (text), `components/paths-toggle.tsx`.
+Every leg of every route is drawn on both maps as a PLANE TRAIL (below, "Trails") whenever the overlay (boxes and labels) is; the legs next to the selected place go to the full-strength head colour. The place panel lists the same legs as sentences. Contract: [api-contract.md](api-contract.md#route-legs-routeslegs-optional-additive-in-schema-version-1). Code: `apps/web/app/globe/paths/` (pure), `engine/route-layer.ts` + `engine/materials.ts` (`pathMaterial`) on the globe, `street/core/routes.ts` + `street/style/street-style.ts` on the street map, `lib/journeys.ts` (text), `components/paths-toggle.tsx`.
 
 ## Data path
 
@@ -8,9 +8,9 @@ Every leg of every route is drawn faintly on both maps at all times; the legs ne
 
 ## Globe
 
-- One instanced `LineSegments` (one draw call; instanced x3 only when a rail leg exists: the rail's cross-ticks are copies 1 and 2). Attributes per vertex: position (lifted), distance along the leg, leg id, mode id, leg length, tangent. Selection is a texel per leg in a small `uState` texture and a draw-on front uniform: no geometry rebuild.
+- One instanced `LineSegments` (one draw call; instanced x3: copies 1 and 2 are the rail's cross-ticks and the cross of every head's spark, discarded by the fragment shader elsewhere). Attributes per vertex: position (lifted), distance along the leg, leg id, mode id, leg length, route palette (`aInfo` is a vec4), tangent. Selection is a texel per leg in a small `uState` texture and a draw-on front uniform: no geometry rebuild.
 - Zoom: `levelFor(metresPerCell, current)` picks the coarsest level whose error is at most half an art pixel, with a 25 % hysteresis; applied with `setDrawRange` (no rebuild). `fadeLevel`: a leg shorter than 2 art pixels is hidden, and its tone steps up through the palette (solid levels, the borders' staircase, no alpha) to the faint tone at 14 pixels. So short legs are hidden at the world view and appear as you zoom.
-- Tones: faint = the palette's `coast` level (3.1:1 light / 3.2:1 dark against the page: the loudest tone the map has, asserted >= 3:1 in `engine/readability.test.ts`); selected legs = ink. Mode colour is a later decision (palettes, PR #289): everything is neutral ink.
+- Colours: the trails of the next section (solid entries of one list, `uTrail`). The short-leg fade (`fadeLevel`) mixes toward the page colour in the same solid levels (the `coast` level count).
 - Styles in art pixels (one buffer pixel is one; table in paths/modes.ts, read by the shader and the street style): road solid; rail 4 on / 2 off with a 1-cell tick across (a 3-cell cross) at the middle of each dash; ferry 1.5 / 2.5; flight 1.5 / 3.5 and lifted; walk 1.5 / 1.5; unknown 4 / 3 and lifted. A "dot" is 1.5 cells because docs/pixel-line-rules.md 3.12 (c) measured that shorter dashes break at some angles under the pixel pass.
 - Occlusion: the analytic "does the camera ray enter the occluder sphere first" test of the old route material (the depth buffer is off for lines), so limb behaviour is unchanged: nothing from the far side shows, nothing is cut mid-dash. Lifted arcs flatten with `routeLift` at the hand-over.
 - Draw order: renderOrder 4 as the old routes (above coast, below the horizon outline, markers and labels).
@@ -20,7 +20,57 @@ Every leg of every route is drawn faintly on both maps at all times; the legs ne
 
 ## Street map
 
-One GeoJSON source `routes` with a feature per leg (`key` = `routeId:legIndex`, `mode`), built once. Layers per mode (`routes-faint[-mode]`, `routes-focus[-mode]`, `-tick` for rail): 1 art pixel wide, `THIN_INK` so staircase removal applies, dasharrays from the same table, colours from `lineColor(coast)` and `lineColor(ink)`. `routes-focus` is `setFilter`ed to the selected place's keys; no `setData` on selection. The old erasing halo is gone (a 3-cell halo would cut every road a 1-cell path crosses). The "Paths" switch sets layout visibility.
+One GeoJSON source `routes` with a feature per leg (`key` = `routeId:legIndex`, `mode`, `pal`), built once. Layers (see "Street trails"): 1 art pixel wide, dasharrays from the same table, trail colours. `routes-focus` is `setFilter`ed to the selected place's keys; no `setData` on selection. The old erasing halo is gone (a 3-cell halo would cut every road a 1-cell path crosses). The "Paths" switch sets layout visibility.
+
+## Trails (colour)
+
+The owner's reference: a handheld ADS-B radar, a short red-orange-to-white trail behind each aircraft. Every leg is a trail from its ORIGIN (the tail: pale and cool) to its DESTINATION (the head: saturated and bright, with a small spark), in the colour of its route. Code: `globe/paths/trail.ts` (pure, one table for both renderers), `engine/materials.ts` (`pathMaterial`), `street/style/street-style.ts` (`gradientOf`, `byPalette`), tests `lib/trail.test.ts`.
+
+**Palette by route.** The route at position `i` of the published routes takes palette `i mod 4` in the order blue, green, ocre, violet (the four hues of [design-tokens.md](design-tokens.md#palettes)), so neighbours in the list differ. It is a function of the order only (ids, titles, geography play no part), carried as `GlobeRoute.palette` (`resolveRoutes` sets it from the position in `projection.routes`, so a dropped route does not shift the others) and, in the vertex, as `aInfo.w`. The Journeys list uses the same index for its swatch. The demo fixture has four routes, so it shows all four.
+
+**Steps** (per scheme; the page colour decides the scheme):
+
+| | tail | head (faint legs) | lit (selected place's legs) | spark |
+| --- | --- | --- | --- | --- |
+| light | 400 | 600 | 700 | 900 |
+| dark | 700 | 300 | 200 | 50 |
+
+The light page gets a pale tail and a saturated head; on the dark page the tail is the dark end and the head the bright one, so the head always pops. The tail-to-head gradient is `TRAIL_BANDS` = 5 solid bands, each a mix of the two steps (`mixHex`), so a leg is a pixel-art staircase of colour, not a smooth ramp, and every colour the globe draws is one entry of a 28-colour list (4 palettes x 5 bands + lit + spark). The position along the leg is `dist / length` (both are in the buffers: no extra attribute), the band `floor(fraction * 5)`. A leg of the selected place is the lit colour along its WHOLE length (the owner's "full-strength head colour"), inked from the place outwards by the draw-on as before, with a bigger spark; the others keep their gradient. Mode patterns are unchanged and the gradient runs along the leg in every mode (a rail dash, a ferry dot are each a band of the trail); the rail's ticks take the band's colour.
+
+**Spark.** At the head, outside the destination's box (the box and its plate cover the last cells of the leg, so the spark starts `SPARK.*.clear` cells back from the destination): a faint leg gets a small plus (3 cells of line in the spark colour, a 3-cell bar across it), a lit leg a 3 x 3 dot on a short stem. It uses the rail ticks' two extra copies and ignores the dash gaps.
+
+**Theme.** `uTrail` (the 28 colours of the scheme) and `uPage` are uniforms rewritten by `RouteLayer.applyTheme`: a theme change touches no geometry. Faintness: only the short-leg fade (a solid mix toward the page in `uFinal` levels) and the overlay presence below; no alpha anywhere.
+
+**Overlay presence.** The paths are part of the overlay, like the detection boxes and labels: `RouteLayer.setPresence(LodTree.overlayAlpha)` runs in `syncNodes`, the same timed value and clock that fade the boxes and labels in and the flat ring out. At 0 (the home screen's caption and ring) the layer does not draw (no draw call), in between the colours mix toward the page in the fade's own levels (solid), at 1 complete; reduced motion: the value jumps like the ring's. A selection hides the caption and shows the overlay, so lit legs follow the same rule. Pages without the showcase have presence 1. Checked by `scripts/paths/check.mjs overlay` (start view: no draw call and no trail pixel; presence equal to the ring's overlay value in every frame, monotonic both ways; a flight to a place; reduced motion).
+
+**Contrast** (WCAG 1.4.11, graphics 3:1, `lib/trail.test.ts` asserts every one; the page `#fbfbfb` / `#0a0a0a`):
+
+| Colour | scheme | blue | green | ocre | violet |
+| --- | --- | --- | --- | --- | --- |
+| faint head | light | 4.47 | 4.45 | 4.53 | 4.83 |
+| lit | light | 5.59 | 5.24 | 5.64 | 6.01 |
+| spark | light | 10.99 | 10.50 | 11.06 | 11.48 |
+| faint head | dark | 12.21 | 12.46 | 12.05 | 11.71 |
+| lit | dark | 14.93 | 15.16 | 14.85 | 14.61 |
+| spark | dark | 18.49 | 18.57 | 18.40 | 18.34 |
+
+The tail (the quiet end, deliberately) is above 1.8:1 (a visible line). Colour-vision: colour is never the only carrier (mode patterns, the Journeys sentences, the place's box). CIEDE2000 between heads under deuteranopia / protanopia: blue-violet 4.6 / 7.3 (light) and 1.0 / 3.8 (dark), green-ocre 11.2 / 8.1 (light) and 7.7 / 4.9 (dark): the doc's weak pairs, and violet follows blue in the order, so a trip's palette is a hint, not an identifier. At most one palette per leg, two when two routes meet at a place.
+
+**Pixel pass.** The globe renders into the art-pixel buffer with nearest upscaling: the list colours reach the screen exactly (the check counts exact colours). The street pass matches the globe's pixels to the nearest entry of ITS palette at the hand-over, so the list is appended to the pass palette (below).
+
+## Street trails
+
+The street map is a greyscale level image (`street/core/palette.ts`), and the paths are the one thing in it that is not grey. The pass palette is now the 12 greys (`MAX_LEVELS` slots, padded with the ink when fewer are active) followed by the same 28 trail colours (`TRAIL_LEVEL_BASE` = 12, `PALETTE_CAPACITY` = 40, `LEVEL_SCALE` = 40); the style writes a trail colour as a level like any other. Consequences:
+
+- **Gradient** (`line-gradient`; needs `lineMetrics: true` on the `routes` source and a `line-progress` expression; it takes no per-feature colour, and cannot be combined with `line-dasharray`): one layer per palette for the faint ROAD legs (`routes-faint-p0..p3`, filter on `pal`), a `step` over `line-progress` through the five band levels. The legs' coordinates run origin to destination, so progress 1 is the head. The step makes it a banded pixel-art gradient; since the level is the palette entry, the theme needs no style change (the pass palette is per theme).
+- **Dashed modes** (rail, ferry, flight, walk, unknown) cannot take a gradient: they are one layer per mode in the head band's colour chosen per feature by `match` on `pal` (data-driven colour is allowed), so on the street map a dashed leg is a solid-colour dashed line, not a gradient. Said plainly: the gradient along the leg exists on the globe in every mode and on the street map for roads only.
+- **Focus** layers (`routes-focus[-mode]`, filtered by `setFilter`) use the lit colour; the sparks are two circle layers (`routes-head` for every leg, `routes-head-focus` for the lit ones, a separate `heads` source of one point per leg) at the destination itself, in the spark colour: a MapLibre layer cannot be offset by art cells along a line, and the street map's box is hollow, so the spark shows inside it.
+- **Exact levels.** A level read from a blended pixel is a different hue, so a path is painted at R = 1 with an opacity of 1 (`routeColor`: it overwrites the road or fill under it) and B = 128 marks it a one-pixel line the pass may thin (a wide line has B = 0; `routeThin` in `gl/pixel-pass.ts`). The path layers are the TOP layers (above the world coast and borders): a first version under the coast blended with it and printed stray blue and black cells where a road crossed a route. (Cost: a route hides the coastline cell it crosses.)
+- **Ease.** The temporal ease slews a level one step per tick; the trail levels are hues, so a trail colour is shown as it is and one that is gone is cleared at once (`isTrailLevel`, in `core/ease.ts` and its GPU twin).
+
+## Journeys swatch
+
+Each journey line of the place panel starts with a 8 px square in its route's head colour (`--trail-<hue>` tokens in app.css: step 600 in light, 300 in dark, the same as the faint head), `aria-hidden`; the sentence is unchanged. No legend or tooltip (the swatch is the legend; skipped as the brief allowed).
 
 ## Switch
 
@@ -42,6 +92,10 @@ Paths are drawn into the aria-hidden canvases. The place panel's "Journeys" sect
 
 Frame cost: `renderNow()` JS time p50 below the 0.1 ms timer resolution and p95 0.1 ms at every view and size; GPU-synced frame p50 0.4 to 0.5 ms (p95 0.8 to 1.4 ms). One draw call added. The design's goal ("a few thousand segments visible") holds at 225 legs; at 2,000 legs it is 10 to 24 thousand segments.
 
+## Trail measurements (same machine and method as above, 2026-10-20)
+
+`check.mjs perf` against `origin/main` and this branch, same session, GPU-synced frame (p50 / p95): main 0.4 to 0.5 ms / 3.7 to 4.0 ms at 225 and 2,000 legs; trails 0.4 to 0.8 ms / 3.6 to 4.3 ms (p50 up to 0.1 ms at 2,000 legs, from the three instances being always on and the fragment's palette lookup; the p95 is the sync's noise floor on this machine, identical on both). `renderNow()` JS p50 under the timer resolution, p95 0.1 ms, unchanged. Still one draw call; buffers 187,849 bytes for the demo (info grew from 3 to 4 floats a vertex: 17.1 MB instead of 15.4 MB at 2,000 legs).
+
 ## Not verified
 
-Safari; any phone GPU; the real data's size and look (fixtures are synthetic); the pixel pass on the street map with real tiles (the layers are unit-tested and the style builds; the street checks in `scripts/street` need tile servers); mode colour (later).
+Safari; any phone GPU; the pixel pass on the street map beyond screenshots of the demo and the owner's preview data at a world-ish street zoom (the street checks in `scripts/street` were not run: they need tile servers); the street map's gradient at city zoom with many tiles (line-progress across tile boundaries was seen to be continuous on one 260 km leg only); colour-vision simulation is the doc's model, not a person.

@@ -13,7 +13,7 @@ import {
 import type { GlobeRoute } from "../types";
 import type { GlobeTheme } from "./colors";
 import { clamp, easeInOutCubic } from "./geo";
-import { PATH_MAX_LEVELS, pathMaterial } from "./materials";
+import { pathMaterial } from "./materials";
 import { coastLevel } from "./palette";
 import { TUNING } from "./tuning";
 import { FADE_FROM_CELLS, FADE_FULL_CELLS, levelFor, metresPerCell } from "../paths/lod";
@@ -43,6 +43,8 @@ export interface PathStats {
   drawCalls: number;
   /** Legs lit by the selected place. */
   lit: number;
+  /** The overlay presence the layer is drawn at (0: nothing is drawn, the home screen's caption and ring are up). */
+  presence: number;
 }
 
 /**
@@ -65,6 +67,8 @@ export class RouteLayer {
   /** performance.now() at which the draw-on began, or null when the legs are complete. */
   private drawStart: number | null = null;
   private enabled = true;
+  /** How present the overlay is (0..1, `LodTree.overlayAlpha`): the paths come and go with the boxes and labels. 0 draws nothing at all. */
+  private presence = 1;
   private mPerCell = 0;
   private cssPerCell = 1;
   private finalLevel = 8;
@@ -82,11 +86,11 @@ export class RouteLayer {
     const g = new InstancedBufferGeometry();
     g.setAttribute("position", new BufferAttribute(b.position, 3));
     g.setAttribute("aDist", new BufferAttribute(b.dist, 1));
-    g.setAttribute("aInfo", new BufferAttribute(b.info, 3));
+    g.setAttribute("aInfo", new BufferAttribute(b.info, 4));
     g.setAttribute("aTan", new BufferAttribute(b.tangent, 3));
-    const hasRail = this.network.legs.some((l) => l.mode === "rail");
+    // copies 1 and 2 are the rail's cross-ticks and the cross of every head's spark: always three
     g.setAttribute("aCopy", new InstancedBufferAttribute(Float32Array.from([0, 1, 2]), 1));
-    g.instanceCount = hasRail ? 3 : 1;
+    g.instanceCount = 3;
     g.setIndex(new BufferAttribute(b.index, 1));
     this.geometry = g;
 
@@ -161,13 +165,30 @@ export class RouteLayer {
     this.updateVisible();
   }
 
+  /**
+   * The overlay's presence as a whole, taken from the same timed value that fades the boxes and labels (`LodTree.overlayAlpha`), on the same
+   * clock: at 0 (the home screen's caption and ring) the layer does not draw at all, in between the colours mix toward the page colour in
+   * the shader (solid, quantised to the fade's levels, never an alpha).
+   */
+  setPresence(a: number) {
+    const v = clamp(a, 0, 1);
+    if (v === this.presence) return;
+    this.presence = v;
+    if (this.material) this.material.uniforms.uPresence!.value = v;
+    this.updateVisible();
+  }
+
+  get overlayPresence(): number {
+    return this.presence;
+  }
+
   private updateVisible() {
-    if (this.line) this.line.visible = this.enabled;
+    if (this.line) this.line.visible = this.enabled && this.presence > 0;
   }
 
   /** Ids of the routes with a leg lit now (measurement and tests). */
   shown(): string[] {
-    return this.enabled ? [...this.litRoutes] : [];
+    return this.enabled && this.presence > 0 ? [...this.litRoutes] : [];
   }
 
   /** Leg ids lit now (checks). */
@@ -227,25 +248,26 @@ export class RouteLayer {
   applyTheme(t: GlobeTheme) {
     this.ramp = t.ramp;
     if (!this.material) return;
-    this.material.uniforms.uInk!.value.setRGB(...t.ink);
-    const ramp = this.material.uniforms.uRamp!.value as { setRGB(r: number, g: number, b: number): void }[];
-    for (let k = 0; k < PATH_MAX_LEVELS; k++) {
-      const c = t.ramp[Math.min(k, t.ramp.length - 1)]!;
-      ramp[k]!.setRGB(...c);
+    this.material.uniforms.uPage!.value.setRGB(...t.background);
+    // The paths' colours for this scheme (paths/trail.ts): a theme change is these uniforms only, the geometry is untouched.
+    const trail = this.material.uniforms.uTrail!.value as { setRGB(r: number, g: number, b: number): void }[];
+    for (let k = 0; k < trail.length; k++) {
+      const c = t.trail[k]!;
+      trail[k]!.setRGB(...c);
     }
-    // The faint tone is the loudest map tone (`coast`): the legs step up through the palette to it as they get longer on screen.
+    // A short leg fades in over this many solid mixes toward the page (the borders' staircase): the palette's `coast` level.
     this.finalLevel = coastLevel(t.ramp.length);
     this.material.uniforms.uFinal!.value = this.finalLevel;
   }
 
-  /** The tone a faint leg reaches at full size, and the ink (for the contrast checks and the docs). */
+  /** The grey tone the old faint legs had and the ink (kept for the checks that compare with the map's own tones). */
   tones() {
     return this.ramp ? { faint: this.ramp[this.finalLevel]!, ink: this.ramp[this.ramp.length - 1]! } : null;
   }
 
   stats(): PathStats {
     const b = this.buffers;
-    if (!b) return { legs: 0, vertices: 0, levelSegments: [], bytes: 0, level: 0, drawnSegments: 0, drawCalls: 0, lit: 0 };
+    if (!b) return { legs: 0, vertices: 0, levelSegments: [], bytes: 0, level: 0, drawnSegments: 0, drawCalls: 0, lit: 0, presence: this.presence };
     const level = this.level ?? 0;
     return {
       legs: b.legCount,
@@ -254,8 +276,9 @@ export class RouteLayer {
       bytes: b.position.byteLength + b.dist.byteLength + b.info.byteLength + b.tangent.byteLength + b.index.byteLength + this.stateData.byteLength,
       level,
       drawnSegments: b.levels[level]!.count / 2,
-      drawCalls: this.enabled ? 1 : 0,
+      drawCalls: this.enabled && this.presence > 0 ? 1 : 0,
       lit: this.lit.size,
+      presence: this.presence,
     };
   }
 
