@@ -11,6 +11,7 @@
  * wheel that starts anywhere else (list, panel, page) still scrolls normally, and over the map the page neither scrolls nor goes back on a swipe.
  */
 import { attachWheelInput } from "./wheel-input";
+import { inputDebug } from "./wheel-debug";
 import { warmHover } from "./hover-warm";
 import type { DragSample } from "./motion";
 
@@ -45,6 +46,7 @@ export function attachControls(canvas: HTMLCanvasElement, container: HTMLElement
   let drag: Drag | null = null;
   let pinchDist = 0;
   let pinchMid = { x: 0, y: 0 };
+  let pinchTotal = 0;
   const cleanups: (() => void)[] = [];
   // The first layout change after the first mouse move blocks a macOS renderer for 30 ms once (engine/hover-warm.ts): take it before the first drag.
   cleanups.push(warmHover(canvas.ownerDocument.defaultView ?? canvas, canvas.ownerDocument as never));
@@ -88,6 +90,7 @@ export function attachControls(canvas: HTMLCanvasElement, container: HTMLElement
     if (pointers.size === 2) {
       pinchDist = pinchDistance();
       pinchMid = midpoint();
+      pinchTotal = 0;
       if (drag) drag.multi = true;
     }
     if (e.pointerType === "mouse") canvas.style.cursor = "grabbing";
@@ -113,7 +116,11 @@ export function attachControls(canvas: HTMLCanvasElement, container: HTMLElement
       // About where the fingers were (so the point between them stays between them), then with the fingers' midpoint as a drag.
       if (pinchDist > 0 && dist > 0) {
         const p = toLocal(pinchMid.x, pinchMid.y);
-        host.zoomAt(Math.log2(dist / pinchDist), p.x, p.y);
+        // The exact ratio of the fingers' distance, no damping and no gain: a physical pinch.
+        const d = Math.log2(dist / pinchDist);
+        pinchTotal += d;
+        inputDebug()?.log({ kind: "touch", reason: `two pointers, distance ${pinchDist.toFixed(0)} -> ${dist.toFixed(0)} px`, zoom: d, cum: pinchTotal, t: e.timeStamp });
+        host.zoomAt(d, p.x, p.y);
       }
       host.panPixels(mid.x - pinchMid.x, mid.y - pinchMid.y);
       pinchDist = dist;

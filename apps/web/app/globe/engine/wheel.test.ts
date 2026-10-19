@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isMacTick, MAC_TICK, PENDING_MS, STREAM_GAP_MS, swipePan, WheelClassifier, zoomStep, type WheelKind, type WheelSample } from "./wheel";
+import { isMacTick, MAC_TICK, PENDING_MS, PINCH_ZOOM_RATE, STREAM_GAP_MS, swipePan, WheelClassifier, zoomStep, type WheelKind, type WheelSample } from "./wheel";
 
 /**
  * Fixtures: the shape of what each device sends (see the table in wheel.ts). They are SYNTHETIC: written from the documented behaviour of each browser and
@@ -239,17 +239,58 @@ describe("zoomStep and swipePan", () => {
   });
 
   it("a pinch keeps its tuned speed and sign", () => {
-    expect(zoomStep(at(0, 0, -5, { ctrl: true }), "pinch")).toBeCloseTo(0.06, 9);
-    expect(zoomStep(at(0, 0, 5, { ctrl: true }), "pinch")).toBeCloseTo(-0.06, 9);
+    expect(zoomStep(at(0, 0, -5, { ctrl: true }), "pinch")).toBeCloseTo(5 * PINCH_ZOOM_RATE, 9);
+    expect(zoomStep(at(0, 0, 5, { ctrl: true }), "pinch")).toBeCloseTo(-5 * PINCH_ZOOM_RATE, 9);
   });
 
   it("a step is capped", () => {
     expect(zoomStep(at(0, 0, -5000, { wheelDy: 120 }), "wheel")).toBeLessThanOrEqual(0.75);
-    expect(zoomStep(at(0, 0, 90, { ctrl: true }), "pinch")).toBeGreaterThanOrEqual(-0.75);
+    expect(zoomStep(at(0, 0, 900, { ctrl: true }), "pinch")).toBeGreaterThanOrEqual(-1.5);
   });
 
   it("a swipe moves the content with the fingers (scroll down: content up)", () => {
     expect(swipePan(at(0, 4, 10))).toEqual({ dx: -4, dy: -10 });
     expect(swipePan(at(0, 0, 0))).toEqual({ dx: 0, dy: 0 });
+  });
+});
+
+describe("pinch calibration", () => {
+  /** What Chromium sends for a physical pinch: `deltaY = -100 ln(scale)` per event (codereview.chromium.org/250923004), the fingers going 3 cm to 6 cm in 30 events. */
+  const chromePinch = (from: number, to: number, n = 30) => {
+    const dist = (i: number) => from + ((to - from) * i) / n;
+    return Array.from({ length: n }, (_, i) => at(i * 16.7, 0, -100 * Math.log(dist(i + 1) / dist(i)), { ctrl: true }));
+  };
+  const PHYSICAL = 1 / (100 * Math.LN2);
+
+  it("a physical pinch (3 cm to 6 cm) is one level at the physical rate, and the classifier never loses an event", () => {
+    const c = new WheelClassifier();
+    const events = chromePinch(3, 6);
+    let total = 0;
+    for (const e of events) {
+      const v = c.classify(e);
+      expect(v.kind).toBe("pinch");
+      total += zoomStep(e, v.kind as "pinch", PHYSICAL);
+    }
+    expect(total).toBeCloseTo(1, 1);
+  });
+
+  it("at the shipped rate the same pinch is PINCH_ZOOM_RATE / 0.0144 levels, about 2.5", () => {
+    const total = chromePinch(3, 6).reduce((a, e) => a + zoomStep(e, "pinch"), 0);
+    expect(total).toBeCloseTo(PINCH_ZOOM_RATE / PHYSICAL, 1);
+    expect(total).toBeGreaterThan(2);
+    expect(total).toBeLessThan(3);
+  });
+
+  it("a stream of 60 events of deltaY -3 to -12 with ctrlKey is all pinch and none is clamped", () => {
+    const c = new WheelClassifier();
+    let total = 0;
+    for (let i = 0; i < 60; i++) {
+      const e = at(i * 16.7, 0, -(3 + ((i * 7) % 10) + 0.3), { ctrl: true, wheelDy: -3 * (3 + 0.3) });
+      expect(c.classify(e).kind).toBe("pinch");
+      const d = zoomStep(e, "pinch");
+      expect(d).toBeCloseTo(-e.dy * PINCH_ZOOM_RATE, 9);
+      total += d;
+    }
+    expect(total).toBeGreaterThan(5);
   });
 });
