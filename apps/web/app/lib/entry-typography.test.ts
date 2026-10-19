@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dropCapIndex, dropCapKind, DROP_CAP_MIN_LENGTH, formatMonthYear, headlineScale, linkedLine, splitFigures, splitHeadline } from "./entry-typography";
+import { dropCapIndex, dropCapKind, DROP_CAP_MIN_LENGTH, formatMonthYear, headlineScale, linkedLine, splitHeadline } from "./entry-typography";
 
 describe("splitHeadline", () => {
   it("leaves a title without a separator as one heavy run", () => {
@@ -87,15 +87,6 @@ describe("dropCapKind", () => {
   it("skips a paragraph shorter than the threshold", () => {
     expect(dropCapKind("A short one.")).toBeNull();
     expect(dropCapKind("A".repeat(DROP_CAP_MIN_LENGTH - 1))).toBeNull();
-  });
-});
-
-describe("splitFigures", () => {
-  it("separates the images, each side in its authored order", () => {
-    const image = (n: number) => ({ type: "image" as const, src: `/media/a/${n}.svg`, alt: String(n) });
-    const { text, figures } = splitFigures([{ type: "paragraph", text: "a" }, image(1), { type: "heading", level: 2, text: "h" }, image(2)]);
-    expect(text.map((b) => b.type)).toEqual(["paragraph", "heading"]);
-    expect(figures.map((f) => f.alt)).toEqual(["1", "2"]);
   });
 });
 

@@ -137,4 +137,22 @@ describe("EntryListPage with a sensitive entry", () => {
     expect((html.match(/data-slot="sensitive-media"/g) ?? []).length).toBe(1);
     expect((html.match(/Mature content/g) ?? []).length).toBe(1);
   });
+  it("sets the artworks as one wall without year headings, and keeps each artwork's anchor and the filter", () => {
+    const artworks = listEntries(demo, "artwork");
+    const html = renderToStaticMarkup(createElement(StaticRouter, { location: "/artworks" }, createElement(EntryListPage, { kind: "artwork", items: artworks })));
+    expect(html).toContain('data-slot="artwork-wall"');
+    expect(html).not.toContain("data-year=");
+    for (const a of artworks) expect(html).toContain(`id="${a.slug}"`);
+    expect(html).toContain(`>${artworks.length} artworks<`);
+  });
+  it("sets the poems in a grid of cells with the summary in the reading face", () => {
+    const poems = listEntries(demo, "poem");
+    const html = render(poems, "", "poem");
+    expect(html).toContain("poem-grid");
+    expect(html).toContain("poem-summary");
+    expect((html.match(/data-slot="entry-card"/g) ?? []).length).toBe(poems.length);
+  });
+  it("puts the tag filter in a scroll row", () => {
+    expect(render(articles)).toContain('data-slot="scroll-row"');
+  });
 });

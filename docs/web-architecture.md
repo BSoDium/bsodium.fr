@@ -55,7 +55,7 @@ app/
   routes/dev-design.tsx   DEV ONLY `/dev/design`: the UI system's styleguide (guarded like `/dev/street`; docs/design-system.md)
   components/         navbar, nav-scrim, skip-links, places-nav, detail-panel, place-detail, entry-list-page,
                       not-found-page, error-page, nav-progress, ui/ (the UI system: Frame, KindTag, Button, CoverArt, EntryCard, ... see docs/design-system.md)
-  components/entry/   entry-view (the one view for both containers), blocks (the body renderer), toc (full-screen contents with scroll-spy), entry-route (route glue), entry-list-card
+  components/entry/   entry-view (the one view for both containers), blocks (the body renderer), figure (a flow figure and its lightbox), toc (full-screen contents with scroll-spy), entry-route (route glue), entry-list-card
   components/         + search-palette (Cmd/Ctrl-K combobox, mounted by the navbar), landing-hero (the home page's typographic hero, which is also its empty state: docs/landing.md)
   lib/content.server.ts   ContentSource + bundled/API sources + cache (server only)
   lib/projection.ts       pure selectors: place index, routes -> points, place detail (with its entries)
@@ -89,6 +89,7 @@ app/
   throws `data({ message }, { status: 404 })`. Its `ErrorBoundary` renders `PlaceNotFound` inside the panel
   (message, link to `/`, a plain inline list of all places); the shell and globe stay mounted. Status is a real 404.
 - Unmatched URLs fall to the root `ErrorBoundary` (404 page inside the navbar).
+- `/artworks` renders `ArtworkWall` (one brick wall, placement computed server-side in `lib/masonry.ts` for 1 to 4 columns and drawn with `calc()` and container query units: no script, no layout shift, DOM = reading order; design-system.md "Artwork wall") and `/poetry` a two-column grid of `PoemRow`s; the other lists use the rows below. The tag filter is a `ScrollRow` (`components/ui/scroll-row.tsx`: hidden native scrollbar, edge arrows from a passive scroll listener and a `ResizeObserver`; `lib/scroll-row.ts` is the pure part). Browser coverage: `scripts/entries/check.mjs` section 11.
 - The list pages (`/software`, `/articles`, `/artworks`, `/poetry`) are plain pages outside the shell: a running head (the owner's name, the plain
   count "5 articles" / "2 of 5 articles" when filtered, one hairline under it; no eyebrow, no index codes), the section's name as the h1 in the reading face at a medium weight, then
   hairline rows (`EntryRow`, `components/entry/entry-list-card.tsx`: a mono column with the date, the places and a status word when there is one;
@@ -327,6 +328,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   same data, the same DOM and focus order (header, details, cover, body, places, related cards, neighbours). In `panel` every block
   spans the 12 columns; in `full` the title (8) and the details frame (4) share the first row, the cover and body (8) and the aside
   (4: places, contents) the second, in a `max-w-6xl` column; the related cards and the neighbours close both, full width. A render test asserts the two layouts have the same text in the same order.
+- **Figures in the flow.** An article's or a project's images are rendered by `BlockRenderer` (`figures` prop) where the author put them: `FlowFigure` (`components/entry/figure.tsx`), numbered by `lib/figures.ts` (`figureInfo`; the id `fig-N` only for a captioned one), with the text's own "Fig. N" mentions turned into `#fig-N` links (`linkFigureMentions`) and the optional zoom dialog (`FigureLightbox`, a portal on `body`). The old third column and `splitFigures` / `Figures` are gone; `.entry-text` is columns 4 to 12 on a full screen and the figure's width is CSS (`.entry-fig`: wide measure, natural width, edge to edge on a narrow container). `DetailPanel` scrolls an in-entry fragment (`#fig-3`) into view on load. Layout contract and rationale: [design-system.md](design-system.md) ("Figures"); browser check: `apps/web/scripts/entries/figures.mjs`.
 - **One container element.** `DetailPanel` does not remount when the layout changes: only `md:w-1/2` becomes `md:w-full` (a width
   transition on `--duration-base` and `--ease-standard`, collapsed to ~0 by the global reduced-motion rule) and the background
   loses its translucency and blur (no blur of a live canvas over the whole screen). Closing from full screen keeps the layout it
@@ -402,6 +404,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   `/artworks/figure-study-two`): the server HTML, no scripts, every moment of hydration (sampled filter), the control by keyboard, reload and
   return, no storage, print, reduced motion, cards (list, tag filter, place panel, related), 390 px and both schemes, the head after a
   client-side navigation.
+- **Browser check of figures:** `apps/web/scripts/entries/figures.mjs` (demo content: `demo-article`'s three figures, one 480 px wide): the figures sit right after the block that precedes them in the source, breakout widths at 1920, 1280, 1024, 768, 390 and in the half panel, a small picture is never upscaled, captions, no horizontal scroll, the links and a deep link land on the figure below the header (also under reduced motion), the lightbox's focus behaviour (starts on Close, Tab stays inside, Escape closes it and keeps the panel, focus returns), print. Screenshots (light and dark) in `OUT_DIR`.
 - **Browser check:** `apps/web/scripts/entries/check.mjs` (demo content; see the file header). Run against `pnpm dev:demo`; with `BASE_URL_EMPTY` set to a server on the empty published content it also checks the empty home and list. Sections 8 and 9 cover the reading aids, the filter, related entries, print, the empty home and the quick search.
 
 **The career page** (`/career`, outside the shell like the lists) is a singleton of the projection, not a section: it exists only while `projection.career` does, and the header link, the hero's fifth row and the search row follow the root loader's `hasCareer`. Everything about it is in [career-page.md](career-page.md).

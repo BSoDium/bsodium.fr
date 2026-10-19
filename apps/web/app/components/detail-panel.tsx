@@ -109,11 +109,18 @@ export function DetailPanel({ open, isMobile, reducedMotion, routeKey, returnSlu
   // Move focus to the heading: always for the modal, only after a user action on desktop (a places link, a marker, a link in the panel).
   useEffect(() => {
     if (!open) return;
-    if (isMobile || intent.current.user || navigationTypeRef.current !== "POP") {
+    // A link to a part of the entry (`#fig-3`, a section's `#body-...`) lands on it, in the panel's own scroll: the browser's scroll to
+    // the fragment is on the page, which does not scroll; the heading is the target otherwise.
+    const target = fragmentTarget(scrollRef.current);
+    if (!target && (isMobile || intent.current.user || navigationTypeRef.current !== "POP")) {
       document.getElementById(PANEL_HEADING_ID)?.focus({ preventScroll: true });
     }
     intent.current.user = false;
     scrollRef.current?.scrollTo({ top: 0 });
+    if (target) {
+      target.scrollIntoView({ block: "start" });
+      if (target.tabIndex < 0 && target.hasAttribute("tabindex")) target.focus({ preventScroll: true });
+    }
   }, [open, isMobile, routeKey, intent]);
 
   // Return focus to the place's list item when the panel closes (entries: to the page's main).
@@ -198,4 +205,17 @@ export function DetailPanel({ open, isMobile, reducedMotion, routeKey, returnSlu
       )}
     </AnimatePresence>
   );
+}
+
+/** The element the URL's fragment names, when it is inside `root` (the panel's scroll area). */
+function fragmentTarget(root: HTMLElement | null): HTMLElement | null {
+  if (!root || typeof window === "undefined" || window.location.hash.length < 2) return null;
+  let id = window.location.hash.slice(1);
+  try {
+    id = decodeURIComponent(id);
+  } catch {
+    // a malformed escape: the raw fragment is all there is
+  }
+  const el = document.getElementById(id);
+  return el && root.contains(el) ? el : null;
 }

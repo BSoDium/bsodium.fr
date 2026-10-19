@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { Link } from "react-router";
 import { PANEL_HEADING_ID } from "~/components/detail-panel";
-import { BlockRenderer, Figures } from "~/components/entry/blocks";
+import { BlockRenderer } from "~/components/entry/blocks";
 import { EntryRefCard } from "~/components/entry/entry-list-card";
 import { TableOfContents } from "~/components/entry/toc";
 import { Button, CopyButton, CoverArt, Icon, SensitiveImage, SensitiveMediaScope, StatusTag, TagList } from "~/components/ui";
@@ -23,13 +23,13 @@ import {
 import { displayHost, safeExternalUrl, safeMediaSrc } from "~/lib/entry-blocks";
 import { tagSearch } from "~/lib/entry-list";
 import { isSensitive } from "~/lib/sensitive";
-import { formatMonthYear, headlineScale, linkedLine, splitFigures, splitHeadline } from "~/lib/entry-typography";
+import { formatMonthYear, headlineScale, linkedLine, splitHeadline } from "~/lib/entry-typography";
 import { formatReadingTime, readingMinutes, tocItems } from "~/lib/reading";
 import { cn } from "~/lib/utils";
 
 export interface EntryViewProps {
   entry: EntryDetail;
-  /** `panel`: one column in the side panel. `full`: the same content on the 12-column grid: marginalia, text and figures. */
+  /** `panel`: one column in the side panel. `full`: the same content on the 12-column grid: marginalia, then the text with its figures. */
   layout: EntryViewMode;
   /** Where the visitor came from inside the panel (a place); adds a way back. */
   backTo?: { slug: string; name: string; href: string } | null;
@@ -50,10 +50,10 @@ function placeNames(places: readonly EntryPlaceLink[]): string | null {
  *
  * Order: back link, the running head (kicker: kind, place, reading time) over one hairline, the headline, the standfirst (the summary), the dateline (date,
  * "open on the globe", copy link), the marginalia (where, written, linked, the authored facts, tags, the external link, contents), the
- * lead image, the text, the figures (articles and projects: the images set apart from the text), the copyright notice (poems, articles
+ * lead image, the text (articles and projects: with its figures in the flow, between the paragraphs where the author put them), the copyright notice (poems, articles
  * and artworks: `lib/copyright.ts`), then "keep reading". A poem puts its
  * title and lines in the middle of the page with its marginalia beside the title. Full screen from 1024 px: marginalia in columns 1 to 3,
- * text in 4 to 9, figures in 10 to 12.
+ * text and its figures in 4 to 12 (a figure may be wider than the text measure, `.entry-fig`).
  *
  * The title is the view's one level 1 (`#panel-heading`, focus lands on it when the view opens); the body's headings are 2 and 3,
  * and the sections around the body (where, contents, related) are level 2. The contents are in the markup of both layouts (same
@@ -84,8 +84,8 @@ function EntryArticle({ entry, layout, backTo, headingId = PANEL_HEADING_ID }: E
   const firstPlace = entry.places[0];
   const names = placeNames(entry.places);
   const notice = copyrightNotice(entry);
-  // The images of an article or a project are the figures of the page (third column); an artwork's and a poem's stay in the text, wide.
-  const { text, figures } = entry.kind === "article" || entry.kind === "project" ? splitFigures(entry.body) : { text: entry.body, figures: [] };
+  // The images of an article or a project are figures in the flow of the text, where the author put them (wide, captioned, cross-referenced, zoomable); an artwork's and a poem's stay in the text, wide.
+  const editorial = entry.kind === "article" || entry.kind === "project";
   const { lead, tail } = poem ? { lead: entry.title, tail: "" } : splitHeadline(entry.title);
 
   // The marginalia rows that are computed, never invented: when the entry authors a fact of the same name, the authored one is shown.
@@ -227,11 +227,10 @@ function EntryArticle({ entry, layout, backTo, headingId = PANEL_HEADING_ID }: E
         {!poem && <Cover entry={entry} />}
 
         <div className="entry-text min-w-0">
-          <BlockRenderer blocks={text} lang={language} dropCap={entry.kind === "article" || entry.kind === "project"} className="gap-[1.1em]" />
+          <BlockRenderer blocks={entry.body} lang={language} dropCap={editorial} figures={editorial} className="gap-[1.1em]" />
         </div>
         {poem && marginEl}
         {poem && <Cover entry={entry} />}
-        {figures.length > 0 && <Figures blocks={figures} />}
       </div>
 
       {notice && (

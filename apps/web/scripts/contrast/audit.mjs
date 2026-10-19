@@ -1,5 +1,5 @@
 // Contrast audit in a browser (docs/design-tokens.md, "Contrast audit"). Loads every kind of route (the home page, the places panel, the four
-// lists, an entry of each kind in the panel and full screen, a short note, an archived project, a mature artwork, a poem in French, the
+// lists, an entry of each kind in the panel and full screen (the article's figures, their captions and credits, the links to a figure, and a figure open larger in its dialog), a short note, an archived project, a mature artwork, a poem in French, the
 // 404 page, the search palette with and without a query, the credits dialog, the styleguide) in BOTH colour schemes at 1440 x 900 and
 // 390 x 844, and for every piece of text compares its colour with what is REALLY drawn behind it:
 //
@@ -53,6 +53,14 @@ const searchPalette = (query) => async (page) => {
   await sleep(700);
   return "dialog[open]";
 };
+/** An article's figure opened larger (the lightbox, a modal dialog): only the dialog is audited then, the page behind is inert. */
+const figureLightbox = async (page) => {
+  await sleep(1500);
+  await page.click(".entry-fig-zoom");
+  await page.waitForSelector("dialog[open] img", { timeout: 5000 });
+  await sleep(600);
+  return "dialog[open]";
+};
 const creditsDialog = async (page) => {
   await waitGlobe(page);
   await sleep(1500);
@@ -90,6 +98,7 @@ const PAGES = [
   { name: "home-search-career", path: "/", after: searchPalette("career") },
   { name: "article-full", path: "/articles/demo-article?view=full" },
   { name: "article-panel", path: "/articles/demo-article", after: async (p) => { await waitGlobe(p); await sleep(2000); } },
+  { name: "article-lightbox", path: "/articles/demo-article?view=full", after: figureLightbox },
   { name: "note-full", path: "/articles/rain-at-the-citadel-gate?view=full" },
   { name: "software-full", path: "/software/demo-project?view=full" },
   { name: "software-panel", path: "/software/demo-project", after: async (p) => { await waitGlobe(p); await sleep(2000); } },

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { PublishedBodyBlock } from "@catalyst/schemas";
-import { BlockRenderer, Figures } from "./blocks";
+import { BlockRenderer } from "./blocks";
 
 const render = (blocks: PublishedBodyBlock[], lang?: string) => renderToStaticMarkup(createElement(BlockRenderer, { blocks, lang }));
 
@@ -132,6 +132,8 @@ describe("BlockRenderer typography", () => {
     // the figure is set under a rule, the picture is not boxed
     expect(html).toContain("entry-figure");
     expect(html).not.toMatch(/border border-border/);
+    // an artwork's or a poem's image is not a flow figure: no id, no cross reference
+    expect(html).not.toContain('id="fig-');
   });
   it("keeps one block per verse line and the stanza gap in em (a poem's lines are the page's type)", () => {
     const html = render([{ type: "verse", stanzas: [["a", "b"], ["c"]] }]);
@@ -140,19 +142,73 @@ describe("BlockRenderer typography", () => {
   });
 });
 
-describe("Figures", () => {
-  it("draws the figures set apart from the text, numbered from 1, and nothing for no drawable image", () => {
-    const blocks = [
-      { type: "image", src: "/media/a/one.svg", alt: "One", width: 10, height: 10, caption: "First" },
-      { type: "image", src: "/media/a/two.svg", alt: "Two", width: 10, height: 10, caption: "Second" },
-    ] as const;
-    const html = renderToStaticMarkup(createElement(Figures, { blocks }));
-    expect(html).toContain('data-slot="entry-figures"');
-    expect(html).toContain("Fig. 1 ");
-    expect(html).toContain("Fig. 2 ");
-    expect(renderToStaticMarkup(createElement(Figures, { blocks: [{ type: "image", src: "https://evil.test/x.png", alt: "x" } as never] }))).toBe("");
+const renderFigures = (blocks: PublishedBodyBlock[]) => renderToStaticMarkup(createElement(BlockRenderer, { blocks, figures: true }));
+const image = (n: number, caption?: string): PublishedBodyBlock => ({ type: "image", src: `/media/a/${n}.svg`, alt: `Alt ${n}`, width: 960, height: 600, ...(caption ? { caption } : {}) });
+
+describe("BlockRenderer, figures in the flow (articles and projects)", () => {
+  const blocks: PublishedBodyBlock[] = [
+    { type: "paragraph", text: "First paragraph." },
+    image(1, "A lamp. (Source: the author)"),
+    { type: "paragraph", text: "Second, citing the lamp (Fig. 1) and a bare image (Fig. 2) and a missing one (Fig. 7)." },
+    image(2),
+    image(3, "The board"),
+    { type: "list", ordered: false, items: ["see Figure 3", "none"] },
+    { type: "quote", text: "As in Fig. 1.", cite: "Fig. 3 says" },
+    { type: "code", language: "text", code: "Fig. 1" },
+    { type: "link", title: "Fig. 1", url: "https://example.org/x" },
+    { type: "heading", level: 2, text: "Fig. 1 in a heading" },
+  ];
+  const html = renderFigures(blocks);
+  it("keeps each image where it is authored: right after the paragraph that precedes it in the source", () => {
+    const at = (needle: string) => html.indexOf(needle);
+    expect(at("First paragraph.")).toBeLessThan(at('src="/media/a/1.svg"'));
+    expect(at('src="/media/a/1.svg"')).toBeLessThan(at("Second, citing"));
+    expect(at("Second, citing")).toBeLessThan(at('src="/media/a/2.svg"'));
+    expect(at('src="/media/a/2.svg"')).toBeLessThan(at('src="/media/a/3.svg"'));
+    expect(html).not.toContain('data-slot="entry-figures"');
+  });
+  it("gives a captioned figure its number and its id, a bare one neither, and carries the natural width", () => {
+    expect(html).toContain('id="fig-1"');
+    expect(html).toContain('id="fig-3"');
+    expect(html).not.toContain('id="fig-2"');
+    expect((html.match(/tabindex="-1"/g) ?? []).length).toBe(2);
+    expect(html).toContain("--fig-natural:960px");
+    expect(html).toContain('<span class="entry-caption-label">Fig. 1</span>');
+    expect(html).toContain('<span class="entry-caption-label">Fig. 3</span>');
+    expect(html).not.toContain(">Fig. 2<");
+  });
+  it("splits the credit from the caption, and keeps the authored words", () => {
+    expect(html).toContain('<span class="entry-caption-text">A lamp.</span>');
+    expect(html).toContain('data-slot="entry-credit"');
+    expect(html).toContain("(Source: the author)");
+  });
+  it("links the mentions of a figure that has an id, in paragraphs, lists and quotes, with the text unchanged", () => {
+    expect(html).toContain('(<a href="#fig-1" data-slot="figure-mention" class="entry-figref">Fig. 1</a>)');
+    expect(html).toContain('<a href="#fig-3" data-slot="figure-mention" class="entry-figref">Figure 3</a>');
+    expect(html).toContain('As in <a href="#fig-1"');
+  });
+  it("leaves the mention of a bare or a missing figure, a quote's cite, a code block, a link card and a heading as text", () => {
+    expect(html).toContain("(Fig. 2)");
+    expect(html).toContain("(Fig. 7)");
+    expect(html).toContain("— Fig. 3 says");
+    expect(html).toContain("<code>Fig. 1</code>");
+    expect(html).not.toMatch(/<a [^>]*href="#fig-1"[^>]*>Fig\. 1 in a heading/);
+    expect((html.match(/href="#fig-/g) ?? []).length).toBe(3);
+  });
+  it("does not link without the flow figures (an artwork, a poem)", () => {
+    expect(render(blocks.slice(0, 3))).not.toContain("#fig-");
+  });
+  it("has no link when no figure carries a number, and no figure for an image that cannot be drawn", () => {
+    expect(renderFigures([para("See Fig. 1."), { type: "image", src: "/media/a/x.svg", alt: "x", width: 10, height: 10 }])).not.toContain("<a ");
+    expect(renderFigures([{ type: "image", src: "https://evil.test/x.png", alt: "x", caption: "c" } as never])).not.toContain("<figure");
+  });
+  it("has no button to open a figure in the server render (the control exists once hydrated and measured)", () => {
+    expect(html).not.toContain("entry-fig-zoom");
+    expect(html).not.toContain("<dialog");
   });
 });
+
+const para = (text: string): PublishedBodyBlock => ({ type: "paragraph", text });
 
 describe("no raw HTML sink", () => {
   it("no component of the entry views or the lists uses dangerouslySetInnerHTML or innerHTML", () => {

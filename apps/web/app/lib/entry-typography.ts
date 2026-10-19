@@ -1,6 +1,6 @@
 /**
  * Pure decisions of the entry pages' typography (docs/design-system.md, "Entry pages"): what is set thin against heavy in a headline,
- * how a date reads as "March 2026", which paragraph opens with a drop cap, which blocks are figures. No markup, no invented text: every
+ * how a date reads as "March 2026", which paragraph opens with a drop cap. No markup, no invented text: every
  * output is a part of, or a count of, what the entry publishes.
  */
 import type { PublishedBodyBlock } from "@catalyst/schemas";
@@ -75,17 +75,6 @@ export function dropCapIndex(blocks: readonly Block[]): number {
   const first = blocks[0];
   if (first?.type !== "paragraph") return -1;
   return dropCapKind(first.text) === null ? -1 : 0;
-}
-
-/** The body split into what is read and what is looked at: the image blocks (the figures) and everything else, each in its authored order. */
-export function splitFigures(blocks: readonly Block[]): { text: Block[]; figures: Extract<Block, { type: "image" }>[] } {
-  const text: Block[] = [];
-  const figures: Extract<Block, { type: "image" }>[] = [];
-  for (const block of blocks) {
-    if (block.type === "image") figures.push(block);
-    else text.push(block);
-  }
-  return { text, figures };
 }
 
 /** The "Linked" line of the marginalia, from counts the page already has; `null` when there is nothing to say. Never a number that is not a count. */

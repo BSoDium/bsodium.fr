@@ -414,7 +414,7 @@ if (process.env.BASE_URL_EMPTY) {
   const { ctx, page } = await newPage(DESKTOP);
   await page.goto(`${BASE_URL}/locations/bangkok`);
   await waitPanel(page);
-  ok((await page.locator("[data-slot=place-entries]").count()) === 0 && (await page.locator("[data-panel] h2").count()) === 0, "a place without entries has no entries section and no empty box at all");
+  ok((await page.locator("[data-slot=place-entries]").count()) === 0 && (await page.locator("[data-panel] h2:not(#place-journeys)").count()) === 0, "a place without entries has no entries section and no empty box at all (its Journeys list, when it has legs, is not an entries section)");
   // print: the chrome goes, the entry stays
   await page.goto(`${BASE_URL}/poetry/cuesta-arriba?view=full`);
   await waitPanel(page);
@@ -623,6 +623,115 @@ for (const path of ["/", "/software"]) {
   const banner = await page.evaluate(() => { const i = document.querySelector("[data-slot=entry-cover] img"); const r = i.getBoundingClientRect(); return { fit: getComputedStyle(i).objectFit, ratio: r.width / r.height }; });
   ok(banner.fit === "cover" && Math.abs(banner.ratio - 1.91) < 0.03, `article cover: still the 1.91:1 banner (${banner.fit}, ${banner.ratio.toFixed(2)})`);
   await ctx.close();
+}
+
+// 11. The artwork wall, the poems' grid and the scroll rows of the lists (docs/design-system.md, "Artwork wall", "Poetry list", "Scroll row").
+{
+  // 11a. The wall: 1 column on a phone, 2 at 768, 3 at 1280, 4 at 1920; no two pictures overlap; the order of the tab stops is the DOM order;
+  // every picture is drawn in its contract proportions (within 3 %); a sensitive one is blurred; no overflow.
+  for (const [width, columns] of [[390, 1], [768, 2], [1280, 3], [1920, 4]]) {
+    const touch = width < 768;
+    const ctx = await browser.newContext({ viewport: { width, height: 900 }, hasTouch: touch, isMobile: touch, colorScheme: "light" });
+    const page = await ctx.newPage();
+    await page.goto(`${BASE_URL}/artworks`);
+    await page.waitForSelector("[data-slot=artwork-wall] .wall-item");
+    await page.waitForTimeout(600);
+    const wall = await page.evaluate(() => {
+      const items = [...document.querySelectorAll(".wall-item")].map((li) => {
+        const r = li.getBoundingClientRect();
+        const m = li.querySelector(".wall-media").getBoundingClientRect();
+        return { l: Math.round(r.left), t: r.top + scrollY, r: r.right, b: r.bottom + scrollY, w: m.width, h: m.height, ratio: parseFloat(li.style.getPropertyValue("--ratio")) };
+      });
+      const list = document.querySelector(".wall-list").getBoundingClientRect();
+      return { items, listBottom: list.bottom + scrollY, cols: new Set(items.map((i) => i.l)).size, overflow: document.documentElement.scrollWidth - innerWidth };
+    });
+    const overlap = wall.items.some((a, i) => wall.items.some((b, j) => j > i && a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5));
+    ok(wall.cols === Math.min(columns, wall.items.length), `${width}px /artworks: ${columns} column(s) (${wall.cols})`);
+    ok(!overlap, `${width}px /artworks: no two pictures overlap`);
+    ok(wall.items.every((i) => Math.abs(i.h / i.w - i.ratio) / i.ratio < 0.03), `${width}px /artworks: every picture keeps its contract proportions`);
+    ok(wall.items.every((i) => i.b <= wall.listBottom + 1), `${width}px /artworks: the wall's reserved height holds every picture`);
+    ok(wall.overflow <= 0, `${width}px /artworks: no horizontal overflow (${wall.overflow})`);
+    const gaps = await page.evaluate(() => { const it = [...document.querySelectorAll(".wall-item")].map((li) => li.getBoundingClientRect()); const xs = [...new Set(it.map((r) => Math.round(r.left)))].sort((a, b) => a - b); return xs.length > 1 ? Math.round(it.find((r) => Math.round(r.left) === xs[1]).left - it.find((r) => Math.round(r.left) === xs[0]).right) : null; });
+    ok(gaps === null || (gaps >= 8 && gaps <= 12), `${width}px /artworks: the column gap is 8 to 12 px (${gaps})`);
+    const order = [];
+    for (let i = 0; i < wall.items.length + 20; i++) { await page.keyboard.press("Tab"); const id = await page.evaluate(() => document.activeElement?.closest(".wall-card")?.id); if (id) order.push(id); }
+    const dom = await page.evaluate(() => [...document.querySelectorAll(".wall-card")].map((a) => a.id));
+    ok(order.length === dom.length && order.every((id, i) => id === dom[i]), `${width}px /artworks: the tab stops follow the DOM (reading) order (${order.length} of ${dom.length})`);
+    const hover = await page.evaluate(() => matchMedia("(hover: hover) and (pointer: fine)").matches);
+    const cap = await page.evaluate(() => { const c = document.querySelector(".wall-caption"); const cs = getComputedStyle(c); return { opacity: cs.opacity, position: cs.position, h: c.getBoundingClientRect().height }; });
+    ok(hover ? cap.opacity === "0" || cap.opacity === "1" : cap.opacity === "1" && cap.h > 40, `${width}px /artworks: the caption is ${hover ? "an overlay (shown on hover and focus)" : "always visible under the picture"}`);
+    ok((await page.locator("[data-slot=sensitive-media][data-state=hidden]").count()) === 1, `${width}px /artworks: the sensitive artwork stays blurred`);
+    if (hover) {
+      // The plate is PAINTED over the picture (the picture's box is positioned: a static plate would sit under it): a pixel inside the plate is the page's colour.
+      const link = page.locator(".wall-card a").first();
+      await link.evaluate((e) => e.scrollIntoView({ block: "center", behavior: "instant" }));
+      const box = await link.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForTimeout(150);
+      const spot = await page.evaluate(() => { const r = document.querySelector(".wall-card .wall-caption").getBoundingClientRect(); return { x: Math.round(r.left + 4), y: Math.round(r.top + r.height / 2), bg: getComputedStyle(document.querySelector(".wall-card .wall-caption")).backgroundColor }; });
+      const png = await page.screenshot({ clip: { x: spot.x, y: spot.y, width: 1, height: 1 }, type: "png" });
+      const px = await page.evaluate(async (b64) => { const img = new Image(); img.src = "data:image/png;base64," + b64; await img.decode(); const c = document.createElement("canvas"); c.width = c.height = 1; const g = c.getContext("2d"); g.drawImage(img, 0, 0); return [...g.getImageData(0, 0, 1, 1).data].slice(0, 3); }, png.toString("base64"));
+      const want = spot.bg.match(/\d+/g).slice(0, 3).map(Number);
+      ok(px.every((v, i) => Math.abs(v - want[i]) <= 2), `${width}px /artworks: on hover the caption plate is painted over the picture in its solid page colour (${px} vs ${want})`);
+      await page.mouse.move(0, 0);
+    }
+    await ctx.close();
+  }
+  // 11b. Poems: wider page, two columns from 44 rem; the summary is 20 px or more in the reading face.
+  for (const [width, columns] of [[390, 1], [768, 1], [1280, 2], [1920, 2], [2560, 2]]) {
+    const ctx = await browser.newContext({ viewport: { width, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(`${BASE_URL}/poetry`);
+    await page.waitForSelector(".poem-grid");
+    const poems = await page.evaluate(() => {
+      const grid = getComputedStyle(document.querySelector(".poem-grid"));
+      const sum = getComputedStyle(document.querySelector(".poem-summary"));
+      return { cols: grid.gridTemplateColumns.split(" ").length, size: parseFloat(sum.fontSize), font: sum.fontFamily, overflow: document.documentElement.scrollWidth - innerWidth, main: document.querySelector("main").getBoundingClientRect().width };
+    });
+    ok(poems.cols === columns, `${width}px /poetry: ${columns} column(s) (${poems.cols})`);
+    ok(poems.size >= 20 && /Newsreader|serif/i.test(poems.font), `${width}px /poetry: the summary is the reading serif at ${poems.size.toFixed(1)} px`);
+    ok(poems.overflow <= 0, `${width}px /poetry: no horizontal overflow`);
+    await ctx.close();
+  }
+  // 11c. Scroll rows: no native scrollbar on a phone; the right arrow at the start, both in the middle, the left at the end; 44 px; named.
+  {
+    const ctx = await browser.newContext({ ...MOBILE });
+    const page = await ctx.newPage();
+    await page.goto(`${BASE_URL}/software`);
+    await page.waitForSelector("[data-slot=scroll-row-arrow]", { timeout: 10000 });
+    const state = () => page.evaluate(() => { const v = document.querySelector("[data-slot=scroll-row-viewport]"); return { sl: v.scrollLeft, overflowing: v.scrollWidth > v.clientWidth, sbw: getComputedStyle(v).scrollbarWidth, bar: v.offsetHeight - v.clientHeight, arrows: [...document.querySelectorAll("[data-slot=scroll-row-arrow]")].map((a) => ({ label: a.getAttribute("aria-label"), w: a.getBoundingClientRect().width, h: a.getBoundingClientRect().height, bg: getComputedStyle(a).backgroundColor, tab: a.tabIndex })) }; });
+    let st = await state();
+    ok(st.overflowing && st.sbw === "none" && st.bar === 0, `scroll row: overflows with no native scrollbar (${st.sbw}, ${st.bar})`);
+    ok(st.sl === 0 && st.arrows.length === 1 && st.arrows[0].label === "Scroll tags right", `scroll row: only the right arrow at the start (${st.arrows.map((a) => a.label)})`);
+    ok(st.arrows.every((a) => a.w >= 44 && a.h >= 44 && /^rgb\(/.test(a.bg)), "scroll row: 44 px arrows on a solid plate");
+    ok(st.arrows.every((a) => a.tab === -1), "scroll row: the arrows are not tab stops (the row's links are)");
+    await page.getByRole("button", { name: "Scroll tags right" }).tap();
+    await page.waitForFunction(() => document.querySelector("[data-slot=scroll-row-viewport]").scrollLeft > 100);
+    st = await state();
+    ok(st.arrows.length === 2, `scroll row: both arrows in the middle (${st.arrows.map((a) => a.label)})`);
+    for (let i = 0; i < 8 && (await page.getByRole("button", { name: "Scroll tags right" }).count()); i++) { await page.getByRole("button", { name: "Scroll tags right" }).tap(); await page.waitForTimeout(500); }
+    st = await state();
+    ok(st.arrows.length === 1 && st.arrows[0].label === "Scroll tags left", `scroll row: only the left arrow at the end (${st.arrows.map((a) => a.label)})`);
+    await page.getByRole("button", { name: "Scroll tags left" }).tap();
+    await page.waitForTimeout(600);
+    ok((await state()).sl < st.sl, "scroll row: the left arrow scrolls back");
+    await ctx.close();
+    // reduced motion: the press scrolls at once
+    const rm = await browser.newContext({ ...MOBILE, reducedMotion: "reduce" });
+    const rp = await rm.newPage();
+    await rp.goto(`${BASE_URL}/software`);
+    await rp.waitForSelector("[data-slot=scroll-row-arrow]");
+    await rp.getByRole("button", { name: "Scroll tags right" }).tap();
+    ok((await rp.evaluate(() => document.querySelector("[data-slot=scroll-row-viewport]").scrollLeft)) > 100, "scroll row: reduced motion scrolls at once");
+    await rm.close();
+    // desktop: the row wraps, no arrows
+    const dk = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const dp = await dk.newPage();
+    await dp.goto(`${BASE_URL}/software`);
+    await dp.waitForTimeout(800);
+    ok((await dp.locator("[data-slot=scroll-row-arrow]").count()) === 0, "scroll row: no arrows when the row wraps (desktop)");
+    await dk.close();
+  }
 }
 
 await browser.close();
