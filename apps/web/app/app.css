@@ -1638,6 +1638,14 @@
 }
 
 /* Entry reading, filters and rows (docs/design-system.md, "Entry view", "Lists"). */
+
+/* How far a figure's caption is held in from the figure's edge when the figure bleeds to the screen's edge (`.entry-fig`): registered, so that it is a length computed on the figure (its `em` and `cqi` are the figure's), not a token read again on the caption. */
+@property --fig-inset {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 @layer components {
   /*
    * Reading text: the reading face at its role size (`.type-reading`), blocks held to the measure (`--measure-reading`), no widows.
@@ -1822,9 +1830,9 @@
    * Entry pages (docs/design-system.md, "Entry pages"): the article and poem boards of the owner's canvas.
    * The entry is a container (`cqi`): the headline, the body and the poem scale with the width of the column they sit in, so the half
    * panel and the full screen are the same design at two widths. From 1024 px of a full screen the page is a 12-column grid with
-   * 28 px gutters: marginalia in 1-3, the text in 4-9, the figures in 10-12 (an article, a project); an artwork's image and a poem's
-   * lines take 4-12 and 4-10. Everything else is one column: header, dateline, marginalia (compact), text, figures. The markup order is
-   * the reading order in both; only the placement changes.
+   * 28 px gutters: marginalia in 1-3, the text with its figures in 4-12 (an article, a project: the figures are in the flow of the text,
+   * `.entry-fig`); an artwork's image takes 4-12 and a poem's lines 4-10. Everything else is one column: header, dateline, marginalia
+   * (compact), text. The markup order is the reading order in both; only the placement changes.
    */
   .entry {
     container-type: inline-size;
@@ -1994,10 +2002,182 @@
     line-height: 1.08;
   }
 
-  /* Figures: a rule of the ink, the image, a mono caption. */
+  /* The cover, and the images of an artwork or a poem: a rule of the ink, the image, a mono caption. */
   .entry-figure {
     border-top: 1px solid var(--foreground);
     padding-top: 0.75rem;
+  }
+
+  /*
+   * Figures in the flow of an article or a project (docs/design-system.md, "Figures"): the image stays where the author put it, between
+   * two blocks, under a hairline of the ink. Its box is the "wide" measure: the text's measure and a quarter (`--fig-box`), never more
+   * than the column; the picture is drawn at most at its own width (`--fig-natural`, the published `width` in CSS pixels, set inline),
+   * so a small diagram is not blown up, and is centred in the wide measure. The figure is as wide as its picture: the rule and the
+   * caption follow it. On a narrow container (a phone, the half panel on a small window) the box is the column plus both page gutters:
+   * a picture as wide as that goes edge to edge, a small one keeps the gutter (the caption keeps it either way). Lengths only (no
+   * percentages in `--fig-col`: it is the container's width, which is the column's there), so the margins and the caption's inset
+   * can be computed from the figure's own width.
+   */
+  .entry {
+    --entry-gutter: 1.5rem;
+  }
+
+  .entry[data-layout="full"] {
+    --entry-gutter: 1rem;
+  }
+
+  .entry-fig {
+    --fig-col: 100%;
+    --fig-bleed: 0px;
+    --fig-box: min(calc(var(--measure-reading) * 1.25), var(--fig-col));
+    --fig-w: min(var(--fig-natural, 100%), var(--fig-box));
+    width: var(--fig-w);
+    margin: 0.9em 0 0.9em calc((var(--fig-box) - var(--fig-w)) / 2 - var(--fig-bleed));
+    border-top: 1px solid var(--foreground);
+    padding-top: 0.75rem;
+    scroll-margin-top: calc(var(--navbar-height) + 1rem);
+    break-inside: avoid;
+  }
+
+  /* Two figures in a row: the same air as between a paragraph and a figure. */
+  .entry-fig + .entry-fig {
+    margin-top: 0;
+  }
+
+  @container (max-width: 40rem) {
+    .entry-fig {
+      --fig-col: 100cqi;
+      --fig-bleed: var(--entry-gutter);
+      --fig-box: calc(var(--fig-col) + 2 * var(--fig-bleed));
+    }
+
+    .entry-fig {
+      --fig-inset: clamp(0px, calc((var(--fig-w) - var(--fig-col)) / 2), var(--fig-bleed));
+    }
+  }
+
+  /* The followed link lands on the figure: it takes the focus (tabindex -1) and shows it to the keyboard. */
+  /* A 44 px target below `md` for the link to a figure inside a line of text (as `.entry-link`: the hit area grows, the text does not). */
+  .entry-figref {
+    position: relative;
+  }
+
+  @media (max-width: 767.98px) {
+    .entry-figref::before {
+      content: "";
+      position: absolute;
+      inset: -0.8125rem -0.5rem;
+    }
+  }
+
+  .entry-fig:focus {
+    outline: none;
+  }
+
+  .entry-fig:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 0.5rem;
+  }
+
+  .entry-fig-media {
+    position: relative;
+  }
+
+  /* The control that opens a figure larger: the picture itself, drawn only once hydrated and where the picture is wider than it is shown. */
+  .entry-fig-zoom {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: zoom-in;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .entry-fig-zoom:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  /* The caption (Le Monde and The Guardian's, in the site's mono micro type): under the picture, left-aligned to its edge, as wide as it and never past about 60 characters. */
+  .entry-caption {
+    margin: 0.625rem 0 0;
+    max-width: min(100%, 60ch);
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "calt" 0;
+    padding-inline: var(--fig-inset);
+    text-align: left;
+    text-wrap: pretty;
+    overflow-wrap: anywhere;
+    color: var(--foreground);
+  }
+
+  .entry-caption-label {
+    font-weight: 700;
+  }
+
+  /* The credit, after the caption: the muted tone (a solid colour, 4.5:1 on the page in both schemes). */
+  .entry-caption-credit {
+    color: var(--muted-foreground);
+  }
+
+  /* A figure open larger: a native modal dialog on the page's colours, the picture at its own width (never past the window), its caption under it. */
+  .figure-lightbox {
+    box-sizing: border-box;
+    margin: auto;
+    padding: 0;
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+    overflow: auto;
+    border: 1px solid var(--border-strong);
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  .figure-lightbox::backdrop {
+    background: rgb(0 0 0 / 0.8);
+  }
+
+  .figure-lightbox-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem 1rem;
+  }
+
+  .figure-lightbox-close {
+    display: grid;
+    align-self: flex-end;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin: 0 -0.75rem 0 0;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    cursor: pointer;
+  }
+
+  .figure-lightbox-close:hover {
+    color: var(--signal-text);
+  }
+
+  .figure-lightbox-close:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -4px;
+  }
+
+  .figure-lightbox-img {
+    display: block;
+    height: auto;
+    /* Its own width, the window's if that is narrower, and no taller than the window leaves room for (the caption and the button). */
+    width: min(var(--fig-natural), calc(100vw - 3rem), calc((100dvh - 9rem) * var(--fig-aspect, 1.5)));
   }
 
   /* A poem: the lines are the page's type (the poem board: roman 300, 36 px / 1.38 at full width, one block per authored line). */
@@ -2043,13 +2223,9 @@
     }
 
     .entry[data-layout="full"] .entry-grid > .entry-text {
-      grid-column: 4 / span 6;
+      grid-column: 4 / -1;
       border-top: 1px solid var(--foreground);
       padding-top: 0.75rem;
-    }
-
-    .entry[data-layout="full"] .entry-grid > .entry-figures {
-      grid-column: 10 / span 3;
     }
 
     /* An artwork: the image is the page, wide; the text keeps its measure on the left of the 9 columns. */
@@ -2125,30 +2301,101 @@
     border-bottom-color: var(--signal);
   }
 
-  /* The toggles: one row that scrolls sideways on a phone (it bleeds to the screen edges), wrapped from md. */
-  .ds-filter-row {
+  /*
+   * The toggles: one row that scrolls sideways on a phone (it bleeds to the screen edges; `ScrollRow` hides the native scrollbar and draws
+   * the arrows), wrapped from md.
+   */
+  .list-filter {
     /* The list page's side padding below md is 1 rem (`px-4`): the row bleeds exactly to the screen edges, no further (a 24 px bleed on a
        16 px page made the page 8 px wider than a 320 px phone). */
     --bleed: 1rem;
-    margin: 0 calc(var(--bleed) * -1);
+    margin-inline: calc(var(--bleed) * -1);
+  }
+
+  .ds-filter-row {
     /* (the first toggle's own padding is outside the text column: the row starts that much earlier) */
-    padding: 0 var(--bleed) 0.25rem calc(var(--bleed) - 0.5rem);
-    overflow-x: auto;
-    scrollbar-width: thin;
+    padding: 0 var(--bleed) 0 calc(var(--bleed) - 0.5rem);
   }
 
   @media (min-width: 768px) {
+    .list-filter {
+      margin-inline: -0.5rem 0;
+    }
+
+    .list-filter .scroll-row-viewport {
+      overflow: visible;
+    }
+
     .ds-filter-row {
       flex-wrap: wrap;
-      margin: 0 0 0 -0.5rem;
       padding: 0;
-      overflow-x: visible;
     }
 
     .ds-filter {
       min-height: 2rem;
       min-width: 0;
     }
+  }
+
+  /*
+   * Scroll row (components/ui/scroll-row.tsx): a row that scrolls sideways with NO native scrollbar and two arrow buttons that exist only
+   * while there is more on that side. The arrow is a 44 px plate of the page's own colour (solid, never a fade) at the edge, with a
+   * hairline on its inner side; the row stays the scroller (touch, keyboard focus, wheel).
+   */
+  .scroll-row {
+    position: relative;
+  }
+
+  .scroll-row-viewport {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    /* room for the focus ring of the first and last chips, which `overflow` would clip */
+    padding-block: 0.25rem;
+    margin-block: -0.25rem;
+  }
+
+  .scroll-row-viewport::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .scroll-row-arrow {
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    color: var(--foreground);
+    background: var(--background);
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .scroll-row-arrow[data-side="start"] {
+    left: 0;
+    border-right: var(--hairline) solid var(--border);
+  }
+
+  .scroll-row-arrow[data-side="end"] {
+    right: 0;
+    border-left: var(--hairline) solid var(--border);
+  }
+
+  .scroll-row-arrow:hover {
+    color: var(--signal-text);
+  }
+
+  .scroll-row-arrow:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
   }
 
   /* A year heading of a list: the year, set quietly above its cards. */
@@ -2202,6 +2449,249 @@
   .list-filter {
     margin-top: 2rem;
   }
+
+  /*
+   * The artwork wall (components/entry/artwork-wall.tsx, lib/masonry.ts, docs/design-system.md "Artwork wall"): a brick wall of pictures at
+   * their own proportions in 1 to 4 equal columns by the wall's own width (a size container: 1 from 0, 2 from 34 rem, 3 from 62 rem,
+   * 4 from 88 rem). The DOM is one list in reading order; each picture is placed with `calc()` from numbers the server computed for every tier
+   * (`--c1..4` column, `--n1..4` pictures above, `--r1..4` their ratios): `top = ratios above * column width + pictures above * (caption + gap)`.
+   * No script, no measuring, no shift. The gap is 10 px. Square edges, a hairline round the picture. A pointer that hovers sees the caption as
+   * a solid page-colour plate over the picture's foot on hover and focus (no height of its own); a touch screen has a caption line of a fixed
+   * height under every picture (`--cap`), so the rhythm of the bricks holds.
+   */
+  .wall {
+    --gap: 0.625rem;
+    --cap: 4.5rem;
+    --slot: calc(var(--cap) + var(--gap));
+    container: wall / inline-size;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .wall {
+      --cap: 0px;
+    }
+  }
+
+  .wall-list {
+    --cols: 1;
+    --colw: calc((100cqi - (var(--cols) - 1) * var(--gap)) / var(--cols));
+    position: relative;
+    height: var(--h1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .wall-item {
+    --col: var(--c1);
+    --n: var(--n1);
+    --r: var(--r1);
+    position: absolute;
+    top: calc(var(--r) * var(--colw) + var(--n) * var(--slot));
+    left: calc(var(--col) * (var(--colw) + var(--gap)));
+    width: var(--colw);
+  }
+
+  @container wall (min-width: 34rem) {
+    .wall-list {
+      --cols: 2;
+      height: var(--h2);
+    }
+
+    .wall-item {
+      --col: var(--c2);
+      --n: var(--n2);
+      --r: var(--r2);
+    }
+  }
+
+  @container wall (min-width: 62rem) {
+    .wall-list {
+      --cols: 3;
+      height: var(--h3);
+    }
+
+    .wall-item {
+      --col: var(--c3);
+      --n: var(--n3);
+      --r: var(--r3);
+    }
+  }
+
+  @container wall (min-width: 88rem) {
+    .wall-list {
+      --cols: 4;
+      height: var(--h4);
+    }
+
+    .wall-item {
+      --col: var(--c4);
+      --n: var(--n4);
+      --r: var(--r4);
+    }
+  }
+
+  .wall-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wall-card:has(:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  /* The picture's box takes the contract's proportions; the picture fills it (a generated cover is drawn to fit). */
+  .wall-media {
+    position: relative;
+    aspect-ratio: var(--aspect);
+    overflow: hidden;
+    background: var(--surface);
+    outline: var(--hairline) solid var(--border);
+    outline-offset: -1px;
+  }
+
+  .wall-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Touch (and any pointer that cannot hover): the caption is under the picture, always shown, two lines of title and one of the medium. */
+  .wall-caption {
+    height: var(--cap);
+    padding-top: 0.5rem;
+    overflow: hidden;
+  }
+
+  .wall-title {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .wall-meta {
+    display: flex;
+    margin: 0.125rem 0 0;
+    color: var(--muted-foreground);
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: pre;
+  }
+
+  .wall-medium {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    /* The caption shares the picture's grid cell and sits at its foot: nothing is positioned, so the title's stretched link still covers the whole card. */
+    .wall-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .wall-media,
+    .wall-caption {
+      grid-area: 1 / 1;
+    }
+
+    /* z-index (a grid item takes it without being positioned): the picture's box is positioned and would paint over a static plate, and a positioned plate would shrink the title link's stretched hit area to itself. */
+    .wall-caption {
+      z-index: 1;
+      align-self: end;
+      height: auto;
+      padding: 0.75rem;
+      overflow: visible;
+      color: var(--foreground);
+      background: var(--background);
+      border-top: var(--hairline) solid var(--border-strong);
+      opacity: 0;
+    }
+
+    .wall-card:hover .wall-caption,
+    .wall-card:has(:focus-visible) .wall-caption {
+      opacity: 1;
+    }
+
+    .wall-title {
+      font-size: 1.125rem;
+    }
+  }
+
+  .wall-card:hover .wall-title a {
+    text-decoration: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.2em;
+  }
+
+  /*
+   * The poems' list (components/entry/entry-list-card.tsx `PoemRow`, docs/design-system.md "Poetry list"): the page is wider (100 rem) and
+   * its rows are cells of a grid, 1 column, 2 from 44 rem of the page's width (the page stops at 100 rem, so never 3: three columns of 480 px would cut the summaries to 35 characters). The summary is the reading face at 20 to 26 px
+   * in the ink, the title heavy over it, the mono line 14 px at a medium weight in the muted tone (6.8:1 and 7.9:1 on the page).
+   */
+  .poem-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: clamp(2rem, 4cqi, 4.5rem);
+  }
+
+  @container (min-width: 44rem) {
+    .poem-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .poem-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    padding-block: 1.75rem 2.25rem;
+  }
+
+  .poem-meta {
+    color: var(--muted-foreground);
+    font-family: var(--font-meta);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-feature-settings: "calt" 0;
+  }
+
+  .poem-row-title {
+    font-size: clamp(1.75rem, 1.3rem + 1.1cqi, 2.625rem);
+    line-height: 1.08;
+  }
+
+  .poem-summary {
+    max-width: 30em;
+    color: var(--foreground);
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    font-size: clamp(1.25rem, 1.05rem + 0.55cqi, 1.625rem);
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
 }
 
 /*
@@ -2460,6 +2950,25 @@ h1[tabindex="-1"]:focus-visible {
  * the colours are the light scheme's whatever the visitor's scheme is.
  */
 @media print {
+  /* The artwork wall prints as two plain columns, caption under every picture. */
+  .wall-list {
+    display: grid;
+    height: auto;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem;
+  }
+
+  .wall-item {
+    position: static;
+    break-inside: avoid;
+  }
+
+  .wall-caption {
+    position: static;
+    height: auto;
+    opacity: 1;
+  }
+
   :root {
     color-scheme: light;
     --background: #fff;

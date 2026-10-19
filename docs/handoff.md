@@ -55,6 +55,24 @@ Done: the cream paper and the warm night of the reading surface are gone: entrie
 
 Contract `routes[].legs` (mode and optional polyline5), limits `ROUTE_LEG_LIMITS`, faint-everywhere/ink-on-selection renderer on both maps, Paths switch, Journeys list. Read [paths.md](paths.md). The private repo must copy `packages/schemas/published.schema.json` and enforce `ROUTE_LEG_LIMITS` (decoder exported as `decodePolyline5`) before exporting legs. Demo routes: `apps/web/scripts/paths/make-demo-legs.mjs` regenerates the fictional legs. Not done: mode colours (palettes), real data, Safari and phone checks.
 
+## Map gestures, the Apple Maps model (branch `feat/map-gestures`, 2026-10-19)
+
+A two-finger swipe on a trackpad now PANS the map (globe and street map), never zooms; pinch/spread (trackpad ctrl-wheel, Safari `gesture*`, two touch pointers) and a classic mouse wheel zoom, and every zoom is anchored on the pointer (or the pinch midpoint): the point under it stays under it, across the globe, the cut and the street map. Read [web-architecture.md](web-architecture.md) ("Input model": the device classification table, the anchor maths, the page-scroll rule, `?input-debug`). Code: `engine/wheel.ts`, `wheel-input.ts`, `wheel-debug.ts`, `anchor.ts`, `controls.ts`, `renderer.ts` (`zoomAt`), `street/engine.ts` (standalone map). Checks: `anchor.test.ts`, `wheel.test.ts`, `scripts/input/check.mjs`. The older browser scripts declare their `page.mouse.wheel` a mouse wheel (`sessionStorage["input-kind"]`, debug pages only). Needs the owner on real hardware: see "Not verified".
+
+## Editorial figures (branch `feat/editorial-figures`, 2026-10-15)
+
+Articles and projects: images stay in the flow of the text (wide, never upscaled, Le Monde / Guardian style captions with a muted credit), the text's "Fig. N" mentions link to them, a figure wider than it is drawn opens in a native dialog; the third column is gone. [design-system.md](design-system.md) ("Figures"), [web-architecture.md](web-architecture.md), `apps/web/scripts/entries/figures.mjs`, the contrast audit page `article-lightbox`. Also fixed on the way: a link to a part of an entry (`#fig-3`, a section's `#body-...`) now scrolls the panel on load. The demo article gained a 480 px figure (`fig-night-trains-ticket.svg`) and three mentions; the real articles need their figures captioned (and, if wanted, a credit in a last parenthesis) to be numbered, linkable and anchored. Not verified: Safari / iOS and a real touch device (Chrome emulation only).
+
+## Pages polish (branch `feat/pages-polish`, 2026-10-19, owner feedback, 3 items)
+
+| Change | Details |
+|---|---|
+| `/artworks`: an interlocking brick wall (1 / 2 / 3 / 4 columns by width, 10 px gap, natural ratios from the contract's cover size, caption plate on hover and focus, always under the picture on touch, DOM = reading order, no script) | [design-system.md](design-system.md) ("Artwork wall"), `lib/masonry.ts`, `components/entry/artwork-wall.tsx` |
+| `/poetry`: a 100 rem page, two columns from 44 rem, summary in the reading serif at 20 to 26 px in the ink, the mono line at 14 px | [design-system.md](design-system.md) ("Poetry list") |
+| Tag rows on phones: no native scrollbar, Spotify-style edge arrows (`ScrollRow`), 44 px, solid plate | [design-system.md](design-system.md) ("Scroll row") |
+
+Not verified: a real touch device (emulated touch only); Safari and Firefox (Chromium only: the layout needs container query units and `:has()`, both in current Safari and Firefox); the caption plate on a very tall picture on a short window.
+
 ## Where the details are
 
 | Topic | Doc |
@@ -100,6 +118,7 @@ Contract `routes[].legs` (mode and optional polyline5), limits `ROUTE_LEG_LIMITS
 
 ## Not verified
 
+- **Gestures on real devices (2026-10-19):** the wheel classifier (`engine/wheel.ts`) is written from each browser's documented behaviour and the shapes a maps library relies on, and tested with SYNTHETIC streams. Nothing ran on a real trackpad (Chrome, Safari, Firefox on macOS), a Magic Mouse, a mouse wheel on macOS (the 4.000244 multiple is the maps libraries' number, not seen here), a Windows precision touchpad, a Windows or Linux mouse, Safari's `gesture*` events (the code path is driven with plain events), or a touch screen's two-pointer pinch (synthetic `PointerEvent`s). Try each with `?input-debug` and send the overlay's lines if one is read wrong (a trackpad swipe that zooms is the bug to look for; a Magic Mouse is expected to pan). Safari's pinch does not pan while it zooms (its `gesturechange` has no translation). The feel of the zoom speeds after the change (the pinch and wheel constants are the old ones) and of the swipe's pan speed (1 px a CSS px, like a drag) is the owner's to judge.
 - **The phone credits line and button on iOS Safari and real phones** (safe-area inset, the 44 px target by thumb, `<dialog>` focus return, whether a first tap on the map is read as the interaction that collapses the line). **OpenFreeMap's own terms** were not read (the spike only quotes their line), nor was the ODbL text beyond the Foundation's guidelines: whether a 5 s line then an "i" meets them is judged from the OSM guidelines only.
 - **Safari and iOS** (including `image-rendering: pixelated` on canvas and the ring's canvas atlas), **real phones** (the frame cost, and what a weak GPU does now that no governor lowers the density: it drops frames, not measured) and real printing of an entry.
 - **Reduced motion** with a real system setting: Chromium emulation only. **A real 120 Hz display and the battery** under the idle rotation.

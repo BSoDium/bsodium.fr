@@ -11,7 +11,7 @@ content with real entries is all it takes to go from demo to real.
 - 18 places in 8 groups and one route (unchanged), a few of them with prose, dates, an image and `related` back-links.
 - **18 entries**, written to read like a finished personal travel, archive and creative-coding site. Every address is `example.org` or
   `example.com`; no real business, person or private data.
-  - 5 articles (travel and field-notes essays): one long one with 14 blocks (`demo-article`), one very short (2 blocks), one with a very long
+  - 5 articles (travel and field-notes essays): one long one with 15 blocks and three figures, one of them a small 480 px diagram, with "Fig. N" mentions in its text (`demo-article`), one very short (2 blocks), one with a very long
     title (`vietnam-by-rail`), two mid-sized. Date precisions: full date, month and year only.
   - 4 projects with `Stack`, `Status` (`Active`, `Paused`, `Archived`), `Repository`, a repository link, code blocks (TypeScript, GLSL,
     Rust, Python, shell) and a changelog list (`demo-project`, `timetable-diff`, `label-collision-engine`, `weather-ledger`).

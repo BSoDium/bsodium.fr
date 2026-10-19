@@ -79,6 +79,10 @@ export interface GlobeDebug {
   project(slug: string): { x: number; y: number; visible: boolean } | null;
   /** Like `project` for any lon/lat (a point of the map, not a place): the snapped cell centre in client px and whether it passes the whole-or-nothing rule. */
   projectAt(lon: number, lat: number): { x: number; y: number; visible: boolean };
+  /** Where the globe model puts any lon/lat for the current view, client px, exact (not snapped to the art pixel, not capped at the globe's own maximum zoom: the street map's registration). */
+  projectExact(lon: number, lat: number): { x: number; y: number };
+  /** The surface point under a client-px point for the current view (the inverse of `projectExact`; on the limb when off the disc). */
+  unprojectExact(x: number, y: number): { lon: number; lat: number; onDisc: boolean };
   labelsShown(): string[];
   /** The boxes as drawn in the last frame: per node, its rectangle in cells, its label's plate in CSS px, name, second line and state. */
   labelCells(): ReturnType<BoxScene["snapshot"]>;
@@ -353,6 +357,15 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         const s = renderer.project(p.lon, p.lat);
         const r = opts.stage.getBoundingClientRect();
         return { x: r.left + s.x, y: r.top + s.y, visible: s.visible };
+      },
+      projectExact(lon, lat) {
+        const p = renderer.projectExact(lon, lat);
+        const r = opts.stage.getBoundingClientRect();
+        return { x: r.left + p.x, y: r.top + p.y };
+      },
+      unprojectExact(x, y) {
+        const r = opts.stage.getBoundingClientRect();
+        return renderer.unprojectExact(x - r.left, y - r.top);
       },
       labelsShown: () => [...labels.shown()],
       labelCells: () => labels.snapshot(),

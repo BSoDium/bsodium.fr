@@ -95,6 +95,12 @@ export function SensitiveMediaScope({ sensitive, children }: { sensitive: boolea
   return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>;
 }
 
+/** Whether the images of the current entry are blurred right now (a sensitive entry whose visitor has not asked to see them): what is hidden must not be opened larger. */
+export function useSensitiveHidden(): boolean {
+  const scope = useContext(ScopeContext);
+  return scope !== null && !scope.revealed;
+}
+
 /** An image of the current entry: blurred, with the reveal control, inside a sensitive entry's scope; otherwise just the image. */
 export function SensitiveImage({ children, className }: { children: ReactNode; className?: string }) {
   const scope = useContext(ScopeContext);

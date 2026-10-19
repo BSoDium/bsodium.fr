@@ -55,7 +55,7 @@ app/
   routes/dev-design.tsx   DEV ONLY `/dev/design`: the UI system's styleguide (guarded like `/dev/street`; docs/design-system.md)
   components/         navbar, nav-scrim, skip-links, places-nav, detail-panel, place-detail, entry-list-page,
                       not-found-page, error-page, nav-progress, ui/ (the UI system: Frame, KindTag, Button, CoverArt, EntryCard, ... see docs/design-system.md)
-  components/entry/   entry-view (the one view for both containers), blocks (the body renderer), toc (full-screen contents with scroll-spy), entry-route (route glue), entry-list-card
+  components/entry/   entry-view (the one view for both containers), blocks (the body renderer), figure (a flow figure and its lightbox), toc (full-screen contents with scroll-spy), entry-route (route glue), entry-list-card
   components/         + search-palette (Cmd/Ctrl-K combobox, mounted by the navbar), landing-hero (the home page's typographic hero, which is also its empty state: docs/landing.md)
   lib/content.server.ts   ContentSource + bundled/API sources + cache (server only)
   lib/projection.ts       pure selectors: place index, routes -> points, place detail (with its entries)
@@ -89,6 +89,7 @@ app/
   throws `data({ message }, { status: 404 })`. Its `ErrorBoundary` renders `PlaceNotFound` inside the panel
   (message, link to `/`, a plain inline list of all places); the shell and globe stay mounted. Status is a real 404.
 - Unmatched URLs fall to the root `ErrorBoundary` (404 page inside the navbar).
+- `/artworks` renders `ArtworkWall` (one brick wall, placement computed server-side in `lib/masonry.ts` for 1 to 4 columns and drawn with `calc()` and container query units: no script, no layout shift, DOM = reading order; design-system.md "Artwork wall") and `/poetry` a two-column grid of `PoemRow`s; the other lists use the rows below. The tag filter is a `ScrollRow` (`components/ui/scroll-row.tsx`: hidden native scrollbar, edge arrows from a passive scroll listener and a `ResizeObserver`; `lib/scroll-row.ts` is the pure part). Browser coverage: `scripts/entries/check.mjs` section 11.
 - The list pages (`/software`, `/articles`, `/artworks`, `/poetry`) are plain pages outside the shell: a running head (the owner's name, the plain
   count "5 articles" / "2 of 5 articles" when filtered, one hairline under it; no eyebrow, no index codes), the section's name as the h1 in the reading face at a medium weight, then
   hairline rows (`EntryRow`, `components/entry/entry-list-card.tsx`: a mono column with the date, the places and a status word when there is one;
@@ -327,6 +328,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   same data, the same DOM and focus order (header, details, cover, body, places, related cards, neighbours). In `panel` every block
   spans the 12 columns; in `full` the title (8) and the details frame (4) share the first row, the cover and body (8) and the aside
   (4: places, contents) the second, in a `max-w-6xl` column; the related cards and the neighbours close both, full width. A render test asserts the two layouts have the same text in the same order.
+- **Figures in the flow.** An article's or a project's images are rendered by `BlockRenderer` (`figures` prop) where the author put them: `FlowFigure` (`components/entry/figure.tsx`), numbered by `lib/figures.ts` (`figureInfo`; the id `fig-N` only for a captioned one), with the text's own "Fig. N" mentions turned into `#fig-N` links (`linkFigureMentions`) and the optional zoom dialog (`FigureLightbox`, a portal on `body`). The old third column and `splitFigures` / `Figures` are gone; `.entry-text` is columns 4 to 12 on a full screen and the figure's width is CSS (`.entry-fig`: wide measure, natural width, edge to edge on a narrow container). `DetailPanel` scrolls an in-entry fragment (`#fig-3`) into view on load. Layout contract and rationale: [design-system.md](design-system.md) ("Figures"); browser check: `apps/web/scripts/entries/figures.mjs`.
 - **One container element.** `DetailPanel` does not remount when the layout changes: only `md:w-1/2` becomes `md:w-full` (a width
   transition on `--duration-base` and `--ease-standard`, collapsed to ~0 by the global reduced-motion rule) and the background
   loses its translucency and blur (no blur of a live canvas over the whole screen). Closing from full screen keeps the layout it
@@ -402,6 +404,7 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
   `/artworks/figure-study-two`): the server HTML, no scripts, every moment of hydration (sampled filter), the control by keyboard, reload and
   return, no storage, print, reduced motion, cards (list, tag filter, place panel, related), 390 px and both schemes, the head after a
   client-side navigation.
+- **Browser check of figures:** `apps/web/scripts/entries/figures.mjs` (demo content: `demo-article`'s three figures, one 480 px wide): the figures sit right after the block that precedes them in the source, breakout widths at 1920, 1280, 1024, 768, 390 and in the half panel, a small picture is never upscaled, captions, no horizontal scroll, the links and a deep link land on the figure below the header (also under reduced motion), the lightbox's focus behaviour (starts on Close, Tab stays inside, Escape closes it and keeps the panel, focus returns), print. Screenshots (light and dark) in `OUT_DIR`.
 - **Browser check:** `apps/web/scripts/entries/check.mjs` (demo content; see the file header). Run against `pnpm dev:demo`; with `BASE_URL_EMPTY` set to a server on the empty published content it also checks the empty home and list. Sections 8 and 9 cover the reading aids, the filter, related entries, print, the empty home and the quick search.
 
 **The career page** (`/career`, outside the shell like the lists) is a singleton of the projection, not a section: it exists only while `projection.career` does, and the header link, the hero's fifth row and the search row follow the root loader's `hasCareer`. Everything about it is in [career-page.md](career-page.md).
@@ -493,7 +496,9 @@ files `../tuning` and `../../types`.
 | `engine/index.ts` | `createGlobe()`: wires renderer + labels + view reporting; `WebGLUnavailableError`; debug introspection |
 | `engine/renderer.ts` | `GlobeRenderer`: WebGLRenderer, camera, sizing (ResizeObserver, DPR), frame scheduling, context loss, visibility, picking |
 | `engine/scene.ts`, `materials.ts`, `route-layer.ts` | what is drawn: disc, graticule, borders, coastlines, routes (only those through the selected place), horizon outline; GLSL. Places and groups are NOT drawn here: they are rectangles on the pixel overlay (below) |
-| `engine/controls.ts` | pointer input: drag, wheel, pinch, tap (canvas only) |
+| `engine/controls.ts` | pointer input: drag, tap, two-pointer pinch about its midpoint; the wheel through `wheel-input.ts` (canvas only; "Input model") |
+| `engine/wheel.ts`, `wheel-input.ts`, `wheel-debug.ts` | the wheel's device classifier (pinch / mouse wheel / swipe), the DOM router (wheel and Safari `gesture*`, shared with the standalone street map) and the `?input-debug` log; `wheel.test.ts` |
+| `engine/anchor.ts` | pure cursor-anchored zoom maths (unproject, closed-form centre solve); `anchor.test.ts` |
 | `engine/motion.ts` | pure flight and inertia maths |
 | `engine/framing.ts` | pure camera framing: `placeFraming(place)` (centre and radius of the place's bounding box, else its point and `viewRadiusKm`) and the zoom that fits that circle in the free area |
 | `engine/inset.ts` | pure maths of the right-hand inset (`insetRight`): the projection centre shifted by whole buffer pixels |
@@ -781,11 +786,54 @@ world round trips, 3 live at street scale (Three + 2) and 1 after (43 created, 4
   stops would only repeat it), see "Detection boxes". The canvas is `pointer-events: none`; the canvas pointer handler
   hit-tests the targets of the drawn nodes (`BoxScene.hit`: the convex hull of a box and its label plus slop, "Targets and labels"),
   so a drag that starts on a label or a box still rotates, and a click or tap on one selects (a place) or flies to frame it (a group).
-- Input: drag (inertia stops cleanly; none under reduced motion; none after a pinch), wheel and trackpad pinch,
-  two-finger pinch, tap/click. `touch-action: none` is set on the canvas only; the container, the places list and the
-  panel keep default touch behaviour. There is no keyboard handling on purpose (the canvas is not focusable).
+- Input: drag (inertia stops cleanly; none under reduced motion; none after a pinch), tap/click, and the Apple Maps model of the next section (pinch and
+  mouse wheel zoom about the pointer, a two-finger swipe pans). `touch-action: none` and `overscroll-behavior: none` are set on the canvas only; the container,
+  the places list and the panel keep default touch and wheel behaviour. There is no keyboard handling on purpose (the canvas is not focusable).
 - Debug introspection: `window.__globeDebug` exists only with `?globe-debug` in the URL or
   `sessionStorage["globe-debug"] = "1"`; the browser checks use it.
+
+### Input model (2026-10-19: align with Apple Maps)
+
+| Input | Does | Where |
+| --- | --- | --- |
+| Drag (mouse, one finger) | pans (rotates the globe), lets go with inertia | `engine/controls.ts` |
+| **Two-finger swipe** on a trackpad (Magic Mouse surface, precision touchpad) | **pans**, like a drag; **never zooms** | `wheel.ts` classifies it `swipe` |
+| **Pinch / spread** on a trackpad (`wheel` with `ctrlKey`; Safari `gesturestart/change/end`) | zooms about the pinch point | `pinch` |
+| Pinch / spread on a touch screen (two pointers) | zooms about the midpoint of the fingers; the midpoint moving pans | `controls.ts` |
+| **Classic mouse wheel** (discrete notches) | zooms about the cursor (a notch of 100 px is 0.16 levels) | `wheel` |
+
+The zoom is **anchored**: the point of the map under the cursor (or the pinch midpoint) stays under it while the zoom changes, instead of zooming into the centre.
+
+**Anchor maths** (`engine/anchor.ts`, pure). The camera is `projectUnit`'s: a perspective camera at distance `d` from the centre of the unit sphere. For a screen offset `(u, v)` from the projection centre (the inset's and the lift's shifts are inside it: the renderer subtracts `canvasLeft + cw/2 - shiftBuf` and `ch/2 - liftBuf`), with `rho2 = (u^2+v^2)/f^2`, a surface point exists iff `1 - rho2 (d^2 - 1) >= 0`. `unprojectOffset` is the ray against the sphere; `solveCentre` is the INVERSE in closed form: the view centre that puts a given surface point under `(u, v)` at another zoom (`g = (d rho2 + sqrt(disc)) / (1 + rho2)`, then `lon' = lonP - atan2(a, Kh)`, `lat' = atan2(Py, Kh) - atan2(b, g)`; north-up fixes the roll). It uses `atan2` only, so it is exact to a thousandth of a pixel from the world to the street map's maximum zoom (1e7 px per radian); an `acos` version lost 0.1 px at street scale. No iteration, no state. The unified zoom `zu` is the same scale at the view centre at every latitude, so the zoom step is a plain `zu += d` and only the centre is solved; the street map is driven by the globe's camera (it is `embedded`, no pointer events), so the anchor is continuous across the handover by construction (measured below). Where the pointer is OFF the planet the anchor is the limb point in its direction, asked to stay under the pointer clamped into the NEW silhouette: no jump, and a solution exists; if the centre still cannot follow (it would need a latitude past 90) only the zoom changes. Zoom limits are applied first (at a limit nothing moves, but the input still counts as activity: idle rotation stops). `clampView`'s latitude limit (82) can bend the fixed point at the poles.
+
+**The standalone street map** (`/dev/street`, `StreetMap` not `embedded`) takes the wheel through the same router: `scrollZoom` is off, a zoom is `map.easeTo({ zoom, around: unproject(pointer), duration: 0 })`, a swipe is `map.panBy([-dx, -dy], { duration: 0 })` (the content follows the fingers); a touch pinch stays MapLibre's, which already zooms about the midpoint. No synthetic inertia there.
+
+**Telling the wheel's devices apart** (`engine/wheel.ts`, documented rule by rule in the file; `wheel.test.ts` runs a stream per device). A browser does not say which device a `wheel` event is from, so it is a heuristic with a safe default (a swipe pans: the wrong answer that must not happen is a trackpad swipe that zooms). Per event: `ctrlKey` is a pinch (unless it looks like a notch: ctrl + mouse wheel zooms as a wheel); then, per STREAM (events less than 300 ms apart; decided once by the first event, kept until 300 ms of silence):
+
+| Device, browser | `deltaMode` | `deltaX` | `deltaY` | `wheelDeltaY` | Cadence | Rule | Kind |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Mouse wheel, Chrome/Edge, Windows | 0 | 0 | 100 (66.67 at 150 %) | 120 | a notch at a time | multiple of 120 | wheel |
+| Mouse wheel, Chrome, Linux | 0 | 0 | 53 | 120 | a notch at a time | multiple of 120 | wheel |
+| Mouse wheel, Firefox, Windows/Linux | 1 (lines) | 0 | 3 | 120 | a notch at a time | line mode | wheel |
+| Mouse wheel, Chrome, macOS | 0 | 0 | k * 4.000244140625 | -3 dY | a notch at a time | multiple of 4.0002 (the number maps use) | wheel |
+| Mouse wheel, Safari/Firefox, macOS | 0 | 0 | whole, 4 and up | -3 dY | a notch at a time | ambiguous: held 40 ms; alone = wheel; a second event decides (`abs(dt * delta) < 200` swipe, else wheel) | wheel |
+| Trackpad swipe, Chrome/Safari, macOS | 0 | any | fractions, momentum | -3 dY | 60 Hz, ramps up, decays | fractional / deltaX / under 4 | swipe |
+| Trackpad swipe, Firefox, macOS | 0 | any | whole, momentum | 0 or -3 dY | as above | deltaX, under 4, or the second-event rule | swipe |
+| Magic Mouse surface | 0 | any | as the trackpad | -3 dY | as the trackpad | as the trackpad | swipe (pans; see below) |
+| Precision touchpad, Chrome/Edge, Windows | 0 | any | whole, no momentum | not a multiple of 120 | 60 Hz while the fingers move | deltaX, under 4, or the second-event rule | swipe |
+| Trackpad pinch, Chrome/Edge/Firefox | 0 | 0 | small, fractional, signed | any | 60 Hz | `ctrlKey` | pinch |
+| Ctrl + mouse wheel | 0 or 1 | 0 | as the mouse | 120 | a notch at a time | `ctrlKey` + a notch signature | wheel |
+| Trackpad pinch, Safari | no `wheel`: `gesturestart` / `gesturechange` (cumulative `scale`) / `gestureend` | | | | | `wheel-input.ts`, step = `log2(scale / previous)` | pinch |
+
+The rows are from each browser's documented behaviour and the maps' code, NOT from hardware: see "Not verified" in docs/handoff.md. What it gets wrong, on purpose: a whole-number mouse (macOS Safari/Firefox) spun so fast that its bursts look like a slow swipe pans instead of zooming (the cure is a notch signature or ctrl); a Magic Mouse pans (it sends what a trackpad sends). The zoom speeds are the tuned ones (`WHEEL_ZOOM_PER_PX` 0.0016 a pixel, `PINCH_ZOOM_PER_PX` 0.012, a line 33 px, a page 400, at most 0.75 levels a step); a macOS Chrome tick (4 px) counts as a whole notch (0.16).
+
+**A swipe is a drag.** Each event is `panPixels(-dx, -dy)` (the drag's own scale: content follows the fingers, scroll down moves the content up). When the stream goes quiet for 70 ms its last samples are handed to the drag's release (`releaseVelocity`, `fling`): a trackpad's OS momentum arrives as events that decay to nothing, so there is nothing left to carry and no inertia is added (no double momentum); a device that stops at speed (a precision touchpad without momentum) lets go like a drag.
+
+**The page keeps its scroll.** The wheel and the Safari gesture events are `preventDefault`ed (`passive: false`) on the map's canvas ONLY, never on the document or the container: over the map the page neither scrolls nor goes back on a horizontal swipe (the canvas also has `touch-action: none` and `overscroll-behavior: none`); over the hero's panels, the lists and the rest of the page nothing changes.
+
+**Checking a device: `?input-debug`** (or `sessionStorage["input-debug"] = "1"`) shows an overlay with the last eight events (kind, the deltas, `deltaMode`, `wheelDeltaY`, what it did, and the rule that decided) and fills `window.__inputDebug.entries`. Checks only: `sessionStorage["input-kind"] = "wheel" | "swipe"` on a debug page declares every plain wheel event one or the other (Chrome's synthetic `page.mouse.wheel` has `wheelDeltaY` 60 at a device scale factor of 2, whatever the delta, so no signature; the scripts' libraries set `wheel` unless `INPUT_KIND=swipe|auto`).
+
+**Checks.** `apps/web/scripts/input/check.mjs [classify swipe zoom anchor offdisc pinch safari fling guard street]` (synthetic events: see its header). Measured 2026-10-19 (Chrome for Testing 153 headless, 1440x900@2, demo content, local PMTiles): the point under the cursor stays under it within 5e-10 px on the globe model and 0.011 px in the street map's own projection over 160 notches from zoom 2.9 to 12.6 (across the cut at zoom 3.98) and back; the zoom step never exceeds 0.16; at the cut itself the street map's projection of the anchored point is 3e-7 px from the cursor. Unit: `anchor.test.ts` (fixed-point property at latitudes -80 to 78, longitudes next to the antimeridian, zooms 1.2 to 17) and `wheel.test.ts`.
 
 ### Idle rotation (2026-10-08; slowed 2026-10-13)
 
@@ -932,6 +980,8 @@ Need Chrome for Testing and the app on `BASE_URL` (default :5175) with `CATALYST
 (`pnpm dev` with that variable, or a build started with `NODE_ENV=development`: production refuses plain-http tile
 URLs); the scripts start the local PMTiles server themselves. The fallback source is pinned by default (deterministic,
 offline); `SOURCE=auto` runs the real chain (OpenFreeMap).
+
+The browser checks that zoom with the wheel declare what `page.mouse.wheel` emulates (`input-kind`, "Input model"); `node apps/web/scripts/input/check.mjs` tests the classification itself.
 
 ```
 node apps/web/scripts/globe/handover-drills.mjs [direct wheel click failover retreat capped recover reduced keyboard mobile-slideover]
