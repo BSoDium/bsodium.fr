@@ -139,6 +139,12 @@ export interface GlobeDebug {
   captionSide(mode: "page" | "mix" | "edge" | null): void;
   /** The ring of type's highlight: "blue", "ink" or "none" (null: the tuned one). */
   ringHighlight(mode: "blue" | "ink" | "none" | null): void;
+  /** One caption frame including the GPU's work on it, ms (measurements). */
+  captionGpuMs(): number;
+  /** Record (true) or take (false) the caption's drawn frames as [timestamp, delta, draw ms]. */
+  traceCaption(on: boolean): [number, number, number][];
+  /** Hold the caption on a rung of the quality ladder (null: the governor decides). */
+  quality(level: number | null): void;
   /** The energy knobs (`ENERGY`): set for measurements. */
   energy(patch: Record<string, unknown>): void;
   /** Turn the showcase (the caption in, the boxes out) on or off as the app's hero would (checks and the perf scenarios). */
@@ -402,6 +408,9 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       captionSide: (mode) => renderer.setCaptionSide(mode),
       ringHighlight: (mode) => renderer.setRingHighlight(mode),
       energy: (patch) => renderer.setEnergy(patch as never),
+      captionGpuMs: () => renderer.captionGpuMs(),
+      traceCaption: (on) => renderer.traceCaption(on),
+      quality: (level) => renderer.holdLoadRung(level),
       captionExtent: () => renderer.captionExtent(),
       setSkyEra: (deg) => renderer.setSkyEra(deg),
       gpuSync: () => renderer.gpuSync(),

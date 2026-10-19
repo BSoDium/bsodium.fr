@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { CAPTION_FACES } from "~/globe/engine/caption";
+import { CAPTION_FACES, CAPTION_STYLES } from "~/globe/engine/caption";
 import { describe, expect, it } from "vitest";
 import { DISPLAY_FONT_URL, FONT_DIR, FONT_FILES } from "./fonts";
 
@@ -158,11 +158,26 @@ describe("the caption's one extra face (loaded by the globe only when the page's
     expect(text).toMatch(/^Copyright /);
   });
 
-  it("is not in the stylesheet: no page pays for it, and the caption's other faces are the page's own (Newsreader, JetBrains Mono)", () => {
+  it("has a classic serif of its own, Old Standard TT (SIL OFL 1.1), a kern-only woff2 subset a weight next to its licence, small, versioned in the name", () => {
+    for (const style of ["plain", "heavy"] as const) {
+      const url = CAPTION_STYLES[style].url!;
+      expect(url).toMatch(/^\/fonts\/old-standard-tt-\d+\.\d+-latin-(400|700)\.woff2$/);
+      const file = publicFile(url.slice(1));
+      expect(existsSync(file), url).toBe(true);
+      expect(readFileSync(file).toString("latin1", 0, 4), url).toBe("wOF2");
+      expect(statSync(file).size, url).toBeLessThan(16 * 1024);
+    }
+    const text = readFileSync(publicFile("fonts/LICENSE-old-standard-tt.txt"), "utf8");
+    expect(text).toContain("SIL Open Font License, Version 1.1");
+    expect(text).toMatch(/^Copyright /);
+    expect(css).not.toMatch(/old.standard/i);
+  });
+
+  it("is not in the stylesheet: no page pays for it, and the caption's mono is the page's own (JetBrains Mono)", () => {
     expect(css).not.toMatch(/imperial/i);
-    expect(CAPTION_FACES.serif.url).toBeNull();
+    expect(CAPTION_FACES.serif.url).toBeNull(); // (a file per style)
     expect(CAPTION_FACES.mono.url).toBeNull();
     expect(css).toContain('font-family: "JetBrains Mono Variable"');
-    expect(css).toContain('font-family: "Newsreader Variable"');
+    expect(css).toContain('font-family: "Newsreader Variable"'); // (the page's reading face; the caption no longer draws with it)
   });
 });

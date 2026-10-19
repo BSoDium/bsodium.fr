@@ -239,8 +239,8 @@ try {
     expect("it asked for no GL frame and no camera tick", s1.frames === s0.frames && s1.ticks === s0.ticks && s1.clears === s0.clears, { s0, s1 });
     const repaints = s1.ring.frames - s0.ring.frames;
     const hz = repaints / dt;
-    // (round 9, the energy pass: 15 a second, `ENERGY.ringFrameMs` 64: the ring turns 3 degrees a second, one pixel a repaint at the largest ring)
-    expect("it repaints at most 30 times a second (15 a second since the energy pass)", hz <= 31.5 && hz > 10, { hz, repaints });
+    // (round 10: the ring is drawn on EVERY display frame while it turns: its letters move 3 degrees a second and a timer's uneven intervals against the vsync are visible judder)
+    expect("it repaints on every display frame (the display's rate: 60 here, up to 144), not on a timer", hz > 40 && hz <= 150, { hz, repaints });
     note(`ring repaints ${hz.toFixed(1)}/s, ${(s1.ring.totalMs - s0.ring.totalMs).toFixed(1)} ms of JS in ${dt.toFixed(1)} s (${((s1.ring.totalMs - s0.ring.totalMs) / repaints).toFixed(2)} ms a frame), ${s1.ring.glyphs} glyphs`);
     // The planet's own idle rotation is independent: with the rotation allowed (shortened delay) the ring's rate does not change.
     await ctx.close();

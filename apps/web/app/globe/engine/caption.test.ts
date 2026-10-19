@@ -851,19 +851,21 @@ describe("leaving: a fade, or the orbit", () => {
 });
 
 describe("faces, styles and colours", () => {
-  it("is the site's own faces and one handwriting: the serif and the mono are in the stylesheet (no file added), the handwriting has a file", () => {
-    expect(CAPTION_FACES.serif.family).toMatch(/Newsreader/);
+  it("is a classic serif of its own (Old Standard TT, one file a weight), the site's mono and one handwriting, loaded by the globe", () => {
+    expect(CAPTION_FACES.serif.family).toMatch(/Caption Serif/);
     expect(CAPTION_FACES.mono.family).toMatch(/JetBrains Mono/);
-    expect(CAPTION_FACES.serif.url).toBeNull();
+    expect(CAPTION_FACES.serif.url).toBeNull(); // (its files are per style: a file a weight)
+    expect(CAPTION_STYLES.plain.url).toMatch(/^\/fonts\/old-standard-tt-\d+\.\d+-latin-400\.woff2$/);
+    expect(CAPTION_STYLES.heavy.url).toMatch(/^\/fonts\/old-standard-tt-\d+\.\d+-latin-700\.woff2$/);
     expect(CAPTION_FACES.mono.url).toBeNull();
     expect(CAPTION_FACES.script.url).toMatch(/^\/fonts\/imperial-script-\d+\.\d+-latin-400\.woff2$/);
-    expect(CAPTION_FACE.capEm).toBeGreaterThan(0.5);
+    expect(CAPTION_FACE.capEm).toBeCloseTo(0.712, 3); // Old Standard TT's cap height over its em (OS/2 sCapHeight 712 / 1000)
   });
 
   it("has heavier weights for the highlights and a font string per style that names its face, weight and italic", () => {
     expect(CAPTION_STYLES.heavy.weight).toBeGreaterThan(CAPTION_STYLES.plain.weight);
     expect(CAPTION_STYLES["heavy-italic"].italic).toBe(true);
-    expect(captionFont("heavy-italic", 100)).toMatch(/^italic 800 100px "Newsreader Variable"/);
+    expect(captionFont("heavy-italic", 100)).toMatch(/^italic 700 100px "Caption Serif"/);
     expect(captionFont("mono", 100)).toMatch(/JetBrains Mono Variable/);
     // the mono and the script are scaled to the serif's cap height
     expect(captionFont("mono", 100)).toContain(`${100 * CAPTION_FACES.mono.scale}px`);
@@ -875,7 +877,7 @@ describe("faces, styles and colours", () => {
     const dark = { background: [0.039, 0.039, 0.039], ink: [0.96, 0.96, 0.96], coast: [0.38, 0.38, 0.38], outline: [0.1, 0.1, 0.1], grid: [0.2, 0.2, 0.2], ramp: [] } as never;
     const l = captionColors(light);
     const d = captionColors(dark);
-    expect(Object.keys(l).sort()).toEqual(["accent", "face", "outline", "side"]);
+    expect(Object.keys(l).sort()).toEqual(["accent", "accentOutline", "accentSide", "face", "outline", "side"]);
     const lum = (c: readonly number[]) => {
       const f = (v: number) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
       return 0.2126 * f(c[0]!) + 0.7152 * f(c[1]!) + 0.0722 * f(c[2]!);
@@ -886,7 +888,7 @@ describe("faces, styles and colours", () => {
       expect(t.face[0]).toBeCloseTo(t.face[1]!, 9);
       expect(ratio(t.face, bg)).toBeGreaterThan(4.5);
       expect(ratio(t.accent, bg)).toBeGreaterThan(3);
-      expect(t.accent[2]).toBeGreaterThan(t.accent[0] + 0.2);
+      expect(t.accent[2]!).toBeGreaterThan(t.accent[0]! + 0.1);
       // the contour reads against the page (1.8 to 2.3:1) and is clearly less strong than the letters; the thickness a step closer to the page
       expect(ratio(t.outline, bg)).toBeGreaterThan(1.8);
       expect(ratio(t.outline, bg)).toBeLessThan(2.3);
@@ -894,8 +896,18 @@ describe("faces, styles and colours", () => {
       expect(ratio(t.side, bg)).toBeGreaterThan(1.5);
       expect(ratio(t.side, bg)).toBeLessThan(ratio(t.outline, bg));
     }
-    // the dark scheme's blue is soft (not glaring): not the 500 step, a lighter, calmer one
-    expect(d.accent[0]).toBeGreaterThan(0.3);
+    // a tinted word's contour and thickness derive from ITS face by the same shares as the neutral ones from the neutral face
+    for (const [t, bg] of [[l, [0.984, 0.984, 0.984]], [d, [0.039, 0.039, 0.039]]] as const) {
+      for (const i of [0, 1, 2]) {
+        expect((t.accentOutline[i]! - bg[i]!) / (t.accent[i]! - bg[i]!)).toBeCloseTo((t.outline[i]! - bg[i]!) / (t.face[i]! - bg[i]!), 6);
+        expect((t.accentSide[i]! - bg[i]!) / (t.accent[i]! - bg[i]!)).toBeCloseTo((t.side[i]! - bg[i]!) / (t.face[i]! - bg[i]!), 6);
+      }
+      // and the tinted letter reads as one: its contour is bluer than the neutral contour
+      expect(t.accentOutline[2]! - t.accentOutline[0]!).toBeGreaterThan(t.outline[2]! - t.outline[0]! + 0.02);
+    }
+    // the lapis blue is muted: low chroma (the 700 or 400 step mixed 60 % into the text tone), still blue and legible
+    expect(d.accent[2]).toBeGreaterThan(d.accent[0]! + 0.1);
+    expect(d.accent[2]).toBeLessThan(0.95);
     // mode `page`: the exact page colour for both
     const p = captionColors(light, "page");
     expect([...p.outline]).toEqual([0.984, 0.984, 0.984]);
@@ -907,5 +919,78 @@ describe("faces, styles and colours", () => {
     const cut = splitRuns(line, (r) => r.text.length)!;
     expect(cut[0]!.find((r) => r.style === "heavy")!.accent).toBe("blue");
     expect(cut[1]!.find((r) => r.style === "heavy")!.accent).toBe("blue");
+  });
+});
+
+describe("the idle settle: every row eases to the middle before the page holds still", () => {
+  const start = 2.6;
+  const make = (seed: number | null) => {
+    const m = new CaptionMotion();
+    m.seed = seed;
+    m.setFixedFrom(2);
+    m.setStarts([start, start, start, start], [0, 1, 2, 3]);
+    m.enter(0);
+    return m;
+  };
+  /** Run the clock to `t` ms in 20 ms frames (a 20 fps loop would be coarser: the maths is a function of time). */
+  const run = (m: CaptionMotion, t: number) => {
+    for (let x = 0; x <= t; x += 20) {
+      m.tick(x);
+      for (let i = 0; i < 4; i++) m.angle(x, i, start);
+    }
+  };
+
+  it("brings every row to the middle in `parkMs`, from any moment of the entrance, the roll and the exit, on either side", () => {
+    // the times cover the entrance (500), the roll (3000), a row's exit (7000 to 7400), the second cycle's entrance (8000) and its roll (12000)
+    for (const seed of [null, 7, 99]) {
+      for (const at of [500, 1500, 3000, 6600, 7000, 7300, 7500, 8000, 12000, 20000]) {
+        const m = make(seed);
+        run(m, at);
+        m.beginPark(at);
+        expect(m.isParking).toBe(true);
+        const end = at + CAPTION.park.parkMs;
+        m.tick(end + 1);
+        for (let i = 0; i < 4; i++) expect(Math.abs(m.angle(end + 1, i, start))).toBeLessThan(1e-9);
+        expect(m.parkDone).toBe(true);
+        // and it stays there, whatever the time
+        for (const later of [end + 500, end + 60000]) for (let i = 0; i < 4; i++) expect(m.angle(later, i, start)).toBe(0);
+        expect(m.drifting).toBe(false);
+      }
+    }
+  });
+
+  it("goes there without a pop and without turning back: the first reading is where the row was, then each |turn| only falls", () => {
+    for (const at of [1500, 3000, 7300, 12000]) {
+      const m = make(7);
+      run(m, at);
+      const before = [0, 1, 2, 3].map((i) => m.angle(at, i, start));
+      m.beginPark(at);
+      const first = [0, 1, 2, 3].map((i) => m.angle(at, i, start));
+      first.forEach((a, i) => expect(a).toBeCloseTo(before[i]!, 9));
+      let last = first.map(Math.abs);
+      for (let x = at + 20; x <= at + CAPTION.park.parkMs; x += 20) {
+        const now = [0, 1, 2, 3].map((i) => Math.abs(m.angle(x, i, start)));
+        now.forEach((a, i) => expect(a).toBeLessThanOrEqual(last[i]! + 1e-12));
+        last = now;
+      }
+    }
+  });
+
+  it("resumes without a pop: the rows blend from the middle (or where they were) into the roll, which goes on from its middle", () => {
+    const m = make(7);
+    run(m, 3000);
+    m.beginPark(3000);
+    m.tick(5000);
+    m.angle(5000, 0, start);
+    m.unpark(9000);
+    expect(m.parkDone).toBe(false);
+    const first = [0, 1, 2, 3].map((i) => m.angle(9000, i, start));
+    first.forEach((a) => expect(Math.abs(a)).toBeLessThan(1e-9));
+    // within the blend the turn stays within the amplitude, and after it the roll goes on
+    for (let x = 9020; x <= 9000 + CAPTION.park.resumeMs + 400; x += 20) {
+      m.tick(x);
+      for (let i = 0; i < 4; i++) expect(Math.abs(m.angle(x, i, start))).toBeLessThanOrEqual(DRIFT.amp + 1e-9);
+    }
+    expect(m.drifting).toBe(true);
   });
 });

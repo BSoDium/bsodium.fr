@@ -43,6 +43,7 @@ import {
   CAPTION_FALLBACK_STYLE,
   CAPTION_STYLES,
   CaptionMotion,
+  DRIFT,
   captionColors,
   captionFont,
   dimPresence,
@@ -60,6 +61,7 @@ import {
   spanOf,
   cycleMs,
   unitBand,
+  BAND_COLUMNS,
   type CaptionContent,
   type CaptionExit,
   type CaptionLine,
@@ -72,6 +74,9 @@ import { OCCLUDER_RADIUS } from "./materials";
 import { CAPTION, ENERGY } from "./tuning";
 
 const DEG_ = Math.PI / 180;
+
+/** The slice counts a strip is drawn with. */
+const SLICE_STEPS = [2, 3, 4, 6, 8, 12, 16, 20, 28] as const;
 
 /**
  * One unit strip serves every line (`unitBand`: `position` is `(u, v, layer)`), and the line's parallel is a handful of uniforms: where the strip
@@ -111,6 +116,8 @@ const FRAG = /* glsl */ `
   uniform vec3 uOutline;
   uniform vec3 uSide;
   uniform vec3 uAccent;
+  uniform vec3 uAccentOutline;
+  uniform vec3 uAccentSide;
   uniform float uEdgeLayer;
   varying vec2 vUv;
   varying float vLayer;
@@ -118,10 +125,14 @@ const FRAG = /* glsl */ `
     vec4 t = texture2D(uMap, vUv, ${CAPTION.lodBias.toFixed(2)});
     if (t.a < 0.02) discard;
     bool front = vLayer > 0.999;
-    // the inside is green (the text tone) or blue (the accent: a word picked out); the red channel is the outline
-    float inside = t.g + t.b;
-    vec3 face = t.b > t.g ? uAccent : uFace;
-    vec3 col = front ? (inside > t.r ? face : uOutline) : (vLayer < uEdgeLayer ? uFace : uSide);
+    // red is the outline, green the inside of a word in the text tone; blue marks a word picked out (its inside is blue alone, its outline red AND
+    // blue): the whole letter, face, contour and thickness, takes the accent's colours, each derived from it as the neutral ones are from the neutral face
+    bool acc = t.b > 0.5;
+    bool isOutline = acc ? t.r > 0.5 : t.r > t.g;
+    vec3 face = acc ? uAccent : uFace;
+    vec3 outl = acc ? uAccentOutline : uOutline;
+    vec3 side = acc ? uAccentSide : uSide;
+    vec3 col = front ? (isOutline ? outl : face) : (vLayer < uEdgeLayer ? face : side);
     // Premultiplied output, blended "over" (see the material): the glyph's inside is exactly 1, so an interior pixel is exactly opaque whatever
     // stacks behind it; only an edge is partly transparent (and then properly premultiplied: no bright fringe).
     float a = smoothstep(0.1, 0.9, t.a);
@@ -201,6 +212,8 @@ interface Variant {
   line: CaptionLine;
   mesh: Mesh;
   material: ShaderMaterial;
+  /** The slice count the strip is drawn with now. */
+  n: number;
   /** The dimming band of the row (mode `bands`): turned with the row. */
   band: Mesh;
   bandMaterial: ShaderMaterial;
@@ -241,7 +254,7 @@ export interface CaptionState {
   /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
   baselines: number[];
   texture: { width: number; height: number }[];
-  colors: { face: number[]; accent: number[]; outline: number[]; side: number[] };
+  colors: { face: number[]; accent: number[]; accentOutline: number[]; accentSide: number[]; outline: number[]; side: number[] };
 }
 
 /**
@@ -339,6 +352,18 @@ class CrispCanvas {
     }
   }
 
+  /** Waits for the GPU to finish this canvas's frame (a 1 x 1 read back): checks and measurements only. */
+  finish(): void {
+    const gl = this.renderer.getContext();
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, this.probe);
+  }
+  private probe = new Uint8Array(4);
+
+  /** Upload a texture now (its first use would do it in the middle of a frame: the first time a phrase set comes round). */
+  warm(tex: CanvasTexture): void {
+    this.renderer.initTexture(tex);
+  }
+
   hide(): void {
     if (!this.shown) return;
     this.renderer.domElement.style.visibility = "hidden";
@@ -401,10 +426,11 @@ async function tryLoadStyle(style: CaptionStyleKey): Promise<boolean> {
   const face = CAPTION_FACES[st.face];
   try {
     if (typeof document === "undefined" || !document.fonts) return false;
-    if (face.url) {
+    const url = st.url ?? face.url;
+    if (url) {
       let added = ADDED_FACES.get(style);
       if (!added) {
-        added = new FontFace(face.family.replace(/"/g, ""), `url(${face.url})`, { weight: String(st.weight), style: st.italic ? "italic" : "normal", display: "block" });
+        added = new FontFace(face.family.replace(/"/g, ""), `url(${url})`, { weight: String(st.weight), style: st.italic ? "italic" : "normal", display: "block" });
         ADDED_FACES.set(style, added);
         document.fonts.add(added);
       }
@@ -453,8 +479,13 @@ export class CaptionLayer {
   private outline = { value: [0, 0, 0] as number[] };
   private side = { value: [0, 0, 0] as number[] };
   private accent = { value: [0, 0, 1] as number[] };
+  private accentOutline = { value: [0, 0, 1] as number[] };
+  private accentSide = { value: [0, 0, 1] as number[] };
   /** The far slices (layer below this) that carry the text colour in mode `edge` (0: none). */
   private edgeLayer = { value: 0 };
+  /** Slices of the thickness now (the quality governor lowers them; `CAPTION.slices` is the best) and the most the canvas is drawn at. */
+  private slices: number = CAPTION.slices;
+  private dprCap: number = ENERGY.captionDpr;
   private sideMode: "page" | "mix" | "edge" = CAPTION.colors.sideMode;
   private theme!: GlobeTheme;
   /** The dimming's colour (the page's), its strength for the scheme, and the mode (`CAPTION.dim.mode`; a check may change it). */
@@ -481,13 +512,16 @@ export class CaptionLayer {
   private sizing: { cell: number; r: number; d: number } | null = null;
   private viewLat = 28;
   /** The strip every line shares (`unitBand`). */
-  private unit: BufferGeometry | null = null;
+  private units = new Map<number, BufferGeometry>();
   /** Checks only: the shell's radius, in place of `CAPTION.radius` (1.001 puts the caption on the surface, over the graticule's own parallels). */
   private radius: number | null = null;
   /** The key of the build in flight (a frame that sees the layout out of date must not start the same build again). */
   private building: string | null = null;
   /** The phrase set each row shows now (of those that take turns): the cycle it is in, modulo the sets; refreshed every frame. */
   private rowSet: number[] = [];
+  /** The phrase set the parked rows show (-1: not parked) and the shift the roll goes on with after a park (so the same set stays on). */
+  private parkSet = -1;
+  private setShift = 0;
   private rowCycle: number[] = [];
   private paused = false;
 
@@ -523,6 +557,8 @@ export class CaptionLayer {
         uOutline: this.outline,
         uSide: this.side,
         uAccent: this.accent,
+        uAccentOutline: this.accentOutline,
+        uAccentSide: this.accentSide,
         uEdgeLayer: this.edgeLayer,
         uBaseLat: { value: 0 },
         uBelow: { value: 0 },
@@ -600,10 +636,93 @@ export class CaptionLayer {
     this.outline.value = [...c.outline];
     this.side.value = [...c.side];
     this.accent.value = [...c.accent];
-    this.edgeLayer.value = this.sideMode === "edge" ? (CAPTION.colors.edgeSlices - 0.5) / (CAPTION.slices - 1) : 0;
+    this.accentOutline.value = [...c.accentOutline];
+    this.accentSide.value = [...c.accentSide];
+    this.edgeLayer.value = this.sideMode === "edge" ? (CAPTION.colors.edgeSlices - 0.5) / (this.slices - 1) : 0;
     this.dimColor.value = [...theme.background];
     const dark = 0.2126 * theme.background[0] + 0.7152 * theme.background[1] + 0.0722 * theme.background[2] < 0.5;
     this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
+  }
+
+  /**
+   * The quality governor's rung: the canvas's pixel ratio cap and the most slices the thickness is drawn with. The strips are drawn with only as
+   * many slices as their SIDE needs (`slicesFor`: a step of under a pixel between two of them), so the cap matters only at the sides of the orbit.
+   */
+  setQuality(dpr: number, slices: number): void {
+    this.dprCap = dpr;
+    this.slices = Math.max(2, Math.min(CAPTION.slices, slices));
+    this.opts.onChange();
+  }
+
+  /** The strip with `n` slices (made once, shared by every row). */
+  private unitFor(n: number): BufferGeometry {
+    let g = this.units.get(n);
+    if (!g) {
+      const unit = unitBand(BAND_COLUMNS, n);
+      g = new BufferGeometry();
+      g.setAttribute("position", new BufferAttribute(unit.attributes, 3));
+      g.setIndex(new BufferAttribute(unit.indices, 1));
+      this.units.set(n, g);
+    }
+    return g;
+  }
+
+  /**
+   * How many slices a row needs: the thickness (`CAPTION.depth` planet radii) projected sideways at the row's far end is `depth * sin(psi)` planet
+   * radii, `psi` the central angle from the view's axis; one slice per `CAPTION.sliceStepPx` of it, at least the front and the back, at most the
+   * governor's cap. A row at rest, within a few degrees of the middle, sees its side edge-on and a small fraction of a pixel wide: a handful of
+   * slices instead of 28 (every slice is a full pass over the glyphs: the GPU cost of the caption at rest was that overdraw).
+   */
+  private slicesFor(theta: number, halfSpan: number, baseLat: number, lat: number): number {
+    const off = Math.min(Math.PI, Math.abs(theta) + halfSpan);
+    const vl = lat * DEG_;
+    const L = baseLat * DEG_;
+    const cos = Math.sin(vl) * Math.sin(L) + Math.cos(vl) * Math.cos(L) * Math.cos(off);
+    const sin = Math.sqrt(Math.max(0, 1 - cos * cos));
+    const px = CAPTION.depth * (this.sizing?.r ?? 300) * sin;
+    const n = Math.ceil(px / CAPTION.sliceStepPx) + 1;
+    // (quantised to a few strips, all made when the strips are built: a row going round the orbit changes its count by a step, and no strip is
+    // first made, or first used, in the middle of an exit)
+    const cap = this.slices;
+    for (const step of SLICE_STEPS) if (step >= n && step <= cap) return step;
+    return Math.max(2, Math.min(cap, SLICE_STEPS.filter((x) => x <= cap).at(-1) ?? cap));
+  }
+
+  /** The quality now (checks). */
+  get quality(): { dpr: number; slices: number } {
+    return { dpr: this.dprCap, slices: this.slices };
+  }
+
+  /**
+   * The idle settle: every row eases to the middle, fully visible, all of them showing one phrase set (the one a row that is in view shows), and
+   * stays there. Returns whether a park began (the caption is rolling); `parkDone` says when it has arrived.
+   */
+  park(now: number): boolean {
+    const b = this.built;
+    if (!b || !this.drifting) return false;
+    let chosen = this.rowSet[0] ?? 0;
+    for (let r = 0; r < b.slotRows; r++) {
+      if (Math.abs(this.lastThetas[r] ?? 9) <= DRIFT.amp * 1.5) {
+        chosen = this.rowSet[r] ?? 0;
+        break;
+      }
+    }
+    this.parkSet = chosen;
+    this.motion.beginPark(now);
+    return true;
+  }
+
+  get parkDone(): boolean {
+    return this.motion.parkDone;
+  }
+
+  /** Leave the park: the rows blend from the middle into the roll, which goes on with the set they were showing. */
+  unpark(now: number): void {
+    if (this.parkSet < 0) return;
+    this.motion.unpark(now);
+    this.setShift = this.parkSet;
+    this.parkSet = -1;
+    this.opts.onChange();
   }
 
   /** The roll stands still (the energy pass's hold): the clock stops, the loops end, the composition stays. */
@@ -671,9 +790,15 @@ export class CaptionLayer {
     this.paused = on;
   }
 
+  get isParking(): boolean {
+    return this.motion.isParking;
+  }
+
   /** The showcase begins (`now`: the clock reading) or, before the first frame exists, `null`: the entrance then starts with the first frame. */
   show(now: number | null): void {
     this.want = true;
+    this.parkSet = -1;
+    this.setShift = 0;
     this.crisp.restore();
     // every showing begins with the first phrase set, whole (the entrance restarts the clock)
     if (this.reduced) this.motion.settle(true);
@@ -785,7 +910,7 @@ export class CaptionLayer {
       // the phrase set a row shows is the cycle it is in (modulo the sets): the row leaves, and the next set comes in on the same parallel
       const n = this.motion.continuous && r < b.slotRows ? this.motion.cycle(now, r).n : 0;
       this.rowCycle[r] = Math.max(0, n);
-      this.rowSet[r] = Math.max(0, n) % nSets;
+      this.rowSet[r] = r < b.slotRows && this.parkSet >= 0 ? this.parkSet : (Math.max(0, n) + this.setShift) % nSets;
     }
     let any = false;
     const bands = this.dimMode === "bands" && this.dimAlpha > 0;
@@ -814,6 +939,12 @@ export class CaptionLayer {
       this.tmp.makeRotationY((lon * Math.PI) / 180 + theta);
       v.mesh.matrix.copy(this.tmp);
       v.mesh.matrixWorldNeedsUpdate = true;
+      // only as many slices as the side of the letters needs from here
+      const ns = this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat);
+      if (ns !== v.n) {
+        v.n = ns;
+        v.mesh.geometry = this.unitFor(ns);
+      }
       if (bands && p > 0.01) {
         v.band.visible = true;
         v.band.matrix.copy(this.tmp);
@@ -913,7 +1044,7 @@ export class CaptionLayer {
       this.crisp.hide();
       return;
     }
-    this.crisp.render(camera, rect, Math.min(dpr, ENERGY.captionDpr));
+    this.crisp.render(camera, rect, Math.min(dpr, ENERGY.captionDpr, this.dprCap));
   }
 
   /**
@@ -962,6 +1093,11 @@ export class CaptionLayer {
     return out;
   }
 
+  /** Checks and measurements: wait for the second canvas's GPU work (a read back). */
+  finishGpu(): void {
+    this.crisp.finish();
+  }
+
   /** The globe is not drawn (the street map owns the view): the second canvas must not show a stale frame. */
   hideCrisp(): void {
     this.crisp.hide();
@@ -1004,7 +1140,7 @@ export class CaptionLayer {
       cycle: { sets: this.opts.content.sets.length, current: this.rowSet[0] ?? 0, swapping, waiting: false, paused: this.paused, swaps: this.rowCycle[0] ?? 0, lastOut: outSides, lastIn: inSides },
       baselines: shown.map((v) => v.line.baseLat),
       texture: this.texSizes,
-      colors: { face: this.face.value, accent: this.accent.value, outline: this.outline.value, side: this.side.value },
+      colors: { face: this.face.value, accent: this.accent.value, accentOutline: this.accentOutline.value, accentSide: this.accentSide.value, outline: this.outline.value, side: this.side.value },
     };
   }
 
@@ -1013,8 +1149,8 @@ export class CaptionLayer {
     this.disposed = true;
     this.token++;
     this.release();
-    this.unit?.dispose();
-    this.unit = null;
+    for (const g of this.units.values()) g.dispose();
+    this.units.clear();
     this.ellipse?.geometry.dispose();
     (this.ellipse?.material as ShaderMaterial | undefined)?.dispose();
     this.ellipse = null;
@@ -1186,7 +1322,8 @@ export class CaptionLayer {
           const py = baseline + f.dy * emPx;
           if (pass === "stroke") {
             c.lineWidth = outlinePx * 2 + emboldenPx(run);
-            c.strokeStyle = "rgb(255 0 0)";
+            // (the outline of a word picked out is red AND blue: the shader reads the blue as "this letter is the accent's")
+            c.strokeStyle = run.accent ? "rgb(255 0 255)" : "rgb(255 0 0)";
             c.strokeText(run.text, px, py);
           } else {
             // (the inside is green, or blue for the accent's word: the shader picks the colour by the stronger channel)
@@ -1206,12 +1343,6 @@ export class CaptionLayer {
     this.release();
     this.built = null;
     const anisotropy = Math.min(this.opts.maxAnisotropy, this.crisp.maxAnisotropy);
-    if (!this.unit) {
-      const unit = unitBand();
-      this.unit = new BufferGeometry();
-      this.unit.setAttribute("position", new BufferAttribute(unit.attributes, 3));
-      this.unit.setIndex(new BufferAttribute(unit.indices, 1));
-    }
     const radius = this.radius ?? CAPTION.radius;
     const variants: Variant[] = rowsOf.map((x, i) => {
       const { canvas, box } = sheets[i]!;
@@ -1221,9 +1352,11 @@ export class CaptionLayer {
       tex.magFilter = LinearFilter;
       tex.anisotropy = anisotropy;
       this.textures.push(tex);
+      // (uploaded now, with the mipmaps: the first frame of a set that has not been on screen yet would otherwise pay for it)
+      this.crisp.warm(tex);
       this.texSizes.push({ width: canvas.width, height: canvas.height });
       const material = this.makeMaterial(tex, radius);
-      const mesh = new Mesh(this.unit!, material);
+      const mesh = new Mesh(this.unitFor(2), material);
       mesh.matrixAutoUpdate = false;
       mesh.frustumCulled = false;
       mesh.visible = false;
@@ -1253,13 +1386,13 @@ export class CaptionLayer {
         blendSrc: OneFactor,
         blendDst: OneFactor,
       });
-      const band = new Mesh(this.unit!, bandMaterial);
+      const band = new Mesh(this.unitFor(2), bandMaterial);
       band.matrixAutoUpdate = false;
       band.frustumCulled = false;
       band.visible = false;
       band.renderOrder = -0.5;
       this.crisp.scene.add(band);
-      return { row: x.row, set: x.set, piece, line: {} as CaptionLine, mesh, material, band, bandMaterial };
+      return { row: x.row, set: x.set, piece, line: {} as CaptionLine, mesh, material, n: 2, band, bandMaterial };
     });
     if (!this.ellipse) {
       const quad = new BufferGeometry();
@@ -1271,6 +1404,7 @@ export class CaptionLayer {
       this.ellipse.visible = false;
       this.crisp.scene.add(this.ellipse);
     }
+    for (const n of SLICE_STEPS) this.unitFor(n); // (the CPU side of every strip is made now)
     this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, key };
     this.place();
     this.motion.setFixedFrom(slotRows);

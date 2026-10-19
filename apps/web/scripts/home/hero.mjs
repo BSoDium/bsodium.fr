@@ -160,7 +160,7 @@ async function layoutChecks(page, label) {
   if (g.badge) ok(!g.inks.some((i) => hit(i, g.badge)), `${label}: nothing of the hero covers the dev badge`);
   ok(
     g.inks.every((i) => i.l >= -0.5 && i.r <= g.vw + 0.5 && i.t >= -0.5 && i.b <= g.vh + 0.5),
-    `${label}: everything is inside the viewport (top ${Math.round(Math.min(...g.inks.map((i) => i.t)))} px, bottom ${Math.round(Math.max(...g.inks.map((i) => i.b)))} of ${g.vh})`,
+    `${label}: everything is inside the viewport (${g.inks.filter((i) => i.t < -0.5 || i.b > g.vh + 0.5).map((i) => i.name).join(",")} top ${Math.round(Math.min(...g.inks.map((i) => i.t)))} px, bottom ${Math.round(Math.max(...g.inks.map((i) => i.b)))} of ${g.vh})`,
   );
   ok(g.header === null === (g.state === "rest"), `${label}: ${g.state === "rest" ? "no header at rest" : "the header is back"}`);
   if (g.header) ok(g.inks.every((i) => i.t >= g.header.b - 0.5), `${label}: nothing is under the header row (${Math.round(Math.min(...g.inks.map((i) => i.t)))} px from the top, header ends at ${Math.round(g.header.b)})`);

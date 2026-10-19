@@ -19,7 +19,7 @@
  */
 import type { GlobeTheme } from "./colors";
 import { GlyphBuffer, placeGlyphs, ringLayout, ringPhase, ringTone, type RingLayout } from "./ring";
-import { CAPTION, ENERGY, RING } from "./tuning";
+import { CAPTION, RING } from "./tuning";
 
 export interface RingFrame {
   /** Centre of the planet on the container, CSS px. */
@@ -262,21 +262,21 @@ export class RingLayer {
   private wake(): void {
     if (this.raf || !this.wantsLoop()) return;
     this.lastAt = performance.now();
-    // (a timer at the ring's own rate, not an animation frame at the display's: a frame it would not draw is a wake for nothing)
-    this.raf = window.setTimeout(this.loop, ENERGY.ringFrameMs);
+    // (an animation frame at the display's rate: the ring's letters move 3 degrees a second, and a timer's uneven intervals against the vsync show as judder)
+    this.raf = requestAnimationFrame(this.loop);
   }
 
   private stopLoop(): void {
-    if (this.raf) window.clearTimeout(this.raf);
+    if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
   }
 
-  private loop = () => {
+  private loop = (now: number) => {
     this.raf = 0;
     if (!this.wantsLoop()) return;
-    const now = performance.now();
-    if (now - this.drawnAt >= ENERGY.ringFrameMs - 4) this.draw(now, true);
-    this.raf = window.setTimeout(this.loop, Math.max(4, ENERGY.ringFrameMs - (performance.now() - this.drawnAt)));
+    // (a full frame of the globe in this same display frame has drawn the ring already)
+    if (now - this.drawnAt > 3) this.draw(now, true);
+    this.raf = requestAnimationFrame(this.loop);
   };
 
   /* ------------------------------ drawing ------------------------------ */

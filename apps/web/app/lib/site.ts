@@ -52,7 +52,7 @@ export interface CaptionSpan {
 const SECTION_CAPTION_STYLE = {
   project: "mono",
   article: "heavy",
-  artwork: "heavy-italic",
+  artwork: "heavy",
   poem: "script",
 } as const satisfies Record<keyof typeof SECTIONS, NonNullable<CaptionSpan["style"]>>;
 

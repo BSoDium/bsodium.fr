@@ -8,22 +8,14 @@ import { execSync } from "node:child_process";
 import { BASE_URL, DESKTOP, launch } from "../globe/_lib.mjs";
 
 const SECONDS = Number(process.env.SECONDS ?? 20);
-const OLD = { captionFrameMs: 32, ringFrameMs: 32, spinFrameMs: 0, captionDpr: 2, captionWindow: "planet", idleFreezeMs: 0, holdWhenBlurred: false, holdWhenOffscreen: false, holdOnSaveData: false };
-const FINAL = { captionFrameMs: 50, ringFrameMs: 64, spinFrameMs: 100, captionDpr: 1.5, captionWindow: "band", idleFreezeMs: 0, holdWhenBlurred: false, holdWhenOffscreen: false, holdOnSaveData: false };
-// (the idle rotation draws a full frame per refresh in the earlier rounds, and a full frame draws the caption and the ring too: the knobs of the
-// caption and the ring only show against a paced rotation, so they are compared against `spin 10 fps` as the base)
-const BASE = { ...OLD, spinFrameMs: 100 };
+const OLD = { spinFrameMs: 0, captionDpr: 2, captionWindow: "planet", idleFreezeMs: 0, holdWhenBlurred: false, holdWhenOffscreen: false, holdOnSaveData: false };
+const SHIPPED = { spinFrameMs: 100, captionDpr: 1.5, captionWindow: "band", idleFreezeMs: 0, holdWhenBlurred: false, holdWhenOffscreen: false, holdOnSaveData: false };
+// (since round 10 the caption and the ring are drawn on every display frame while they move: no knob lowers their rate; what saves energy is the
+// idle hold, the slices on demand, the band-sized canvas, the paced idle rotation, the pauses and the low-power hint)
 const CONFIGS = {
-  "before (round 8)": OLD,
-  "spin 10 fps": BASE,
-  "spin 10 + caption 20 fps": { ...BASE, captionFrameMs: 50 },
-  "spin 10 + caption 15 fps": { ...BASE, captionFrameMs: 66 },
-  "spin 10 + caption dpr 1.5": { ...BASE, captionDpr: 1.5 },
-  "spin 10 + caption dpr 1": { ...BASE, captionDpr: 1 },
-  "spin 10 + window band": { ...BASE, captionWindow: "band" },
-  "spin 10 + ring 15 fps": { ...BASE, ringFrameMs: 64 },
-  "all of the above": FINAL,
-  "all + idle freeze": { ...FINAL, idleFreezeMs: 2000 },
+  "before (round 8: full frames at the display rate, planet-box canvas, dpr 2)": OLD,
+  "shipped, moving (caption and ring on every display frame, rotation 10 a second, band canvas, dpr 1.5)": SHIPPED,
+  "shipped, after the idle hold (2 s here, 30 s shipped)": { ...SHIPPED, idleFreezeMs: 2000 },
 };
 const only = process.argv[2]?.split(",");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

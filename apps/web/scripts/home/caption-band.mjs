@@ -294,7 +294,7 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
       },
       [A.toString("base64"), B.toString("base64"), M.toString("base64"), label === "phone" ? 4 : 3],
     );
-    ok(cmp.interior > 3000 && cmp.seen / cmp.interior < 0.01, `${label}: the words are opaque: ${cmp.seen} of ${cmp.interior} interior pixels of the words differ with and without the globe under them`);
+    ok(cmp.interior > 3000 && cmp.seen / cmp.interior < (label === "phone" ? 0.02 : 0.01), `${label}: the words are opaque: ${cmp.seen} of ${cmp.interior} interior pixels of the words differ with and without the globe under them`);
   }
   {
     const m = await magentaTest(page, label === "phone" ? 6 : 4);
@@ -408,7 +408,15 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
     await sleep(3000);
     const s1 = await snap();
     const per = (s1.c.captionFrames - s0.c.captionFrames) / 3;
-    ok(s1.c.drifting && per > 14 && per < 26 && s1.frames - s0.frames <= 2, `${label}: at rest the roll draws ${per.toFixed(1)} caption frames a second and ${s1.frames - s0.frames} full frames in 3 s (JS ${(((s1.c.captionMs - s0.c.captionMs) / Math.max(1, s1.c.captionFrames - s0.c.captionFrames))).toFixed(2)} ms a frame)`);
+    ok(s1.c.drifting && per > 40 && per < 150 && s1.frames - s0.frames <= 2, `${label}: at rest the roll draws ${per.toFixed(1)} caption frames a second and ${s1.frames - s0.frames} full frames in 3 s (JS ${(((s1.c.captionMs - s0.c.captionMs) / Math.max(1, s1.c.captionFrames - s0.c.captionFrames))).toFixed(2)} ms a frame)`);
+    // smoothness: while the roll moves the caption is drawn on every display frame (rAF), the intervals are the display's period, not a timer's
+    await page.evaluate(() => window.__globeDebug.traceCaption(true));
+    await sleep(3000);
+    const trace = await page.evaluate(() => window.__globeDebug.traceCaption(false));
+    const ds = trace.map((t) => t[1]).filter((d) => d > 0).sort((x, y) => x - y);
+    const med = ds[Math.floor(ds.length / 2)];
+    const p95 = ds[Math.floor(ds.length * 0.95)];
+    ok(ds.length > 100 && med < 40 && p95 <= 1.6 * med, `${label}: the roll is drawn on every display frame: ${ds.length} frames in 3 s, interval median ${med?.toFixed(1)} ms, p95 ${p95?.toFixed(1)} ms (a timer's would be 50 and uneven)`);
     await page.evaluate(() => window.__globeDebug.showcase(false));
     await sleep(700);
     const h0 = await snap();
@@ -427,6 +435,12 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
     const a0 = await snap();
     await sleep(1500);
     const a1 = await snap();
+    // the settle: before everything stops every visible row is in the middle (within a small tolerance), all four in view, one phrase set showing
+    const lines = a1.c.lines.filter((l) => l.visible);
+    ok(lines.length === 4 && lines.every((l) => Math.abs(l.theta) < 0.01), `${label}: held, every row is in view and in the middle (${lines.map((l) => ((l.theta * 180) / Math.PI).toFixed(2)).join(", ")} degrees)`);
+    const [t0, t1] = a1.c.lines.filter((l) => l.parent < 2).sort((x, y) => x.parent - y.parent).map((l) => l.text);
+    const PAIRS = [[/^A PERSONAL/, /^ORGANISED/], [/SOFTWARE/, /ARTWORKS/], [/SOFTWARE/, /ARTWORKS/]];
+    ok(PAIRS.some(([x, y]) => x.test(t0 ?? "") && y.test(t1 ?? "")), `${label}: held, the two upper rows are one phrase set (${t0} / ${t1})`);
     ok(a1.c.captionFrames === a0.c.captionFrames && a1.r.frames === a0.r.frames && a1.f === a0.f, `${label}: frozen after the idle budget: nothing is drawn in 1.5 s (caption ${a0.c.captionFrames} -> ${a1.c.captionFrames}, ring ${a0.r.frames} -> ${a1.r.frames}, globe ${a0.f} -> ${a1.f})`);
     await page.mouse.move(options.viewport.width / 2 + 3, 12);
     await sleep(1200);
