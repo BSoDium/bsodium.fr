@@ -1,0 +1,82 @@
+import type { CSSProperties } from "react";
+import { Link } from "react-router";
+import { CoverArt, SensitiveMedia } from "~/components/ui";
+import { coverRatio, layoutAllTiers, masonryItemVars, masonryListVars, RATIO_FALLBACK } from "~/lib/masonry";
+import { yearOf } from "~/lib/entry-list";
+import { safeMediaSrc } from "~/lib/entry-blocks";
+import type { EntrySummary } from "~/lib/entries";
+
+/** The first pictures of a wall load at once (the first screen at four columns); the rest are lazy. */
+const EAGER = 4;
+
+const fact = (entry: EntrySummary, label: string) => entry.meta.find((m) => m.label.trim().toLowerCase() === label)?.value.trim() || undefined;
+
+/** The caption's second line: the medium and the year, as authored (the `Medium` and `Year` facts; the entry's date year when no `Year`). */
+export function artworkCaption(entry: Pick<EntrySummary, "meta" | "date">): { medium?: string; year?: string } {
+  const medium = fact(entry as EntrySummary, "medium");
+  const year = fact(entry as EntrySummary, "year") ?? (yearOf(entry.date)?.toString() || undefined);
+  return { ...(medium ? { medium } : {}), ...(year ? { year } : {}) };
+}
+
+/**
+ * The artworks as a brick wall (docs/design-system.md, "Artwork wall"): pictures at their own proportions (the contract's cover size, so
+ * the space is reserved before the image arrives), nested in 1 to 4 columns by the wall's width, 10 px apart. The DOM is ONE list in reading
+ * order; the placement is computed on the server (`lib/masonry.ts`) and drawn with `calc()` (`.wall` in app.css), so there is no script, no
+ * measuring and no shift, and the tab order is the reading order. The title, medium and year are a plate over the picture's foot on a
+ * pointer that hovers (shown on hover and on focus) and a line under the picture on touch (always visible). One link per picture
+ * (the title), stretched over it. An artwork without a cover is a generated one at 4:3. A sensitive artwork stays blurred.
+ */
+export function ArtworkWall({ items, headingLevel = 2, label }: { items: readonly EntrySummary[]; headingLevel?: 2 | 3 | 4; label: string }) {
+  const Heading = `h${headingLevel}` as "h2" | "h3" | "h4";
+  const covers = items.map((entry) => (entry.cover && safeMediaSrc(entry.cover.src) ? entry.cover : null));
+  const ratios = covers.map((cover) => (cover ? coverRatio(cover) : RATIO_FALLBACK));
+  const layouts = layoutAllTiers(ratios);
+  return (
+    <div data-slot="artwork-wall" className="wall">
+      <ul role="list" aria-label={label} className="wall-list" style={masonryListVars(layouts) as CSSProperties}>
+        {items.map((entry, i) => {
+          const cover = covers[i];
+          const { medium, year } = artworkCaption(entry);
+          const eager = i < EAGER;
+          const image = cover ? (
+            <img
+              src={cover.src}
+              alt={cover.alt}
+              {...(cover.width && cover.height ? { width: cover.width, height: cover.height } : {})}
+              loading={eager ? "eager" : "lazy"}
+              decoding="async"
+              className="wall-img"
+            />
+          ) : null;
+          return (
+            <li key={entry.slug} className="wall-item" style={masonryItemVars(ratios[i]!, layouts, i) as CSSProperties}>
+              <article id={entry.slug} data-slot="entry-card" data-kind="artwork" data-ratio={ratios[i]!.toFixed(3)} className="wall-card scroll-mt-24">
+                <div className="wall-media">
+                  {image && entry.sensitive === true ? (
+                    <SensitiveMedia className="size-full">{image}</SensitiveMedia>
+                  ) : (
+                    (image ?? <CoverArt seed={entry.slug} kind="artwork" cols={48} rows={36} className="h-full" />)
+                  )}
+                </div>
+                <div className="wall-caption">
+                  <Heading data-slot="entry-card-title" className="wall-title">
+                    <Link to={entry.href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+                      {entry.title}
+                    </Link>
+                  </Heading>
+                  {(medium || year) && (
+                    <p className="wall-meta">
+                      {medium && <span className="wall-medium">{medium}</span>}
+                      {medium && year && <span aria-hidden="true"> · </span>}
+                      {year && <time dateTime={year}>{year}</time>}
+                    </p>
+                  )}
+                </div>
+              </article>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}

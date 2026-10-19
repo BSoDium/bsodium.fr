@@ -55,6 +55,16 @@ Done: the cream paper and the warm night of the reading surface are gone: entrie
 
 Contract `routes[].legs` (mode and optional polyline5), limits `ROUTE_LEG_LIMITS`, faint-everywhere/ink-on-selection renderer on both maps, Paths switch, Journeys list. Read [paths.md](paths.md). The private repo must copy `packages/schemas/published.schema.json` and enforce `ROUTE_LEG_LIMITS` (decoder exported as `decodePolyline5`) before exporting legs. Demo routes: `apps/web/scripts/paths/make-demo-legs.mjs` regenerates the fictional legs. Not done: mode colours (palettes), real data, Safari and phone checks.
 
+## Pages polish (branch `feat/pages-polish`, 2026-10-19, owner feedback, 3 items)
+
+| Change | Details |
+|---|---|
+| `/artworks`: an interlocking brick wall (1 / 2 / 3 / 4 columns by width, 10 px gap, natural ratios from the contract's cover size, caption plate on hover and focus, always under the picture on touch, DOM = reading order, no script) | [design-system.md](design-system.md) ("Artwork wall"), `lib/masonry.ts`, `components/entry/artwork-wall.tsx` |
+| `/poetry`: a 100 rem page, two columns from 44 rem, summary in the reading serif at 20 to 26 px in the ink, the mono line at 14 px | [design-system.md](design-system.md) ("Poetry list") |
+| Tag rows on phones: no native scrollbar, Spotify-style edge arrows (`ScrollRow`), 44 px, solid plate | [design-system.md](design-system.md) ("Scroll row") |
+
+Not verified: a real touch device (emulated touch only); Safari and Firefox (Chromium only: the layout needs container query units and `:has()`, both in current Safari and Firefox); the caption plate on a very tall picture on a short window.
+
 ## Where the details are
 
 | Topic | Doc |

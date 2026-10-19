@@ -89,6 +89,7 @@ app/
   throws `data({ message }, { status: 404 })`. Its `ErrorBoundary` renders `PlaceNotFound` inside the panel
   (message, link to `/`, a plain inline list of all places); the shell and globe stay mounted. Status is a real 404.
 - Unmatched URLs fall to the root `ErrorBoundary` (404 page inside the navbar).
+- `/artworks` renders `ArtworkWall` (one brick wall, placement computed server-side in `lib/masonry.ts` for 1 to 4 columns and drawn with `calc()` and container query units: no script, no layout shift, DOM = reading order; design-system.md "Artwork wall") and `/poetry` a two-column grid of `PoemRow`s; the other lists use the rows below. The tag filter is a `ScrollRow` (`components/ui/scroll-row.tsx`: hidden native scrollbar, edge arrows from a passive scroll listener and a `ResizeObserver`; `lib/scroll-row.ts` is the pure part). Browser coverage: `scripts/entries/check.mjs` section 11.
 - The list pages (`/software`, `/articles`, `/artworks`, `/poetry`) are plain pages outside the shell: a running head (the owner's name, the plain
   count "5 articles" / "2 of 5 articles" when filtered, one hairline under it; no eyebrow, no index codes), the section's name as the h1 in the reading face at a medium weight, then
   hairline rows (`EntryRow`, `components/entry/entry-list-card.tsx`: a mono column with the date, the places and a status word when there is one;
