@@ -70,3 +70,86 @@ export function journeysOf(projection: PublishedProjection, slug: string, nameOf
   });
   return out;
 }
+
+/** One hop of a trip as seen from a stop: the place at the other end, how, how far, and the sentence that says it. */
+export interface TripHop {
+  slug: string;
+  name: string;
+  mode: LegMode;
+  km: number;
+  text: string;
+}
+
+/** One visit of the place in a trip (a place can be a stop of a route twice). */
+export interface TripVisit {
+  /** 1-based position among the route's stops. */
+  position: number;
+  /** The hop that brought the trip here; null when the trip starts here. */
+  previous: TripHop | null;
+  /** The hop that leaves; null when the trip ends here. */
+  next: TripHop | null;
+  /** Stops before the previous one / after the next one: the itinerary shows one on each side and counts the rest. */
+  earlier: number;
+  later: number;
+}
+
+/** A published route that stops at the place: the panel's itinerary card. */
+export interface Trip {
+  id: string;
+  title: string;
+  palette: number;
+  /** Stops in the route / whole route length, rounded to 10 km. */
+  stops: number;
+  km: number;
+  /** Where the route starts and ends, by name. */
+  from: string;
+  to: string;
+  visits: TripVisit[];
+}
+
+/** The routes that stop at `slug`, each with the hop before and the hop after every visit. Same inputs and rounding as `journeysOf`. */
+export function tripsOf(projection: PublishedProjection, slug: string, nameOf: (place: PublishedProjection["places"][number]) => string = (p) => p.name): Trip[] {
+  const bySlug = new Map(projection.places.map((p) => [p.slug, p]));
+  const trips: Trip[] = [];
+  projection.routes.forEach((route, order) => {
+    const places = route.stops.map((s) => bySlug.get(s));
+    if (places.some((p) => !p) || !route.stops.includes(slug)) return;
+    const hop = (legIndex: number, other: number, direction: Journey["direction"]): TripHop => {
+      const a = places[legIndex]!;
+      const b = places[legIndex + 1]!;
+      const leg = route.legs?.[legIndex];
+      const mode: LegMode = leg?.mode ?? "unknown";
+      const km = roundKm(legLengthM({ lat: a.coordinates.lat, lon: a.coordinates.lon }, { lat: b.coordinates.lat, lon: b.coordinates.lon }, leg));
+      const name = nameOf(places[other]!);
+      return { slug: places[other]!.slug, name, mode, km, text: journeyText(direction, name, mode, km) };
+    };
+    const visits: TripVisit[] = [];
+    route.stops.forEach((stop, i) => {
+      if (stop !== slug) return;
+      visits.push({
+        position: i + 1,
+        previous: i > 0 ? hop(i - 1, i - 1, "arrived") : null,
+        next: i + 1 < route.stops.length ? hop(i, i + 1, "left") : null,
+        earlier: Math.max(0, i - 1),
+        later: Math.max(0, route.stops.length - i - 2),
+      });
+    });
+    let total = 0;
+    for (let i = 0; i + 1 < places.length; i++) {
+      const a = places[i]!.coordinates;
+      const b = places[i + 1]!.coordinates;
+      total += legLengthM({ lat: a.lat, lon: a.lon }, { lat: b.lat, lon: b.lon }, route.legs?.[i]);
+    }
+    trips.push({
+      id: route.id,
+      title: route.title,
+      palette: paletteOf(order),
+      stops: route.stops.length,
+      km: roundKm(total),
+      from: nameOf(places[0]!),
+      to: nameOf(places[places.length - 1]!),
+      visits,
+    });
+  });
+  return trips;
+}

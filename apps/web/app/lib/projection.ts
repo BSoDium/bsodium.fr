@@ -12,7 +12,7 @@ import type {
   PublishedProjection,
 } from "@catalyst/schemas";
 import { countryName, stripCountry } from "~/globe/engine/country-names";
-import { journeysOf, type Journey } from "~/lib/journeys";
+import { journeysOf, tripsOf, type Journey, type Trip } from "~/lib/journeys";
 import { bboxExtentsKm, bboxFitRadiusKm } from "~/globe/engine/framing";
 import type { GlobeEntryRef, GlobeGroup, GlobePlace, GlobeRoute } from "~/globe/types";
 import { paletteOf } from "~/globe/paths/trail";
@@ -171,6 +171,8 @@ export interface PlaceDetailData {
   entries: EntryGroup[];
   /** The legs of the routes next to the place as sentences (`lib/journeys.ts`): the text twin of the paths on the map. */
   journeys: Journey[];
+  /** The same legs grouped by route, with the stop before and after: what the panel draws (`lib/journeys.ts`). */
+  trips: Trip[];
 }
 
 /** Full place with its linked entries resolved. Unresolvable references are dropped. */
@@ -190,6 +192,7 @@ export function getPlaceDetail(projection: PublishedProjection, slug: string): P
     images: place.images,
     entries: entriesOfPlace(projection, place.slug),
     journeys: journeysOf(projection, place.slug, (p) => stripCountry(p.name, p.countryCode)),
+    trips: tripsOf(projection, place.slug, (p) => stripCountry(p.name, p.countryCode)),
   };
 }
 

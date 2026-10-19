@@ -2,14 +2,11 @@ import { Link } from "react-router";
 import type { PlaceSummary } from "@catalyst/schemas";
 import { PANEL_HEADING_ID } from "~/components/detail-panel";
 import { EntryListCard } from "~/components/entry/entry-list-card";
+import { Trips } from "~/components/trip-itinerary";
 import { Button, Icon, SectionHeader, Stack, StatePanel } from "~/components/ui";
 import { safeMediaSrc } from "~/lib/entry-blocks";
 import { formatPlaceCoordinates } from "~/lib/labelling";
 import { imageSize, placePath, type PlaceDetailData } from "~/lib/projection";
-import { cn } from "~/lib/utils";
-
-/** The route's trail palette (blue, green, ocre, violet) as a solid fill: the head colour of its paths on the maps. Literal class names so Tailwind sees them. */
-const SWATCH = ["bg-trail-blue", "bg-trail-green", "bg-trail-ocre", "bg-trail-violet"] as const;
 
 function Figure({ image }: { image: PlaceDetailData["images"][number] }) {
   const src = safeMediaSrc(image.src);
@@ -86,18 +83,11 @@ export function PlaceDetail({ place }: { place: PlaceDetailData }) {
             ))}
           </Stack>
         )}
-        {place.journeys.length > 0 && (
+        {place.trips.length > 0 && (
           <section aria-labelledby="place-journeys" data-slot="place-journeys">
-            <Stack gap={3}>
-              <SectionHeader as="h2" id="place-journeys" title="Journeys" meta={place.journeys.length} />
-              <ul className="m-0 flex list-none flex-col gap-1 p-0 text-base text-pretty">
-                {place.journeys.map((journey) => (
-                  <li key={journey.text} className="flex items-baseline gap-2">
-                    <span aria-hidden data-slot="journey-swatch" data-palette={journey.palette} className={cn("size-2 shrink-0 translate-y-px", SWATCH[journey.palette])} />
-                    <span>{journey.text}</span>
-                  </li>
-                ))}
-              </ul>
+            <Stack gap={4}>
+              <SectionHeader as="h2" id="place-journeys" title="Journeys" meta={place.trips.length} />
+              <Trips trips={place.trips} />
             </Stack>
           </section>
         )}

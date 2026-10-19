@@ -45,4 +45,14 @@ describe("PlaceDetail", () => {
     expect(ordinary.slice(0, ordinary.indexOf("</article>"))).not.toContain("sensitive-media");
     expect(render("lisbon")).not.toContain("sensitive-media");
   });
+  it("draws the journeys as a trip card per route: the stop before, here, the stop after", () => {
+    const p = (slug: string, lon: number) => ({ slug, name: slug, coordinates: { lat: 10, lon }, labelPriority: 0, body: [], images: [], related: [] });
+    const projection = { ...demo, places: [p("a", 10), p("b", 11), p("c", 12)], entries: [], routes: [{ id: "r", title: "Round", stops: ["a", "b", "c"] }] };
+    const html = renderToStaticMarkup(createElement(StaticRouter, { location: "/" }, createElement(PlaceDetail, { place: getPlaceDetail(projection, "b")! })));
+    expect(html).toContain('data-slot="trip"');
+    expect(html).toContain('data-slot="trip-here"');
+    expect(html).toContain("Stop 2 of 3");
+    expect(html).toContain('href="/locations/a"');
+    expect(html).toContain('href="/locations/c"');
+  });
 });

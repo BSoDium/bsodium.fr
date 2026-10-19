@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EMPTY_PROJECTION, encodePolyline5, type PublishedProjection } from "@catalyst/schemas";
-import { journeyText, journeysOf, roundKm } from "./journeys";
+import { journeyText, journeysOf, roundKm, tripsOf } from "./journeys";
 
 const place = (slug: string, name: string, lat: number, lon: number, countryCode?: string) => ({
   slug, name, coordinates: { lat, lon }, labelPriority: 0, body: [], images: [], related: [], ...(countryCode ? { countryCode } : {}),
@@ -57,5 +57,25 @@ describe("journeys", () => {
   it("lists a repeated sentence once", () => {
     const twice: PublishedProjection = { ...projection, routes: [projection.routes[0]!, { ...projection.routes[0]!, id: "r2" }] };
     expect(journeysOf(twice, "beta")).toHaveLength(2);
+  });
+});
+
+describe("tripsOf", () => {
+  it("gives the route with the hop before and after the visit, and counts the stops it does not draw", () => {
+    const [trip] = tripsOf(projection, "beta");
+    expect(trip).toMatchObject({ id: "r1", title: "R1", stops: 4, from: "Alpha", to: "Delta", palette: 0 });
+    const [visit] = trip!.visits;
+    expect(visit).toMatchObject({ position: 2, earlier: 0, later: 1 });
+    expect(visit!.previous).toMatchObject({ slug: "alpha", mode: "road", km: 60 });
+    expect(visit!.next).toMatchObject({ slug: "gamma", mode: "rail", km: 50 });
+  });
+  it("has no previous at the start and no next at the end", () => {
+    expect(tripsOf(projection, "alpha")[0]!.visits[0]).toMatchObject({ previous: null, earlier: 0, later: 2 });
+    expect(tripsOf(projection, "delta")[0]!.visits[0]).toMatchObject({ next: null, earlier: 2, later: 0 });
+  });
+  it("lists every visit of a place a route passes twice, and no trip for a place off the routes", () => {
+    const loop: PublishedProjection = { ...projection, routes: [{ id: "loop", title: "Loop", stops: ["alpha", "beta", "alpha"] }] };
+    expect(tripsOf(loop, "alpha")[0]!.visits.map((v) => v.position)).toEqual([1, 3]);
+    expect(tripsOf(projection, "nowhere")).toEqual([]);
   });
 });
