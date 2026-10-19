@@ -1,11 +1,16 @@
 /**
- * Pointer controls for the canvas: drag to rotate (with inertia handled by the host), wheel and pinch to
- * zoom, tap or click to select. There is deliberately no keyboard handling: the canvas is not focusable and the
- * place list is the accessible path.
+ * Pointer controls for the canvas, the Apple Maps way: drag to rotate (with inertia handled by the host), tap or click to select, and
+ *   - a PINCH and a SPREAD zoom, about the midpoint of the fingers (two pointers on a touch screen; a trackpad's pinch arrives as `wheel` with `ctrlKey`,
+ *     and in Safari as `gesture*` events: `engine/wheel-input.ts`);
+ *   - a classic mouse wheel zooms about the cursor;
+ *   - a two-finger SWIPE on a trackpad PANS like a drag (and lets go like one: inertia where the device gave none), never zooms.
+ * Which of the wheel's devices is which is `engine/wheel.ts`. There is deliberately no keyboard handling: the canvas is not focusable and the place list is
+ * the accessible path.
  *
- * `touch-action: none` is set on the canvas only, so a finger that starts anywhere else (list, panel, page)
- * still scrolls normally.
+ * `touch-action: none` and `overscroll-behavior: none` are set on the canvas only, and the wheel is `preventDefault`ed on the canvas only, so a finger or a
+ * wheel that starts anywhere else (list, panel, page) still scrolls normally, and over the map the page neither scrolls nor goes back on a swipe.
  */
+import { attachWheelInput } from "./wheel-input";
 import { warmHover } from "./hover-warm";
 import type { DragSample } from "./motion";
 
@@ -15,8 +20,8 @@ export interface ControlsHost {
   /** A new gesture started: cancel flights and inertia. */
   stopMotion(): void;
   panPixels(dx: number, dy: number): void;
-  /** Zoom by `dLog2` zoom levels (positive zooms in). */
-  zoomBy(dLog2: number): void;
+  /** Zoom by `dLog2` zoom levels (positive zooms in), keeping the point under the container-relative CSS-px point (x, y) where it is on the screen. */
+  zoomAt(dLog2: number, x: number, y: number): void;
   fling(samples: readonly DragSample[], now: number): void;
   /** Place under a container-relative CSS-px point (labels first, then markers), or null. */
   pickAt(x: number, y: number, kind: PointerKind): string | null;
@@ -39,6 +44,7 @@ export function attachControls(canvas: HTMLCanvasElement, container: HTMLElement
   const pointers = new Map<number, { x: number; y: number }>();
   let drag: Drag | null = null;
   let pinchDist = 0;
+  let pinchMid = { x: 0, y: 0 };
   const cleanups: (() => void)[] = [];
   // The first layout change after the first mouse move blocks a macOS renderer for 30 ms once (engine/hover-warm.ts): take it before the first drag.
   cleanups.push(warmHover(canvas.ownerDocument.defaultView ?? canvas, canvas.ownerDocument as never));
@@ -60,6 +66,15 @@ export function attachControls(canvas: HTMLCanvasElement, container: HTMLElement
     const [a, b] = [...pointers.values()];
     return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
   };
+  /** The midpoint of the first two pointers, client px. */
+  const midpoint = () => {
+    const [a, b] = [...pointers.values()];
+    return a && b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : { x: 0, y: 0 };
+  };
+  const toLocal = (clientX: number, clientY: number) => {
+    const r = container.getBoundingClientRect();
+    return { x: clientX - r.left, y: clientY - r.top };
+  };
 
   on("pointerdown", (e) => {
     try {
@@ -72,6 +87,7 @@ export function attachControls(canvas: HTMLCanvasElement, container: HTMLElement
     if (pointers.size === 1) drag = { moved: 0, samples: [], multi: false };
     if (pointers.size === 2) {
       pinchDist = pinchDistance();
+      pinchMid = midpoint();
       if (drag) drag.multi = true;
     }
     if (e.pointerType === "mouse") canvas.style.cursor = "grabbing";
@@ -93,8 +109,15 @@ export function attachControls(canvas: HTMLCanvasElement, container: HTMLElement
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size >= 2) {
       const dist = pinchDistance();
-      if (pinchDist > 0 && dist > 0) host.zoomBy(Math.log2(dist / pinchDist));
+      const mid = midpoint();
+      // About where the fingers were (so the point between them stays between them), then with the fingers' midpoint as a drag.
+      if (pinchDist > 0 && dist > 0) {
+        const p = toLocal(pinchMid.x, pinchMid.y);
+        host.zoomAt(Math.log2(dist / pinchDist), p.x, p.y);
+      }
+      host.panPixels(mid.x - pinchMid.x, mid.y - pinchMid.y);
       pinchDist = dist;
+      pinchMid = mid;
       return;
     }
     if (!drag) return;
@@ -128,15 +151,17 @@ export function attachControls(canvas: HTMLCanvasElement, container: HTMLElement
     if (e.pointerType === "mouse" && !pointers.has(e.pointerId)) host.hover?.(null);
   });
 
-  on(
-    "wheel",
-    (e) => {
-      e.preventDefault();
-      const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1;
-      // ctrlKey is how browsers report a trackpad pinch.
-      host.zoomBy(-e.deltaY * unit * (e.ctrlKey ? 0.012 : 0.0016));
-    },
-    { passive: false },
+  canvas.style.overscrollBehavior = "none";
+  cleanups.push(
+    attachWheelInput(canvas, {
+      begin: () => host.stopMotion(),
+      zoom: (d, clientX, clientY) => {
+        const p = toLocal(clientX, clientY);
+        host.zoomAt(d, p.x, p.y);
+      },
+      pan: (dx, dy) => host.panPixels(dx, dy),
+      panEnd: (samples, now) => host.fling(samples, now),
+    }),
   );
 
   return () => {

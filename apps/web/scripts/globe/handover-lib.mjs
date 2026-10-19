@@ -19,11 +19,13 @@ export async function openApp(browser, contextOptions, { path = "/", colorScheme
     if (n) sessionStorage.setItem("palette-levels", String(n));
     else sessionStorage.removeItem("palette-levels");
   }, levels);
-  await page.addInitScript((o) => {
+  await page.addInitScript(([o, kind]) => {
     sessionStorage.setItem("globe-debug", "1");
+    // The checks emulate a mouse wheel with `page.mouse.wheel` (see globe/_lib.mjs).
+    if (kind !== "auto") sessionStorage.setItem("input-kind", kind);
     if (o) sessionStorage.setItem("street-opts", JSON.stringify(o));
     else sessionStorage.removeItem("street-opts");
-  }, opts ?? null);
+  }, [opts ?? null, process.env.INPUT_KIND ?? "wheel"]);
   // Debug pages have the sky OFF by default (engine/sky.ts `applySkyFlags`); SKY=1 runs any handover check with it on.
   if (process.env.SKY === "1") await page.addInitScript(() => sessionStorage.setItem("sky", "1"));
   // ... and the ring of type OFF (the lowest zoom is the fit there); RING=1 runs any check with it on.

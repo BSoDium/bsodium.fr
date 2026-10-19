@@ -17,7 +17,8 @@ export async function runScenarios({ base, scenarios, device = "desktop", scheme
     const sc = SCENARIOS.find((s) => s.id === id);
     if (!sc) throw new Error(`unknown scenario ${id}`);
     for (let rep = 0; rep < repeat; rep++) {
-      const flags = { "globe-debug": "1" };
+      // The scenarios emulate a mouse wheel with `page.mouse.wheel` (no device signature at a scale factor of 2: engine/wheel-debug.ts `inputKindOverride`).
+      const flags = { "globe-debug": "1", "input-kind": "wheel" };
       // Debug pages have the ring OFF by default (engine/ring.ts `applyRingFlags`): its own scenarios turn it on, and RING=1 runs any scenario with it.
       if (sc.ring || process.env.RING === "1") flags.ring = "1";
       if (sc.flags) Object.assign(flags, sc.flags);
