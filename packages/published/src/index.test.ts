@@ -156,10 +156,9 @@ describe("published package", () => {
 });
 
 describe("career", () => {
-  it("the committed projection has none while the owner has not published the document, and an old projection stays valid without it", () => {
-    expect(loadPublishedProjection()).not.toHaveProperty("career");
-    expect(getCareer()).toBeUndefined();
-    expect(getCareer("published")).toBeUndefined();
+  it("the committed projection may carry the owner's career (it is present once published), and an old projection stays valid without it", () => {
+    // (the committed file is written by the publication workflow: with a career once the owner publishes the document, without one before)
+    expect(getCareer("published")).toEqual(loadPublishedProjection().career);
     const { career: _omit, ...withoutCareer } = loadDemoProjection();
     expect(parsePublishedProjection(JSON.parse(JSON.stringify(withoutCareer)))).not.toHaveProperty("career");
   });
