@@ -314,14 +314,6 @@
         },
         {
           "kind": "poem",
-          "slug": "prose-nocturne"
-        },
-        {
-          "kind": "poem",
-          "slug": "sinking"
-        },
-        {
-          "kind": "poem",
           "slug": "the-enslaved-acrobat"
         },
         {
@@ -1652,8 +1644,12 @@
           "text": "Pre-rendering, as expected, is not suitable for videogames, or any kind of interactive medium, since it consists of generating the images/video feed beforehand. This is done very often on a powerful machine, allowing for more complex and detailed simulations, while keeping the rendering speeds pretty low compared to what it would take for an average computer to do the same. Therefore, this technique is mostly used in cinematography and filmmaking, with software such as Blender 3D (open source), Cinema 4D, 3ds Max and many others (Fig. 1)."
         },
         {
-          "type": "paragraph",
-          "text": "Fig. 1: Most popular 3D Modelling tools in 2016, sorted by market presence vertically and user satisfaction horizontally (G2, 2016)"
+          "type": "image",
+          "src": "/media/article/rendering-techniques-applied-to-caustics/g2-3d-modeling-grid-2016.b3398412.webp",
+          "alt": "G2 Crowd grid of 3D modelling software in summer 2016, plotting market presence against user satisfaction",
+          "width": 828,
+          "height": 828,
+          "caption": "Most popular 3D Modelling tools in 2016, sorted by market presence vertically and user satisfaction horizontally (G2, 2016)"
         },
         {
           "type": "paragraph",
@@ -1664,8 +1660,12 @@
           "text": "However, it is important to note that nowadays, the frontier between these two categories is becoming thinner with the constant increase in computing power, and the new algorithms made available on the market (cf. Unreal Engine 5 – Lumen Global Illumination and Reflections). On the same note, software usually used in pre-computed rendering can be applied to virtual reality, and other forms of interactive 3D visualization in some very specific hardware configurations (Interactive rendering with blender cycles for virtual reality using hpc clusters, 2019), such as the one described below (Fig. 2). Here, the computing power is fully relocated to a high-performance computing data centre, which can handle the rendering of 60 images in one second. This cloud-computing infrastructure receives lightweight network packets containing user input data, and sends back compressed images back to the user’s interface."
         },
         {
-          "type": "paragraph",
-          "text": "Fig. 2: Cloud-computing infrastructure, featuring an HPC distributed rendering Cluster (Interactive rendering with blender cycles for virtual reality using hpc clusters, 2019)"
+          "type": "image",
+          "src": "/media/article/rendering-techniques-applied-to-caustics/hpc-render-cluster.8dc7e0f8.webp",
+          "alt": "Diagram of a Blender visualisation client connected to a high-performance computing cluster for distributed rendering",
+          "width": 1222,
+          "height": 711,
+          "caption": "Cloud-computing infrastructure, featuring an HPC distributed rendering Cluster (Interactive rendering with blender cycles for virtual reality using hpc clusters, 2019)"
         },
         {
           "type": "heading",
@@ -1685,12 +1685,20 @@
           "text": "¹ The near plane, or near clipping plane lies perpendicular to the camera direction. The distance from the camera (eye point) to the near plane is the closest distance that any object can be to the camera while still remaining in the view."
         },
         {
-          "type": "paragraph",
-          "text": "Fig. 3: Caustics created by a glass of water (cgiknowledge, 2013)"
+          "type": "image",
+          "src": "/media/article/rendering-techniques-applied-to-caustics/glass-of-water-caustics.69095ece.webp",
+          "alt": "A glass of water casting a bright caustic pattern on a surface",
+          "width": 573,
+          "height": 430,
+          "caption": "Caustics created by a glass of water (cgiknowledge, 2013)"
         },
         {
-          "type": "paragraph",
-          "text": "Fig. 4: Common representation of a virtual camera in 3D rendering (Moccozet, 2008)"
+          "type": "image",
+          "src": "/media/article/rendering-techniques-applied-to-caustics/virtual-camera-frustum.d9aa6c6f.webp",
+          "alt": "Diagram of a virtual camera showing the near and far clipping planes and the field of view",
+          "width": 484,
+          "height": 264,
+          "caption": "Common representation of a virtual camera in 3D rendering (Moccozet, 2008)"
         },
         {
           "type": "paragraph",
@@ -1701,8 +1709,12 @@
           "text": "A common example (Dual Heights Software AB, 2021) of its use is water: pre-calculated caustics textures are projected onto the ocean/pool floor (Fig. 5) and distorted to create the illusion of movement, while the water surface itself is displaced according to an independent noise texture. The lack of consistency between cause (distortion of the water surface) and effect (resulting caustic network) remains unnoticed as long as the waves are low in height and uniform."
         },
         {
-          "type": "paragraph",
-          "text": "Fig. 5: Caustic network textures projected onto various shapes in Unity 3D (Dual Heights Software AB, 2021)"
+          "type": "image",
+          "src": "/media/article/rendering-techniques-applied-to-caustics/unity-caustics-textures.a29d3110.webp",
+          "alt": "Caustic network textures projected onto a cylinder, a sphere and a cube in Unity",
+          "width": 700,
+          "height": 280,
+          "caption": "Caustic network textures projected onto various shapes in Unity 3D (Dual Heights Software AB, 2021)"
         },
         {
           "type": "paragraph",
@@ -1802,16 +1814,24 @@
           "text": "After taking a look at the actual design of one of these headsets (Parkin, 2014), we can identify three “main” components, the first being the circuit board. It features a highly powerful graphical processing unit, due to the very high requirements in terms of display latency: extended looking at a slow and unresponsive video feed has proven to induce nausea and headaches."
         },
         {
-          "type": "paragraph",
-          "text": "Figure 1: Inside view of an Oculus Rift VR headset (Parkin, 2014)"
+          "type": "image",
+          "src": "/media/article/virtual-reality-technologies/oculus-rift-inside-view.6d92f413.webp",
+          "alt": "Exploded view of an Oculus Rift headset showing the foam padding, lenses, display, circuit board and cover",
+          "width": 745,
+          "height": 885,
+          "caption": "Inside view of an Oculus Rift VR headset (Parkin, 2014)"
         },
         {
           "type": "paragraph",
           "text": "This board is then connected to a high-definition display module, whose technology can vary depending on the budget (LCD or OLED solutions are often preferred). However, the most commonly encountered design uses a backlit liquid crystal display, i.e., a non-emissive, translucent layer of so-called liquid crystals (extensively small cells whose color can be dynamically changed by applying a specific voltage for each color), coupled with a monochrome light-emitting backlight unit (BLU), which ensured the visibility of the content displayed on the aforementioned layer, by shining light through it."
         },
         {
-          "type": "paragraph",
-          "text": "Figure 2: Schematic diagram of an LCD (Liquid crystal display and organic light-emitting diode display: present status and future perspectives, 2017)"
+          "type": "image",
+          "src": "/media/article/virtual-reality-technologies/lcd-schematic.8db01734.webp",
+          "alt": "Layered schematic of a liquid crystal display: polarising filters, colour filters, liquid crystal layer, TFT array and backlight",
+          "width": 830,
+          "height": 486,
+          "caption": "Schematic diagram of an LCD (Liquid crystal display and organic light-emitting diode display: present status and future perspectives, 2017)"
         },
         {
           "type": "paragraph",
@@ -1835,16 +1855,24 @@
           "text": "Multiple solutions do exist, and yet it would be a lie to say that these are in competition on the market, as each and every single one of them is more suitable for certain specific use cases. Open environments with great freedom of movement, such as virtual reality battle arenas (e.g., EVA) or military combat training infrastructure (Lele, 2011), will require positional tracking of limbs and weapons, which best works using optical tracking methods. The monitored zone cannot be infinite, and must be surrounded with cameras, coupled with highly powerful light projectors (preferably infrared, due to its imperceptibility to the human eye). The user should be equipped with judiciously placed retro-reflective markers, so as to minimize the positional estimation error; obviously, these markers are in general specifically designed to reflect extremely well the light frequency emitted by the aforementioned projectors. In the end, what the cameras see is an extremely dark image, covered with blindingly white dots, which correspond to the limbs of the user, and whose coordinates can later be determined, in order to programmatically calculate his position. Variations of this method may involve laser emitters instead of markers (Simulation of a virtual reality tracking system, 2011), whose beams will project dots of light on the walls of the monitored room. However, both techniques make use of cameras when it comes to locating them."
         },
         {
-          "type": "paragraph",
-          "text": "Figure 3: Visualization of an optical tracker's detection system (RetroTracker: Upgrading Existing Virtual Reality Tracking Systems, 2019)"
+          "type": "image",
+          "src": "/media/article/virtual-reality-technologies/optical-tracker.1d1c2b26.webp",
+          "alt": "Diagram of a retro-reflective optical tracking system with three panels showing how markers are detected",
+          "width": 991,
+          "height": 453,
+          "caption": "Visualization of an optical tracker's detection system (RetroTracker: Upgrading Existing Virtual Reality Tracking Systems, 2019)"
         },
         {
           "type": "paragraph",
           "text": "High precision motion capture is usually sought after in VR apps which call for (included but not limited to) hand-gesture detection and close contact interactions with the environment. Again, several solutions are available to the public: optical detection in conjunction with AI algorithms, or gloves/suits equipped with structural deformation sensors."
         },
         {
-          "type": "paragraph",
-          "text": "Figure 4: Motion capture using an Optitrack marker suit and IMU-based gloves (Parger, et al., 2020)"
+          "type": "image",
+          "src": "/media/article/virtual-reality-technologies/optitrack-mocap.332f6e97.webp",
+          "alt": "A motion capture room where a person wears a marker suit and gloves fitted with tracking markers",
+          "width": 846,
+          "height": 524,
+          "caption": "Motion capture using an Optitrack marker suit and IMU-based gloves (Parger, et al., 2020)"
         },
         {
           "type": "paragraph",
@@ -2857,83 +2885,6 @@
       ]
     },
     {
-      "slug": "prose-nocturne",
-      "title": "Prose nocturne",
-      "summary": "Un poème en prose sur une pièce éclairée de néons bleus.",
-      "meta": [
-        {
-          "label": "Language",
-          "value": "Français"
-        }
-      ],
-      "body": [
-        {
-          "type": "verse",
-          "stanzas": [
-            [
-              "Dans la pénombre jaunâtre et bleutée",
-              "d'un bouge obscur aux meubles clairsemés,",
-              "des néons bleus bourdonnent tristement."
-            ],
-            [
-              "Une lueur sombre mais grésillante",
-              "baigne les murs de tons froids, ambigus."
-            ],
-            [
-              "Et dans un coin se blottit, assoupi,",
-              "un être pâle à la chevelure noire."
-            ],
-            [
-              "Sur son visage creusé par l'insomnie",
-              "se réverbèrent des sigles mystérieux."
-            ],
-            [
-              "Des ombres sourdes, quelques notes",
-              "chétives et faibles et cependant dansantes,",
-              "seule trace d'un monde proche de l’irréel."
-            ],
-            [
-              "Les vers s'effondrent, tels les piliers centenaires d'un édifice ancien,",
-              "et l'esprit se fragmente, dans un cri déchirant plein de frayeur et d'angoisse."
-            ]
-          ]
-        }
-      ],
-      "placeSlugs": [
-        "toulouse"
-      ]
-    },
-    {
-      "slug": "sinking",
-      "title": "Sinking",
-      "summary": "A short poem about melancholy as a slow drowning.",
-      "meta": [
-        {
-          "label": "Language",
-          "value": "English"
-        }
-      ],
-      "body": [
-        {
-          "type": "verse",
-          "stanzas": [
-            [
-              "Melancholy kicking in, like waves splashing on a rundown pier",
-              "Surges of pain flashing up your spine, exploding in your head",
-              "washing up the remains of your mind, dragging you down the well",
-              "like a sinking boat, you fight for your life, for the air, for the freedom",
-              "but you don't even know what it feels like anymore.",
-              "Your face fades away in the dark, oily water, and your mouth",
-              "opens and close again and again, in a futile survival instinct."
-            ]
-          ]
-        }
-      ],
-      "placeSlugs": [
-        "toulouse"
-      ]
-    },
-    {
       "slug": "the-enslaved-acrobat",
       "title": "The enslaved acrobat",
       "summary": "A poem in four quatrains about a prisoner acrobat on a battlefield at night.",
@@ -3005,5 +2956,262 @@
         "toulouse"
       ]
     }
-  ]
+  ],
+  "career": {
+    "title": "Career",
+    "summary": "Frontend engineer with an MSc in Computer Graphics & Vision and several years of production experience building React/TypeScript interfaces for geospatial and data-heavy platforms. Comfortable partnering closely with product, design, and engineering to ship technically complex, high-quality UI, from rendering-layer optimisation to end-to-end frontend architecture.",
+    "updated": "2026-10",
+    "portrait": {
+      "src": "/media/career/portrait.5333ec22.webp",
+      "alt": "Illustrated portrait of Elliot Négrel-Jerzy, a smiling man with dark hair in a blue jacket, drawn in flat blue tones",
+      "width": 1000,
+      "height": 1000
+    },
+    "availability": {
+      "text": "Open to opportunities",
+      "asOf": "2026-10"
+    },
+    "roles": [
+      {
+        "id": "macrodata-labs-founding-engineer",
+        "title": "Founding Engineer, Frontend & UX",
+        "org": "Macrodata Labs",
+        "location": "Paris, France",
+        "place": "paris",
+        "employment": "Permanent",
+        "start": "2026",
+        "highlights": [
+          "Built the frontend and design of Macrodata Labs' data observability platform, enabling AI teams to process, understand, and scale multimodal datasets"
+        ],
+        "skills": [
+          "React",
+          "TypeScript",
+          "Next.js"
+        ]
+      },
+      {
+        "id": "kanop-frontend-engineer",
+        "title": "Frontend Engineer",
+        "org": "Kanop",
+        "location": "Paris, France",
+        "place": "paris",
+        "employment": "Contract",
+        "start": "2025-02",
+        "end": "2026-03",
+        "highlights": [
+          "De facto UI/UX lead: owned frontend architecture, design language, and product experience across the platform",
+          "Engineered geospatial dashboards for carbon monitoring at scale; built a production LLM-powered chat interface with real-time streaming Markdown and full PWA support",
+          "Unified authentication across all Kanop apps into a centralised SSO system"
+        ],
+        "skills": [
+          "React",
+          "TypeScript",
+          "GCP",
+          "Framer Motion",
+          "Mapbox GL",
+          "D3.js",
+          "LLM",
+          "GitLab CI/CD"
+        ]
+      },
+      {
+        "id": "tauniqo-full-stack-engineer",
+        "title": "Full-Stack Engineer",
+        "org": "Tauniqo.ai",
+        "location": "Barcelona, Spain",
+        "employment": "Full-time",
+        "start": "2024-07",
+        "end": "2025-02",
+        "highlights": [
+          "Sole frontend lead: rewrote the entire platform in React/Redux/i18n, delivering significant performance gains",
+          "Built a Google Slides-style presentation editor from scratch, with complex state management and deep rendering optimisations",
+          "Containerised backend services using Docker, reducing developer onboarding time by 70%"
+        ],
+        "skills": [
+          "React",
+          "Redux",
+          "Framer Motion",
+          "Docker",
+          "Django",
+          "i18n"
+        ]
+      },
+      {
+        "id": "escape-technologies-full-stack-engineer",
+        "title": "Full-Stack Engineer",
+        "org": "Escape Technologies",
+        "location": "Paris, France",
+        "place": "paris",
+        "employment": "Full-time",
+        "start": "2023-11",
+        "end": "2024-05",
+        "highlights": [
+          "Designed and built a Svelte component library aligned with Material UI guidelines, increasing development speed and design consistency",
+          "Researched and implemented a contrast-aware palette generation algorithm using oklab/oklch colourspaces, significantly improving aesthetics and WCAG compliance",
+          "Redesigned the company website, driving a 30% increase in traffic and 20% increase in conversion"
+        ],
+        "skills": [
+          "Svelte",
+          "GraphQL",
+          "Node.js",
+          "Figma",
+          "UI/UX"
+        ]
+      },
+      {
+        "id": "kanop-frontend-engineer-2022",
+        "title": "Frontend Engineer (Freelance & Internship)",
+        "org": "Kanop",
+        "location": "Paris, France",
+        "place": "paris",
+        "start": "2022-06",
+        "end": "2023-09",
+        "highlights": [
+          "Pioneered SaaS web applications using React, TypeScript, D3.js, and Mapbox GL for advanced geospatial data visualisations",
+          "Automated frontend/backend type synchronisation via RTK Query codegen; led major website overhauls improving navigation and SEO"
+        ],
+        "skills": [
+          "React",
+          "TypeScript",
+          "Mapbox GL",
+          "D3.js",
+          "Node.js",
+          "RTK Query"
+        ]
+      }
+    ],
+    "education": [
+      {
+        "id": "enseeiht-inp-toulouse",
+        "institution": "ENSEEIHT, INP Toulouse",
+        "programme": "Computer Science & Applied Mathematics",
+        "level": "MEng",
+        "start": "2020",
+        "end": "2023",
+        "location": "Toulouse, France",
+        "place": "toulouse"
+      },
+      {
+        "id": "aau-klagenfurt",
+        "institution": "Alpen-Adria-Universität Klagenfurt",
+        "programme": "Computer Graphics & Vision",
+        "level": "MSc",
+        "start": "2022",
+        "end": "2023",
+        "location": "Klagenfurt, Austria",
+        "place": "klagenfurt",
+        "note": "Exchange year"
+      },
+      {
+        "id": "lycee-deodat-de-severac",
+        "institution": "Lycée Déodat de Séverac",
+        "programme": "Mathematics & Physics",
+        "level": "CPGE PCSI/PSI*",
+        "start": "2018",
+        "end": "2020"
+      }
+    ],
+    "languages": [
+      {
+        "name": "French",
+        "level": "C2",
+        "label": "Native"
+      },
+      {
+        "name": "English",
+        "level": "C1",
+        "label": "Advanced"
+      },
+      {
+        "name": "Spanish",
+        "level": "C1",
+        "label": "Advanced"
+      },
+      {
+        "name": "Polish",
+        "level": "B2",
+        "label": "Upper-intermediate"
+      },
+      {
+        "name": "German",
+        "level": "B1",
+        "label": "Intermediate"
+      }
+    ],
+    "skills": [
+      {
+        "group": "Primary",
+        "items": [
+          "React",
+          "TypeScript",
+          "JavaScript",
+          "frontend architecture",
+          "UI/UX design",
+          "design systems"
+        ]
+      },
+      {
+        "group": "Secondary",
+        "items": [
+          "Node.js",
+          "Next.js",
+          "GraphQL",
+          "Redux",
+          "Svelte",
+          "D3.js",
+          "Mapbox GL",
+          "WebSockets",
+          "Framer Motion",
+          "Django",
+          "Docker",
+          "GCP",
+          "GitLab CI/CD"
+        ]
+      },
+      {
+        "group": "Domain",
+        "items": [
+          "computer graphics and rendering",
+          "geospatial and data visualisation",
+          "accessibility (WCAG)",
+          "colour science (oklab/oklch)"
+        ]
+      },
+      {
+        "group": "Testing",
+        "items": [
+          "Jest",
+          "Playwright"
+        ]
+      },
+      {
+        "group": "Process",
+        "items": [
+          "Agile/Scrum"
+        ]
+      },
+      {
+        "group": "Tools",
+        "items": [
+          "Figma",
+          "Git",
+          "Claude Code"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "GitHub",
+        "url": "https://github.com/BSoDium"
+      },
+      {
+        "label": "LinkedIn",
+        "url": "https://linkedin.com/in/bsodium"
+      },
+      {
+        "label": "ArtStation",
+        "url": "https://artstation.com/bsodium"
+      }
+    ]
+  }
 }

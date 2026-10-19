@@ -3,6 +3,51 @@
   "version": 1,
   "files": [
     {
+      "path": "article/rendering-techniques-applied-to-caustics/g2-3d-modeling-grid-2016.b3398412.webp",
+      "sha256": "b339841299dff811d31dc9fcf5d315c4f00d92078348ac11ed54c2f8ba8aeea9",
+      "bytes": 52984
+    },
+    {
+      "path": "article/rendering-techniques-applied-to-caustics/glass-of-water-caustics.69095ece.webp",
+      "sha256": "69095ece7d6feb7acea66d0fd064f335ad9cd2e8282fa3aa230989876e9f5a32",
+      "bytes": 34268
+    },
+    {
+      "path": "article/rendering-techniques-applied-to-caustics/hpc-render-cluster.8dc7e0f8.webp",
+      "sha256": "8dc7e0f842ac3e28ccc0f8da29aeb7e2f40a370062639a46f60d3de6554dbcd4",
+      "bytes": 99992
+    },
+    {
+      "path": "article/rendering-techniques-applied-to-caustics/unity-caustics-textures.a29d3110.webp",
+      "sha256": "a29d3110f3f362dfc1c8be7f86f491bcc0cc08a966a13244a83914621f4b175d",
+      "bytes": 160858
+    },
+    {
+      "path": "article/rendering-techniques-applied-to-caustics/virtual-camera-frustum.d9aa6c6f.webp",
+      "sha256": "d9aa6c6f8b9102595c981950926d1b7329d126d9602496ff3a077dc9296d38dc",
+      "bytes": 6174
+    },
+    {
+      "path": "article/virtual-reality-technologies/lcd-schematic.8db01734.webp",
+      "sha256": "8db017344d8ef6b5c3194c5423a73a959162f4ceac9ef160b176ea0e73489793",
+      "bytes": 105450
+    },
+    {
+      "path": "article/virtual-reality-technologies/oculus-rift-inside-view.6d92f413.webp",
+      "sha256": "6d92f413a04018a47da3418def00dbcd2987cd697a9eaeb4f112802d57f9289f",
+      "bytes": 136410
+    },
+    {
+      "path": "article/virtual-reality-technologies/optical-tracker.1d1c2b26.webp",
+      "sha256": "1d1c2b26e82899bdd952688a97125c17465d54e4b56b95e87be304c43694309a",
+      "bytes": 182252
+    },
+    {
+      "path": "article/virtual-reality-technologies/optitrack-mocap.332f6e97.webp",
+      "sha256": "332f6e9726285d92495a2e155369ce92161467ae27a4153818287da73a25c0fd",
+      "bytes": 200300
+    },
+    {
       "path": "artwork/anatomy-study/cover.ed3d1edb.jpg",
       "sha256": "ed3d1edbb4e2486dde3bfa404266e7d39579fde73662ec654ea14e01ba85a73d",
       "bytes": 595673
@@ -91,6 +136,11 @@
       "path": "artwork/yamato-class-battleship-firing-test-study/cover.4ec1f84b.jpg",
       "sha256": "4ec1f84babef571be13294f53eba0b9f6ca1ce9fa08aa34ad95ab94085d0f719",
       "bytes": 212311
+    },
+    {
+      "path": "career/portrait.5333ec22.webp",
+      "sha256": "5333ec227ba4e6d262a92af6cba505f69a50479a85a16fb2ef0009fdff5f503e",
+      "bytes": 18712
     }
   ]
 }
