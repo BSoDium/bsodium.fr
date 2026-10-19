@@ -90,7 +90,7 @@ export const WHEEL_ZOOM_PER_PX = 0.0016;
  * Apple Maps amplifies: 2.5 times the physical rate, 0.036, so one hand-span pinch is 2 to 3 levels. Touch pointers and Safari's `gesturechange` are
  * NOT amplified: they use the exact ratio of the fingers' distance, `log2(d / d_prev)`, `log2(scale / scale_prev)`.
  */
-export const PINCH_ZOOM_RATE = 0.4;
+export const PINCH_ZOOM_RATE = 0.01;
 /** A line of a `deltaMode` 1 wheel and a page of a `deltaMode` 2 one, in pixels. */
 export const LINE_PX = 33;
 export const PAGE_PX = 400;

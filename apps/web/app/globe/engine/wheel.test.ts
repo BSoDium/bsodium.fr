@@ -290,7 +290,7 @@ describe("pinch calibration", () => {
       expect(d).toBeCloseTo(Math.min(-e.dy * PINCH_ZOOM_RATE, MAX_PINCH_STEP), 9);
       total += d;
     }
-    expect(total).toBeGreaterThan(5);
+    expect(total).toBeGreaterThan(4);
   });
 });
 
@@ -299,10 +299,9 @@ describe("effective pinch zoom", () => {
     const evs = [-4.2, -3.7, -5.1].map((dy) => at(0, 0, dy, { ctrl: true }));
     expect(evs.reduce((a, e) => a + zoomStep(e, "pinch"), 0)).toBeCloseTo(13 * PINCH_ZOOM_RATE, 6);
   });
-  it("two comfortable pinches (3 cm to 8 cm, 69 px a cm-third of deltaY) go from world to city", () => {
-    const px = (100 * Math.log(8 / 3)) / Math.LN2 / 1; // deltaY of a physical 3 -> 8 cm pinch, per Chromium's formula, in ln units * 100
+  it("a physical 3 -> 8 cm pinch gains about a level or two at the shipped rate (the owner's A/B: 0.01 is the sweet spot, 0.4 far too fast)", () => {
     const perPinch = 100 * Math.log(8 / 3) * PINCH_ZOOM_RATE;
-    expect(2 * perPinch).toBeGreaterThan(9);
-    expect(px).toBeGreaterThan(0);
+    expect(perPinch).toBeGreaterThan(0.5);
+    expect(perPinch).toBeLessThan(2);
   });
 });
