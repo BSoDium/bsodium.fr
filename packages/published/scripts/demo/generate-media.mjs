@@ -714,6 +714,8 @@ const MOTIFS = { rails, contours, coast, labels, globe, strata, riso, platform, 
 
 const COVER = [1200, 630];
 const FIGURE = [960, 600];
+/** A small diagram: narrower than any reading column, so the figures' layout is seen not stretching a picture past its own width. */
+const SMALL = [480, 300];
 
 /**
  * Every image: file name, size, motif and options, plate and seed, with the alternative text the fixture uses. A cover is 1200x630,
@@ -734,6 +736,7 @@ export const MEDIA = [
   { name: "cover-figure-study", size: COVER, motif: "nested", plate: "dark", opts: { rects: 18 }, alt: "Rectangles nested one inside the next, each shifted a little from the last, in dithered grey on black with one cyan frame" },
   // figures
   { name: "fig-night-trains-board", size: FIGURE, motif: "timetable", plate: "light", opts: { rowsN: 13 }, alt: "A departures board reduced to bars and cells, several rows outlined in cyan where a time changed" },
+  { name: "fig-night-trains-ticket", size: SMALL, motif: "timetable", plate: "light", opts: { rowsN: 7 }, alt: "A small timetable reduced to bars and cells, a few rows outlined in cyan" },
   { name: "fig-night-trains-platform", size: FIGURE, motif: "platform", plate: "dark", opts: { lamps: 8 }, alt: "An empty platform in perspective, posts with lamps on both sides, one lamp in cyan, faint reflections on the floor" },
   { name: "fig-coast-road", size: FIGURE, motif: "coast", plate: "dark", opts: { dir: -1 }, alt: "The coast road mirrored: a dashed road on a cliff on the right, dark sea lines on the left and a cyan bus" },
   { name: "fig-coast-swell", size: FIGURE, motif: "strata", plate: "light", opts: { lines: 20, signalLine: 12, amp: 0.8 }, alt: "Stacked swell lines on pale paper, one line in cyan" },

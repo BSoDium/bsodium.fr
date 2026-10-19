@@ -55,6 +55,10 @@ Done: the cream paper and the warm night of the reading surface are gone: entrie
 
 Contract `routes[].legs` (mode and optional polyline5), limits `ROUTE_LEG_LIMITS`, faint-everywhere/ink-on-selection renderer on both maps, Paths switch, Journeys list. Read [paths.md](paths.md). The private repo must copy `packages/schemas/published.schema.json` and enforce `ROUTE_LEG_LIMITS` (decoder exported as `decodePolyline5`) before exporting legs. Demo routes: `apps/web/scripts/paths/make-demo-legs.mjs` regenerates the fictional legs. Not done: mode colours (palettes), real data, Safari and phone checks.
 
+## Editorial figures (branch `feat/editorial-figures`, 2026-10-15)
+
+Articles and projects: images stay in the flow of the text (wide, never upscaled, Le Monde / Guardian style captions with a muted credit), the text's "Fig. N" mentions link to them, a figure wider than it is drawn opens in a native dialog; the third column is gone. [design-system.md](design-system.md) ("Figures"), [web-architecture.md](web-architecture.md), `apps/web/scripts/entries/figures.mjs`, the contrast audit page `article-lightbox`. Also fixed on the way: a link to a part of an entry (`#fig-3`, a section's `#body-...`) now scrolls the panel on load. The demo article gained a 480 px figure (`fig-night-trains-ticket.svg`) and three mentions; the real articles need their figures captioned (and, if wanted, a credit in a last parenthesis) to be numbered, linkable and anchored. Not verified: Safari / iOS and a real touch device (Chrome emulation only).
+
 ## Where the details are
 
 | Topic | Doc |

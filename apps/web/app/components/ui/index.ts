@@ -15,7 +15,7 @@ export { Col, Grid, Stack } from "./layout";
 export { MetadataStrip } from "./metadata-strip";
 export { MicroLabel } from "./micro-label";
 export { SectionHeader } from "./section-header";
-export { SensitiveMedia, SensitiveMediaScope, SensitiveImage } from "./sensitive-media";
+export { SensitiveMedia, SensitiveMediaScope, SensitiveImage, useSensitiveHidden } from "./sensitive-media";
 export { Skeleton, StatePanel } from "./state-panel";
 export { StatusTag } from "./status-tag";
 export { TagList } from "./tag-list";
