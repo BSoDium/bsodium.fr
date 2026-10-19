@@ -15,6 +15,7 @@ import { countryName, stripCountry } from "~/globe/engine/country-names";
 import { journeysOf, type Journey } from "~/lib/journeys";
 import { bboxExtentsKm, bboxFitRadiusKm } from "~/globe/engine/framing";
 import type { GlobeEntryRef, GlobeGroup, GlobePlace, GlobeRoute } from "~/globe/types";
+import { paletteOf } from "~/globe/paths/trail";
 import { formatDates, type FormattedDates } from "./dates";
 import { COLLECTIONS, entriesOfPlace, type EntryGroup } from "./entries";
 
@@ -137,7 +138,7 @@ export function buildPlaceTree(places: readonly PlaceSummary[], groups: readonly
 /** Routes become ordered points. Stops that cannot be resolved are skipped; a route needs 2+ points. */
 export function resolveRoutes(projection: PublishedProjection): GlobeRoute[] {
   const bySlug = new Map(projection.places.map((p) => [p.slug, p]));
-  return projection.routes.flatMap((route) => {
+  return projection.routes.flatMap((route, order) => {
     const points = route.stops.flatMap((slug) => {
       const place = bySlug.get(slug);
       return place ? [{ lat: place.coordinates.lat, lon: place.coordinates.lon }] : [];
@@ -145,7 +146,7 @@ export function resolveRoutes(projection: PublishedProjection): GlobeRoute[] {
     if (points.length < 2) return [];
     // Legs are positional: they only mean something when every stop resolved (the contract guarantees it; a stale one is dropped).
     const legs = route.legs && points.length === route.stops.length ? { legs: route.legs.map((l) => ({ mode: l.mode, ...(l.polyline ? { polyline: l.polyline } : {}) })) } : {};
-    return [{ id: route.id, title: route.title, points, ...legs }];
+    return [{ id: route.id, title: route.title, points, palette: paletteOf(order), ...legs }];
   });
 }
 

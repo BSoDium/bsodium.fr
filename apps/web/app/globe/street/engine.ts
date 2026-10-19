@@ -29,7 +29,7 @@ import { INK_THRESHOLD, SOLID_FROM } from "./core/art-line";
 import { cellCssFor, cellDevicePx, EasedValue, revealRadiusDevice } from "./core/pixel";
 import { isPmtilesUrl, type SourceDescriptor } from "./core/source-descriptor";
 import { TileSourceManager, type SourceId, type TileStatus } from "./core/tile-source-manager";
-import { legFeatures, legKeysAt } from "./core/routes";
+import { legFeatures, legHeads, legKeysAt } from "./core/routes";
 import { LEG_MODES, MODE_STYLE } from "../paths/modes";
 import { Compositor, type OutputSize } from "./gl/compositor";
 import type { WarpCamera } from "./core/warp";
@@ -40,7 +40,7 @@ import { createTileNetwork } from "./net/tile-protocols";
 import { probeSource, type ProbeConfig, type ProbeOutcome } from "./net/probe";
 import { HudLayer } from "./overlay/hud-layer";
 import { LayerSwitch, switchRules, type SwitchView } from "./style/layer-switch";
-import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, buildStreetStyle, focusFilter, graticule, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
+import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, buildStreetStyle, focusFilter, graticule, headFocusFilter, ROUTE_HEAD_FOCUS_ID, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
 import { STREET_TUNING } from "./tuning";
 import type { AnimateOptions, FlyOptions, RevealOptions, StreetDebug, StreetMap, StreetMapOptions, StreetView } from "./types";
 
@@ -183,6 +183,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
   const grid = graticule(15, 3);
   // Every leg of every route is one source, built once; the selected place's legs are the keys the focus layers filter on (`setFilter`).
   const legs = legFeatures(opts.routes);
+  const heads = legHeads(opts.routes);
   const placeBySlug = (slug: string | null) => (slug ? opts.places.find((p) => p.slug === slug) : undefined);
   let focusKeys = legKeysAt(opts.routes, placeBySlug(opts.selectedSlug));
   let pathsOn = opts.paths !== false;
@@ -192,6 +193,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
         if (map.getLayer(id)) map.setFilter(id, focusFilter(mode, focusKeys));
       }
     }
+    if (map.getLayer(ROUTE_HEAD_FOCUS_ID)) map.setFilter(ROUTE_HEAD_FOCUS_ID, headFocusFilter(focusKeys));
   };
   const applyPathsVisible = () => {
     for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", pathsOn ? "visible" : "none");
@@ -271,6 +273,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
       borders: world.borders,
       graticule: grid,
       routes: legs,
+      heads,
       focusKeys,
       pathsVisible: pathsOn,
       projection: opts.projection ?? "globe",

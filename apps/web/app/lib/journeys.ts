@@ -12,6 +12,7 @@
  */
 import type { PublishedProjection } from "@catalyst/schemas";
 import { legLengthM } from "~/globe/paths/network";
+import { paletteOf } from "~/globe/paths/trail";
 import type { GlobeLeg } from "~/globe/types";
 
 type LegMode = GlobeLeg["mode"];
@@ -26,6 +27,8 @@ export interface Journey {
   /** Rounded to 10 km, at least 10. */
   km: number;
   text: string;
+  /** The route's trail palette (0 blue, 1 green, 2 ocre, 3 violet: its position among the published routes, modulo 4): the swatch beside the line. */
+  palette: number;
 }
 
 const BY: Record<LegMode, string> = { road: " by road", rail: " by train", ferry: " by ferry", flight: " by plane", walk: " on foot", unknown: "" };
@@ -43,7 +46,7 @@ export function journeysOf(projection: PublishedProjection, slug: string, nameOf
   const bySlug = new Map(projection.places.map((p) => [p.slug, p]));
   const out: Journey[] = [];
   const seen = new Set<string>();
-  for (const route of projection.routes) {
+  projection.routes.forEach((route, order) => {
     route.stops.forEach((stop, i) => {
       if (stop !== slug) return;
       const add = (legIndex: number, otherSlug: string | undefined, direction: Journey["direction"]) => {
@@ -59,11 +62,11 @@ export function journeysOf(projection: PublishedProjection, slug: string, nameOf
         const text = journeyText(direction, name, mode, km);
         if (seen.has(text)) return;
         seen.add(text);
-        out.push({ direction, slug: other.slug, name, mode, km, text });
+        out.push({ direction, slug: other.slug, name, mode, km, text, palette: paletteOf(order) });
       };
       if (i > 0) add(i - 1, route.stops[i - 1], "arrived");
       if (i + 1 < route.stops.length) add(i, route.stops[i + 1], "left");
     });
-  }
+  });
   return out;
 }

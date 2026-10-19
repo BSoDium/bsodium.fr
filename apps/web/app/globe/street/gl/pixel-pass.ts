@@ -25,7 +25,7 @@
  * Source orientation: row 0 is the top (an uploaded canvas). The art texture always has row 0 at the top.
  */
 import type { Rgb } from "../core/pixel-types";
-import { LEVEL_SCALE, MAX_LEVELS, codeOf } from "../core/palette";
+import { LEVEL_SCALE, PALETTE_CAPACITY as MAX_LEVELS, ROUTE_THIN, TRAIL_LEVEL_BASE, codeOf } from "../core/palette";
 import { MESH_STEP, type WarpMesh } from "../core/warp";
 
 const VERT = `#version 300 es
@@ -113,7 +113,9 @@ void main() {
   int cls = 0;   // 0 none, 1 thin line, 2 wide line
   if (aMax >= 0.5) {
     if (mx.r > uInk) {
-      cls = mx.r > uSolid ? 2 : 1;
+      // a path line is painted at R = 1 over what it crosses (core/palette.ts routeColor) and marked thin by B: it is a one-pixel line
+      bool routeThin = mx.b > ${(ROUTE_THIN / 255 / 2).toFixed(4)} * mx.r;
+      cls = (mx.r > uSolid && !routeThin) ? 2 : 1;
       if (cls == 1) {
         // The edge texel of a WIDE line is antialiased (R = ink x coverage) and reads like a thin line. A thin line is painted at
         // THIN_INK (0.75) and never exceeds it, so a texel of the cell's block with R above uSolid proves a wide line: its edge cells
@@ -121,7 +123,8 @@ void main() {
         int n = max(1, int(floor(float(uCellOut) * uScale + 0.5)));
         vec2 b = vec2(cell) * float(uCellOut) * uScale;
         for (int j = 0; j < n; j++) for (int i = 0; i < n; i++) {
-          if (texture(uSrc, (b + vec2(float(i), float(j)) + 0.5) / vec2(uSrcSize)).r > uSolid) cls = 2;
+          vec4 tx = texture(uSrc, (b + vec2(float(i), float(j)) + 0.5) / vec2(uSrcSize));
+          if (tx.r > uSolid && !(tx.b > ${(ROUTE_THIN / 255 / 2).toFixed(4)} * tx.r)) cls = 2;
         }
       }
       // G / R is the level whatever the coverage of an antialiased edge texel (both are scaled by it)
@@ -185,6 +188,7 @@ uniform int uStep;               // levels per tick; 255 = take the target at on
 layout(location = 0) out vec4 o;    // the presented image
 layout(location = 1) out vec4 oT;   // the classified image, kept as the "previous target" of the next frame (no separate copy pass)
 const int FILL_R = 4;            // core/ease.ts FILL_RADIUS
+const int TRAIL_FROM = ${TRAIL_LEVEL_BASE};   // core/palette.ts: the levels from here are path-trail colours, never slewed
 // (level, 1 if a line else 0) of a cell, (0, 0) outside the image
 ivec2 cellAt(sampler2D s, ivec2 c) {
   if (c.x < 0 || c.y < 0 || c.x >= uArt.x || c.y >= uArt.y) return ivec2(0);
@@ -255,8 +259,10 @@ void main() {
   } else {
     ivec2 pe = cellAt(uPrev, oc);
     int e = pe.y == 1 ? pe.x : 0;
-    if (t > 0 && tLine) {
-      int base = e > 0 ? e : (pFill ? ph.x : 0);   // a road over a lake takes over from the fill tone: no dip
+    if (t >= TRAIL_FROM && tLine) {
+      lineOut = t;
+    } else if (t > 0 && tLine) {
+      int base = (e > 0 && e < TRAIL_FROM) ? e : (pFill ? ph.x : 0);   // a road over a lake takes over from the fill tone: no dip
       int best = 1000;
       // the same line right here, at the warped cell (the common case: a pan by whole cells, a tile that stays): the nearest match, no search
       bool here = false;
@@ -276,6 +282,8 @@ void main() {
         }
       }
       lineOut = base + clamp(t - base, -uStep, uStep);
+    } else if (e >= TRAIL_FROM) {
+      lineOut = 0;
     } else if (e > 0) {
       bool moved = false;                    // a lit line cell of the target near with a level of at least e - 1: the line moved
       for (int dy = -2; dy <= 2; dy++) {

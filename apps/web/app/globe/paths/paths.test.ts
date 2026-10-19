@@ -182,8 +182,9 @@ describe("network and buffers", () => {
     expect(Math.max(...b.index)).toBeLessThan(b.vertexCount);
     // the vertex of the first point of leg 1
     const v0 = net.legs[0]!.lonlat.length / 2;
-    expect(b.info[v0 * 3]).toBe(1);
-    expect(b.info[v0 * 3 + 1]).toBe(MODE_STYLE.flight.id);
+    expect(b.info[v0 * 4]).toBe(1);
+    expect(b.info[v0 * 4 + 1]).toBe(MODE_STYLE.flight.id);
+    expect(b.info[v0 * 4 + 3]).toBe(net.legs[1]!.palette);
     expect(b.dist[0]).toBe(0);
     expect(b.dist[v0 - 1]).toBeCloseTo(net.legs[0]!.lengthM / EARTH_RADIUS_M, 5);
     // lifted arcs sit above the unit sphere, ground legs on it

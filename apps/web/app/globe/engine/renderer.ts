@@ -822,6 +822,8 @@ export class GlobeRenderer {
   private syncNodes() {
     const lod = this.lodFrame();
     lod.advance(performance.now());
+    // the paths come and go with the boxes and labels: the same timed value, in the same frame
+    this.globe.routes.setPresence(lod.overlayAlpha);
     const P = this.pixel;
     const screen = this.nodeScreen;
     let boxes = 0;

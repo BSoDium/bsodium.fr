@@ -9,6 +9,7 @@ import { lonLatToVec3 } from "../engine/geo";
 import { MODE_STYLE, isLegMode, type LegMode } from "./modes";
 import { decodePolyline5 } from "./polyline";
 import { EARTH_RADIUS_M, simplify } from "./simplify";
+import { paletteOf } from "./trail";
 
 /** Simplification tolerances in metres, finest first: level 0 only drops points that are collinear to 20 m. The top one is about
  *  what a chord may sink under the globe's surface before the planet hides it (`OCCLUDER_RADIUS`: 12.7 km), so coarser is never useful. */
@@ -22,6 +23,8 @@ export interface PathLeg {
   /** Index in `PathNetwork.legs`: the GPU's leg id. */
   index: number;
   routeId: string;
+  /** The route's palette (`trail.ts`: blue, green, ocre, violet by the route's order). */
+  palette: number;
   /** Position in the route: the leg between stop `legIndex` and `legIndex + 1`. */
   legIndex: number;
   mode: LegMode;
@@ -116,7 +119,8 @@ export function buildNetwork(routes: readonly GlobeRoute[]): PathNetwork {
   const legs: PathLeg[] = [];
   const byPlace: PathNetwork["byPlace"] = new Map();
   let points = 0;
-  for (const route of routes) {
+  routes.forEach((route, order) => {
+    const palette = paletteOf(route.palette ?? order);
     for (let i = 0; i + 1 < route.points.length; i++) {
       const a = route.points[i]!;
       const b = route.points[i + 1]!;
@@ -153,6 +157,7 @@ export function buildNetwork(routes: readonly GlobeRoute[]): PathNetwork {
       const leg: PathLeg = {
         index: legs.length,
         routeId: route.id,
+        palette,
         legIndex: i,
         mode,
         arc,
@@ -171,7 +176,7 @@ export function buildNetwork(routes: readonly GlobeRoute[]): PathNetwork {
         byPlace.set(key, list);
       }
     }
-  }
+  });
   return { legs, byPlace, points };
 }
 
@@ -185,7 +190,7 @@ export interface PathBuffers {
   position: Float32Array;
   /** Distance along the leg from its start, radians. */
   dist: Float32Array;
-  /** Per vertex: leg id, mode id, the leg's length in radians. */
+  /** Per vertex: leg id, mode id, the leg's length in radians, the route's palette index. The position along the leg (0 origin, 1 destination) is `dist / length`: the same number as a stored fraction, one attribute less. */
   info: Float32Array;
   /** Unit tangent of the path at the vertex (the direction a rail tick is drawn across). */
   tangent: Float32Array;
@@ -201,7 +206,7 @@ export function buildBuffers(net: PathNetwork): PathBuffers {
   const vertexCount = net.points;
   const position = new Float32Array(vertexCount * 3);
   const dist = new Float32Array(vertexCount);
-  const info = new Float32Array(vertexCount * 3);
+  const info = new Float32Array(vertexCount * 4);
   const tangent = new Float32Array(vertexCount * 3);
   const base: number[] = [];
   let v = 0;
@@ -221,9 +226,11 @@ export function buildBuffers(net: PathNetwork): PathBuffers {
       position[o + 1] = g[1] * r;
       position[o + 2] = g[2] * r;
       dist[v + k] = acc;
-      info[o] = leg.index;
-      info[o + 1] = MODE_STYLE[leg.mode].id;
-      info[o + 2] = lenRad;
+      const q4 = (v + k) * 4;
+      info[q4] = leg.index;
+      info[q4 + 1] = MODE_STYLE[leg.mode].id;
+      info[q4 + 2] = lenRad;
+      info[q4 + 3] = leg.palette;
       const p = lonLatToVec3(leg.lonlat[Math.max(0, k - 1) * 2]!, leg.lonlat[Math.max(0, k - 1) * 2 + 1]!);
       const q = lonLatToVec3(leg.lonlat[Math.min(n - 1, k + 1) * 2]!, leg.lonlat[Math.min(n - 1, k + 1) * 2 + 1]!);
       const tx = q[0] - p[0], ty = q[1] - p[1], tz = q[2] - p[2];

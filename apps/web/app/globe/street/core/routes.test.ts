@@ -48,8 +48,8 @@ describe("legFeatures", () => {
     const fc = legFeatures([route, { id: "lonely", title: "x", points: [{ lat: 0, lon: 0 }] }, { id: "none", title: "y", points: [] }]);
     expect(fc.features).toHaveLength(2);
     expect(fc.features.map((f) => f.properties)).toEqual([
-      { id: "r1", key: "r1:0", mode: "unknown" },
-      { id: "r1", key: "r1:1", mode: "unknown" },
+      { id: "r1", key: "r1:0", mode: "unknown", pal: 0 },
+      { id: "r1", key: "r1:1", mode: "unknown", pal: 0 },
     ]);
     const first = fc.features[0]!.geometry.coordinates[0]!;
     expect(first[0]).toEqual([106.7, 10.78]);
@@ -58,7 +58,7 @@ describe("legFeatures", () => {
   it("follows a leg's polyline and tags its mode; a flight's polyline is ignored (an arc)", () => {
     const pl = encodePolyline5([106.7, 10.78, 106.9, 13.2, 107.59, 16.46]);
     const fc = legFeatures([{ ...route, legs: [{ mode: "rail", polyline: pl }, { mode: "flight", polyline: pl }] }]);
-    expect(fc.features[0]!.properties).toEqual({ id: "r1", key: "r1:0", mode: "rail" });
+    expect(fc.features[0]!.properties).toEqual({ id: "r1", key: "r1:0", mode: "rail", pal: 0 });
     expect(fc.features[0]!.geometry.coordinates[0]).toEqual([[106.7, 10.78], [106.9, 13.2], [107.59, 16.46]]);
     expect(fc.features[1]!.properties!.mode).toBe("flight");
     expect(fc.features[1]!.geometry.coordinates[0]!.length).toBeGreaterThan(3);

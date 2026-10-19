@@ -125,7 +125,7 @@ describe("style wiring of the LOD", () => {
       const hidden = st.filter((l) => l.layout?.visibility === "none").map((l) => l.id);
       const switchedIds = new Set([...SPECS.filter((s) => s.lod || s.fade).map((s) => s.id), "graticule"]);
       for (const id of hidden) expect(switchedIds.has(id) || /^world-/.test(id), `${schema} ${id} must not be hidden by the switch`).toBe(true);
-      for (const id of ["water-edge", "boundary-country", "road-major-fill", "road-medium-fill", "routes-faint", "routes-focus", "routes-faint-rail", "background"]) expect(hidden.includes(id), `${schema} ${id}`).toBe(false);
+      for (const id of ["water-edge", "boundary-country", "road-major-fill", "road-medium-fill", "routes-faint-p0", "routes-focus", "routes-faint-rail", "background"]) expect(hidden.includes(id), `${schema} ${id}`).toBe(false);
       for (const id of switchedIds) expect(hidden.includes(id), `${schema} ${id}`).toBe(true);
     }
   });
@@ -227,7 +227,7 @@ describe("regression: the coast is never dashed (owner report: coasts dotted aro
   it("the only dashed world layer is the graticule", () => {
     const st = make("openmaptiles").layers as unknown as L[];
     const dashed = st.filter((l) => /^(world-|graticule|routes-)/.test(l.id) && l.paint["line-dasharray"]).map((l) => l.id);
-    expect(dashed.sort()).toEqual(["graticule", ...ROUTE_LAYER_IDS.filter((id) => id !== "routes-faint" && id !== "routes-focus").sort()]);
+    expect(dashed.sort()).toEqual(["graticule", ...ROUTE_LAYER_IDS.filter((id) => !/^routes-(faint-p\d|focus|head.*)$/.test(id)).sort()]);
   });
 });
 
