@@ -103,6 +103,7 @@ export function EntryRow({
   const cover = entry.cover && safeMediaSrc(entry.cover.src) ? { src: entry.cover.src, alt: entry.cover.alt } : null;
   const showCover = !!cover || entry.kind === "artwork";
   const tags = entry.tags.slice(0, 4);
+  if (entry.kind === "poem") return <PoemRow entry={entry} Heading={Heading} date={date} place={place} status={status} tags={tags} className={className} />;
   return (
     <article
       id={entry.slug}
@@ -157,6 +158,64 @@ export function EntryRow({
           </div>
         </div>
       )}
+    </article>
+  );
+}
+
+/**
+ * A poem in the poems' list (docs/design-system.md, "Poetry list"): a cell of a wide grid, not a 12-column row. The mono line (place, date,
+ * status) over the title, over the summary in the reading face at a large size and in the ink (a solid colour, 17:1 or more): a poem's
+ * summary is the one thing the list has to read, so it is not the thin muted caption of an article's. Same anchors, same stretched link.
+ */
+function PoemRow({
+  entry,
+  Heading,
+  date,
+  place,
+  status,
+  tags,
+  className,
+}: {
+  entry: EntrySummary;
+  Heading: "h2" | "h3" | "h4";
+  date: ReturnType<typeof formatEntryDate>;
+  place: string | undefined;
+  status: string | undefined;
+  tags: string[];
+  className?: string | undefined;
+}) {
+  return (
+    <article id={entry.slug} data-slot="entry-card" data-kind="poem" className={cn("ds-card entry-row poem-row min-w-0 border-t border-border", className)}>
+      <dl className="poem-meta m-0 flex min-w-0 flex-wrap gap-x-4 gap-y-1">
+        {place && (
+          <div>
+            <dt className="sr-only">Place</dt>
+            <dd className="m-0 [overflow-wrap:anywhere]">{place}</dd>
+          </div>
+        )}
+        {date && (
+          <div>
+            <dt className="sr-only">Date</dt>
+            <dd className="m-0">
+              <time dateTime={date.dateTime}>{date.text}</time>
+            </dd>
+          </div>
+        )}
+        {status && (
+          <div>
+            <dd className="m-0">
+              <StatusTag status={status} className="text-[length:inherit] leading-[inherit] [font:inherit] tracking-[inherit] uppercase" />
+            </dd>
+          </div>
+        )}
+      </dl>
+      <Heading data-slot="entry-card-title" className="poem-row-title type-display-md m-0 font-extrabold">
+        <Link to={entry.href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+          {entry.title}
+        </Link>
+      </Heading>
+      {entry.summary && <p className="poem-summary m-0 text-pretty">{entry.summary}</p>}
+      {tags.length > 0 && <TagList label="Tags" tags={tags.map((label) => ({ label }))} className="font-meta text-sm" />}
     </article>
   );
 }

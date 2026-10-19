@@ -2125,30 +2125,101 @@
     border-bottom-color: var(--signal);
   }
 
-  /* The toggles: one row that scrolls sideways on a phone (it bleeds to the screen edges), wrapped from md. */
-  .ds-filter-row {
+  /*
+   * The toggles: one row that scrolls sideways on a phone (it bleeds to the screen edges; `ScrollRow` hides the native scrollbar and draws
+   * the arrows), wrapped from md.
+   */
+  .list-filter {
     /* The list page's side padding below md is 1 rem (`px-4`): the row bleeds exactly to the screen edges, no further (a 24 px bleed on a
        16 px page made the page 8 px wider than a 320 px phone). */
     --bleed: 1rem;
-    margin: 0 calc(var(--bleed) * -1);
+    margin-inline: calc(var(--bleed) * -1);
+  }
+
+  .ds-filter-row {
     /* (the first toggle's own padding is outside the text column: the row starts that much earlier) */
-    padding: 0 var(--bleed) 0.25rem calc(var(--bleed) - 0.5rem);
-    overflow-x: auto;
-    scrollbar-width: thin;
+    padding: 0 var(--bleed) 0 calc(var(--bleed) - 0.5rem);
   }
 
   @media (min-width: 768px) {
+    .list-filter {
+      margin-inline: -0.5rem 0;
+    }
+
+    .list-filter .scroll-row-viewport {
+      overflow: visible;
+    }
+
     .ds-filter-row {
       flex-wrap: wrap;
-      margin: 0 0 0 -0.5rem;
       padding: 0;
-      overflow-x: visible;
     }
 
     .ds-filter {
       min-height: 2rem;
       min-width: 0;
     }
+  }
+
+  /*
+   * Scroll row (components/ui/scroll-row.tsx): a row that scrolls sideways with NO native scrollbar and two arrow buttons that exist only
+   * while there is more on that side. The arrow is a 44 px plate of the page's own colour (solid, never a fade) at the edge, with a
+   * hairline on its inner side; the row stays the scroller (touch, keyboard focus, wheel).
+   */
+  .scroll-row {
+    position: relative;
+  }
+
+  .scroll-row-viewport {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    /* room for the focus ring of the first and last chips, which `overflow` would clip */
+    padding-block: 0.25rem;
+    margin-block: -0.25rem;
+  }
+
+  .scroll-row-viewport::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .scroll-row-arrow {
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    color: var(--foreground);
+    background: var(--background);
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .scroll-row-arrow[data-side="start"] {
+    left: 0;
+    border-right: var(--hairline) solid var(--border);
+  }
+
+  .scroll-row-arrow[data-side="end"] {
+    right: 0;
+    border-left: var(--hairline) solid var(--border);
+  }
+
+  .scroll-row-arrow:hover {
+    color: var(--signal-text);
+  }
+
+  .scroll-row-arrow:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
   }
 
   /* A year heading of a list: the year, set quietly above its cards. */
@@ -2202,6 +2273,249 @@
   .list-filter {
     margin-top: 2rem;
   }
+
+  /*
+   * The artwork wall (components/entry/artwork-wall.tsx, lib/masonry.ts, docs/design-system.md "Artwork wall"): a brick wall of pictures at
+   * their own proportions in 1 to 4 equal columns by the wall's own width (a size container: 1 from 0, 2 from 34 rem, 3 from 62 rem,
+   * 4 from 88 rem). The DOM is one list in reading order; each picture is placed with `calc()` from numbers the server computed for every tier
+   * (`--c1..4` column, `--n1..4` pictures above, `--r1..4` their ratios): `top = ratios above * column width + pictures above * (caption + gap)`.
+   * No script, no measuring, no shift. The gap is 10 px. Square edges, a hairline round the picture. A pointer that hovers sees the caption as
+   * a solid page-colour plate over the picture's foot on hover and focus (no height of its own); a touch screen has a caption line of a fixed
+   * height under every picture (`--cap`), so the rhythm of the bricks holds.
+   */
+  .wall {
+    --gap: 0.625rem;
+    --cap: 4.5rem;
+    --slot: calc(var(--cap) + var(--gap));
+    container: wall / inline-size;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .wall {
+      --cap: 0px;
+    }
+  }
+
+  .wall-list {
+    --cols: 1;
+    --colw: calc((100cqi - (var(--cols) - 1) * var(--gap)) / var(--cols));
+    position: relative;
+    height: var(--h1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .wall-item {
+    --col: var(--c1);
+    --n: var(--n1);
+    --r: var(--r1);
+    position: absolute;
+    top: calc(var(--r) * var(--colw) + var(--n) * var(--slot));
+    left: calc(var(--col) * (var(--colw) + var(--gap)));
+    width: var(--colw);
+  }
+
+  @container wall (min-width: 34rem) {
+    .wall-list {
+      --cols: 2;
+      height: var(--h2);
+    }
+
+    .wall-item {
+      --col: var(--c2);
+      --n: var(--n2);
+      --r: var(--r2);
+    }
+  }
+
+  @container wall (min-width: 62rem) {
+    .wall-list {
+      --cols: 3;
+      height: var(--h3);
+    }
+
+    .wall-item {
+      --col: var(--c3);
+      --n: var(--n3);
+      --r: var(--r3);
+    }
+  }
+
+  @container wall (min-width: 88rem) {
+    .wall-list {
+      --cols: 4;
+      height: var(--h4);
+    }
+
+    .wall-item {
+      --col: var(--c4);
+      --n: var(--n4);
+      --r: var(--r4);
+    }
+  }
+
+  .wall-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wall-card:has(:focus-visible) {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  /* The picture's box takes the contract's proportions; the picture fills it (a generated cover is drawn to fit). */
+  .wall-media {
+    position: relative;
+    aspect-ratio: var(--aspect);
+    overflow: hidden;
+    background: var(--surface);
+    outline: var(--hairline) solid var(--border);
+    outline-offset: -1px;
+  }
+
+  .wall-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Touch (and any pointer that cannot hover): the caption is under the picture, always shown, two lines of title and one of the medium. */
+  .wall-caption {
+    height: var(--cap);
+    padding-top: 0.5rem;
+    overflow: hidden;
+  }
+
+  .wall-title {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .wall-meta {
+    display: flex;
+    margin: 0.125rem 0 0;
+    color: var(--muted-foreground);
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: pre;
+  }
+
+  .wall-medium {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    /* The caption shares the picture's grid cell and sits at its foot: nothing is positioned, so the title's stretched link still covers the whole card. */
+    .wall-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .wall-media,
+    .wall-caption {
+      grid-area: 1 / 1;
+    }
+
+    /* z-index (a grid item takes it without being positioned): the picture's box is positioned and would paint over a static plate, and a positioned plate would shrink the title link's stretched hit area to itself. */
+    .wall-caption {
+      z-index: 1;
+      align-self: end;
+      height: auto;
+      padding: 0.75rem;
+      overflow: visible;
+      color: var(--foreground);
+      background: var(--background);
+      border-top: var(--hairline) solid var(--border-strong);
+      opacity: 0;
+    }
+
+    .wall-card:hover .wall-caption,
+    .wall-card:has(:focus-visible) .wall-caption {
+      opacity: 1;
+    }
+
+    .wall-title {
+      font-size: 1.125rem;
+    }
+  }
+
+  .wall-card:hover .wall-title a {
+    text-decoration: underline;
+    text-decoration-color: var(--signal);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.2em;
+  }
+
+  /*
+   * The poems' list (components/entry/entry-list-card.tsx `PoemRow`, docs/design-system.md "Poetry list"): the page is wider (100 rem) and
+   * its rows are cells of a grid, 1 column, 2 from 44 rem of the page's width (the page stops at 100 rem, so never 3: three columns of 480 px would cut the summaries to 35 characters). The summary is the reading face at 20 to 26 px
+   * in the ink, the title heavy over it, the mono line 14 px at a medium weight in the muted tone (6.8:1 and 7.9:1 on the page).
+   */
+  .poem-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: clamp(2rem, 4cqi, 4.5rem);
+  }
+
+  @container (min-width: 44rem) {
+    .poem-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .poem-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    padding-block: 1.75rem 2.25rem;
+  }
+
+  .poem-meta {
+    color: var(--muted-foreground);
+    font-family: var(--font-meta);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-feature-settings: "calt" 0;
+  }
+
+  .poem-row-title {
+    font-size: clamp(1.75rem, 1.3rem + 1.1cqi, 2.625rem);
+    line-height: 1.08;
+  }
+
+  .poem-summary {
+    max-width: 30em;
+    color: var(--foreground);
+    font-family: var(--font-reading);
+    font-optical-sizing: auto;
+    font-kerning: normal;
+    font-size: clamp(1.25rem, 1.05rem + 0.55cqi, 1.625rem);
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
 }
 
 /*
@@ -2460,6 +2774,25 @@ h1[tabindex="-1"]:focus-visible {
  * the colours are the light scheme's whatever the visitor's scheme is.
  */
 @media print {
+  /* The artwork wall prints as two plain columns, caption under every picture. */
+  .wall-list {
+    display: grid;
+    height: auto;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.625rem;
+  }
+
+  .wall-item {
+    position: static;
+    break-inside: avoid;
+  }
+
+  .wall-caption {
+    position: static;
+    height: auto;
+    opacity: 1;
+  }
+
   :root {
     color-scheme: light;
     --background: #fff;

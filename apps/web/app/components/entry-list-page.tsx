@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import type { ContentKind } from "@catalyst/schemas";
+import { ArtworkWall } from "~/components/entry/artwork-wall";
 import { EntryRow } from "~/components/entry/entry-list-card";
-import { Button, StatePanel } from "~/components/ui";
+import { Button, ScrollRow, StatePanel } from "~/components/ui";
 import { KIND_PLURALS, kindCount, type EntrySummary } from "~/lib/entries";
 import { collectTags, filterByTag, groupByYear, parseTagFilter, shouldGroupByYear, tagSearch, type TagCount } from "~/lib/entry-list";
 import { SITE_NAME } from "~/lib/site";
+import { cn } from "~/lib/utils";
 
 /** Tags shown before "more": the rest sit one press away (the selected tag is always shown). */
 const TAGS_SHOWN = 10;
@@ -17,6 +19,9 @@ const TAGS_SHOWN = 10;
  * mono, the title heavy over a thin summary, the image where there is one), grouped by year (newest first) when a year holds more than
  * one. The filter is the URL (`?tag=rail`: a link, a reload, the back button; works without scripts) and each choice is a link. An empty
  * collection is one muted line. Each row keeps the entry's slug as its anchor id (`/articles#slug`).
+ *
+ * Two sections are set differently: `/artworks` is ONE brick wall of pictures (`ArtworkWall`, no year headings: the year is in each caption) and
+ * `/poetry` is a wider page of poems in two columns from 44 rem of its width (the page stops at 100 rem), with the summary in the reading face at a larger size.
  */
 export function EntryListPage({ kind, items }: { kind: ContentKind; items: EntrySummary[] }) {
   const { search } = useLocation();
@@ -33,6 +38,8 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
   // One implementation of the count noun: `kindCount` ("33 software", "1 poem").
   const total = kindCount(kind, items.length);
   let seen = 0;
+  const wall = kind === "artwork";
+  const poems = kind === "poem";
 
   return (
     <main
@@ -40,7 +47,8 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
       tabIndex={-1}
       data-surface="reading"
       data-layout="full"
-      className="entry mx-auto max-w-[90rem] px-4 pt-[calc(var(--navbar-height)+3rem)] pb-24 outline-none md:px-14"
+      data-list={kind}
+      className={cn("entry mx-auto px-4 pt-[calc(var(--navbar-height)+3rem)] pb-24 outline-none md:px-14", wall ? "max-w-[120rem]" : poems ? "max-w-[100rem]" : "max-w-[90rem]")}
     >
       <header data-slot="list-head" className="list-head">
         <p className="list-running type-meta">
@@ -60,6 +68,9 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
       <div className="mt-8 flex flex-col gap-14">
         {items.length === 0 ? (
           <StatePanel state="empty" headingLevel={2} title="Nothing here yet." />
+        ) : wall ? (
+          // One wall for every year, newest first: the year is in each caption, and a heading would cut the bricks.
+          <ArtworkWall items={groups.flatMap((g) => g.items)} headingLevel={2} label={KIND_PLURALS[kind]} />
         ) : (
           groups.map((group) => {
             const id = `year-${group.key}`;
@@ -71,7 +82,7 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
                     <span className="sr-only">, {group.items.length === 1 ? "1 entry" : `${group.items.length} entries`}</span>
                   </h2>
                 )}
-                <div role="list" aria-label={grouped ? `${KIND_PLURALS[kind]} ${group.year ?? "undated"}` : KIND_PLURALS[kind]} className="flex flex-col">
+                <div role="list" aria-label={grouped ? `${KIND_PLURALS[kind]} ${group.year ?? "undated"}` : KIND_PLURALS[kind]} className={poems ? "poem-grid" : "flex flex-col"}>
                   {group.items.map((entry) => {
                     const priority = seen++ < 3;
                     return (
@@ -108,7 +119,8 @@ function TagFilter({ tags, selected, search, label }: { tags: TagCount[]; select
   );
   return (
     <nav aria-label={label} data-slot="tag-filter" className="list-filter">
-      <ul className="ds-filter-row flex list-none gap-0">
+      <ScrollRow noun="tags">
+        <ul className="ds-filter-row flex list-none gap-0">
         {link(null, "All", selected === null, "all")}
         {visible.map((t) => link(t.tag, t.tag, selected === t.tag, t.tag))}
         {(hidden > 0 || (open && tags.length > TAGS_SHOWN + 2)) && (
@@ -118,7 +130,8 @@ function TagFilter({ tags, selected, search, label }: { tags: TagCount[]; select
             </Button>
           </li>
         )}
-      </ul>
+        </ul>
+      </ScrollRow>
     </nav>
   );
 }
