@@ -12,6 +12,8 @@ export interface InputLogEntry {
   sample?: WheelSample;
   /** What it did: a zoom step in levels, or a pan in px. */
   zoom?: number;
+  /** Cumulative zoom change of the pinch in progress (levels). */
+  cum?: number;
   pan?: [number, number];
   t: number;
 }
@@ -54,6 +56,13 @@ export function inputKindOverride(): "wheel" | "swipe" | null {
   }
 }
 
+/** `?pinch-rate=N` (debug pages with `?input-debug`): levels a pixel of a trackpad pinch's deltaY, instead of `PINCH_ZOOM_RATE`. */
+export function pinchRateOverride(): number | null {
+  if (!inputDebugWanted()) return null;
+  const n = Number(new URLSearchParams(location.search).get("pinch-rate"));
+  return Number.isFinite(n) && n > 0 && n < 1 ? n : null;
+}
+
 const f = (v: number | undefined, digits = 1) => (v === undefined ? "-" : Number.isInteger(v) ? String(v) : v.toFixed(digits));
 
 let shared: InputDebug | null = null;
@@ -90,7 +99,7 @@ export function inputDebug(): InputDebug | null {
       const lines = entries.slice(-SHOWN).map((e) => {
         const s = e.sample;
         const raw = s ? ` dx${f(s.dx)} dy${f(s.dy)} m${s.mode}${s.ctrl ? " ctrl" : ""} wy${f(s.wheelDy)}` : "";
-        const out = e.zoom !== undefined ? ` zoom ${e.zoom >= 0 ? "+" : ""}${e.zoom.toFixed(3)}` : e.pan ? ` pan ${f(e.pan[0])},${f(e.pan[1])}` : "";
+        const out = e.zoom !== undefined ? ` zoom ${e.zoom >= 0 ? "+" : ""}${e.zoom.toFixed(3)}${e.cum !== undefined ? ` (pinch total ${e.cum >= 0 ? "+" : ""}${e.cum.toFixed(2)})` : ""}` : e.pan ? ` pan ${f(e.pan[0])},${f(e.pan[1])}` : "";
         return `${e.kind.padEnd(7)}${raw}${out}  ${e.reason}`;
       });
       box.textContent = `input (${entries.length})\n${lines.join("\n")}`;

@@ -80,12 +80,24 @@ export const SMALL_DELTA = 4;
 
 /** Zoom levels for a pixel of wheel (`wheel`) and of pinch (`pinch`, `deltaY` with `ctrlKey` is small and signed): the tuned speeds of the zoom since the first version. */
 export const WHEEL_ZOOM_PER_PX = 0.0016;
-export const PINCH_ZOOM_PER_PX = 0.012;
+/**
+ * Zoom levels per pixel of a pinch's `deltaY` (the ctrl-wheel a trackpad pinch arrives as). TUNABLE, one constant (`?pinch-rate=N` on a `?input-debug` page tries another).
+ *
+ * Calibration. Chromium synthesizes the pinch's wheel as `deltaY = -100 * ln(scale)` (the 2015 code review that added it: "zooming in 2x is about -70"; the
+ * inverse the PDF viewer uses is `exp(-deltaY / 100)`), so a physical pinch is `log2(scale) = -deltaY / (100 ln 2) = 0.0144` levels a pixel: fingers 3 cm to
+ * 6 cm = about 69 px = one level. maplibre-gl's own trackpad rate (1/100 of `deltaY` through a logistic: 0.0072 levels a px) and d3-zoom's (0.02 ln units a px
+ * with ctrl: 0.029) bracket it. 0.012 was 0.83 of physical and felt dead (owner, 2026-10-19: a trackpad is 5 cm across, a pinch covers little of it).
+ * Apple Maps amplifies: 2.5 times the physical rate, 0.036, so one hand-span pinch is 2 to 3 levels. Touch pointers and Safari's `gesturechange` are
+ * NOT amplified: they use the exact ratio of the fingers' distance, `log2(d / d_prev)`, `log2(scale / scale_prev)`.
+ */
+export const PINCH_ZOOM_RATE = 0.036;
 /** A line of a `deltaMode` 1 wheel and a page of a `deltaMode` 2 one, in pixels. */
 export const LINE_PX = 33;
 export const PAGE_PX = 400;
 /** No single event zooms more than this many levels. */
 export const MAX_ZOOM_STEP = 0.75;
+/** ... of one pinch event (a fast pinch sends deltaY of 20 or more in a frame). */
+export const MAX_PINCH_STEP = 1.5;
 
 const nearInt = (v: number) => Math.abs(v - Math.round(v)) < 1e-9;
 
@@ -162,14 +174,15 @@ export class WheelClassifier {
 }
 
 /** The step in zoom levels (positive = in) of one event of a `wheel` or a `pinch`. */
-export function zoomStep(s: WheelSample, kind: "wheel" | "pinch"): number {
+export function zoomStep(s: WheelSample, kind: "wheel" | "pinch", pinchRate = PINCH_ZOOM_RATE): number {
   const unit = s.mode === 1 ? LINE_PX : s.mode === 2 ? PAGE_PX : 1;
   let d: number;
-  if (kind === "pinch") d = -s.dy * unit * PINCH_ZOOM_PER_PX;
+  if (kind === "pinch") d = -s.dy * unit * pinchRate;
   // A tick of macOS Chrome's wheel is 4 px: one notch is worth what a 100 px notch is elsewhere.
   else if (s.mode === 0 && s.dx === 0 && isMacTick(s.dy) && !isNotch(s)) d = (-s.dy / MAC_TICK) * 100 * WHEEL_ZOOM_PER_PX;
   else d = -s.dy * unit * WHEEL_ZOOM_PER_PX;
-  return Math.max(-MAX_ZOOM_STEP, Math.min(MAX_ZOOM_STEP, d));
+  const cap = kind === "pinch" ? MAX_PINCH_STEP : MAX_ZOOM_STEP;
+  return Math.max(-cap, Math.min(cap, d));
 }
 
 /** A swipe's movement as a drag's: the content follows the fingers (a positive `deltaY` is a scroll down: the content goes up), in CSS px. */
