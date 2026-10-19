@@ -40,7 +40,6 @@ export function attachWheelInput(el: HTMLElement, handlers: WheelHandlers, timer
   let swipeSamples: DragSample[] = [];
   let lastT = Number.NEGATIVE_INFINITY;
   let gestureScale = 0;
-  const pinchRate = pinchRateOverride() ?? undefined;
   let cum = 0;
   let cumT = Number.NEGATIVE_INFINITY;
   /** The running total of a pinch (a new one after 300 ms without a pinch step). */
@@ -66,7 +65,7 @@ export function attachWheelInput(el: HTMLElement, handlers: WheelHandlers, timer
       }, SWIPE_END_MS);
       return;
     }
-    const d = zoomStep(s, kind, pinchRate);
+    const d = zoomStep(s, kind, pinchRateOverride() ?? undefined);
     debug?.log({ kind, reason, sample: s, zoom: d, cum: kind === "pinch" ? total(d, s.t) : undefined, t: s.t });
     handlers.zoom(d, x, y);
   };
