@@ -202,9 +202,17 @@ export const CAPTION = {
    * largest step of its clock (a stalled frame must not make a row jump).
    */
   drift: { ampDeg: 8, frameMs: 32, maxStepMs: 64 },
+  /**
+   * Before the page holds still for inactivity (`ENERGY.idleFreezeMs`) every row eases to the middle of the globe, fully visible (a smoothstep of
+   * `parkMs`, from wherever it is: mid-roll, mid-entrance, mid-exit, behind the planet), all of them showing the phrase set the visible row had;
+   * when an input wakes the page the rows blend from the middle back into the roll in `resumeMs`.
+   */
+  park: { parkMs: 800, resumeMs: 600 },
   /** The thickness of the letters, in planet radii (towards the planet from the front face), and the number of slices stacked to make it. */
   depth: 0.016,
   slices: 28,
+  /** The most the sideways step between two slices of the thickness may be on the screen, CSS px (`CaptionLayer.slicesFor`: a row draws only the slices its side needs). */
+  sliceStepPx: 0.8,
   /**
    * The entrance: each line starts hidden behind the planet (`fromDeg` of longitude from the central meridian at least, and as far as its parallel
    * needs to be hidden), on a side of its own drawn at random per entrance (west or east along its parallel), travels round the sphere to its
@@ -225,15 +233,17 @@ export const CAPTION = {
    * Colours, all solid (alpha 1). The letters are text-coloured; the contour and the thickness are a MID TONE from the page colour towards the
    * text colour (a cut-out: the globe's linework stops at a halo round every glyph). `text` is the secondary text tone (`--muted-foreground` of
    * app.css: #595959 light, #a3a3a3 dark; 6.8:1 and 7.9:1 against the page). `accent` is BSoD Blue, the caption's one palette, used sparingly (two
-   * words on screen at most), a palette step that is not glaring: `--palette-blue-600` on the light page (#0076d4, 4.5:1) and `--palette-blue-400`
-   * on the dark (#70b4ff, 9.1:1) (feat/palettes, PR #289: copied here, re-point to the tokens when it merges). `outlineMix` is the contour's
+   * words on screen at most), as a muted stone-like blue (lapis lazuli), a SOLID MIX of the palette's blue and the text tone: 60 % `--palette-blue-700`
+   * (#0067b8) and 40 % #595959 on the light page (#246192, 6.3:1), 60 % `--palette-blue-400` (#70b4ff) and 40 % #a3a3a3 on the dark (#84adda, 8.5:1)
+   * (feat/palettes, PR #289: copied here, re-point to the tokens when it merges). A tinted word's contour and thickness derive from ITS face the
+   * way the neutral ones derive from the neutral face (the same shares), so the whole letter is one colour. `outlineMix` is the contour's
    * share of the way from the page colour to the text colour (2.0:1 against the page in both schemes, 3.5 to 3.7:1 against the face), `sideMix`
    * the thickness's (a step closer to the page: 1.7:1). `sideMode`: `page` (the exact page colour for both), `mix` (by those shares), `edge`
    * (the thickness as in `mix` with a thin text-coloured line on the far `edgeSlices` slices).
    */
   colors: {
     text: { light: "#595959", dark: "#a3a3a3" },
-    accent: { light: "#0076d4", dark: "#70b4ff" },
+    accent: { light: "#246192", dark: "#84adda" },
     sideMode: "mix" as "page" | "mix" | "edge",
     outlineMix: { light: 0.42, dark: 0.37 },
     sideMix: { light: 0.34, dark: 0.3 },
@@ -339,4 +349,32 @@ export const ENERGY = {
   holdWhenOffscreen: true,
   holdOnSaveData: true,
   gpu: "low-power" as "low-power" | "high-performance" | "default",
+  /** The caption's quality governor (engine/quality.ts, `CAPTION_LOAD`) on or off: off for the before/after measurements. */
+  qualityEnabled: true,
+};
+
+/**
+ * The caption's quality governor (engine/quality.ts): the rungs it steps down through when its frame loop cannot keep up, and when it steps.
+ * `ladder[0]` is the shipped look (the energy pass's: 20 a second, the canvas at a pixel ratio of 1.5, 28 slices); the order is the owner's:
+ * the caption's frame rate, then the canvas's pixel ratio, then the thickness's slices. A frame's cost is the larger of its interval over the
+ * period asked for and its JS time times `jsShare` over that period; the governor steps DOWN when the third quartile of the last `windowMs` is over
+ * `downRatio` (at least `minSamples` frames, and `downPauseMs` after the last change), and back UP, one rung, after `upAfterMs` in which the 90th
+ * percentile stayed under `upRatio`.
+ */
+export const CAPTION_LOAD = {
+  enabled: true,
+  ladder: [
+    { frameMs: 50, dpr: 1.5, slices: 28 },
+    { frameMs: 66, dpr: 1.5, slices: 28 },
+    { frameMs: 66, dpr: 1, slices: 28 },
+    { frameMs: 66, dpr: 1, slices: 14 },
+    { frameMs: 100, dpr: 1, slices: 8 },
+  ] as readonly { frameMs: number; dpr: number; slices: number }[],
+  windowMs: 2500,
+  minSamples: 6,
+  downRatio: 1.4,
+  upRatio: 1.15,
+  downPauseMs: 1500,
+  upAfterMs: 6000,
+  jsShare: 3,
 };

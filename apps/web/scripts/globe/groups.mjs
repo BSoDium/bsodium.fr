@@ -1137,6 +1137,8 @@ try {
     // before the labels kept their slots while it turns (`LabelTracker.setDrifting`, `PlanUnits.keepSlack`).
     for (const lon of [15, -75, -30]) {
       const { page, logs } = await openGlobe(browser, DESKTOP, "&rotate&spin-idle=100");
+      // (the energy pass's idle budget would hold the rotation after 30 s without an input: this check turns for 40 s)
+      await page.evaluate(() => window.__globeDebug.energy?.({ idleFreezeMs: 0 }));
       const r = await page.evaluate(async (lon) => {
         const d = window.__globeDebug;
         d.setView({ lon, lat: 20, zoom: d.minZoom() });
@@ -1183,7 +1185,8 @@ try {
         return out;
       }, lon);
       console.log(`     from lon ${lon}: ${r.labels} labels, ${r.frames} frames, ${r.changes} slot changes (${r.swapBacks} back to the slot just left), ${r.visibility} appearances and disappearances (${r.blinks} blinks), turned ${(r.lon0 - r.lon1).toFixed(2)} deg`);
-      expect(`from lon ${lon}: it turns for the whole 40 s, a frame per display refresh (${(r.frames / 40).toFixed(0)} a second)`, r.spinning && r.frames >= 40 * 50 && r.lon0 - r.lon1 > 0.05, r);
+      // (round 9, the energy pass: the rotation is redrawn at `ENERGY.spinFrameMs`, about 6 to 10 a second, paced by a timer)
+      expect(`from lon ${lon}: it turns for the whole 40 s, redrawn at the paced rate (${(r.frames / 40).toFixed(1)} a second)`, r.spinning && r.frames >= 40 * 4 && r.frames <= 40 * 14 && r.lon0 - r.lon1 > 0.05, r);
       expect(`from lon ${lon}: at most 16 slot changes in 40 s (${r.changes}; 4 to 11 measured, 50 to 75 a minute before the labels kept their slots), at most 4 of them back to the slot just left (${r.swapBacks})`, r.changes <= 16 && r.swapBacks <= 4, r);
       expect(`from lon ${lon}: no label blinks (disappears and returns within 2 s: ${r.blinks})`, r.blinks === 0, r);
       expect(`from lon ${lon}: no console error or warning`, logs.length === 0, logs);
@@ -1401,6 +1404,7 @@ try {
     // The drawn box steps by whole art cells (2 to 2.5 px at a time); the label follows the PROJECTED box, so it moves by fractions of a pixel,
     // in step with it: per frame |label step - projected box step| is zero (the same slot) and the label's own steps are not multiples of a cell.
     const { page, logs } = await open(browser, { ...DESKTOP, colorScheme: "light", reducedMotion: "no-preference" }, "/?globe-debug&no-street&rotate&spin-idle=400", { noGroups: false });
+    await page.evaluate(() => window.__globeDebug.energy?.({ idleFreezeMs: 0 }));
     await waitGlobe(page);
     await page.waitForFunction(() => window.__globeDebug.spin().spinning, null, { timeout: 15000 });
     await sleep(1500); // past the ease-in

@@ -47,10 +47,22 @@ export interface CaptionContent {
   fixed: readonly (readonly CaptionRun[])[];
 }
 
-export const CAPTION_STYLES: Readonly<Record<CaptionStyleKey, { face: CaptionFaceKey; weight: number; italic: boolean }>> = {
-  plain: { face: "serif", weight: 500, italic: false },
-  heavy: { face: "serif", weight: 800, italic: false },
-  "heavy-italic": { face: "serif", weight: 800, italic: true },
+/** One style: its face, weight and slant; `url` is its own file (a face with a file per weight), else the face's. */
+export interface CaptionStyleDef {
+  face: CaptionFaceKey;
+  weight: number;
+  italic: boolean;
+  url?: string;
+}
+
+/** The serif's files: Old Standard TT (SIL OFL 1.1, Alexey Kryukov), kern-only subsets of Basic Latin and the middle dot, one file a weight. */
+const SERIF_FILES = { 400: "/fonts/old-standard-tt-3.000-latin-400.woff2", 700: "/fonts/old-standard-tt-3.000-latin-700.woff2" } as const;
+
+export const CAPTION_STYLES: Readonly<Record<CaptionStyleKey, CaptionStyleDef>> = {
+  plain: { face: "serif", weight: 400, italic: false, url: SERIF_FILES[400] },
+  heavy: { face: "serif", weight: 700, italic: false, url: SERIF_FILES[700] },
+  // (the family has no bold italic: the style is the bold roman, registered as italic so the canvas does not slant it; the app does not use it)
+  "heavy-italic": { face: "serif", weight: 700, italic: true, url: SERIF_FILES[700] },
   mono: { face: "mono", weight: 700, italic: false },
   script: { face: "script", weight: 400, italic: false },
 };
@@ -62,12 +74,12 @@ export const CAPTION_STYLES: Readonly<Record<CaptionStyleKey, { face: CaptionFac
  * face's own plus `CAPTION.tracking`: the caption is set in capitals, which want a little air).
  */
 export const CAPTION_FACES = {
-  serif: { family: '"Newsreader Variable"', fallback: 'Georgia, "Times New Roman", serif', scale: 1, dy: 0, tracking: 0.005 + CAPTION.tracking.serif, embolden: 0, url: null },
-  mono: { family: '"JetBrains Mono Variable"', fallback: 'ui-monospace, Menlo, Consolas, monospace', scale: 0.88, dy: 0, tracking: CAPTION.tracking.mono, embolden: 0, url: null },
+  serif: { family: '"Caption Serif"', fallback: 'Georgia, "Times New Roman", serif', scale: 1, dy: 0, tracking: 0.005 + CAPTION.tracking.serif, embolden: 0, url: null },
+  mono: { family: '"JetBrains Mono Variable"', fallback: 'ui-monospace, Menlo, Consolas, monospace', scale: 0.95, dy: 0, tracking: CAPTION.tracking.mono, embolden: 0, url: null },
   script: {
     family: '"Caption Script"',
     fallback: '"Snell Roundhand", "Apple Chancery", "Segoe Script", cursive',
-    scale: 1.0,
+    scale: 1.079,
     dy: 0,
     tracking: 0.004 + CAPTION.tracking.script,
     /** A formal script's hairlines would vanish under a thin outline: its letters are thickened by this many caps (a stroke in the face colour). */
@@ -79,7 +91,7 @@ export const CAPTION_FACES = {
 /** The serif's own metrics, which the whole caption is measured in (a cap height is the serif's; the other faces are scaled to it). */
 export const CAPTION_FACE = {
   /** Cap height over the em, as the serif sets it. */
-  capEm: 0.66,
+  capEm: 0.712,
   /** The line box in caps: above the baseline (ascenders, with the outline) and below it (descenders, the script's too, with the outline). */
   above: 1.4,
   below: 0.55,
@@ -97,6 +109,9 @@ const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16
 export function captionColors(theme: GlobeTheme, sideMode: "page" | "mix" | "edge" = CAPTION.colors.sideMode): {
   face: readonly [number, number, number];
   accent: readonly [number, number, number];
+  /** The contour and the thickness of a tinted word: derived from ITS face as the neutral ones are from the neutral face. */
+  accentOutline: readonly [number, number, number];
+  accentSide: readonly [number, number, number];
   outline: readonly [number, number, number];
   side: readonly [number, number, number];
 } {
@@ -111,7 +126,9 @@ export function captionColors(theme: GlobeTheme, sideMode: "page" | "mix" | "edg
   const sideMix = [CAPTION.colors.sideMix.dark, CAPTION.colors.sideMix.light][k]!;
   const outline = sideMode === "page" ? page : mix(page, face, outlineMix);
   const side = sideMode === "page" ? page : mix(page, face, sideMix);
-  return { face, accent, outline, side };
+  const accentOutline = sideMode === "page" ? page : mix(page, accent, outlineMix);
+  const accentSide = sideMode === "page" ? page : mix(page, accent, sideMix);
+  return { face, accent, accentOutline, accentSide, outline, side };
 }
 
 /** The face asked of the system when a face could not be had: the handwriting is the one that can fail (its file), and the heavy italic serif stands in for it. */
@@ -796,6 +813,40 @@ export class CaptionMotion {
   continuous = true;
   /** The clock stands still (the energy pass: no input for a long while, a blurred window, a globe out of view): the composition stays as it is. */
   frozen = false;
+  /** Parking (the idle settle): every row eases to the middle, then stays there (`parked`) until an input; and the blend back into the roll. */
+  private parking: { t0: number; from: number[] } | null = null;
+  parked = false;
+  private resuming: { t0: number; from: number[] } | null = null;
+
+  /** Begin parking at `now`: each row eases from where it is to the middle in `CAPTION.park.parkMs` (a smoothstep: no velocity at either end). */
+  beginPark(now: number): void {
+    if (this.parking || this.parked) return;
+    const from = this.starts.map((s, i) => this.angle(now, i, s));
+    if (this.phase === "in") this.phase = "rest"; // (an entrance still under way is cut short: the rows go on from where they are)
+    this.parking = { t0: now, from };
+  }
+
+  /** The parking has run its course (every row is in the middle). */
+  get parkDone(): boolean {
+    return this.parked;
+  }
+
+  get isParking(): boolean {
+    return this.parking !== null;
+  }
+
+  /** Leave the park (an input): the rows blend from where they are into the roll, which goes on from its middle, in `CAPTION.park.resumeMs`. */
+  unpark(now: number): void {
+    if (!this.parking && !this.parked) return;
+    const from = this.starts.map((s, i) => this.angle(now, i, s));
+    this.parking = null;
+    this.parked = false;
+    this.resuming = { t0: now, from };
+    // the roll goes on from its middle: row 0 is at 0 (the middle of the dwell), the others are as far from it as their stagger says
+    this.clock = CAPTION.enter.ms + CAPTION.cycle.dwellMs / 2;
+    this.ticked = true;
+    this.phase = "rest";
+  }
   private starts: number[] = [];
   /** An `in` that waits for the first frame (the time starts when something is there to see). */
   private pending = false;
@@ -830,6 +881,9 @@ export class CaptionMotion {
       // (a leaving cut short goes on from where each line is: its sides are the ones it left by)
       this.enterFrom = this.starts.map((s, i) => this.angle(now, i, s));
     } else this.rollSides();
+    this.parking = null;
+    this.parked = false;
+    this.resuming = null;
     this.phase = "in";
     this.pending = now === null;
     this.t0 = now ?? 0;
@@ -910,6 +964,7 @@ export class CaptionMotion {
 
   /** Which cycle line `i` is in now and how far into it (ms): the layer picks the phrase set by it. `n` is -1 before the line's own start. */
   cycle(now: number, i: number): { n: number; local: number } {
+    if (this.parking || this.parked) return { n: 0, local: CAPTION.enter.ms + CAPTION.cycle.dwellMs / 2 };
     const k = this.order[i] ?? i;
     const t = this.pinned !== null ? this.pinned : this.time(now);
     return cycleOf(t - (this.staggerOn ? k * CAPTION.enter.staggerMs : 0));
@@ -952,8 +1007,28 @@ export class CaptionMotion {
     switch (this.phase) {
       case "hidden":
         return start;
-      case "rest":
-        return this.timelineAngle(this.time(now), i, magnitude);
+      case "rest": {
+        if (this.parked) return 0;
+        if (this.parking) {
+          const p = clamp((now - this.parking.t0) / CAPTION.park.parkMs, 0, 1);
+          if (p >= 1) {
+            this.parked = true;
+            this.parking = null;
+            return 0;
+          }
+          return (this.parking.from[i] ?? 0) * (1 - p * p * (3 - 2 * p));
+        }
+        const tl = this.timelineAngle(this.time(now), i, magnitude);
+        if (this.resuming) {
+          const p = clamp((now - this.resuming.t0) / CAPTION.park.resumeMs, 0, 1);
+          if (p >= 1) this.resuming = null;
+          else {
+            const e = p * p * (3 - 2 * p);
+            return (this.resuming.from[i] ?? 0) * (1 - e) + tl * e;
+          }
+        }
+        return tl;
+      }
       case "in": {
         if (this.pending) return this.enterFrom?.[i] ?? start;
         const t = this.time(now);
@@ -990,7 +1065,7 @@ export class CaptionMotion {
 
   /** The steady roll is on: the rows are in and moving (a slower, capped frame loop of the caption's own: `CAPTION.drift.frameMs`). */
   get drifting(): boolean {
-    return this.pinned === null && this.pinnedAngle === null && this.phase === "rest" && this.continuous && !this.frozen;
+    return this.pinned === null && this.pinnedAngle === null && this.phase === "rest" && this.continuous && !this.frozen && !this.parked;
   }
 }
 

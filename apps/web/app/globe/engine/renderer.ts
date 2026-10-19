@@ -58,7 +58,8 @@ import { SHOWCASE_STATE, bandLat, inBand, shellWindowFactor, type CaptionContent
 import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
-import { CAPTION, ENERGY, INSET_EASE, RING, SKY, START_VIEW, TUNING } from "./tuning";
+import { CAPTION, ENERGY, INSET_EASE, CAPTION_LOAD, RING, SKY, START_VIEW, TUNING } from "./tuning";
+import { QualityGovernor } from "./quality";
 import { fromViewState } from "./view";
 import { markerShown } from "./visibility";
 import { perfEnd, perfStart } from "./perf";
@@ -322,6 +323,7 @@ export class GlobeRenderer {
     }
     this.cleanups.push(() => window.clearTimeout(this.freezeTimer));
     this.cleanups.push(() => window.clearTimeout(this.paceTimer));
+    this.cleanups.push(() => window.clearTimeout(this.parkTimer));
     this.armFreeze();
     this.listen(this.canvas, "webglcontextlost", () => this.onContextLost());
     this.listen(this.canvas, "webglcontextrestored", () => this.onContextRestored());
@@ -1082,6 +1084,13 @@ export class GlobeRenderer {
   private noteActivity() {
     this.spin.activity(performance.now());
     this.armSpin();
+    if (this.parkTimer) {
+      // the settle was under way: the rows go back to the roll from where they are
+      window.clearTimeout(this.parkTimer);
+      this.parkTimer = 0;
+      this.caption?.unpark(performance.now());
+      this.armCaption();
+    }
     if (this.idleFrozen) {
       this.idleFrozen = false;
       this.applyHold();
@@ -1110,10 +1119,29 @@ export class GlobeRenderer {
     if (!(ENERGY.idleFreezeMs > 0) || this.disposed) return;
     this.freezeTimer = window.setTimeout(() => {
       this.freezeTimer = 0;
-      this.idleFrozen = true;
-      this.applyHold();
+      this.settleThenHold();
     }, ENERGY.idleFreezeMs);
   }
+
+  /**
+   * The idle budget is spent: the rows ease to the middle of the globe, fully visible (`CAPTION.park`), and only then does everything stop; a
+   * caption that is not rolling (hidden, the showcase off) is held at once. An input meanwhile cancels the settle and the rows go back to the roll.
+   */
+  private settleThenHold() {
+    const now = performance.now();
+    if (this.caption?.park(now)) {
+      this.parkTimer = window.setTimeout(() => {
+        this.parkTimer = 0;
+        this.idleFrozen = true;
+        this.applyHold();
+      }, CAPTION.park.parkMs + 150);
+      this.armCaption();
+    } else {
+      this.idleFrozen = true;
+      this.applyHold();
+    }
+  }
+  private parkTimer = 0;
 
   private setBlurred(on: boolean) {
     if (on === this.blurred) return;
@@ -1137,6 +1165,9 @@ export class GlobeRenderer {
       if (this.capRaf) window.clearTimeout(this.capRaf);
       this.capRaf = 0;
     } else {
+      this.caption?.unpark(performance.now());
+      this.governor.reset(performance.now());
+      this.capLastAt = 0;
       this.armSpin();
       this.armCaption();
       this.requestRender();
@@ -1257,6 +1288,8 @@ export class GlobeRenderer {
    * too) and stops entirely while the tab is hidden, the context is lost, the street map owns the view or nothing is drawn.
    */
   private capRaf = 0;
+  private governor = new QualityGovernor();
+  private capLastAt = 0;
   private capDrawnAt = 0;
   private capFrames = 0;
   /** JS ms spent in the caption's own frames (checks). */
@@ -1268,7 +1301,7 @@ export class GlobeRenderer {
     if (!c || this.capRaf || this.disposed || this.hidden || this.lost || this.suspended || !this.lastBasis) return;
     if (!c.drifting) return;
     // (a timer at the caption's own rate: a frame it would not draw is no wake)
-    this.capRaf = window.setTimeout(this.captionTick, Math.max(4, ENERGY.captionFrameMs - (performance.now() - this.capDrawnAt)));
+    this.capRaf = window.setTimeout(this.captionTick, Math.max(4, Math.max(ENERGY.captionFrameMs, this.governor.rung.frameMs) - (performance.now() - this.capDrawnAt)));
   }
 
   private captionTick = () => {
@@ -1281,16 +1314,43 @@ export class GlobeRenderer {
       return;
     }
     const now = performance.now();
-    if (now - this.capDrawnAt >= ENERGY.captionFrameMs - 4) {
+    const period = c.isParking ? 33 : Math.max(ENERGY.captionFrameMs, this.governor.rung.frameMs);
+    if (now - this.capDrawnAt >= period - 4) {
+      const interval = this.capLastAt > 0 ? now - this.capLastAt : period;
       this.capDrawnAt = now;
+      this.capLastAt = now;
       const b = this.lastBasis!;
       c.sync(b.d, b.lon, b.lat, now);
       this.renderCrispCaption();
       this.capFrames++;
-      this.capMs += performance.now() - now;
+      const js = performance.now() - now;
+      this.capMs += js;
+      // the quality governor: a loop that cannot keep up steps the caption down a rung (frame rate, then pixel ratio, then slices), and back up slowly
+      if (CAPTION_LOAD.enabled && ENERGY.qualityEnabled && interval < 5 * period) {
+        const next = this.governor.sample(now, interval, period, js);
+        if (next !== null) this.applyLoadRung();
+      }
     }
     this.armCaption();
   };
+
+  /** Hand the governor's rung to the caption's canvas and strips. */
+  private applyLoadRung() {
+    const r = this.governor.rung;
+    this.caption?.setQuality(r.dpr, r.slices);
+    this.qualityChanges++;
+  }
+  private qualityChanges = 0;
+
+  /** Checks and measurements: hold the caption on a rung of the quality ladder (null: the governor decides again). */
+  holdLoadRung(level: number | null) {
+    if (level === null) {
+      this.governor.reset(performance.now());
+      return;
+    }
+    this.governor.level = Math.max(0, Math.min(CAPTION_LOAD.ladder.length - 1, level));
+    this.applyLoadRung();
+  }
 
   private captionRect = { w: 0, h: 0, left: 0, top: 0, mask: "", full: { w: 0, h: 0 }, at: { x: 0, y: 0 } };
   private renderCrispCaption() {
@@ -1499,6 +1559,18 @@ export class GlobeRenderer {
     return began;
   }
 
+  /** Checks and measurements: one caption frame INCLUDING the GPU's work on it (ms: the sync, the draw and a read back). */
+  captionGpuMs(): number {
+    const c = this.caption;
+    if (!c || !this.lastBasis) return 0;
+    const t = performance.now();
+    const b = this.lastBasis;
+    c.sync(b.d, b.lon, b.lat, t);
+    this.renderCrispCaption();
+    c.finishGpu();
+    return performance.now() - t;
+  }
+
   /** Checks and measurements: set the energy knobs (`ENERGY`) now; the idle rotation's frame period follows. */
   setEnergy(patch: Partial<typeof ENERGY>) {
     Object.assign(ENERGY, patch);
@@ -1546,7 +1618,7 @@ export class GlobeRenderer {
   captionState() {
     const c = this.caption;
     if (!c) return null;
-    return { ...c.state(), showcase: this.showcaseOn, captionFrames: this.capFrames, captionMs: this.capMs, drifting: c.drifting, band: { shown: this.captionOn, snapping: this.latSnap !== null, deg: CAPTION.band.deg }, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
+    return { ...c.state(), showcase: this.showcaseOn, captionFrames: this.capFrames, captionMs: this.capMs, quality: { level: this.governor.level, changes: this.qualityChanges, ...this.caption!.quality }, drifting: c.drifting, band: { shown: this.captionOn, snapping: this.latSnap !== null, deg: CAPTION.band.deg }, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
   }
 
   /* ------------------------------ showcase ------------------------------ */
