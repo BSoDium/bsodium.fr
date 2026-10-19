@@ -2434,7 +2434,9 @@
       grid-area: 1 / 1;
     }
 
+    /* z-index (a grid item takes it without being positioned): the picture's box is positioned and would paint over a static plate, and a positioned plate would shrink the title link's stretched hit area to itself. */
     .wall-caption {
+      z-index: 1;
       align-self: end;
       height: auto;
       padding: 0.75rem;
@@ -2452,12 +2454,6 @@
 
     .wall-title {
       font-size: 1.125rem;
-    }
-  }
-
-  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-    .wall-caption {
-      transition: opacity var(--duration-fast) var(--ease-standard);
     }
   }
 

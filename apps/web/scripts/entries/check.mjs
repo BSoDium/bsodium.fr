@@ -661,6 +661,20 @@ for (const path of ["/", "/software"]) {
     const cap = await page.evaluate(() => { const c = document.querySelector(".wall-caption"); const cs = getComputedStyle(c); return { opacity: cs.opacity, position: cs.position, h: c.getBoundingClientRect().height }; });
     ok(hover ? cap.opacity === "0" || cap.opacity === "1" : cap.opacity === "1" && cap.h > 40, `${width}px /artworks: the caption is ${hover ? "an overlay (shown on hover and focus)" : "always visible under the picture"}`);
     ok((await page.locator("[data-slot=sensitive-media][data-state=hidden]").count()) === 1, `${width}px /artworks: the sensitive artwork stays blurred`);
+    if (hover) {
+      // The plate is PAINTED over the picture (the picture's box is positioned: a static plate would sit under it): a pixel inside the plate is the page's colour.
+      const link = page.locator(".wall-card a").first();
+      await link.evaluate((e) => e.scrollIntoView({ block: "center", behavior: "instant" }));
+      const box = await link.boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForTimeout(150);
+      const spot = await page.evaluate(() => { const r = document.querySelector(".wall-card .wall-caption").getBoundingClientRect(); return { x: Math.round(r.left + 4), y: Math.round(r.top + r.height / 2), bg: getComputedStyle(document.querySelector(".wall-card .wall-caption")).backgroundColor }; });
+      const png = await page.screenshot({ clip: { x: spot.x, y: spot.y, width: 1, height: 1 }, type: "png" });
+      const px = await page.evaluate(async (b64) => { const img = new Image(); img.src = "data:image/png;base64," + b64; await img.decode(); const c = document.createElement("canvas"); c.width = c.height = 1; const g = c.getContext("2d"); g.drawImage(img, 0, 0); return [...g.getImageData(0, 0, 1, 1).data].slice(0, 3); }, png.toString("base64"));
+      const want = spot.bg.match(/\d+/g).slice(0, 3).map(Number);
+      ok(px.every((v, i) => Math.abs(v - want[i]) <= 2), `${width}px /artworks: on hover the caption plate is painted over the picture in its solid page colour (${px} vs ${want})`);
+      await page.mouse.move(0, 0);
+    }
     await ctx.close();
   }
   // 11b. Poems: wider page, two columns from 44 rem; the summary is 20 px or more in the reading face.
