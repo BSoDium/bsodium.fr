@@ -141,6 +141,8 @@ export interface GlobeDebug {
   ringHighlight(mode: "blue" | "ink" | "none" | null): void;
   /** One caption frame including the GPU's work on it, ms (measurements). */
   captionGpuMs(): number;
+  /** Record (true) or take (false) the caption's drawn frames as [timestamp, delta, draw ms]. */
+  traceCaption(on: boolean): [number, number, number][];
   /** Hold the caption on a rung of the quality ladder (null: the governor decides). */
   quality(level: number | null): void;
   /** The energy knobs (`ENERGY`): set for measurements. */
@@ -407,6 +409,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       ringHighlight: (mode) => renderer.setRingHighlight(mode),
       energy: (patch) => renderer.setEnergy(patch as never),
       captionGpuMs: () => renderer.captionGpuMs(),
+      traceCaption: (on) => renderer.traceCaption(on),
       quality: (level) => renderer.holdLoadRung(level),
       captionExtent: () => renderer.captionExtent(),
       setSkyEra: (deg) => renderer.setSkyEra(deg),

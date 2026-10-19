@@ -321,3 +321,23 @@ The owner saw "a heavy frame-rate drop a few seconds in, especially when a new l
 | 5120 x 2880 @2, band window, dpr 1.5 (shipped), after | 7.9 | 12 | 15 | 22 |
 
 **The governor** (`quality.mjs`, CPU throttled 40 times for 40 s, then released): with it on the caption goes from rung 0 (20 a second) to rung 1 (15 a second) after about 25 s of lag and back to rung 0 about 6 s after the throttle is lifted; with it off it stays at the same rung and the frames just come late (16 a second). A 6 times throttle does not move the caption at all (the draw is 0.2 ms of JS): the caption's load is the GPU's, which headless cannot throttle, so the governor's trigger for a GPU-bound drop (the draw's JS time and the loop's lateness, which a blocked command buffer raises) is tested by unit tests (`quality.test.ts`) and by this throttled run only, not on a slow GPU.
+
+
+### Round 10 (2026-10-19, owner: "the roll still stutters, the exits drop frames")
+
+**What was wrong.** The energy pass drew the caption on a 20 a second timer (the ring on 15): against the display's vsync a timer gives uneven intervals (3 display frames between two draws 93 % of the time, 4 frames 7 %: judder) and, at 2.9 degrees a second, 1.7 px steps; the governor then stepped down from jitter-prone lateness, frame rate first.
+
+**What is now.** The caption and the ring are drawn on every display frame by rAF, time-based; the governor never moves from jitter, derives the display's period and gives up slices, then pixel ratio, and only last every second display frame; the energy is the idle hold, the slices on demand, the band canvas, the paced rotation, the pauses and the low-power hint (`ENERGY.captionFrameMs` and `ringFrameMs` are gone). `?caption-fps` is the overlay (frames a second, the display's period as derived, the interval histogram in periods, p50/p95/p99/max, late share, the rung, held or moving).
+
+**Frame intervals, headless Chrome (`scripts/perf/raf-deltas.mjs`), 60 Hz:** the caption's rAF interval during the slow roll (8 s, 479 frames) is p50 16.7, p95 16.7, p99 16.8, max 16.8 ms, 0 % late, draw JS p50 0.2 ms; during an exit (2.2 s, 132 frames) the same. The earlier rounds' timer loop in the same page: 144 draws 3 display frames apart and 11 four frames apart (roll), 40 and 3 (exit). A 120 or 144 Hz screen was NOT available: headless Chrome has no such display, and with `--disable-frame-rate-limit` its rAF runs at thousands a second (deltas of 0.1 ms), which is not a display; the derivation of the period is covered by `quality.test.ts` at 60, 90, 120 and 144 Hz (deltas of 16.7, 11.1, 8.3, 6.9 ms), including that jitter alone, a skipped-frame rung and a stalled tab never move the rung. The owner can read the real numbers with `?caption-fps`.
+
+**Energy, honest (headless, 1440 x 900 @2, 20 s each; `energy.mjs`):**
+
+| | task ms/s | script ms/s | globe frames/s | caption frames/s | ring repaints/s | GPU helper CPU ms/s | renderer CPU ms/s |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| before round 9 (full frames at the display rate, planet-box canvas, dpr 2) | 108 | 66 | 60 | 60 (with the globe's) | 120 | 203 | 155 |
+| round 9 energy pass (20 / 15 a second timers) | 36 | 16 | 9 | 17 | 17 | 78 | 69 |
+| **now, moving** (caption and ring on every display frame, rotation 10 a second, band canvas, dpr 1.5, slices on demand) | **55** | **26** | **9** | **60** | **69** | **118** | **89** |
+| now, after the idle hold | 1.3 | 0 | 0 | 0 | 0 | 6 | 13 |
+
+Smoothness costs about 20 ms a second of main-thread time and 40 of GPU-helper CPU over the timer version while the caption moves, against about half of the round-8 cost; the idle hold, 30 s without an input, brings it to nothing. (The `ps` columns are coarse; GPU energy and battery are not measured.)

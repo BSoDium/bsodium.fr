@@ -324,9 +324,8 @@ export const RING = {
  * is drawn, how sharp the caption's canvas is while it rolls, how big its window is, and when everything stops. MUTABLE module state (like
  * `SPIN`): the measurements in `scripts/perf/energy.mjs` set them through `__globeDebug.energy(patch)`; the values here are the shipped ones.
  *
- * - `captionFrameMs`: least time between two drawn frames of the caption's own loop while only the roll moves (50: 20 a second; a row moves 2.9
- *   degrees a second, a third of a pixel a frame on the planet's width).
- * - `ringFrameMs`: the ring's own clock (64: 15 a second; it turns 3 degrees a second, one pixel a frame at the largest ring).
+ * The caption and the ring are drawn on every display frame while they move (smoothness first: no frame-rate saving while text moves; the savings
+ * are the idle hold, the slices on demand, the band-sized canvas, the visibility pauses and the low-power hint).
  * - `spinFrameMs`: the idle rotation's frame period (100: 10 a second; it moves one art pixel every 1.35 s: a frame changes nothing visible
  *   in between), paced by a timer and not by the display's refresh.
  * - `captionDpr`: the most the caption's canvas is drawn at (1.5: its glyphs are large; the window is a quarter of the stage's pixels).
@@ -339,8 +338,6 @@ export const RING = {
  * - `gpu`: the context's `powerPreference` (creation time).
  */
 export const ENERGY = {
-  captionFrameMs: 50,
-  ringFrameMs: 64,
   spinFrameMs: 100,
   captionDpr: 1.5,
   captionWindow: "band" as "band" | "planet",
@@ -354,27 +351,32 @@ export const ENERGY = {
 };
 
 /**
- * The caption's quality governor (engine/quality.ts): the rungs it steps down through when its frame loop cannot keep up, and when it steps.
- * `ladder[0]` is the shipped look (the energy pass's: 20 a second, the canvas at a pixel ratio of 1.5, 28 slices); the order is the owner's:
- * the caption's frame rate, then the canvas's pixel ratio, then the thickness's slices. A frame's cost is the larger of its interval over the
- * period asked for and its JS time times `jsShare` over that period; the governor steps DOWN when the third quartile of the last `windowMs` is over
- * `downRatio` (at least `minSamples` frames, and `downPauseMs` after the last change), and back UP, one rung, after `upAfterMs` in which the 90th
- * percentile stayed under `upRatio`.
+ * The caption's quality governor (engine/quality.ts). The caption is drawn on EVERY display frame (`requestAnimationFrame`, positions a function of
+ * the frame's own timestamp) while it moves: the roll and the exits must never be drawn at a lower rate than the display's. Only a real overload
+ * steps it down, in the order that costs the eye least: the thickness's slice cap (28, 14, 8), then the canvas's pixel ratio (1.5, 1), and last of
+ * all every second display frame (`skip` 2: exactly 30 a second at 60 Hz, aligned to the display, never a timer). The display's period is DERIVED
+ * (the median of the first `periodSamples` frame deltas: a 120 or 144 Hz screen is not assumed to be 60), and a frame counts as late when its
+ * delta is over `lateRatio` times the period asked for. Overload is more than `lateShare` of the frames late over the last `windowMs` (a few late
+ * frames are jitter and never move the rung), or the draw's own JS taking more than `jsShare` of the period; a stalled frame (over `stallMs`: a
+ * throttled background tab, a blurred window) is not a sample at all. One rung back up after `upAfterMs` with at most `calmShare` late.
  */
 export const CAPTION_LOAD = {
   enabled: true,
   ladder: [
-    { frameMs: 50, dpr: 1.5, slices: 28 },
-    { frameMs: 66, dpr: 1.5, slices: 28 },
-    { frameMs: 66, dpr: 1, slices: 28 },
-    { frameMs: 66, dpr: 1, slices: 14 },
-    { frameMs: 100, dpr: 1, slices: 8 },
-  ] as readonly { frameMs: number; dpr: number; slices: number }[],
-  windowMs: 2500,
-  minSamples: 6,
-  downRatio: 1.4,
-  upRatio: 1.15,
+    { skip: 1, dpr: 1.5, slices: 28 },
+    { skip: 1, dpr: 1.5, slices: 14 },
+    { skip: 1, dpr: 1.5, slices: 8 },
+    { skip: 1, dpr: 1, slices: 8 },
+    { skip: 2, dpr: 1, slices: 8 },
+  ] as readonly { skip: number; dpr: number; slices: number }[],
+  periodSamples: 30,
+  windowMs: 2000,
+  minSamples: 24,
+  lateRatio: 1.5,
+  lateShare: 0.2,
+  calmShare: 0.05,
+  jsShare: 0.6,
+  stallMs: 250,
   downPauseMs: 1500,
-  upAfterMs: 6000,
-  jsShare: 3,
+  upAfterMs: 4000,
 };

@@ -61,6 +61,7 @@ import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
 import { CAPTION, ENERGY, INSET_EASE, CAPTION_LOAD, RING, SKY, START_VIEW, TUNING } from "./tuning";
 import { QualityGovernor } from "./quality";
+import { FpsOverlay } from "./fps-overlay";
 import { fromViewState } from "./view";
 import { markerShown } from "./visibility";
 import { perfEnd, perfStart } from "./perf";
@@ -311,6 +312,14 @@ export class GlobeRenderer {
       this.cleanups.push(() => window.removeEventListener(type, this.onInput, { capture: true }));
     }
     this.cleanups.push(() => window.clearTimeout(this.spinTimer));
+    try {
+      if (new URLSearchParams(location.search).has("caption-fps")) {
+        this.overlay = new FpsOverlay(opts.container, () => ({ period: this.governor.period, lateShare: this.governor.lateShare, rung: { level: this.governor.level, ...this.governor.rung }, held: this.held }));
+        this.cleanups.push(() => this.overlay?.dispose());
+      }
+    } catch {
+      // no location: no overlay
+    }
     // The energy pass: what makes the resting home screen stand still (docs/performance.md, "Energy").
     this.listen(window, "blur", () => this.setBlurred(true));
     this.listen(window, "focus", () => this.setBlurred(false));
@@ -986,6 +995,8 @@ export class GlobeRenderer {
 
   private setHidden(hidden: boolean) {
     this.hidden = hidden;
+    this.governor.reset(performance.now());
+    this.capLastRaf = 0;
     this.caption?.setPaused(this.hidden || this.lost || this.suspended);
     this.noteActivity();
     if (hidden) {
@@ -1177,6 +1188,9 @@ export class GlobeRenderer {
   private setBlurred(on: boolean) {
     if (on === this.blurred) return;
     this.blurred = on;
+    // (a window that lost focus has throttled frames: not an overload; when it is back the window starts again)
+    this.governor.reset(performance.now());
+    this.capLastRaf = 0;
     this.applyHold();
   }
 
@@ -1198,7 +1212,7 @@ export class GlobeRenderer {
     } else {
       this.caption?.unpark(performance.now());
       this.governor.reset(performance.now());
-      this.capLastAt = 0;
+      this.capLastRaf = 0;
       this.armSpin();
       this.armCaption();
       this.requestRender();
@@ -1320,8 +1334,6 @@ export class GlobeRenderer {
    */
   private capRaf = 0;
   private governor = new QualityGovernor();
-  private capLastAt = 0;
-  private capDrawnAt = 0;
   private capFrames = 0;
   /** JS ms spent in the caption's own frames (checks). */
   private capMs = 0;
@@ -1331,37 +1343,63 @@ export class GlobeRenderer {
     const c = this.caption;
     if (!c || this.capRaf || this.disposed || this.hidden || this.lost || this.suspended || !this.lastBasis) return;
     if (!c.drifting) return;
-    // (a timer at the caption's own rate: a frame it would not draw is no wake)
-    this.capRaf = window.setTimeout(this.captionTick, Math.max(4, Math.max(ENERGY.captionFrameMs, this.governor.rung.frameMs) - (performance.now() - this.capDrawnAt)));
+    // The caption moves: it is drawn on EVERY display frame (rAF, positions a function of the frame's own timestamp), never on a timer: a timer's
+    // period against the display's vsync gives uneven frame intervals, which at a slow roll is visible judder.
+    this.capRaf = requestAnimationFrame(this.captionTick);
   }
 
-  private captionTick = () => {
+  /** Whether the caption was drawn by a full frame in this very display frame (the loop does not draw it twice). */
+  private capDrawnAny = 0;
+  private capLastRaf = 0;
+  /** The `?caption-fps` overlay (debug): null without the flag. */
+  private overlay: FpsOverlay | null = null;
+  private capSkip = 0;
+  /** Checks and measurements: every drawn caption frame as [timestamp, delta, draw JS ms] (null: not recording). */
+  private capTrace: [number, number, number][] | null = null;
+
+  /** Start (`true`), or stop and take (`false`), the recording of the caption's drawn frames. */
+  traceCaption(on: boolean): [number, number, number][] {
+    if (on) {
+      this.capTrace = [];
+      return [];
+    }
+    const out = this.capTrace ?? [];
+    this.capTrace = null;
+    return out;
+  }
+
+  private captionTick = (ts: number) => {
     this.capRaf = 0;
     const c = this.caption;
-    if (!c || this.disposed || this.hidden || this.lost || this.suspended || !this.sized || !c.drifting) return;
-    if (this.raf) {
-      // (a full frame is pending: it advances and draws the caption itself)
-      this.armCaption();
+    if (!c || this.disposed || this.hidden || this.lost || this.suspended || !this.sized || !c.drifting) {
+      this.capLastRaf = 0;
       return;
     }
-    const now = performance.now();
-    const period = c.isParking ? 33 : Math.max(ENERGY.captionFrameMs, this.governor.rung.frameMs);
-    if (now - this.capDrawnAt >= period - 4) {
-      const interval = this.capLastAt > 0 ? now - this.capLastAt : period;
-      this.capDrawnAt = now;
-      this.capLastAt = now;
+    const rung = this.governor.rung;
+    const since = this.capLastRaf > 0 ? ts - this.capLastRaf : 0;
+    this.capLastRaf = ts;
+    // every `skip`th display frame at the last rung of the ladder (exactly 30 a second at 60 Hz, aligned to the display)
+    const due = ++this.capSkip >= rung.skip;
+    if (due && ts - this.capDrawnAny > 3) {
+      this.capSkip = 0;
+      const t0 = performance.now();
       const b = this.lastBasis!;
-      c.sync(b.d, b.lon, b.lat, now);
+      c.sync(b.d, b.lon, b.lat, ts);
       this.renderCrispCaption();
       this.capFrames++;
-      const js = performance.now() - now;
+      const js = performance.now() - t0;
       this.capMs += js;
-      // the quality governor: a loop that cannot keep up steps the caption down a rung (frame rate, then pixel ratio, then slices), and back up slowly
-      if (CAPTION_LOAD.enabled && ENERGY.qualityEnabled && interval < 5 * period) {
-        const next = this.governor.sample(now, interval, period, js);
+      this.overlay?.frame(ts, since, js);
+      if (this.capTrace) {
+        this.capTrace.push([ts, since, js]);
+        if (this.capTrace.length > 4000) this.capTrace.shift();
+      }
+      // the quality governor: a real overload (many late frames) steps the caption down a rung, a calm stretch back up; never from jitter, never from a stall
+      if (CAPTION_LOAD.enabled && ENERGY.qualityEnabled && !this.blurred && !document.hidden) {
+        const next = this.governor.sample(ts, since > 0 ? since : 0, js);
         if (next !== null) this.applyLoadRung();
       }
-    }
+    } else if (due) this.capSkip = 0;
     this.armCaption();
   };
 
@@ -1433,6 +1471,7 @@ export class GlobeRenderer {
     rect.at.x = x0;
     rect.at.y = y0;
     caption.renderCrisp(cam, rect, window.devicePixelRatio || 1);
+    this.capDrawnAny = performance.now();
     if (this.shiftBuf || this.liftBuf) cam.setViewOffset(this.bufW, this.bufH, this.shiftBuf, this.liftBuf, this.bufW, this.bufH);
     else cam.clearViewOffset();
     cam.updateProjectionMatrix();
@@ -1649,7 +1688,7 @@ export class GlobeRenderer {
   captionState() {
     const c = this.caption;
     if (!c) return null;
-    return { ...c.state(), showcase: this.showcaseOn, captionFrames: this.capFrames, captionMs: this.capMs, quality: { level: this.governor.level, changes: this.qualityChanges, ...this.caption!.quality }, drifting: c.drifting, band: { shown: this.captionOn, snapping: this.latSnap !== null, deg: CAPTION.band.deg }, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
+    return { ...c.state(), showcase: this.showcaseOn, captionFrames: this.capFrames, captionMs: this.capMs, quality: { level: this.governor.level, changes: this.qualityChanges, period: this.governor.period, lateShare: this.governor.lateShare, ...this.caption!.quality }, drifting: c.drifting, band: { shown: this.captionOn, snapping: this.latSnap !== null, deg: CAPTION.band.deg }, overlayHidden: this.lod.isSuppressed, animating: c.animating, zoom: this.view.zoom, fit: this.fit, floor: this.minZoom };
   }
 
   /* ------------------------------ showcase ------------------------------ */

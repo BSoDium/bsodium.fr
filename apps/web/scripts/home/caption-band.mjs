@@ -408,7 +408,15 @@ for (const [label, options] of [["desktop", DESKTOP], ["phone", MOBILE]]) {
     await sleep(3000);
     const s1 = await snap();
     const per = (s1.c.captionFrames - s0.c.captionFrames) / 3;
-    ok(s1.c.drifting && per > 14 && per < 26 && s1.frames - s0.frames <= 2, `${label}: at rest the roll draws ${per.toFixed(1)} caption frames a second and ${s1.frames - s0.frames} full frames in 3 s (JS ${(((s1.c.captionMs - s0.c.captionMs) / Math.max(1, s1.c.captionFrames - s0.c.captionFrames))).toFixed(2)} ms a frame)`);
+    ok(s1.c.drifting && per > 40 && per < 150 && s1.frames - s0.frames <= 2, `${label}: at rest the roll draws ${per.toFixed(1)} caption frames a second and ${s1.frames - s0.frames} full frames in 3 s (JS ${(((s1.c.captionMs - s0.c.captionMs) / Math.max(1, s1.c.captionFrames - s0.c.captionFrames))).toFixed(2)} ms a frame)`);
+    // smoothness: while the roll moves the caption is drawn on every display frame (rAF), the intervals are the display's period, not a timer's
+    await page.evaluate(() => window.__globeDebug.traceCaption(true));
+    await sleep(3000);
+    const trace = await page.evaluate(() => window.__globeDebug.traceCaption(false));
+    const ds = trace.map((t) => t[1]).filter((d) => d > 0).sort((x, y) => x - y);
+    const med = ds[Math.floor(ds.length / 2)];
+    const p95 = ds[Math.floor(ds.length * 0.95)];
+    ok(ds.length > 100 && med < 40 && p95 <= 1.6 * med, `${label}: the roll is drawn on every display frame: ${ds.length} frames in 3 s, interval median ${med?.toFixed(1)} ms, p95 ${p95?.toFixed(1)} ms (a timer's would be 50 and uneven)`);
     await page.evaluate(() => window.__globeDebug.showcase(false));
     await sleep(700);
     const h0 = await snap();

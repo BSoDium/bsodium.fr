@@ -75,6 +75,9 @@ import { CAPTION, ENERGY } from "./tuning";
 
 const DEG_ = Math.PI / 180;
 
+/** The slice counts a strip is drawn with. */
+const SLICE_STEPS = [2, 3, 4, 6, 8, 12, 16, 20, 28] as const;
+
 /**
  * One unit strip serves every line (`unitBand`: `position` is `(u, v, layer)`), and the line's parallel is a handful of uniforms: where the strip
  * is on the globe is computed here, so a change of the camera's tilt, which moves every line to another parallel, is a few uniforms and no new
@@ -678,7 +681,11 @@ export class CaptionLayer {
     const sin = Math.sqrt(Math.max(0, 1 - cos * cos));
     const px = CAPTION.depth * (this.sizing?.r ?? 300) * sin;
     const n = Math.ceil(px / CAPTION.sliceStepPx) + 1;
-    return Math.max(2, Math.min(this.slices, n));
+    // (quantised to a few strips, all made when the strips are built: a row going round the orbit changes its count by a step, and no strip is
+    // first made, or first used, in the middle of an exit)
+    const cap = this.slices;
+    for (const step of SLICE_STEPS) if (step >= n && step <= cap) return step;
+    return Math.max(2, Math.min(cap, SLICE_STEPS.filter((x) => x <= cap).at(-1) ?? cap));
   }
 
   /** The quality now (checks). */
@@ -1397,6 +1404,7 @@ export class CaptionLayer {
       this.ellipse.visible = false;
       this.crisp.scene.add(this.ellipse);
     }
+    for (const n of SLICE_STEPS) this.unitFor(n); // (the CPU side of every strip is made now)
     this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, key };
     this.place();
     this.motion.setFixedFrom(slotRows);
