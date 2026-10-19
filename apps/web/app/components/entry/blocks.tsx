@@ -14,6 +14,8 @@ import {
   type OutlineItem,
 } from "~/lib/entry-blocks";
 import { dropCapIndex, dropCapKind } from "~/lib/entry-typography";
+import { figureId, figureInfo, linkableNumbers, linkFigureMentions, type FigureInfo } from "~/lib/figures";
+import { FlowFigure } from "~/components/entry/figure";
 import { cn } from "~/lib/utils";
 
 type Block = PublishedBodyBlock;
@@ -28,7 +30,9 @@ type Block = PublishedBodyBlock;
  * Headings are level 2 and 3 under the entry's own level 1 (the view's title); a `lang` (the poem's `Language` fact) is set on the body.
  * The type is the reading role's (`.ds-prose`, app.css): the markup carries no size, weight or measure of its own, so the entry
  * pages can set the body at the board's scale. `dropCap` opens the body's first paragraph with a drop cap when it is long enough
- * (`dropCapIndex`); images are numbered in the order they appear (`Fig. N` before a caption).
+ * (`dropCapIndex`); images are numbered in the order they appear (`Fig. N` before a caption). `figures` (an article, a project) sets the images
+ * as figures in the flow of the text (`FlowFigure`: wide, captioned, zoomable) and turns the text's own mentions of a captioned figure
+ * ("Fig. 3") into links to it (`lib/figures.ts`).
  */
 export function BlockRenderer({
   blocks,
@@ -36,16 +40,19 @@ export function BlockRenderer({
   idPrefix = "body",
   className,
   dropCap = false,
+  figures = false,
 }: {
   blocks: readonly Block[];
   lang?: string;
   idPrefix?: string;
   className?: string;
   dropCap?: boolean;
+  figures?: boolean;
 }) {
   const groups = useMemo(() => groupBlocks(blocks), [blocks]);
   const outline = useMemo(() => new Map(buildOutline(blocks, idPrefix).map((o) => [o.index, o])), [blocks, idPrefix]);
-  const figureNumbers = useMemo(() => figureNumbering(blocks), [blocks]);
+  const figureNumbers = useMemo(() => figureInfo(blocks), [blocks]);
+  const linkable = useMemo(() => (figures ? linkableNumbers(figureNumbers) : new Set<number>()), [figures, figureNumbers]);
   const capped = dropCap ? dropCapIndex(blocks) : -1;
   if (groups.length === 0) return null;
   return (
@@ -60,15 +67,15 @@ export function BlockRenderer({
             ))}
           </ul>
         ) : (
-          <BlockView key={group.key} block={group.block} heading={outline.get(group.index)} dropCap={group.index === capped} figure={figureNumbers.get(group.index)} />
+          <BlockView key={group.key} block={group.block} heading={outline.get(group.index)} dropCap={group.index === capped} figure={figureNumbers.get(group.index)} flow={figures} linkable={linkable} />
         ),
       )}
     </div>
   );
 }
 
-/** Text with its hard line breaks as `<br>`. */
-function Lines({ text }: { text: string }) {
+/** Text with its hard line breaks as `<br>`. With `linkable`, the mentions of those figures ("Fig. 3") are links to them (text unchanged). */
+function Lines({ text, linkable }: { text: string; linkable?: ReadonlySet<number> }) {
   const lines = splitLines(text);
   const keys = dedupeKeys(lines, "-");
   return (
@@ -76,20 +83,28 @@ function Lines({ text }: { text: string }) {
       {lines.map((line, i) => (
         <Fragment key={keys[i]}>
           {i > 0 && <br />}
-          {line}
+          {linkable && linkable.size > 0 ? <FigureMentions text={line} linkable={linkable} /> : line}
         </Fragment>
       ))}
     </>
   );
 }
 
-/** The figure number of each image block, by the block's index: 1, 2, 3 in the order the images appear (an image that cannot be drawn is not counted). */
-function figureNumbering(blocks: readonly Block[]): Map<number, number> {
-  const out = new Map<number, number>();
-  blocks.forEach((block, index) => {
-    if (block.type === "image" && safeMediaSrc(block.src)) out.set(index, out.size + 1);
-  });
-  return out;
+/** A run of text with its mentions of a figure as in-page links: the link text is the mention as written, the target is the figure (`#fig-N`). */
+function FigureMentions({ text, linkable }: { text: string; linkable: ReadonlySet<number> }) {
+  return (
+    <>
+      {linkFigureMentions(text, linkable).map((run, i) =>
+        run.figure === undefined ? (
+          <Fragment key={i}>{run.text}</Fragment>
+        ) : (
+          <a key={i} href={`#${figureId(run.figure)}`} data-slot="figure-mention" className="entry-figref">
+            {run.text}
+          </a>
+        ),
+      )}
+    </>
+  );
 }
 
 function BlockView({
@@ -97,36 +112,40 @@ function BlockView({
   heading,
   dropCap,
   figure,
+  flow,
+  linkable,
 }: {
   block: Exclude<Block, { type: "link" }>;
   heading: OutlineItem | undefined;
   dropCap: boolean;
-  figure: number | undefined;
+  figure: FigureInfo | undefined;
+  flow: boolean;
+  linkable: ReadonlySet<number>;
 }) {
   switch (block.type) {
     case "paragraph":
       return (
         <p className={cn("m-0", dropCap && "drop-cap")} data-drop-cap={dropCap ? (dropCapKind(block.text) ?? "plain") : undefined}>
-          <Lines text={block.text} />
+          <Lines text={block.text} linkable={linkable} />
         </p>
       );
     case "heading":
       return heading ? <HeadingView item={heading} /> : null;
     case "list":
-      return <ListView ordered={block.ordered} items={block.items} />;
+      return <ListView ordered={block.ordered} items={block.items} linkable={linkable} />;
     case "quote":
       return (
         <figure className="type-pullquote my-[0.4em]">
           <blockquote className="m-0">
             <p className="m-0">
-              <Lines text={block.text} />
+              <Lines text={block.text} linkable={linkable} />
             </p>
           </blockquote>
           {block.cite && <figcaption className="ds-caption mt-3 not-italic">&mdash; {block.cite}</figcaption>}
         </figure>
       );
     case "image":
-      return <ImageView block={block} number={figure} />;
+      return flow ? <FlowFigure block={block} number={figure?.number} /> : <ImageView block={block} number={figure?.number} />;
     case "verse":
       return <VerseView stanzas={block.stanzas} />;
     case "code":
@@ -159,21 +178,21 @@ function HeadingView({ item }: { item: OutlineItem }) {
   );
 }
 
-function ListView({ ordered, items }: { ordered: boolean; items: readonly string[] }) {
+function ListView({ ordered, items, linkable }: { ordered: boolean; items: readonly string[]; linkable: ReadonlySet<number> }) {
   const Tag = ordered ? "ol" : "ul";
   const keys = dedupeKeys(items);
   return (
     <Tag className={cn("m-0 flex flex-col gap-2 pl-6", ordered ? "list-decimal" : "list-[square]", "marker:text-muted-foreground")}>
       {items.map((item, i) => (
         <li key={keys[i]} className="pl-1">
-          <Lines text={item} />
+          <Lines text={item} linkable={linkable} />
         </li>
       ))}
     </Tag>
   );
 }
 
-/** An image in the body: the figure of the page (a rule, the picture, a mono caption that starts with its number). Also the column of figures of an article. */
+/** An image in the body of an artwork or a poem: a rule, the picture, a mono caption that starts with its number. (An article's and a project's are `FlowFigure`.) */
 export function ImageView({ block, number }: { block: Extract<Block, { type: "image" }>; number?: number | undefined }) {
   const src = safeMediaSrc(block.src);
   if (!src) return null;
@@ -201,19 +220,6 @@ export function ImageView({ block, number }: { block: Extract<Block, { type: "im
         </figcaption>
       )}
     </figure>
-  );
-}
-
-/** The figures of an article or a project, set apart from the text (the board's third column): the images in their order, numbered from 1. */
-export function Figures({ blocks, className }: { blocks: readonly Extract<Block, { type: "image" }>[]; className?: string }) {
-  const drawn = blocks.filter((b) => safeMediaSrc(b.src));
-  if (drawn.length === 0) return null;
-  return (
-    <div data-slot="entry-figures" className={cn("entry-figures flex min-w-0 flex-col gap-8", className)}>
-      {drawn.map((block, i) => (
-        <ImageView key={`${block.src}-${i}`} block={block} number={i + 1} />
-      ))}
-    </div>
   );
 }
 

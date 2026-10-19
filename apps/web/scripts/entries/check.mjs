@@ -414,7 +414,7 @@ if (process.env.BASE_URL_EMPTY) {
   const { ctx, page } = await newPage(DESKTOP);
   await page.goto(`${BASE_URL}/locations/bangkok`);
   await waitPanel(page);
-  ok((await page.locator("[data-slot=place-entries]").count()) === 0 && (await page.locator("[data-panel] h2").count()) === 0, "a place without entries has no entries section and no empty box at all");
+  ok((await page.locator("[data-slot=place-entries]").count()) === 0 && (await page.locator("[data-panel] h2:not(#place-journeys)").count()) === 0, "a place without entries has no entries section and no empty box at all (its Journeys list, when it has legs, is not an entries section)");
   // print: the chrome goes, the entry stays
   await page.goto(`${BASE_URL}/poetry/cuesta-arriba?view=full`);
   await waitPanel(page);

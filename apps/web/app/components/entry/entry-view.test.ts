@@ -226,17 +226,33 @@ describe("EntryView", () => {
       expect(html).toContain("4 places<");
       expect(html).not.toMatch(/4 places, 6 entries/);
     });
-    it("sets an article's images apart from its text, after it (the figures column), numbered", () => {
+    it("sets an article's images in the flow of its text, where the author put them, numbered, with no third column", () => {
       const html = render("article", "demo-article", "full");
-      const body = html.slice(html.indexOf('data-slot="entry-body"'), html.indexOf('data-slot="entry-figures"'));
-      expect(html).toContain('data-slot="entry-figures"');
-      expect(body).not.toContain("<img");
-      expect(html.slice(html.indexOf('data-slot="entry-figures"'))).toContain("Fig. 1 ");
-      expect(html.indexOf('data-slot="entry-figures"')).toBeLessThan(html.indexOf('data-slot="entry-more"'));
+      expect(html).not.toContain('data-slot="entry-figures"');
+      const body = html.slice(html.indexOf('data-slot="entry-body"'), html.indexOf('data-slot="entry-more"'));
+      // 1 platform after the quote that follows the Ljubljana paragraph, 2 the ticket after "Six bunks", 3 the board after Belgrade
+      const at = (needle: string) => body.indexOf(needle);
+      expect(at("A night train is the only kind of travel")).toBeLessThan(at("fig-night-trains-platform.svg"));
+      expect(at("fig-night-trains-platform.svg")).toBeLessThan(at("What I would pack again"));
+      expect(at("Six bunks, five strangers")).toBeLessThan(at("fig-night-trains-ticket.svg"));
+      expect(at("fig-night-trains-ticket.svg")).toBeLessThan(at("Belgrade, 06:12"));
+      expect(at("I wake to a grey light")).toBeLessThan(at("fig-night-trains-board.svg"));
+      for (const n of [1, 2, 3]) {
+        expect(body).toContain(`id="fig-${n}"`);
+        expect(body).toContain(`>Fig. ${n}</span>`);
+        expect(body).toContain(`href="#fig-${n}"`);
+      }
+    });
+    it("sets a project's images in its flow too", () => {
+      const html = render("project", "demo-project", "panel");
+      expect(html).not.toContain('data-slot="entry-figures"');
+      expect(html).toContain('id="fig-1"');
     });
     it("keeps an artwork's images in its text, wide, and its marginalia mono facts", () => {
       const html = render("artwork", "demo-artwork", "full");
       expect(html).not.toContain('data-slot="entry-figures"');
+      expect(html).not.toContain("data-flow");
+      expect(html).not.toContain('id="fig-');
       expect(html.slice(html.indexOf('data-slot="entry-body"'))).toContain("<img");
       expect(html).toContain(">Medium<");
     });
