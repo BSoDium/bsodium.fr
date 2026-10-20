@@ -12,36 +12,38 @@ const PAGE: Record<TrailScheme, readonly [number, number, number]> = { light: [0
 const rgbOf = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
 
 describe("palette assignment", () => {
-  it("routes take blue, green, ocre, violet in order and start over, so neighbours in the list differ", () => {
-    expect(TRAIL_PALETTES).toEqual(["blue", "green", "ocre", "violet"]);
-    expect(Array.from({ length: 11 }, (_, i) => paletteOf(i))).toEqual([0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2]);
-    for (let i = 0; i < 40; i++) expect(paletteOf(i)).not.toBe(paletteOf(i + 1));
-    expect(paletteOf(-1)).toBe(3);
+  it("every route takes the one trail gradient: a saturated blue tail turning into a violet head", () => {
+    expect(TRAIL_PALETTES).toEqual(["trail"]);
+    expect(PALETTE_COUNT).toBe(1);
+    expect(Array.from({ length: 11 }, (_, i) => paletteOf(i))).toEqual(Array(11).fill(0));
+    for (const scheme of ["light", "dark"] as const) {
+      const [tail, head] = [TRAIL_STEPS[scheme].tail, TRAIL_STEPS[scheme].head];
+      expect(tail[0]).toBe("blue");
+      expect(head[0]).toBe("violet");
+    }
   });
-  it("is deterministic: the same routes give the same palettes, by order and not by id", () => {
+  it("is deterministic and the same for every leg, whatever the order or the id", () => {
     const route = (id: string) => ({ id, title: id, points: [{ lat: 0, lon: 0 }, { lat: 1, lon: 1 }] });
-    const a = buildNetwork([route("x"), route("y"), route("z")]).legs.map((l) => l.palette);
-    const b = buildNetwork([route("z"), route("y"), route("x")]).legs.map((l) => l.palette);
-    expect(a).toEqual([0, 1, 2]);
-    expect(b).toEqual([0, 1, 2]);
-    // an explicit palette (the projection's own order, when routes were dropped before) wins over the position
-    expect(buildNetwork([{ ...route("q"), palette: 6 }]).legs[0]!.palette).toBe(2);
+    expect(buildNetwork([route("x"), route("y"), route("z")]).legs.map((l) => l.palette)).toEqual([0, 0, 0]);
+    expect(buildNetwork([{ ...route("q"), palette: 6 }]).legs[0]!.palette).toBe(0);
   });
 });
 
 describe("the ladder", () => {
   it("PALETTE_HEX is the --palette-* scale of app.css", () => {
-    for (const hue of TRAIL_PALETTES) {
+    for (const hue of ["blue", "green", "ocre", "violet"] as const) {
       for (const [step, hex] of Object.entries(PALETTE_HEX[hue])) {
         const m = new RegExp(`--palette-${hue}-${step}:\\s*(#[0-9a-f]{6})`).exec(css);
         expect(m?.[1], `${hue}-${step}`).toBe(hex);
       }
     }
   });
-  it("--trail-<hue> is the faint head's step: 600 in light, 300 in dark (the swatch of a route)", () => {
-    for (const [scheme, step] of [["light", TRAIL_STEPS.light.head], ["dark", TRAIL_STEPS.dark.head]] as const) {
-      const tokens = [...css.matchAll(/--trail-(blue|green|ocre|violet): var\(--palette-\w+-(\d+)\);/g)].map((m) => Number(m[2]));
-      expect(tokens.filter((n) => n === step).length, scheme).toBeGreaterThanOrEqual(4);
+  it("--trail-from and --trail-to are the gradient's two ends (the panel's trip colours): the tail's blue and the head's violet, per scheme", () => {
+    for (const scheme of ["light", "dark"] as const) {
+      const s = TRAIL_STEPS[scheme];
+      const decl = (name: string) => [...css.matchAll(new RegExp(`--trail-${name}: var\\(--palette-(\\w+)-(\\d+)\\);`, "g"))].map((m) => `${m[1]}-${m[2]}`);
+      expect(decl("from")).toContain(`${s.tail[0]}-${s.tail[1]}`);
+      expect(decl("to")).toContain(`${s.head[0]}-${s.head[1]}`);
     }
   });
 });
@@ -57,11 +59,11 @@ describe("trail colours", () => {
         for (const h of hex) expect(h).toMatch(/^#[0-9a-f]{6}$/);
         for (let p = 0; p < PALETTE_COUNT; p++) {
           const s = TRAIL_STEPS[scheme];
-          const name = TRAIL_PALETTES[p]!;
-          expect(hex[trailIndex(p, 0)]).toBe(PALETTE_HEX[name][s.tail]);
-          expect(hex[trailIndex(p, TRAIL_BANDS - 1)]).toBe(PALETTE_HEX[name][s.head]);
-          expect(hex[trailIndex(p, "lit")]).toBe(PALETTE_HEX[name][s.lit]);
-          expect(hex[trailIndex(p, "spark")]).toBe(PALETTE_HEX[name][s.spark]);
+          const at = ([name, step]: readonly [keyof typeof PALETTE_HEX, number]) => PALETTE_HEX[name][step as 500];
+          expect(hex[trailIndex(p, 0)]).toBe(at(s.tail));
+          expect(hex[trailIndex(p, TRAIL_BANDS - 1)]).toBe(at(s.head));
+          expect(hex[trailIndex(p, "lit")]).toBe(at(s.lit));
+          expect(hex[trailIndex(p, "spark")]).toBe(at(s.spark));
         }
       });
       it("runs tail to head: the head contrasts with the page at 3:1 or more for every palette (graphics, WCAG 1.4.11), and so do the lit head and the spark", () => {
@@ -81,17 +83,14 @@ describe("trail colours", () => {
         }
         if (process.env.TRAIL_NUMBERS) console.log(scheme, rows.join(" | "));
       });
-      it("keeps the four palettes apart: adjacent palettes in the order differ by a clear CIEDE2000 at the head, and under each colour-vision deficiency the weakest pair is reported by the docs", () => {
-        const head = (p: number) => hex[trailIndex(p, TRAIL_BANDS - 1)]!;
-        for (let p = 0; p < PALETTE_COUNT; p++) expect(deltaE2000(head(p), head((p + 1) % PALETTE_COUNT)), `${p}`).toBeGreaterThan(15);
+      it("the tail and the head are clearly two colours (CIEDE2000), also under each colour-vision deficiency", () => {
+        const tail = hex[trailIndex(0, 0)]!;
+        const head = hex[trailIndex(0, TRAIL_BANDS - 1)]!;
+        expect(deltaE2000(tail, head)).toBeGreaterThan(15);
         for (const kind of ["protanopia", "deuteranopia", "tritanopia"] as Cvd[]) {
-          for (let p = 0; p < PALETTE_COUNT; p++) {
-            for (let q = p + 1; q < PALETTE_COUNT; q++) {
-              const d = deltaE2000(simulateCvd(head(p), kind), simulateCvd(head(q), kind));
-              if (process.env.TRAIL_NUMBERS) console.log(scheme, kind, TRAIL_PALETTES[p], TRAIL_PALETTES[q], d.toFixed(1));
-              expect(Number.isFinite(d)).toBe(true);
-            }
-          }
+          const d = deltaE2000(simulateCvd(tail, kind), simulateCvd(head, kind));
+          if (process.env.TRAIL_NUMBERS) console.log(scheme, kind, d.toFixed(1));
+          expect(Number.isFinite(d)).toBe(true);
         }
       });
     });
@@ -126,7 +125,7 @@ describe("shader uniform mapping", () => {
     expect(dark.scheme).toBe("dark");
     const wantDark = trailHex("dark");
     for (let k = 0; k < TRAIL_ENTRIES; k++) expect([entry(k).r, entry(k).g, entry(k).b].map((v) => Math.round(v * 255)), `dark ${k}`).toEqual(rgbOf(wantDark[k]!).map((v) => Math.round(v * 255)));
-    expect(trailIndex(1, "lit")).toBe(1 * TRAIL_PER_PALETTE + TRAIL_BANDS); // what the shader computes: palette * PER + band
+    expect(trailIndex(0, "lit")).toBe(0 * TRAIL_PER_PALETTE + TRAIL_BANDS); // what the shader computes: palette * PER + band
     expect((layer as unknown as { geometry: unknown }).geometry).toBe(geometry);
   });
   it("the overlay's presence: at 0 the layer draws nothing, in between it is a uniform (a mix toward the page), at 1 it is complete", () => {
@@ -146,6 +145,6 @@ describe("shader uniform mapping", () => {
   });
   it("the vertex carries the palette (info.w) and the position along the leg is dist / length", () => {
     const net = layer.network;
-    expect(net.legs.map((l) => l.palette)).toEqual([0, 1, 2, 3, 0]);
+    expect(net.legs.map((l) => l.palette)).toEqual([0, 0, 0, 0, 0]);
   });
 });

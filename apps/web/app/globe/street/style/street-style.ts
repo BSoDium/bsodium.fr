@@ -52,6 +52,8 @@ export interface StreetStyleOptions {
   focusKeys?: readonly string[];
   /** The "Paths" layer switch: false starts every path layer hidden. */
   pathsVisible?: boolean;
+  /** The patterned legs (every mode but road) and the sparks are drawn cell by cell on the overlay (overlay/trail-dots.ts): no MapLibre layer for them. */
+  overlayDots?: boolean;
   /** Zoom at which the world-scale coastline (110m, @catalyst/geodata) hands over to tile geometry. */
   handoffZoom?: number;
   projection?: "globe" | "mercator";
@@ -379,7 +381,7 @@ export const ROUTE_LAYER_IDS: string[] = [
 ];
 /** A colour per palette picked by the feature's `pal`: `level(p)` is the trail level of palette p. */
 const byPalette = (level: (p: number) => number, color: (l: number) => string = routeColor): ExpressionSpecification =>
-  ["match", ["get", "pal"], ...Array.from({ length: PALETTE_COUNT - 1 }, (_, p) => [p, color(level(p))]).flat(), color(level(PALETTE_COUNT - 1))] as unknown as ExpressionSpecification;
+  (PALETTE_COUNT === 1 ? color(level(0)) : ["match", ["get", "pal"], ...Array.from({ length: PALETTE_COUNT - 1 }, (_, p) => [p, color(level(p))]).flat(), color(level(PALETTE_COUNT - 1))]) as unknown as ExpressionSpecification;
 /** The gradient of a palette: the bands from tail (progress 0) to head (1), each a solid trail colour. */
 export const gradientOf = (palette: number): ExpressionSpecification =>
   ["step", ["line-progress"], routeColor(trailLevel(palette, 0)), ...Array.from({ length: TRAIL_BANDS - 1 }, (_, b) => [(b + 1) / TRAIL_BANDS, routeColor(trailLevel(palette, b + 1))]).flat()] as unknown as ExpressionSpecification;
@@ -534,6 +536,7 @@ export function buildStreetStyle(o: StreetStyleOptions): StyleSpecification {
   for (const prefix of ROUTE_LAYER_PREFIXES) {
     for (const mode of LEG_MODES) {
       if (prefix === "routes-faint" && mode === "road") continue;
+      if (o.overlayDots && mode !== "road") continue;
       const base = prefix === "routes-faint" ? ["==", ["get", "mode"], mode] : focusFilter(mode, focusKeys);
       const color = prefix === "routes-faint" ? byPalette(headLevel) : byPalette((p) => trailLevel(p, "lit"));
       const tickColor = prefix === "routes-faint" ? byPalette(headLevel, lineColor) : byPalette((p) => trailLevel(p, "lit"), lineColor);
@@ -553,10 +556,12 @@ export function buildStreetStyle(o: StreetStyleOptions): StyleSpecification {
     }
   }
   const sparkColor = byPalette((p) => trailLevel(p, "spark"), lineColor);
-  routeLayers.push(
-    { id: ROUTE_HEAD_ID, type: "circle", source: "heads", layout: o.pathsVisible === false ? { visibility: "none" } : {}, paint: { "circle-color": sparkColor, "circle-opacity": 1, "circle-radius": SPARK_RADIUS.faint * cell, "circle-pitch-alignment": "map" } } as LayerSpecification,
-    { id: ROUTE_HEAD_FOCUS_ID, type: "circle", source: "heads", filter: headFocusFilter(focusKeys) as never, layout: o.pathsVisible === false ? { visibility: "none" } : {}, paint: { "circle-color": sparkColor, "circle-opacity": 1, "circle-radius": SPARK_RADIUS.lit * cell, "circle-pitch-alignment": "map" } } as LayerSpecification,
-  );
+  if (!o.overlayDots) {
+    routeLayers.push(
+      { id: ROUTE_HEAD_ID, type: "circle", source: "heads", layout: o.pathsVisible === false ? { visibility: "none" } : {}, paint: { "circle-color": sparkColor, "circle-opacity": 1, "circle-radius": SPARK_RADIUS.faint * cell, "circle-pitch-alignment": "map" } } as LayerSpecification,
+      { id: ROUTE_HEAD_FOCUS_ID, type: "circle", source: "heads", filter: headFocusFilter(focusKeys) as never, layout: o.pathsVisible === false ? { visibility: "none" } : {}, paint: { "circle-color": sparkColor, "circle-opacity": 1, "circle-radius": SPARK_RADIUS.lit * cell, "circle-pitch-alignment": "map" } } as LayerSpecification,
+    );
+  }
 
   const sources: StyleSpecification["sources"] = {
     coast: { type: "geojson", data: o.coastlines as never },

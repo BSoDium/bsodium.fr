@@ -35,6 +35,19 @@ export const MODE_STYLE: Record<LegMode, ModeStyle> = {
   unknown: { id: 5, period: 7, on: 4, tick: false },
 };
 
+/**
+ * The patterns written CELL BY CELL on the street map (street/overlay/trail-dots.ts): whole cells along the path, so a dot is exactly one art pixel at
+ * every angle and zoom. Same periods as `MODE_STYLE` (the globe draws those in its own buffer); an `on` of 1 is a dot.
+ */
+export const CELL_PATTERN: Record<LegMode, { period: number; on: number; tick: boolean } | null> = {
+  road: null,
+  rail: { period: 6, on: 4, tick: true },
+  ferry: { period: 4, on: 1, tick: false },
+  flight: { period: 5, on: 1, tick: false },
+  walk: { period: 3, on: 1, tick: false },
+  unknown: { period: 7, on: 4, tick: false },
+};
+
 /** MapLibre `line-dasharray` (in line widths = cells for a 1-cell line) of a mode, or undefined when it is solid. */
 export function dashArray(mode: LegMode): [number, number] | undefined {
   const s = MODE_STYLE[mode];
