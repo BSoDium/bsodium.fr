@@ -209,6 +209,13 @@ export const BOX_STYLE = {
    * there is no pop: the picture changes by a cell at a time, and only where the size crosses a threshold.
    */
   open: { from: 1, to: 2 },
+  /**
+   * A LOPSIDED box (2026-10-20, owner: a very wide and short box, or a narrow and tall one, was drawn as a plain closed rectangle, because its short
+   * side sets the arms and how open it is): when the long side is at least this many times the short one, the two short sides are solid and the two
+   * long ones are dashed like the edges of a big box (arm and gap by the long side, fully open). The dashes say "not selected"; two edges that long
+   * are never corners.
+   */
+  lopsided: 3,
 } as const;
 
 /** How one box is dashed: arm length and gap, in cells. */
@@ -270,14 +277,19 @@ export function drawBox(buf: PixelBuffer, rect: CellRect, tones: LabelTones, sty
   if (style.fillAlpha > 0) buf.fillRect(rect.c0 + 1, rect.r0 + 1, w - 2, h - 2, tones.bg, style.fillAlpha);
   const solid = !!style.solid;
   const level = (style.active ? tones.active : tones.rest).box;
-  const dash = dashingFor(w, h, style.open ?? 1);
+  // A lopsided box: the short sides are solid, the long ones dashed as a big box's are (`BOX_STYLE.lopsided`); else the one look for all four.
+  const wide = w >= BOX_STYLE.lopsided * h && w >= 2 * BOX_STYLE.arm.min + 2 * BOX_STYLE.gap.min + BOX_STYLE.dashOn; // (an edge too short to hold two arms and a dash stays as it is)
+  const tall = h >= BOX_STYLE.lopsided * w && h >= 2 * BOX_STYLE.arm.min + 2 * BOX_STYLE.gap.min + BOX_STYLE.dashOn;
+  const dash = wide || tall ? dashingFor(Math.max(w, h), Math.max(w, h)) : dashingFor(w, h, style.open ?? 1);
+  const solidH = solid || tall; // the top and the bottom are the short sides of a tall box
+  const solidV = solid || wide;
   for (let i = 0; i < w; i++) {
-    if (edgeLit(i, w, solid, dash)) buf.set(rect.c0 + i, rect.r0, level, style.alpha); // top: anchored at its left corner
-    if (h > 1 && edgeLit(w - 1 - i, w, solid, dash)) buf.set(rect.c0 + i, rect.r1 - 1, level, style.alpha); // bottom: at its right corner
+    if (edgeLit(i, w, solidH, dash)) buf.set(rect.c0 + i, rect.r0, level, style.alpha); // top: anchored at its left corner
+    if (h > 1 && edgeLit(w - 1 - i, w, solidH, dash)) buf.set(rect.c0 + i, rect.r1 - 1, level, style.alpha); // bottom: at its right corner
   }
   for (let j = 1; j < h - 1; j++) {
-    if (edgeLit(j, h, solid, dash)) buf.set(rect.c0, rect.r0 + j, level, style.alpha); // left: at its top
-    if (w > 1 && edgeLit(h - 1 - j, h, solid, dash)) buf.set(rect.c1 - 1, rect.r0 + j, level, style.alpha); // right: at its bottom
+    if (edgeLit(j, h, solidV, dash)) buf.set(rect.c0, rect.r0 + j, level, style.alpha); // left: at its top
+    if (w > 1 && edgeLit(h - 1 - j, h, solidV, dash)) buf.set(rect.c1 - 1, rect.r0 + j, level, style.alpha); // right: at its bottom
   }
 }
 
