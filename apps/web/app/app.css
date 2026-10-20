@@ -3595,9 +3595,40 @@ h1[tabindex="-1"]:focus-visible {
     }
   }
 
+  /*
+   * A phone upright: the rows in two columns (still 44 px targets) so the block is shorter and the globe above it, with its ring and its caption,
+   * has the room to be read (docs/landing.md "Room for the globe": the planet and the ring are sized to what is left above the block). Five
+   * rows are three lines; the short tier below does the same with smaller type.
+   */
+  @media (max-width: 47.99rem) and (min-height: 36.01rem) {
+    .landing-hero {
+      --hero-fixed: 22rem;
+    }
+
+    .hero-list ul {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 1.25rem;
+    }
+
+    /* The search line's hairline is the rule above both of the first two. */
+    .hero-list li:nth-child(2) {
+      border-top: 0;
+    }
+
+    .hero-row {
+      font-size: 1.375rem;
+    }
+  }
+
   @media (max-width: 47.99rem) and (max-height: 36rem) {
     .landing-hero {
       --hero-fixed: 17rem;
+    }
+
+    /* Who the owner is stays of the introduction; what he works on goes: two lines more for the globe above the block. */
+    .hero-intro-more {
+      display: none;
     }
 
     .hero-list ul {

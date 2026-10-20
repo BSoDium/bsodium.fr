@@ -74,6 +74,7 @@ export interface HandoverOptions {
   /** The lines of the caption that wraps the planet (`GlobeProps.captionPhrases`), the cover and the showcase at start: handed to the globe unchanged. */
   captionPhrases?: import("../types").GlobeCaption;
   coverBottom?: number;
+  coverBlocks?: readonly import("../types").CoverBlock[];
   showcase?: boolean;
   /** Testing and tuning: street engine options (pinned source, timings ...). */
   streetOptions?: Record<string, unknown>;
@@ -134,7 +135,7 @@ export interface HandoverHandle {
   setReducedMotion(on: boolean): void;
   setInset(px: number): void;
   /** The app covers the bottom `px` of the globe (the landing hero at rest): the planet is lifted clear of it as far as there is room. */
-  setCover(px: number): void;
+  setCover(px: number, blocks?: readonly import("../types").CoverBlock[]): void;
   /** The home screen is at rest: boxes and labels out, the caption in. */
   setShowcase(on: boolean): void;
   /** The globe has the caption (the page has the showcase and the app gave it lines). */
@@ -231,6 +232,7 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     ringText: opts.ringText,
     captionPhrases: opts.captionPhrases,
     coverBottom: opts.coverBottom,
+    coverBlocks: opts.coverBlocks,
     showcase: opts.showcase,
     onSelect: opts.onSelect,
     onSelectGroup: (slug) => selectGroup(slug),
@@ -799,8 +801,8 @@ export function createHandover(opts: HandoverOptions): HandoverHandle {
     setInset(px) {
       globe.setInset(px);
     },
-    setCover(px) {
-      globe.setCover(px);
+    setCover(px, blocks) {
+      globe.setCover(px, blocks);
     },
     setShowcase(on) {
       globe.setShowcase(on);

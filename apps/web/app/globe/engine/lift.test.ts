@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { liftFor } from "./lift";
+import { CAPTION_BOTTOM_R, CAPTION_HALF_R, liftFor, placeAbove } from "./lift";
 import { LIFT } from "./tuning";
 
 describe("the lift: the planet's centre goes up so it clears what covers the bottom, as far as there is room", () => {
   // 1440 x 900, the planet 300 px in radius at the lowest zoom, the name covering the bottom 182 px.
   const base = { height: 900, planetPx: 300, reachTopPx: 330, cover: 182 };
 
-  it("is what makes the planet's lowest point clear the cover by `gapPx`", () => {
+  it("is what makes the lowest drawn point (the ring's, as far below the centre as its top is above) clear the cover by `gapPx`", () => {
     const lift = liftFor(base);
-    expect(lift).toBeCloseTo(450 + 300 + LIFT.gapPx - (900 - 182), 9);
-    expect(450 - lift + 300 + LIFT.gapPx).toBeCloseTo(900 - 182, 9);
+    expect(lift).toBeCloseTo(450 + 330 + LIFT.gapPx - (900 - 182), 9);
+    expect(450 - lift + 330 + LIFT.gapPx).toBeCloseTo(900 - 182, 9);
   });
 
   it("is 0 when nothing covers the planet: no cover, or a cover the planet already clears", () => {
@@ -45,5 +45,51 @@ describe("the lift: the planet's centre goes up so it clears what covers the bot
     const lift = liftFor(phone);
     expect(lift).toBeCloseTo(422 - 200 - LIFT.marginPx, 9);
     expect(422 - lift - 200).toBeGreaterThanOrEqual(LIFT.marginPx - 1e-9);
+  });
+});
+
+describe("placeAbove: the biggest planet whose caption clears the content, its lower part free to go under it", () => {
+  const reachTop = (r: number) => r * 1.15 + 30;
+  const args = { height: 1000, cx: 500, rMax: 380, reachTop };
+
+  it("keeps the planet as big as the room allows when nothing is under the caption's column", () => {
+    const p = placeAbove({ ...args, blocks: [{ x0: 0, x1: 60, top: 100 }, { x0: 940, x1: 1000, top: 100 }] })!;
+    expect(p.r).toBe(380);
+    expect(p.top).toBe(1000);
+  });
+
+  it("puts the caption's lowest line `gapPx` above the highest block under it, and lets the planet's bottom go under", () => {
+    const top = 620;
+    const p = placeAbove({ ...args, blocks: [{ x0: 200, x1: 800, top }] })!;
+    expect(p.top).toBe(top);
+    const centreY = 1000 / 2 - p.lift;
+    expect(centreY + CAPTION_BOTTOM_R * p.r).toBeLessThanOrEqual(top - LIFT.gapPx + 1e-6);
+    expect(centreY + p.r).toBeGreaterThan(top); // the planet itself goes under the block
+    expect(centreY - reachTop(p.r)).toBeGreaterThanOrEqual(LIFT.marginPx - 1e-6); // the ring's top stays in the window
+  });
+
+  it("is the largest such planet (one step bigger would not fit)", () => {
+    const blocks = [{ x0: 200, x1: 800, top: 560 }];
+    const p = placeAbove({ ...args, blocks })!;
+    expect(p.r).toBeLessThan(380);
+    const bigger = p.r + 2;
+    const highest = LIFT.marginPx + reachTop(bigger);
+    const lowest = Math.min(500, 560 - LIFT.gapPx - CAPTION_BOTTOM_R * bigger);
+    expect(highest).toBeGreaterThan(lowest);
+  });
+
+  it("a smaller planet has a narrower column: it may clear a block a larger one would stand over", () => {
+    // a block just outside the narrow column but inside the wide one
+    const blocks = [{ x0: 640, x1: 900, top: 200 }];
+    const p = placeAbove({ ...args, blocks })!;
+    expect(500 + CAPTION_HALF_R * p.r).toBeLessThanOrEqual(640 + 1e-6);
+  });
+
+  it("never lifts the planet above what its ring needs, and never lowers it below the page's middle", () => {
+    const p = placeAbove({ ...args, blocks: [] })!;
+    expect(p.lift).toBe(0);
+    const q = placeAbove({ ...args, blocks: [{ x0: 0, x1: 1000, top: 90 }] })!; // no room at all: the smallest planet, as high as it goes
+    expect(q.r).toBe(40);
+    expect(q.lift).toBeGreaterThan(0);
   });
 });

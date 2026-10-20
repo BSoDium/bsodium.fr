@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { GlobeShowcase, GlobeSignal, GlobeViewState } from "~/globe";
+import type { CoverBlock, GlobeShowcase, GlobeSignal, GlobeViewState } from "~/globe";
 import { createHeroMachine, HERO_IDLE_MS, isWorldView, showcaseOf, type HeroMachine } from "~/lib/hero-machine";
 
 /**
@@ -61,7 +61,7 @@ export interface LandingHero {
    */
   showcase: GlobeSignal<GlobeShowcase>;
   /** The hero reports the height it covers at the bottom of the globe's box, CSS px (measured by the hero; a change tells the globe). Stable. */
-  setCover(px: number): void;
+  setCover(px: number, blocks?: readonly CoverBlock[]): void;
 }
 
 /**
@@ -89,13 +89,15 @@ export function useLandingHero(open: boolean): LandingHero {
 
   // The showcase: a signal over the machine and the measured cover. The snapshot object is replaced only when a value changes.
   const cover = useRef(0);
+  const coverBlocks = useRef<readonly CoverBlock[] | undefined>(undefined);
   const coverListeners = useRef(new Set<() => void>());
   const showcase = useMemo<GlobeSignal<GlobeShowcase>>(() => {
     let snap: GlobeShowcase = { on: false, coverBottom: 0 };
     return {
       get() {
         const { on, coverBottom } = showcaseOf(machine.getSnapshot(), cover.current);
-        if (snap.on !== on || snap.coverBottom !== coverBottom) snap = { on, coverBottom };
+        const blocks = on ? coverBlocks.current : undefined;
+        if (snap.on !== on || snap.coverBottom !== coverBottom || snap.blocks !== blocks) snap = { on, coverBottom, ...(blocks ? { blocks } : {}) };
         return snap;
       },
       subscribe(listener) {
@@ -108,10 +110,14 @@ export function useLandingHero(open: boolean): LandingHero {
       },
     };
   }, [machine]);
-  const setCover = useCallback((px: number) => {
+  const setCover = useCallback((px: number, blocks?: readonly CoverBlock[]) => {
     const next = Math.max(0, Math.round(px));
-    if (next === cover.current) return;
+    const nextBlocks = blocks?.map((b) => ({ x0: Math.round(b.x0), x1: Math.round(b.x1), top: Math.round(b.top) }));
+    const prev = coverBlocks.current;
+    const same = (!nextBlocks && !prev) || (!!nextBlocks && !!prev && nextBlocks.length === prev.length && nextBlocks.every((b, i) => b.x0 === prev[i]!.x0 && b.x1 === prev[i]!.x1 && b.top === prev[i]!.top));
+    if (next === cover.current && same) return;
     cover.current = next;
+    if (!same) coverBlocks.current = nextBlocks;
     for (const l of [...coverListeners.current]) l();
   }, []);
 

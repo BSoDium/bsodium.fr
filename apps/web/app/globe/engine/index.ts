@@ -3,7 +3,7 @@
  * React component talks to; it is imported dynamically so that `three` stays in its own client chunk.
  */
 import type { Polylines } from "@catalyst/geodata";
-import { isFitView, type GlobeCaption, type GlobeInitialView, type GlobePlace, type GlobeProps, type GlobeRoute, type GlobeViewState } from "../types";
+import { isFitView, type CoverBlock, type GlobeCaption, type GlobeInitialView, type GlobePlace, type GlobeProps, type GlobeRoute, type GlobeViewState } from "../types";
 import { readTheme } from "./colors";
 import { BoxScene } from "./box-scene";
 import { placeFraming } from "./framing";
@@ -57,6 +57,7 @@ interface GlobeOptions {
   captionPhrases?: GlobeCaption;
   /** See `GlobeProps.coverBottom` and `GlobeProps.showcase`: read at creation. */
   coverBottom?: number;
+  coverBlocks?: readonly CoverBlock[];
   showcase?: boolean;
 }
 
@@ -207,7 +208,7 @@ export interface GlobeHandle {
   /** `GlobeProps.insetRight` changed. */
   setInset(px: number): void;
   /** `GlobeProps.coverBottom` changed. */
-  setCover(px: number): void;
+  setCover(px: number, blocks?: readonly CoverBlock[]): void;
   /** `GlobeProps.showcase` changed. */
   setShowcase(on: boolean): void;
   debug(): GlobeDebug;
@@ -282,6 +283,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
         ringText: opts.ringText,
         captionPhrases: opts.captionPhrases,
         coverBottom: opts.coverBottom,
+        coverBlocks: opts.coverBlocks,
         showcase: opts.showcase,
         onSelect: opts.onSelect,
         onSelectGroup: opts.onSelectGroup,
@@ -339,7 +341,7 @@ export function createGlobe(opts: GlobeOptions): GlobeHandle {
       labels.setReducedMotion(on);
     },
     setInset: (px) => renderer.setInset(px),
-    setCover: (px) => renderer.setCover(px),
+    setCover: (px, blocks) => renderer.setCover(px, blocks),
     setShowcase: (on) => renderer.setShowcase(on),
     debug: () => ({
       minZoom: () => renderer.getFitZoom(),
