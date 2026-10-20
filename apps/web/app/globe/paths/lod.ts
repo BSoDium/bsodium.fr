@@ -41,3 +41,15 @@ export function fadeLevel(lengthCells: number, finalLevel: number): number {
   const t = (lengthCells - FADE_FROM_CELLS) / (FADE_FULL_CELLS - FADE_FROM_CELLS);
   return rampLevel(Math.min(1, t), finalLevel);
 }
+
+/**
+ * How far away the view is, 0..1, for the paths' own tone: 1 on the whole globe, 0 from `FAR_TO` (internal zoom) on, in sixths (a timed value would
+ * be a fade; a step of the tone is what the art does). Far away every path is quieter, so the set of them does not read as a tangle; the legs of the
+ * selected place are not affected.
+ */
+export const FAR_FROM = 1.2;
+export const FAR_TO = 2.6;
+export function farOf(zoom: number): number {
+  const t = Math.min(1, Math.max(0, (zoom - FAR_FROM) / (FAR_TO - FAR_FROM)));
+  return Math.round((1 - t * t * (3 - 2 * t)) * 6) / 6;
+}

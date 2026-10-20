@@ -141,10 +141,8 @@
   --palette-violet-text: var(--palette-violet-700);
   --palette-violet-tint: #f1eaf5;
   /* Trail head colour (globe/paths/trail.ts: the faint legs' head): the swatch of a route. 600 in light, 300 in dark. */
-  --trail-blue: var(--palette-blue-600);
-  --trail-green: var(--palette-green-600);
-  --trail-ocre: var(--palette-ocre-600);
-  --trail-violet: var(--palette-violet-600);
+  --trail-from: var(--palette-blue-500);
+  --trail-to: var(--palette-violet-700);
 
   /* Radii: none. Square edges everywhere; the names stay so shadcn-style classes (`rounded-md`) resolve to 0. */
   --radius-sm: 0;
@@ -242,10 +240,8 @@
   --palette-ocre-tint: #211a09;
   --palette-violet-text: var(--palette-violet-500);
   --palette-violet-tint: #201526;
-  --trail-blue: var(--palette-blue-300);
-  --trail-green: var(--palette-green-300);
-  --trail-ocre: var(--palette-ocre-300);
-  --trail-violet: var(--palette-violet-300);
+  --trail-from: var(--palette-blue-500);
+  --trail-to: var(--palette-violet-400);
   }
 }
 
@@ -374,10 +370,8 @@
   --color-palette-violet-on: var(--palette-violet-on);
   --color-palette-violet-text: var(--palette-violet-text);
   --color-palette-violet-tint: var(--palette-violet-tint);
-  --color-trail-blue: var(--trail-blue);
-  --color-trail-green: var(--trail-green);
-  --color-trail-ocre: var(--trail-ocre);
-  --color-trail-violet: var(--trail-violet);
+  --color-trail-from: var(--trail-from);
+  --color-trail-to: var(--trail-to);
 }
 
 /*
@@ -437,10 +431,8 @@
   --palette-ocre-tint: #f1ede2;
   --palette-violet-text: var(--palette-violet-700);
   --palette-violet-tint: #f1eaf5;
-  --trail-blue: var(--palette-blue-600);
-  --trail-green: var(--palette-green-600);
-  --trail-ocre: var(--palette-ocre-600);
-  --trail-violet: var(--palette-violet-600);
+  --trail-from: var(--palette-blue-500);
+  --trail-to: var(--palette-violet-700);
 }
 
 :root[data-scheme="dark"],
@@ -494,10 +486,8 @@
   --palette-ocre-tint: #211a09;
   --palette-violet-text: var(--palette-violet-500);
   --palette-violet-tint: #201526;
-  --trail-blue: var(--palette-blue-300);
-  --trail-green: var(--palette-green-300);
-  --trail-ocre: var(--palette-ocre-300);
-  --trail-violet: var(--palette-violet-300);
+  --trail-from: var(--palette-blue-500);
+  --trail-to: var(--palette-violet-400);
 }
 
 /*

@@ -12,11 +12,11 @@ import {
 } from "three";
 import type { GlobeRoute } from "../types";
 import type { GlobeTheme } from "./colors";
-import { clamp, easeInOutCubic } from "./geo";
+import { clamp, easeInOutCubic, radiusPxToZoom } from "./geo";
 import { pathMaterial } from "./materials";
 import { coastLevel } from "./palette";
 import { TUNING } from "./tuning";
-import { FADE_FROM_CELLS, FADE_FULL_CELLS, levelFor, metresPerCell } from "../paths/lod";
+import { FADE_FROM_CELLS, FADE_FULL_CELLS, farOf, levelFor, metresPerCell } from "../paths/lod";
 import { buildBuffers, buildNetwork, legsAt, type PathBuffers, type PathNetwork } from "../paths/network";
 
 /** Marching speed of the dashes of a leg while it draws on, in px per second. */
@@ -231,6 +231,7 @@ export class RouteLayer {
     this.cssPerCell = cssPerCell;
     this.mPerCell = metresPerCell(radiusPx, cssPerCell);
     this.material.uniforms.uCell!.value = cssPerCell / radiusPx;
+    this.material.uniforms.uFar!.value = farOf(radiusPxToZoom(radiusPx));
     const level = levelFor(this.mPerCell, this.level);
     if (level !== this.level) this.applyLevel(level);
   }

@@ -40,6 +40,7 @@ import { createTileNetwork } from "./net/tile-protocols";
 import { probeSource, type ProbeConfig, type ProbeOutcome } from "./net/probe";
 import { HudLayer } from "./overlay/hud-layer";
 import { LayerSwitch, switchRules, type SwitchView } from "./style/layer-switch";
+import { TrailDotsLayer, dotLegs } from "./overlay/trail-dots-layer";
 import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, applyDashScale, buildStreetStyle, dashStepOf, focusFilter, graticule, headFocusFilter, ROUTE_HEAD_FOCUS_ID, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
 import { STREET_TUNING } from "./tuning";
 import type { AnimateOptions, FlyOptions, RevealOptions, StreetDebug, StreetMap, StreetMapOptions, StreetView } from "./types";
@@ -184,6 +185,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
   // Every leg of every route is one source, built once; the selected place's legs are the keys the focus layers filter on (`setFilter`).
   const legs = legFeatures(opts.routes);
   const heads = legHeads(opts.routes);
+  let trailDotsRef: TrailDotsLayer | null = null;
   const placeBySlug = (slug: string | null) => (slug ? opts.places.find((p) => p.slug === slug) : undefined);
   let focusKeys = legKeysAt(opts.routes, placeBySlug(opts.selectedSlug));
   let pathsOn = opts.paths !== false;
@@ -194,8 +196,10 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
       }
     }
     if (map.getLayer(ROUTE_HEAD_FOCUS_ID)) map.setFilter(ROUTE_HEAD_FOCUS_ID, headFocusFilter(focusKeys));
+    trailDotsRef?.setFocus(focusKeys);
   };
   const applyPathsVisible = () => {
+    trailDotsRef?.setVisible(pathsOn);
     for (const id of ROUTE_LAYER_IDS) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", pathsOn ? "visible" : "none");
   };
   // The places at the far ends of the lit legs are drawn at any zoom (a lit leg would otherwise run between missing markers).
@@ -276,6 +280,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
       heads,
       focusKeys,
       pathsVisible: pathsOn,
+      overlayDots: true,
       projection: opts.projection ?? "globe",
       cellCss: mapCell(),
       visible: layerSwitch.visibleIds(),
@@ -419,6 +424,12 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
   applyTones(theme);
   const hud = new HudLayer(hudRoot, lod, reduced, opts.embedded ? "globe" : "hud");
   hud.setTheme(theme);
+  const trailDots = new TrailDotsLayer(hudRoot);
+  trailDotsRef = trailDots;
+  trailDots.setLegs(dotLegs(legs));
+  trailDots.setTrail(theme.trail);
+  trailDots.setFocus(focusKeys);
+  trailDots.setVisible(pathsOn);
   perfEnd("street.create.hud", tHud);
   const tRest = perfStart();
   hud.driveGlides(true); // a label's glide is a DOM transform: it must not repaint the map
@@ -549,6 +560,10 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     // container's own space with the projection centre the map uses; the free area is the box minus the inset the host passed.
     setLodCamera(lodCam, registerMapToGlobe(v), { width: w, height: h, centreX: (w - pad()) / 2 }, w - clampInset(inset, w), cellCss);
     hud.update({ width: w, height: h, cellCss, cam: lodCam });
+    // The camera's signature includes where the centre lands on screen: closing the panel changes the map's padding (the inset), which moves every
+    // projected point without changing the centre's lon, lat or zoom.
+    const at = map.project(map.getCenter());
+    trailDots.draw((p) => map.project(p), w, h, cellCss, map.getZoom(), `${v.lon.toFixed(6)},${v.lat.toFixed(6)},${v.zoom.toFixed(5)},${at.x.toFixed(2)},${at.y.toFixed(2)}`);
     // The boxes fade by time, not by camera: the map keeps repainting (and so this runs again) until the last transition has ended. The labels'
     // glides are not in this: they are DOM transforms the labels' own frames run (hud.driveGlides), the map has nothing to redraw for them.
     if (hud.boxesAnimating) map.triggerRepaint();
@@ -670,6 +685,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     theme = readTheme(root);
     applyTones(theme);
     hud.setTheme(theme);
+    trailDots.setTrail(theme.trail);
     if (!compositor.repool()) map.triggerRepaint();
   };
   scheme.addEventListener("change", onScheme);

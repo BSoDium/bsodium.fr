@@ -1,20 +1,20 @@
 /**
- * The colour of the paths: PLANE TRAILS (docs/paths.md, "Trails"). Every leg is a trail that runs from its origin (the tail, pale and
- * cool) to its destination (the head, saturated), in the colour of its ROUTE: route number `i` takes palette `i mod 4`, in the order
- * blue, green, ocre, violet (the four hues of docs/design-tokens.md "Palettes"), so the neighbours in the list differ.
+ * The colour of the paths: PLANE TRAILS (docs/paths.md, "Trails"). Every leg is a trail that runs from its origin (the tail) to its
+ * destination (the head) along ONE gradient shared by all routes: a saturated blue at the tail that turns into a darker, more saturated
+ * violet at the head (in the dark scheme, a lighter violet). One gradient, not a colour per trip: the map reads as one set of paths.
  *
  * One table for both renderers, pure (no WebGL, no DOM): the globe's shader and the street map's pixel pass read the SAME list of solid
  * colours (`trailColors`), so a trail looks the same on both sides of the hand-over (the pass matches the globe's pixels to the nearest
  * entry of its palette, so the entries must be the colours the globe draws, and they are).
  *
- * Per palette and theme there are `TRAIL_BANDS` bands from the tail to the head (a mix of two solid palette steps, quantised: a pixel-art
- * gradient, no smooth ramp), then the LIT head colour (the selected place's legs: the full strength along the whole length) and the SPARK
- * (the bright dot at the head). Steps, light scheme / dark scheme:
+ * There are `TRAIL_BANDS` bands from the tail to the head (a mix of the blue and the violet, quantised: a pixel-art gradient, no smooth
+ * ramp), then the LIT head colour (the selected place's legs: the full strength along the whole length) and the SPARK (the bright dot at
+ * the head). Steps of the ladders (docs/design-tokens.md "Palettes"), light scheme / dark scheme:
  *
- *   tail  400 / 700    pale on the light page, dark on the dark page: the trail fades into the ground at its origin
- *   head  600 / 300    the faint legs' head; 3:1 or more against the page in both schemes (asserted in trail.test.ts)
- *   lit   700 / 200    the whole length of a selected leg
- *   spark 900 / 50     the dot at the head: the extreme of the ladder on the side that contrasts with the page
+ *   tail  blue 500 / blue 500       the saturated blue the trail starts in
+ *   head  violet 700 / violet 400   the faint legs' head; 3:1 or more against the page in both schemes (asserted in trail.test.ts)
+ *   lit   violet 800 / violet 200   the whole length of a selected leg
+ *   spark violet 900 / violet 50    the dot at the head: the extreme of the ladder on the side that contrasts with the page
  *
  * Colour is never the only carrier: the mode keeps its pattern (road solid, rail dashed with ticks, ferry and flight dotted, ...) and the
  * Journeys list says the same in words.
@@ -22,7 +22,6 @@
 // (No import from lib/: nothing under globe/ reaches the rest of the app, globe/layering.test.ts. lib/palette.ts has the maths for the tests.)
 type PaletteName = "blue" | "green" | "ocre" | "violet";
 type PaletteStep = 50 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;
-const PALETTE_NAMES = ["blue", "green", "ocre", "violet"] as const satisfies readonly PaletteName[];
 const hexToRgb = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 /** A solid mix in sRGB: `share` of `a`, the rest `b` (as `color-mix(in srgb)` does). */
 const mixHex = (a: string, b: string, share: number): string => {
@@ -41,12 +40,12 @@ export const PALETTE_HEX: Record<PaletteName, Partial<Record<PaletteStep, string
   violet: { 50: "#faf4ff", 100: "#f6e9ff", 200: "#eed4ff", 300: "#e2b7fd", 400: "#cd94ef", 500: "#b769e2", 600: "#9651bc", 700: "#8346a4", 800: "#673682", 900: "#4b285f" },
 };
 
-/** The palettes in the order routes take them. */
-export const TRAIL_PALETTES = PALETTE_NAMES;
+/** The one trail palette (kept as a list: the renderers index their colour table by palette). */
+export const TRAIL_PALETTES = ["trail"] as const;
 export const PALETTE_COUNT = TRAIL_PALETTES.length;
 
-/** The palette of the route at position `order` in the published routes: blue, green, ocre, violet, then again. */
-export const paletteOf = (order: number): number => ((Math.trunc(order) % PALETTE_COUNT) + PALETTE_COUNT) % PALETTE_COUNT;
+/** Every route takes the one palette. */
+export const paletteOf = (_order: number): number => 0;
 
 /** Bands from tail to head. */
 export const TRAIL_BANDS = 5;
@@ -56,18 +55,20 @@ export const TRAIL_PER_PALETTE = TRAIL_BANDS + 2;
 export const TRAIL_ENTRIES = PALETTE_COUNT * TRAIL_PER_PALETTE;
 
 export type TrailScheme = "light" | "dark";
+/** A step of one hue's ladder. */
+export type TrailStep = readonly [PaletteName, PaletteStep];
 export interface TrailSteps {
-  tail: PaletteStep;
-  head: PaletteStep;
-  lit: PaletteStep;
-  spark: PaletteStep;
+  tail: TrailStep;
+  head: TrailStep;
+  lit: TrailStep;
+  spark: TrailStep;
 }
 export const TRAIL_STEPS: Record<TrailScheme, TrailSteps> = {
-  light: { tail: 400, head: 600, lit: 700, spark: 900 },
-  dark: { tail: 700, head: 300, lit: 200, spark: 50 },
+  light: { tail: ["blue", 500], head: ["violet", 700], lit: ["violet", 800], spark: ["violet", 900] },
+  dark: { tail: ["blue", 500], head: ["violet", 400], lit: ["violet", 200], spark: ["violet", 50] },
 };
 
-const hex = (palette: number, step: PaletteStep): string => PALETTE_HEX[TRAIL_PALETTES[palette]!][step]!;
+const hexOf = ([name, step]: TrailStep): string => PALETTE_HEX[name][step]!;
 const rgb = (h: string): TrailRgb => {
   const [r, g, b] = hexToRgb(h);
   return [r / 255, g / 255, b / 255];
@@ -80,14 +81,12 @@ export const trailIndex = (palette: number, band: number | "lit" | "spark"): num
 /** The band of a position along the leg (0 = origin, 1 = destination): the tail's band is 0 and the head's TRAIL_BANDS - 1. */
 export const bandOf = (fraction: number): number => Math.max(0, Math.min(TRAIL_BANDS - 1, Math.floor(fraction * TRAIL_BANDS)));
 
-/** The hex colours of the list for a scheme (see `trailIndex`). */
+/** The hex colours of the list for a scheme (see `trailIndex`): the bands from the tail's blue to the head's violet, the lit head, the spark. */
 export function trailHex(scheme: TrailScheme): string[] {
   const s = TRAIL_STEPS[scheme];
   const out: string[] = [];
-  for (let p = 0; p < PALETTE_COUNT; p++) {
-    for (let b = 0; b < TRAIL_BANDS; b++) out.push(mixHex(hex(p, s.head), hex(p, s.tail), b / (TRAIL_BANDS - 1)));
-    out.push(hex(p, s.lit), hex(p, s.spark));
-  }
+  for (let b = 0; b < TRAIL_BANDS; b++) out.push(mixHex(hexOf(s.head), hexOf(s.tail), b / (TRAIL_BANDS - 1)));
+  out.push(hexOf(s.lit), hexOf(s.spark));
   return out;
 }
 

@@ -263,7 +263,7 @@ Tailwind: `bg-palette-green`, `text-palette-green-text`, `bg-palette-green-tint`
 | green / violet | 48.6 | 48.0 | 41.5 | 44.4 |
 | ocre / violet | 55.7 | 53.5 | 52.1 | **14.8** |
 
-**Path trails** use the ladder too (the tail, head, lit and spark steps per scheme, the contrast table and the by-route assignment are in [paths.md](paths.md), "Trails"); `--trail-<hue>` is the route swatch (600 in light, 300 in dark).
+**Path trails** use the ladder too (the tail, head, lit and spark steps per scheme, the contrast table and the by-route assignment are in [paths.md](paths.md), "Trails"); `--trail-from` / `--trail-to` are the gradient's two ends (blue 500 to violet 700 in light, to violet 400 in dark).
 
 The weak pairs are blue / violet (red-green deficiencies fold a blue and a purple together) and green / ocre (they fold both to a yellowish olive); blue / green is weak only under the rare tritanopia. Pairing rules: (1) hue is never the only carrier: a mark, a chart series or a tag set in a palette also has a shape, a position, a label or a word; (2) when blue and violet, or green and ocre, appear together in one graphic, separate them on the ladder by 300 or more of the step number as well (blue 700 with violet 400: 28 / 20 under deuteranopia / protanopia; green 700 with ocre 300: 33 / 28), not 600 against 600; (3) blue with ocre and green or ocre with violet are the safe adjacent pairs; (4) do not put more than two palettes in one small graphic. The test pins rules 1 and 2 (the 600/600 weakness and the repair).
 

@@ -88,6 +88,7 @@ export function pathMaterial(): ShaderMaterial {
       uLift: { value: 1 },
       uState: { value: null },
       uTexSize: { value: [1, 1] },
+      uFar: { value: 0 },
       uFadeFrom: { value: 2 },
       uFadeFull: { value: 14 },
     },
@@ -124,7 +125,7 @@ export function pathMaterial(): ShaderMaterial {
         gl_Position = c;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uTrail[${TRAIL_ENTRIES}]; uniform vec3 uPage; uniform float uFinal; uniform float uPresence; uniform float uFront; uniform float uMarch; uniform float uCell;
+      uniform vec3 uTrail[${TRAIL_ENTRIES}]; uniform vec3 uPage; uniform float uFinal; uniform float uPresence; uniform float uFront; uniform float uMarch; uniform float uCell; uniform float uFar;
       varying float vDist; varying float vLen; varying float vMode; varying float vState; varying float vCopy; varying float vFade; varying float vPal;
       varying vec3 vPos;
       // True when the occluder sphere lies between the camera and p.
@@ -155,7 +156,8 @@ export function pathMaterial(): ShaderMaterial {
         float sparkLine = inked ? ${f(SPARK.lit.line)} : ${f(SPARK.faint.line)};
         float crossFrom = inked ? ${f(SPARK.lit.crossFrom)} : ${f(SPARK.faint.crossFrom)};
         float crossTo = inked ? ${f(SPARK.lit.crossTo)} : ${f(SPARK.faint.crossTo)};
-        bool sparkOn = vCopy < 0.5 ? (h >= 0.0 && h < sparkLine) : (h >= crossFrom && h < crossTo);
+        bool sparkOn = false; // the sparks are not drawn from space: the street map has them, up close
+        if (false) sparkOn = vCopy < 0.5 ? (h >= 0.0 && h < sparkLine) : (h >= crossFrom && h < crossTo);
         bool tick = false;
         if (period > 0.5) {
           float u = mod(cells, period);
@@ -173,7 +175,8 @@ export function pathMaterial(): ShaderMaterial {
         // the overlay's presence (boxes and labels share it): a solid mix toward the page in the fade's own levels; nothing at 0
         float pk = ceil(uPresence * uFinal - 1.0e-4) / uFinal;
         if (pk < 0.01) discard;
-        col = mix(uPage, col, (inked ? 1.0 : vFade) * pk);
+        // from far away the paths are quieter (a solid mix toward the page, not an opacity); the selected place's legs keep their strength
+        col = mix(uPage, col, (inked ? 1.0 : vFade * (1.0 - 0.55 * uFar)) * pk);
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
