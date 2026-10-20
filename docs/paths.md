@@ -26,7 +26,7 @@ One GeoJSON source `routes` with a feature per leg (`key` = `routeId:legIndex`, 
 
 The owner's reference: a handheld ADS-B radar, a short red-orange-to-white trail behind each aircraft. Every leg is a trail from its ORIGIN (the tail: pale and cool) to its DESTINATION (the head: saturated and bright, with a small spark), in the colour of its route. Code: `globe/paths/trail.ts` (pure, one table for both renderers), `engine/materials.ts` (`pathMaterial`), `street/style/street-style.ts` (`gradientOf`, `byPalette`), tests `lib/trail.test.ts`.
 
-**Palette by route.** The route at position `i` of the published routes takes palette `i mod 4` in the order blue, green, ocre, violet (the four hues of [design-tokens.md](design-tokens.md#palettes)), so neighbours in the list differ. It is a function of the order only (ids, titles, geography play no part), carried as `GlobeRoute.palette` (`resolveRoutes` sets it from the position in `projection.routes`, so a dropped route does not shift the others) and, in the vertex, as `aInfo.w`. The Journeys list uses the same index for its swatch. The demo fixture has four routes, so it shows all four.
+**One gradient.** Every route takes the same trail gradient (owner feedback, 2026-10-20: not a colour per trip): a saturated blue tail (`blue-500`) turning into a violet head (`violet-700` in light, `violet-400` in dark), lit `violet-800` / `violet-200`, spark `violet-900` / `violet-50`; five solid bands between the two ends (`globe/paths/trail.ts`). `--trail-from` / `--trail-to` are the two ends for the panel's trip cards and map.
 
 **Steps** (per scheme; the page colour decides the scheme):
 
@@ -99,3 +99,11 @@ Frame cost: `renderNow()` JS time p50 below the 0.1 ms timer resolution and p95 
 ## Not verified
 
 Safari; any phone GPU; the pixel pass on the street map beyond screenshots of the demo and the owner's preview data at a world-ish street zoom (the street checks in `scripts/street` were not run: they need tile servers); the street map's gradient at city zoom with many tiles (line-progress across tile boundaries was seen to be continuous on one 260 km leg only); colour-vision simulation is the doc's model, not a person.
+
+
+## Patterned legs on the street map, cell by cell; far away; sparks
+
+- **Cell by cell** (`street/overlay/trail-dots.ts`, `trail-dots-layer.ts`; owner feedback 2026-10-20: dotted legs flickered and read as artefacts). MapLibre drew dashes at device resolution and the pass thresholded them onto the art grid, so a dash 1.5 cells long was one cell or two or none depending on the angle and the offset. Every mode but road is now projected to cell space and walked in whole cells (`CELL_PATTERN` in `paths/modes.ts`: flight 1 on / 4 off, ferry 1 / 3, walk 1 / 2, rail 4 / 2 with a 3-cell tick, unknown 4 / 3), anchored to the leg's own length, on a canvas of the art cells under the boxes. A dot is exactly one art pixel at every angle and zoom. Roads keep the MapLibre gradient line.
+- **Far away.** The paths are quieter from space: a solid mix toward the page by `farOf(zoom)` (0.55 at the whole globe, none from internal zoom 2.6; sixths), the selected place's legs excepted. The globe's arcs keep their look.
+- **Sparks.** None from space (the globe draws none). On the street map a cell at each head (a plus when lit) from map zoom 9 (`SPARK_FROM_ZOOM`), inside the place's box.
+- **Dash length by zoom.** The one remaining MapLibre dashed layers (graticule, dashed road classes) get their arrays scaled by 2^-(zoom fraction) because MapLibre sizes dashes at `floor(zoom)` (`applyDashScale`).

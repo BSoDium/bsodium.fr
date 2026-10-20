@@ -185,6 +185,8 @@ Explicitly curated routes; stops are place slugs in travel order. Routes are nev
    "legs": [{ "mode": "rail", "polyline": "..." }, { "mode": "flight" }] }]
 ```
 
+Each route may also carry `summary` (a line or two about the trip, 1 to 400 characters) and `dates` (the same shape as a place's `dates`; months are enough). Both are additive in schema version 1 and optional; the place panel shows them on the trip's card.
+
 #### Route legs (`routes[].legs`, optional, additive in schema version 1)
 
 `legs` says how each leg of a route is travelled and, optionally, the path it follows. Absent: every leg is the geodesic arc between its two stops, as before. Where present it is positional: `legs[i]` is the leg between `stops[i]` and `stops[i + 1]`, so `legs.length === stops.length - 1`. No timestamps, durations or speeds ride along (order is the only time).
