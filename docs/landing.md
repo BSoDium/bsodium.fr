@@ -43,6 +43,21 @@ While the hero is `rest` at the world view (`showcaseOf(snapshot, cover)`: `stat
 - **Accessibility.** The caption is pixels in the globe's canvas (not in the accessibility tree, not selectable). The how-to line is visually hidden (not removed) while the caption is there; without scripts (`scripting: none`), without WebGL, with `?no-ring` and on the empty archive (`data-orbit="false"`) it shows as before.
 - **Off switches.** `?no-ring` (the ring AND the caption, the lowest zoom below the fit, the showcase): the page is the previous one, the boxes stay and the hint shows.
 
+## Room for the globe (phones and tablets, 2026-10-20)
+
+The caption (the 3D words) must never run over a line of the hero, and the globe should be as big as that allows. The hero reports the blocks of the home screen over the globe (`GlobeShowcase.blocks`: the name, the intro and search, the list; their span across the container and the y of their top, measured by `LandingHero`; the name from layout offsets, so its own travel never moves it). The globe works out its size and place itself (`engine/lift.ts` `placeAbove`, used by `GlobeRenderer.lowestFor`):
+
+- **The caption's lowest line sits `LIFT.gapPx` above the highest block under the column the words span** (`CAPTION_HALF_R`, 1.04 radii to each side of the centre; the lowest line is `CAPTION_BOTTOM_R`, 0.32 radii below the centre: measured on the page). The planet's own lower part may go under the content: it is a drawing that fades into the page behind the hero's scrim; only the words must be readable.
+- **That is the minimum; more room is used.** The planet may be as big as its whole ring fits the window (`ringRoomRadius`, no longer capped half a level under the whole-globe fit), and between the highest and the lowest place it can take, the globe sits in the MIDDLE of the free room: the space above its ring equal to the space between its bottom and what stands under it (the whole planet clear of the content when there is room for that).
+- **The biggest planet that does it**: searched from the largest the window allows downward, since a smaller planet has a narrower column and can clear a block a larger one would stand over (a wide window keeps its big planet between the text at its sides; on a tablet the list rises into the column). The ring's top stays `LIFT.marginPx` inside the window, and the centre is as low as the middle of the page allows (never lower: the globe is not pushed down).
+- **The lowest zoom is that size** (`minZoom`), the lift is the centre's rise, and a view resting at the old floor follows it when the blocks change.
+- **The ring (flat type round the planet) is cut where the content begins** (`RingLayer.setCut`: a mask from the highest block's top under its column), so no ring letter runs over the text; the planet and the caption are not cut.
+- **No letters that would be cut**: when the planet at that zoom is under 60 px of radius (`MIN_TEXT_PLANET_PX`), neither ring nor caption is drawn (their letters have a smallest size); the planet is still there.
+- A phone upright holds the rows in two columns (five rows are three lines), and a short one drops the second sentence of the intro, so the globe has more of the page.
+- A page that gives no blocks (only `coverBottom`) keeps the earlier lift (`liftFor`: the planet and its ring clear of one cover height).
+
+Checked in the browser pane at 375 x 812, 320 x 568, 812 x 375, 850 x 1043, 768 x 1024 and 2000 x 1158. Not checked: a real phone, Safari, a tablet on its side.
+
 ## States
 
 | State | When | What shows |

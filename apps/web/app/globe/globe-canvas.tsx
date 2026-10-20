@@ -209,6 +209,7 @@ export default function GlobeCanvas({
           ringText: ringText(now.ringPhrases ?? []), // the line of the ring of type, from the identity the app hands in (the words, capitals and closing seam are the engine's)
           captionPhrases: now.captionPhrases,
           coverBottom: now.showcase?.get().coverBottom ?? 0,
+          coverBlocks: now.showcase?.get().blocks,
           showcase: now.showcase?.get().on ?? false,
           onNotice: setNotice,
           onSelect: (slug) => latest.current.onSelect(slug),
@@ -268,7 +269,7 @@ export default function GlobeCanvas({
     if (!showcase || status !== "ready") return;
     const apply = () => {
       const v = showcase.get();
-      handleRef.current?.setCover(v.coverBottom);
+      handleRef.current?.setCover(v.coverBottom, v.blocks);
       handleRef.current?.setShowcase(v.on);
     };
     apply();

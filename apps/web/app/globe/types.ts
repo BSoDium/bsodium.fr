@@ -163,6 +163,15 @@ export interface GlobeAttributionProps {
 export interface GlobeShowcase {
   on: boolean;
   coverBottom: number;
+  /** What the home screen's text and links occupy, in the globe's container (CSS px): the globe is sized and placed so its caption stays above them. */
+  blocks?: readonly CoverBlock[];
+}
+
+/** A block of the home screen over the globe: where it is across the container (`x0` to `x1`) and the y of its top edge, CSS px from the container's top. */
+export interface CoverBlock {
+  x0: number;
+  x1: number;
+  top: number;
 }
 
 /** A value that changes over time and is read by subscription (the shape of a `useSyncExternalStore` source): the globe follows it without a render. */
