@@ -16,8 +16,9 @@ import { clamp, easeInOutCubic, radiusPxToZoom } from "./geo";
 import { pathMaterial } from "./materials";
 import { coastLevel } from "./palette";
 import { TUNING } from "./tuning";
-import { FADE_FROM_CELLS, FADE_FULL_CELLS, farOf, levelFor, metresPerCell } from "../paths/lod";
+import { FADE_FROM_CELLS, FADE_FULL_CELLS, farOf, TICK_FROM, levelFor, metresPerCell } from "../paths/lod";
 import { buildBuffers, buildNetwork, legsAt, type PathBuffers, type PathNetwork } from "../paths/network";
+import { legKey, thinLegs, thinZoomOf, type ThinLeg } from "../paths/thin";
 
 /** Marching speed of the dashes of a leg while it draws on, in px per second. */
 const MARCH_PX_PER_S = 30;
@@ -27,6 +28,8 @@ const STATE_ROW = 1024;
 const STATE_NONE = 0;
 const STATE_FWD = 128;
 const STATE_REV = 255;
+/** A leg thinned away at this zoom (`paths/thin.ts`): the vertex shader clips it (a value between `none` and the lit states). */
+const STATE_HIDDEN = 26;
 
 export interface PathStats {
   legs: number;
@@ -63,6 +66,11 @@ export class RouteLayer {
   private stateData = new Uint8Array(0);
   private level: number | null = null;
   private lit = new Set<number>();
+  /** Legs thinned away at this zoom, the keys that stay (null: all) and what they were worked out for. */
+  private hidden = new Set<number>();
+  private kept: ReadonlySet<string> | null = null;
+  private thinList: ThinLeg[] | null = null;
+  private thinSig = "";
   private litRoutes = new Set<string>();
   /** performance.now() at which the draw-on began, or null when the legs are complete. */
   private drawStart: number | null = null;
@@ -152,11 +160,49 @@ export class RouteLayer {
         this.litRoutes.add(this.network.legs[leg]!.routeId);
       }
     }
+    this.applyHidden();
+    this.thinSig = ""; // the selected place's legs are never thinned: the next frame works it out again
     this.state.needsUpdate = true;
     const animating = animate && this.lit.size > 0;
     this.drawStart = animating ? now : null;
     this.setFront(animating ? 0 : 2, 0);
     this.updateVisible();
+  }
+
+  /** The legs thinned away, as the state of their texel (the lit ones are never hidden). */
+  private applyHidden() {
+    for (const leg of this.hidden) if (!this.lit.has(leg)) this.stateData[leg] = STATE_HIDDEN;
+  }
+
+  /**
+   * Thin the paths for the view (`paths/thin.ts`): `zoom` is the Web Mercator zoom that gives the centre's scale (the unified zoom less log2 of the
+   * latitude's secant) and `cssPerCell` the art pixel. Cheap when the zoom has not moved by a quarter step or the selection has not changed.
+   * Returns the keys of the legs that stay (null: all of them), for the pictures of the modes.
+   */
+  setThinning(zoom: number, cssPerCell: number): ReadonlySet<string> | null {
+    if (!this.state || this.network.legs.length === 0) return null;
+    const z = thinZoomOf(zoom);
+    const sig = `${z}|${cssPerCell}`;
+    if (sig === this.thinSig) return this.kept;
+    this.thinSig = sig;
+    if (!this.thinList) {
+      this.thinList = this.network.legs.map((leg) => {
+        // a coarse level is plenty to tell which legs share a corridor
+        const lvl = leg.levels[Math.min(2, leg.levels.length - 1)] ?? leg.levels[0]!;
+        const pts: Array<readonly [number, number]> = [];
+        for (const i of lvl) pts.push([leg.lonlat[i * 2]!, leg.lonlat[i * 2 + 1]!]);
+        return { key: legKey(leg.routeId, leg.legIndex), parts: [pts] };
+      });
+    }
+    const list = this.thinList.map((l, i) => (this.lit.has(i) ? { ...l, lit: true } : l));
+    const kept = thinLegs(list, z, cssPerCell);
+    this.kept = kept;
+    for (const leg of this.hidden) if (!this.lit.has(leg)) this.stateData[leg] = STATE_NONE;
+    this.hidden.clear();
+    if (kept) this.thinList.forEach((l, i) => { if (!kept.has(l.key) && !this.lit.has(i)) this.hidden.add(i); });
+    this.applyHidden();
+    this.state.needsUpdate = true;
+    return kept;
   }
 
   /** The "Paths" switch: off hides every path, on shows them (the selection is kept either way). */
@@ -184,6 +230,16 @@ export class RouteLayer {
 
   private updateVisible() {
     if (this.line) this.line.visible = this.enabled && this.presence > 0;
+  }
+
+  /** Whether the layer is drawn now (on, and the overlay is present). */
+  get visible(): boolean {
+    return this.enabled && this.presence > 0;
+  }
+
+  /** The keys (`paths/thin.ts` `legKey`) of the legs lit now. */
+  litKeys(): string[] {
+    return [...this.lit].map((i) => legKey(this.network.legs[i]!.routeId, this.network.legs[i]!.legIndex));
   }
 
   /** Ids of the routes with a leg lit now (measurement and tests). */
@@ -232,6 +288,7 @@ export class RouteLayer {
     this.mPerCell = metresPerCell(radiusPx, cssPerCell);
     this.material.uniforms.uCell!.value = cssPerCell / radiusPx;
     this.material.uniforms.uFar!.value = farOf(radiusPxToZoom(radiusPx));
+    this.material.uniforms.uTickOn!.value = radiusPxToZoom(radiusPx) >= TICK_FROM ? 1 : 0;
     const level = levelFor(this.mPerCell, this.level);
     if (level !== this.level) this.applyLevel(level);
   }

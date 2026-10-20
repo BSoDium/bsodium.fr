@@ -14,6 +14,8 @@
 import { ColorManagement, Color, PerspectiveCamera, Vector3, WebGLRenderer } from "three";
 import type { Polylines } from "@catalyst/geodata";
 import type { CoverBlock, GlobePlace, GlobeRoute } from "../types";
+import { TrailDotsLayer, dotLegs } from "../paths/trail-dots-layer";
+import { legFeatures } from "../paths/leg-features";
 import type { GlobeTheme } from "./colors";
 import { anchorZoom, unprojectOffset } from "./anchor";
 import { attachControls, type ControlsHost, type PointerKind } from "./controls";
@@ -53,6 +55,7 @@ import {
 import { snapBox } from "./group-square";
 import { IdleSpin, SPIN, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
 import { liftFor, placeAbove, type Placement } from "./lift";
+import { routeLift } from "./view";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
@@ -72,6 +75,8 @@ import { perfEnd, perfStart } from "./perf";
 ColorManagement.enabled = false;
 
 const MARKER_RADIUS = 1;
+/** The unified zoom from which the legs wear the picture of their mode on the globe (from far away they are lines in a tangle: a picture each would be worse). */
+const LEG_ICON_FROM_ZOOM = 2.6;
 /** The smallest planet radius (CSS px, at the lowest zoom) the ring's and the caption's letters are drawn for: their letters have a smallest size, under it they would be cut by the planet's edge. */
 const MIN_TEXT_PLANET_PX = 60;
 const easeInset = cubicBezier(...INSET_EASE);
@@ -162,6 +167,8 @@ export class GlobeRenderer {
   private fit = 1;
   /** The ring of type, when there is one (engine/ring-layer.ts: a flat circle of text round the disc, unchanged by the showcase). */
   private ring: RingLayer | null = null;
+  /** The pictures of the modes on the legs (street/overlay/trail-dots-layer.ts, lines off: the shader draws the lines): a canvas over the globe's, null without routes. */
+  private legIcons: TrailDotsLayer | null = null;
   /** The caption: lines wrapped on a sphere in the globe's own scene (engine/caption-layer.ts), when the showcase is on this page. */
   private caption: CaptionLayer | null = null;
   /**
@@ -284,6 +291,12 @@ export class GlobeRenderer {
 
     this.globe = new GlobeScene(opts);
     if (opts.ringText && RING_STATE.enabled) this.ring = new RingLayer(opts.container, opts.ringText, opts.theme, this.reduced);
+    if (opts.routes.length > 0) {
+      this.legIcons = new TrailDotsLayer(opts.container, { lines: false, iconFromZoom: LEG_ICON_FROM_ZOOM, onTop: true });
+      this.legIcons.setLegs(dotLegs(legFeatures(opts.routes)));
+      this.legIcons.setTrail(opts.theme.trail);
+      this.legIcons.setPage(opts.theme.background);
+    }
     this.showcaseActive = !!this.ring && SHOWCASE_STATE.enabled;
     this.cover = Math.max(0, opts.coverBottom ?? 0);
     this.blocks = opts.coverBlocks ?? [];
@@ -1550,6 +1563,7 @@ export class GlobeRenderer {
     this.syncCamera();
     this.syncNodes();
     this.syncRing();
+    this.syncLegIcons();
     perfEnd("three.sync", tp);
     // The whole buffer is drawn: a GL scissor limited to the free area saved nothing measurable (docs/web-architecture.md)
     // and left the area outside it stale, which the CSS edge-fade mask then revealed.
@@ -1589,6 +1603,43 @@ export class GlobeRenderer {
       width: this.width,
       height: this.height,
     });
+  }
+
+  /**
+   * The pictures of the modes go where the legs are, in the same frame: the middle of each leg that stays at this zoom and is long enough, lifted like
+   * its arc, not where the planet hides it. Cheap when the camera has not moved (the layer keys its drawing on the view).
+   */
+  private syncLegIcons() {
+    const icons = this.legIcons;
+    if (!icons) return;
+    const routes = this.globe.routes;
+    const shown = routes.visible;
+    icons.setVisible(shown);
+    if (!shown) return;
+    const P = this.pixel;
+    const cw = this.bufW * P;
+    const ch = this.bufH * P;
+    const v = this.drawView();
+    const basis = viewBasis(v, ch);
+    const cx = cw / 2 - this.shiftBuf * P;
+    const cy = ch / 2 - this.liftBuf * P;
+    const lift = routeLift(v.zoom);
+    icons.setKept(this.globe.kept);
+    icons.setOrigin(this.canvasLeft, this.canvasTop);
+    icons.setFocus(this.globe.routes.litKeys());
+    const camera = `${v.lon.toFixed(4)},${v.lat.toFixed(4)},${v.zoom.toFixed(4)},${this.shiftBuf},${this.liftBuf},${cw}x${ch},${lift.toFixed(3)},${routes.overlayPresence}`;
+    icons.draw(
+      (p, l) => {
+        const s = projectLonLat(p[0], p[1], basis, cw, ch, 1 + l, cx, cy);
+        return s.visible ? { x: s.x, y: s.y } : null;
+      },
+      cw,
+      ch,
+      P,
+      v.zoom,
+      camera,
+      lift,
+    );
   }
 
   /**
@@ -1857,7 +1908,7 @@ export class GlobeRenderer {
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
     const now = performance.now();
-    this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced);
+    this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced, v.lat);
     this.lastBasis = { d: b.d, lon: v.lon, lat: v.lat };
     this.caption?.sync(b.d, v.lon, v.lat, now);
     this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf, lift: this.liftBuf }, now, this.reduced);
@@ -1917,6 +1968,8 @@ export class GlobeRenderer {
     this.cleanups = [];
     this.ring?.dispose();
     this.ring = null;
+    this.legIcons?.canvas.remove();
+    this.legIcons = null;
     this.caption?.dispose();
     this.caption = null;
     this.globe.dispose();

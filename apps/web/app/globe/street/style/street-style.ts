@@ -52,7 +52,7 @@ export interface StreetStyleOptions {
   focusKeys?: readonly string[];
   /** The "Paths" layer switch: false starts every path layer hidden. */
   pathsVisible?: boolean;
-  /** The patterned legs (every mode but road) and the sparks are drawn cell by cell on the overlay (overlay/trail-dots.ts): no MapLibre layer for them. */
+  /** The patterned legs (every mode but road) and the sparks are drawn cell by cell on the overlay (paths/trail-dots.ts): no MapLibre layer for them. */
   overlayDots?: boolean;
   /** Zoom at which the world-scale coastline (110m, @catalyst/geodata) hands over to tile geometry. */
   handoffZoom?: number;
@@ -445,6 +445,20 @@ function dashedLayers(): Array<[string, readonly number[]]> {
 export function applyDashScale(map: MLMap, step: number): void {
   const k = dashScaleOf(step);
   for (const [id, base] of dashedLayers()) if (map.getLayer(id)) map.setPaintProperty(id, "line-dasharray", base.map((v) => v * k) as never);
+}
+
+/**
+ * Keep only these legs on the faint road layers (`paths/thin.ts`: the legs that stay at this zoom); null: all of them. The lit layers filter by the
+ * selected place's keys and are never thinned.
+ */
+export function applyKeptLegs(map: MLMap, keys: ReadonlySet<string> | null): void {
+  for (let p = 0; p < PALETTE_COUNT; p++) {
+    const id = routeGradientId(p);
+    if (!map.getLayer(id)) continue;
+    const base: unknown[] = ["all", ["==", ["get", "mode"], "road"], ["==", ["get", "pal"], p]];
+    if (keys) base.push(["in", ["get", "key"], ["literal", [...keys]]]);
+    map.setFilter(id, base as never);
+  }
 }
 
 /** `layout.visibility` of a switched layer: on or off as the switch says (a style built for tests has them all on). */

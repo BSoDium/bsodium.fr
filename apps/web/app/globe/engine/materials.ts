@@ -89,6 +89,7 @@ export function pathMaterial(): ShaderMaterial {
       uState: { value: null },
       uTexSize: { value: [1, 1] },
       uFar: { value: 0 },
+      uTickOn: { value: 1 },
       uFadeFrom: { value: 2 },
       uFadeFull: { value: 14 },
     },
@@ -109,8 +110,8 @@ export function pathMaterial(): ShaderMaterial {
         float level = fd <= 0.0 ? 0.0 : clamp(ceil(fd * uFinal), 1.0, uFinal);
         vFade = level / uFinal;
         vDist = aDist; vLen = aInfo.z; vMode = aInfo.y; vPal = aInfo.w; vState = st; vCopy = aCopy;
-        // a leg nothing shows is clipped away
-        if (level < 0.5 && st < 0.25) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+        // a leg nothing shows is clipped away, and so is one thinned away at this zoom (paths/thin.ts: the state between none and lit)
+        if ((level < 0.5 && st < 0.25) || (st > 0.05 && st < 0.2)) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
         // uLift scales the height above the surface: 1 = lifted arc, 0 = on the ground (street scale).
         vec3 p = normalize(position) * (1.0 + (length(position) - 1.0) * uLift);
         vPos = p;
@@ -125,7 +126,7 @@ export function pathMaterial(): ShaderMaterial {
         gl_Position = c;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uTrail[${TRAIL_ENTRIES}]; uniform vec3 uPage; uniform float uFinal; uniform float uPresence; uniform float uFront; uniform float uMarch; uniform float uCell; uniform float uFar;
+      uniform vec3 uTrail[${TRAIL_ENTRIES}]; uniform vec3 uPage; uniform float uFinal; uniform float uPresence; uniform float uFront; uniform float uMarch; uniform float uCell; uniform float uFar; uniform float uTickOn;
       varying float vDist; varying float vLen; varying float vMode; varying float vState; varying float vCopy; varying float vFade; varying float vPal;
       varying vec3 vPos;
       // True when the occluder sphere lies between the camera and p.
@@ -162,7 +163,7 @@ export function pathMaterial(): ShaderMaterial {
         if (period > 0.5) {
           float u = mod(cells, period);
           // the rail's tick: one cell across the line at the middle of each dash
-          if (vCopy > 0.5) tick = abs(vMode - 1.0) < 0.5 && u >= on * 0.5 - 0.5 && u < on * 0.5 + 0.5;
+          if (vCopy > 0.5) tick = uTickOn > 0.5 && abs(vMode - 1.0) < 0.5 && u >= on * 0.5 - 0.5 && u < on * 0.5 + 0.5;
           else if (u >= on && !sparkOn) discard;
         }
         if (vCopy > 0.5 && !tick && !sparkOn) discard;
