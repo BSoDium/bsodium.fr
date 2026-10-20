@@ -221,15 +221,30 @@ export function LandingHero({ machine, away, empty, orbit = null, onCover, hasCa
     if (!root || !name || !main || !onCover || typeof ResizeObserver === "undefined") return;
     const measure = () => {
       if (getComputedStyle(root).visibility === "hidden") return;
-      // The block's highest part: the name, or, where the text and the list stand beside or above it (a tablet: the list rises over the name's
-      // row), the first of those. The planet and its ring are lifted and sized to stay above all of it, so no text of the globe runs over a line of the hero.
-      const mainTop = main.getBoundingClientRect().top;
-      let top = root.offsetTop + name.offsetTop;
-      for (const el of root.querySelectorAll<HTMLElement>(".hero-lead, .hero-list")) {
-        const r = el.getBoundingClientRect();
-        if (r.height > 0) top = Math.min(top, r.top - mainTop);
-      }
-      const covered = main.clientHeight - top;
+      // What the planet and its ring must stay clear of. The name (it runs the width of the page) always counts; the intro, the search and the list
+      // count only where they stand under the planet: on a wide window they are at its sides and the planet may be as big as the room allows, on a
+      // tablet the list rises into its column and the planet is made smaller to stay above it. The planet's size and the cover depend on each other
+      // (a smaller planet leaves the sides), so the largest size that fits above what it then stands over is searched, from the most the window
+      // gives (the half of the smaller side, less the ring's margin: `RING.zoom.fitMargin`, 0.12) down; the cover reported is what makes the globe's
+      // own sizing (`ringFloorZoom`: the room above the cover, less the lift's air and margin, 28 px) come out at that size.
+      const mainBox = main.getBoundingClientRect();
+      const W = main.clientWidth;
+      const H = main.clientHeight;
+      const nameTop = root.offsetTop + name.offsetTop;
+      const parts = [...root.querySelectorAll<HTMLElement>(".hero-lead, .hero-list")]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.height > 0)
+        .map((r) => ({ x0: r.left - mainBox.left, x1: r.right - mainBox.left, top: r.top - mainBox.top }));
+      const AIR = 28;
+      const coverAt = (R: number) => {
+        let top = nameTop;
+        for (const p of parts) if (p.x1 > W / 2 - R && p.x0 < W / 2 + R) top = Math.min(top, p.top);
+        return H - top;
+      };
+      const R0 = (Math.min(W, H) / 2) * 0.88;
+      let R = R0;
+      while (R > 40 && R > (H - coverAt(R) - AIR) / 2) R -= 6;
+      const covered = Math.max(coverAt(R), H - AIR - 2 * R);
       if (covered > 0 && covered < main.clientHeight) onCover(covered);
     };
     measure();
