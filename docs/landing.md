@@ -43,6 +43,17 @@ While the hero is `rest` at the world view (`showcaseOf(snapshot, cover)`: `stat
 - **Accessibility.** The caption is pixels in the globe's canvas (not in the accessibility tree, not selectable). The how-to line is visually hidden (not removed) while the caption is there; without scripts (`scripting: none`), without WebGL, with `?no-ring` and on the empty archive (`data-orbit="false"`) it shows as before.
 - **Off switches.** `?no-ring` (the ring AND the caption, the lowest zoom below the fit, the showcase): the page is the previous one, the boxes stay and the hint shows.
 
+## Room for the globe (phones and tablets, 2026-10-20)
+
+The planet, its ring and the caption must never run over a line of the hero (owner feedback: on a phone and a tablet the orbiting text sat on the name and the list). Three rules:
+
+- **The cover is the block's highest part**, not only the name: `LandingHero` measures the first of the name, the intro and search (`.hero-lead`) and the list (`.hero-list`), so on a tablet, where the list rises over the name's row, the globe stays above the list.
+- **The lowest zoom fits above the cover** (`ringFloorZoom({ cover })`: the planet and the whole ring in what is left above the block, with the lift's air and margin, never under half a size of 40 px), and the lift clears the RING's bottom, not only the planet's (`liftFor`: `reach`). A view resting at the old floor follows it when the cover changes.
+- **No letters that would be cut**: when the planet at that zoom is under 60 px of radius (`MIN_TEXT_PLANET_PX`), the ring and the caption are not drawn (their letters have a smallest size and would be clipped by the planet's edge); the planet is still there.
+- A phone upright holds its rows in two columns (five rows are three lines), and a short one drops the second sentence of the intro, so the globe has more of the page.
+
+Checked in the browser pane at 375 x 812, 320 x 568, 812 x 375 and 768 x 1024. Not checked: a real phone, Safari, a tablet on its side.
+
 ## States
 
 | State | When | What shows |

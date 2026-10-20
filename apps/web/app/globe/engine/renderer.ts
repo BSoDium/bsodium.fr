@@ -71,6 +71,8 @@ import { perfEnd, perfStart } from "./perf";
 ColorManagement.enabled = false;
 
 const MARKER_RADIUS = 1;
+/** The smallest planet radius (CSS px, at the lowest zoom) the ring's and the caption's letters are drawn for: their letters have a smallest size, under it they would be cut by the planet's edge. */
+const MIN_TEXT_PLANET_PX = 60;
 const easeInset = cubicBezier(...INSET_EASE);
 
 export interface RendererOptions {
@@ -168,6 +170,8 @@ export class GlobeRenderer {
   private captionOn = false;
   private latSnap: { from: number; to: number; t0: number } | null = null;
   private showcaseActive = false;
+  /** The planet at the lowest zoom is big enough for the ring's and the caption's letters (they have a smallest size): when it is not, they are not drawn rather than cut. */
+  private textFits = true;
   /** A press began while the showcase was on: its tap is not a click on a box nobody could see (cleared a moment after the press ends). */
   private inertPress = false;
   /** CSS px of the container's bottom the app covers (the hero), the lift it asks for now, and the animated lift (see `setCover`). */
@@ -394,7 +398,8 @@ export class GlobeRenderer {
     const inset = clampInset(this.inset, w);
     this.shiftBuf = insetShiftBuf(inset, P);
     this.fit = fitZoom(freeWidth(w, inset), h, TUNING.fitMargin);
-    this.minZoom = this.ring ? Math.min(this.fit, ringFloorZoom({ fit: this.fit, freeWidth: freeWidth(w, inset), height: h })) : this.fit;
+    this.minZoom = this.ring ? Math.min(this.fit, ringFloorZoom({ fit: this.fit, freeWidth: freeWidth(w, inset), height: h, cover: this.showcaseActive ? this.cover : 0 })) : this.fit;
+    this.textFits = silhouetteRadiusPx(this.minZoom, h) >= MIN_TEXT_PLANET_PX;
     this.containerMask = fadeMask(w, inset);
     this.ring?.setMask(this.containerMask);
     this.layoutRing();
@@ -421,7 +426,7 @@ export class GlobeRenderer {
     this.ringLayoutKey = key;
     const free = freeWidth(w, clampInset(this.insetTarget, w));
     const fit = fitZoom(free, h, TUNING.fitMargin);
-    const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h }));
+    const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h, cover: this.showcaseActive ? this.cover : 0 }));
     this.ring.setLayout(silhouetteRadiusPx(floor, h));
     this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h), cameraDistance(floor, this.bufH * this.pixel));
   }
@@ -463,6 +468,12 @@ export class GlobeRenderer {
     if (next === this.cover) return;
     this.cover = next;
     this.noteChange();
+    if (this.sized && this.showcaseActive) {
+      // The lowest zoom keeps the planet and the ring above the cover (`ringFloorZoom`): a new cover moves it, and a view resting at it moves with it.
+      const atFloor = Math.abs(this.view.zoom - this.minZoom) < 1e-6;
+      this.applyInset();
+      this.view = { ...this.view, zoom: atFloor ? this.minZoom : clamp(this.view.zoom, this.minZoom, this.maxZoomAt(this.view.lat)) };
+    }
     this.retargetLift(true);
   }
 
@@ -1540,7 +1551,7 @@ export class GlobeRenderer {
    * without the showcase (a debug page, `?no-ring` has no ring at all) the ring is a function of the zoom alone, as it was.
    */
   private ringPresence(): number {
-    const a = ringAlpha(this.view.zoom, this.fit, this.minZoom);
+    const a = this.textFits ? ringAlpha(this.view.zoom, this.fit, this.minZoom) : 0;
     return this.showcaseActive ? a * (1 - this.lod.overlayAlpha) : a;
   }
 
@@ -1744,6 +1755,13 @@ export class GlobeRenderer {
   private guardCaption(now: number) {
     const caption = this.caption;
     if (!caption || !this.showcaseOn) return;
+    if (!this.textFits) {
+      if (this.captionOn) {
+        this.captionOn = false;
+        caption.hide(performance.now(), "fade");
+      }
+      return;
+    }
     const lat = this.view.lat;
     if (this.captionOn) {
       if (!inBand(lat, CAPTION.band.hysteresisDeg)) {

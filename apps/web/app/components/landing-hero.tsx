@@ -221,13 +221,22 @@ export function LandingHero({ machine, away, empty, orbit = null, onCover, hasCa
     if (!root || !name || !main || !onCover || typeof ResizeObserver === "undefined") return;
     const measure = () => {
       if (getComputedStyle(root).visibility === "hidden") return;
-      const covered = main.clientHeight - (root.offsetTop + name.offsetTop);
+      // The block's highest part: the name, or, where the text and the list stand beside or above it (a tablet: the list rises over the name's
+      // row), the first of those. The planet and its ring are lifted and sized to stay above all of it, so no text of the globe runs over a line of the hero.
+      const mainTop = main.getBoundingClientRect().top;
+      let top = root.offsetTop + name.offsetTop;
+      for (const el of root.querySelectorAll<HTMLElement>(".hero-lead, .hero-list")) {
+        const r = el.getBoundingClientRect();
+        if (r.height > 0) top = Math.min(top, r.top - mainTop);
+      }
+      const covered = main.clientHeight - top;
       if (covered > 0 && covered < main.clientHeight) onCover(covered);
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(root);
     ro.observe(name);
+    for (const el of root.querySelectorAll(".hero-lead, .hero-list")) ro.observe(el);
     ro.observe(main);
     return () => ro.disconnect();
   }, [onCover, Name]);

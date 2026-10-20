@@ -6,10 +6,10 @@ describe("the lift: the planet's centre goes up so it clears what covers the bot
   // 1440 x 900, the planet 300 px in radius at the lowest zoom, the name covering the bottom 182 px.
   const base = { height: 900, planetPx: 300, reachTopPx: 330, cover: 182 };
 
-  it("is what makes the planet's lowest point clear the cover by `gapPx`", () => {
+  it("is what makes the lowest drawn point (the ring's, as far below the centre as its top is above) clear the cover by `gapPx`", () => {
     const lift = liftFor(base);
-    expect(lift).toBeCloseTo(450 + 300 + LIFT.gapPx - (900 - 182), 9);
-    expect(450 - lift + 300 + LIFT.gapPx).toBeCloseTo(900 - 182, 9);
+    expect(lift).toBeCloseTo(450 + 330 + LIFT.gapPx - (900 - 182), 9);
+    expect(450 - lift + 330 + LIFT.gapPx).toBeCloseTo(900 - 182, 9);
   });
 
   it("is 0 when nothing covers the planet: no cover, or a cover the planet already clears", () => {
