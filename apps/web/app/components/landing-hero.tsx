@@ -130,7 +130,7 @@ interface LandingHeroProps {
    */
   orbit?: boolean | null;
   /** The height the name covers at the bottom of the page, CSS px, when it is measured and when it changes (the globe lifts the planet clear of it). */
-  onCover?: (px: number) => void;
+  onCover?: (px: number, blocks: { x0: number; x1: number; top: number }[]) => void;
   /** A place or an entry is open: the hero is not the page (its name is no heading then). */
   away: boolean;
   /** No place is published: the globe has nothing on it. */
@@ -221,13 +221,24 @@ export function LandingHero({ machine, away, empty, orbit = null, onCover, hasCa
     if (!root || !name || !main || !onCover || typeof ResizeObserver === "undefined") return;
     const measure = () => {
       if (getComputedStyle(root).visibility === "hidden") return;
-      const covered = main.clientHeight - (root.offsetTop + name.offsetTop);
-      if (covered > 0 && covered < main.clientHeight) onCover(covered);
+      // What the globe's caption must stay above: the name (laid out, so its own travel never changes it) and the intro and search and the list (where
+      // they are). The globe works out its own size and place from these blocks (`engine/lift.ts` `placeAbove`); `covered` is the height from the
+      // highest of them to the bottom, for a globe that takes only that.
+      const mainBox = main.getBoundingClientRect();
+      const nameX0 = root.offsetLeft + name.offsetLeft;
+      const blocks: { x0: number; x1: number; top: number }[] = [{ x0: nameX0, x1: nameX0 + name.offsetWidth, top: root.offsetTop + name.offsetTop }];
+      for (const el of root.querySelectorAll<HTMLElement>(".hero-lead, .hero-list")) {
+        const r = el.getBoundingClientRect();
+        if (r.height > 0) blocks.push({ x0: r.left - mainBox.left, x1: r.right - mainBox.left, top: r.top - mainBox.top });
+      }
+      const covered = main.clientHeight - Math.min(...blocks.map((x) => x.top));
+      if (covered > 0 && covered < main.clientHeight) onCover(covered, blocks);
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(root);
     ro.observe(name);
+    for (const el of root.querySelectorAll(".hero-lead, .hero-list")) ro.observe(el);
     ro.observe(main);
     return () => ro.disconnect();
   }, [onCover, Name]);

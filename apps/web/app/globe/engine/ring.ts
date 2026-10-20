@@ -97,13 +97,20 @@ export function ringLayout(lineLength: number, rFloorPx: number): RingLayout {
  * whole-globe fit `fit`. `height` is the viewport's (it sets the focal length); `freeWidth` the width the globe is centred in.
  */
 export function ringFloorZoom(a: { fit: number; freeWidth: number; height: number }): number {
-  const { fit, freeWidth, height } = a;
-  const room = (Math.min(freeWidth, height) / 2) * (1 - RING.zoom.fitMargin);
-  // Outer radius = r (1 + gap) + cap, the cap at the em the layout will pick (the target at most `emSlack` above) and a glyph of room.
+  const { fit, height } = a;
+  return Math.min(fit - RING.zoom.floorBelowFit, silhouetteZoom(ringRoomRadius(a), height));
+}
+
+/**
+ * The largest planet radius (CSS px) whose whole ring fits the free area with `RING.zoom.fitMargin` of its smaller half-side left empty: the ring's
+ * outer radius is `r (1 + gap)` plus the letters' height at the em the layout will pick (the target at most `emSlack` above) and a glyph of room.
+ * `ringFloorZoom` keeps the ring at least `floorBelowFit` levels below the fit; a page that places the globe itself (`placeAbove`) may go up to this.
+ */
+export function ringRoomRadius(a: { freeWidth: number; height: number }): number {
+  const room = (Math.min(a.freeWidth, a.height) / 2) * (1 - RING.zoom.fitMargin);
   const t = RING.type.targetEmPx;
   const reach = CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
-  const r = Math.max(1, (room - reach) / (1 + RING.gap));
-  return Math.min(fit - RING.zoom.floorBelowFit, silhouetteZoom(r, height));
+  return Math.max(1, (room - reach) / (1 + RING.gap));
 }
 
 /**

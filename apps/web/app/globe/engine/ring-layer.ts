@@ -192,10 +192,30 @@ export class RingLayer {
     this.redraw();
   }
 
+  private fadeMask: string | null = null;
+  private cutY: number | null = null;
+
   /** `mask-image` of the container's inset fade (the panel's edge), or null. */
   setMask(mask: string | null): void {
-    this.root.style.maskImage = mask ?? "";
-    this.root.style.setProperty("-webkit-mask-image", mask ?? "");
+    this.fadeMask = mask;
+    this.applyMask();
+  }
+
+  /** The ring is not drawn below this y (CSS px from the container's top: where the home screen's content begins under it), or null. */
+  setCut(y: number | null): void {
+    if (y === this.cutY) return;
+    this.cutY = y;
+    this.applyMask();
+  }
+
+  private applyMask(): void {
+    const cut = this.cutY === null ? null : `linear-gradient(to bottom, #000 ${this.cutY}px, transparent ${this.cutY}px)`;
+    const layers = [this.fadeMask, cut].filter((m): m is string => !!m);
+    const value = layers.join(", ");
+    for (const prop of ["mask-image", "-webkit-mask-image"]) this.root.style.setProperty(prop, value);
+    // both layers must let the pixel through (the fade and the cut)
+    this.root.style.setProperty("mask-composite", "intersect");
+    this.root.style.setProperty("-webkit-mask-composite", "source-in");
   }
 
   /** Where the planet is now and how present the ring is. Draws at once when the ring is shown (the camera moved: the ring goes with the planet in the same frame). */
