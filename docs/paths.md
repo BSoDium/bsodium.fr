@@ -107,3 +107,5 @@ Safari; any phone GPU; the pixel pass on the street map beyond screenshots of th
 - **Far away.** The paths are quieter from space: a solid mix toward the page by `farOf(zoom)` (0.55 at the whole globe, none from internal zoom 2.6; sixths), the selected place's legs excepted. The globe's arcs keep their look.
 - **Sparks.** None from space (the globe draws none). On the street map a cell at each head (a plus when lit) from map zoom 6.5 (`SPARK_FROM_ZOOM`), inside the place's box.
 - **Dash length by zoom.** The one remaining MapLibre dashed layers (graticule, dashed road classes) get their arrays scaled by 2^-(zoom fraction) because MapLibre sizes dashes at `floor(zoom)` (`applyDashScale`).
+
+Owner-visible changes of 2026-10-20: see the sections above (one gradient, cell-by-cell patterns, far tone, sparks, trip cards).
