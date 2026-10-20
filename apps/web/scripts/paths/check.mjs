@@ -1,6 +1,6 @@
 // Browser checks of the paths layer (every route leg drawn faintly, the selected place's in ink; docs/paths.md).
 //
-//   CHROME_PATH=... BASE_URL=http://localhost:5300 OUT_DIR=/some/dir node apps/web/scripts/paths/check.mjs [shots|select|toggle|reduced|limb|perf|street]
+//   CHROME_PATH=... BASE_URL=http://localhost:5300 OUT_DIR=/some/dir node apps/web/scripts/paths/check.mjs [shots|select|reduced|limb|perf|street]
 //
 // Run the app on demo content (`CATALYST_CONTENT=demo`): the fictional routes of packages/published/fixtures/demo.json carry
 // legs of every mode. Pages run in debug mode (`?globe-debug`), where `window.__globeDebug` is the introspection (pathStats,
@@ -10,7 +10,6 @@
 //           are hidden at the world view and shown at city zoom; screenshots in OUT_DIR
 // select    selecting a place lights its adjacent legs (ink) with a draw-on that runs from the place, others stay faint; no geometry
 //           change (buffers, vertex count unchanged); the draw-on ends and the globe goes idle
-// toggle    the Paths switch: off hides every path (draw calls, pixels), on brings them back, the choice is stored and survives a reload
 // reduced   prefers-reduced-motion: the selected legs are complete at once, nothing animates
 // limb      lines near the limb are hidden behind the planet (no ink pixel outside the disc, none inside the far side)
 // trail     the plane-trail colours: each palette's pixels are on the screen, a leg runs from its pale tail to its saturated head (the mean
@@ -84,15 +83,15 @@ const openGlobe = async (browser, ctxOptions = {}, path = "/", opts = {}) => {
 
 /** Pixels of the paths alone: the same view with the switch on and off (the coast shares the faint tone, the page has black text). */
 async function pathPixels(page, colors, shot) {
-  const btn = page.locator("[data-paths-toggle] button");
+  const setPaths = (on) => page.evaluate((on) => window.__globeDebug.setPaths(on), on);
   await sleep(600);
   await page.evaluate(() => window.__globeDebug.settle());
   const on = await count(page, await page.screenshot(shot ? { path: shot } : undefined), colors);
-  await btn.click();
+  await setPaths(false);
   await sleep(300);
   await page.evaluate(() => window.__globeDebug.settle());
   const off = await count(page, await page.screenshot(), colors);
-  await btn.click();
+  await setPaths(true);
   await sleep(300);
   await page.evaluate(() => window.__globeDebug.settle());
   return { faint: on.faint - off.faint, ink: on.ink - off.ink, onFaint: on.faint, offFaint: off.faint };
@@ -171,50 +170,6 @@ try {
     expect("selection changes no geometry: same buffers, same vertex count, same level", before.bytes === after.bytes && before.vertices === after.vertices && before.legs === after.legs, { before, after });
     expect("the globe is idle after the draw-on", !(await page.evaluate(() => window.__globeDebug.isAnimating())));
     await ctx.close();
-  }
-
-  /* ------------------------------------------------------------------ toggle */
-  if (run("toggle")) {
-    note("toggle");
-    const { page, ctx } = await openGlobe(browser, {});
-    const t = await tones(page);
-    const max = await page.evaluate(() => window.__globeDebug.maxZoom());
-    await view(page, { lon: 17.5, lat: 44.8, zoom: max - 0.5 });
-    await sleep(800);
-    await page.evaluate(() => window.__globeDebug.settle());
-    const on = await count(page, await page.screenshot(), { faint: t.faint });
-    const base = on.faint;
-    const btn = page.locator("[data-paths-toggle] button");
-    expect("the switch exists, named Paths, pressed by default", (await btn.getAttribute("aria-pressed")) === "true" && (await btn.getAttribute("aria-label")) === "Paths");
-    const calls = async () => page.evaluate(() => { window.__globeDebug.renderNow(); return window.__globeDebug.info().calls; });
-    const callsOn = await calls();
-    await btn.click();
-    await sleep(800);
-    await page.evaluate(() => window.__globeDebug.settle());
-    const off = await count(page, await page.screenshot({ path: out("paths-toggle-off.png") }), { faint: t.faint });
-    const callsOff = await calls();
-    expect("off: fewer path pixels, one draw call fewer", on.faint - off.faint > 50 && callsOn - callsOff === 1, { on: on.faint, off: off.faint, callsOn, callsOff });
-    expect("the choice is stored", (await page.evaluate(() => localStorage.getItem("paths-layer"))) === "off");
-    await page.reload();
-    await waitGlobe(page);
-    await view(page, { lon: 17.5, lat: 44.8, zoom: max - 0.5 });
-    await sleep(800);
-    await page.evaluate(() => window.__globeDebug.settle());
-    expect("it survives a reload (still off, still pressed=false)", (await page.locator("[data-paths-toggle] button").getAttribute("aria-pressed")) === "false" && (await count(page, await page.screenshot(), { faint: t.faint })).faint === off.faint);
-    await page.locator("[data-paths-toggle] button").click();
-    await sleep(800);
-    await page.evaluate(() => window.__globeDebug.settle());
-    expect("on again: back", (await count(page, await page.screenshot(), { faint: t.faint })).faint === base && (await page.evaluate(() => localStorage.getItem("paths-layer"))) === null);
-    await ctx.close();
-    // storage that throws: the page still works, the default is on
-    const b = await openGlobe(browser, {});
-    await b.page.addInitScript(() => {
-      Object.defineProperty(window, "localStorage", { get() { throw new Error("blocked"); } });
-    });
-    await b.page.reload();
-    await waitGlobe(b.page);
-    expect("blocked storage: the layer is on and the page works", (await b.page.locator("[data-paths-toggle] button").getAttribute("aria-pressed")) === "true");
-    await b.ctx.close();
   }
 
   /* ------------------------------------------------------------------ reduced */

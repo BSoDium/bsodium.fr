@@ -1,6 +1,6 @@
 # Travel paths (2026-10-15, trails 2026-10-20)
 
-Every leg of every route is drawn on both maps as a PLANE TRAIL (below, "Trails") whenever the overlay (boxes and labels) is; the legs next to the selected place go to the full-strength head colour. The place panel lists the same legs as sentences. Contract: [api-contract.md](api-contract.md#route-legs-routeslegs-optional-additive-in-schema-version-1). Code: `apps/web/app/globe/paths/` (pure), `engine/route-layer.ts` + `engine/materials.ts` (`pathMaterial`) on the globe, `street/core/routes.ts` + `street/style/street-style.ts` on the street map, `lib/journeys.ts` (text), `components/paths-toggle.tsx`.
+Every leg of every route is drawn on both maps as a PLANE TRAIL (below, "Trails") whenever the overlay (boxes and labels) is; the legs next to the selected place go to the full-strength head colour. The place panel lists the same legs as sentences. Contract: [api-contract.md](api-contract.md#route-legs-routeslegs-optional-additive-in-schema-version-1). Code: `apps/web/app/globe/paths/` (pure), `engine/route-layer.ts` + `engine/materials.ts` (`pathMaterial`) on the globe, `street/core/routes.ts` + `street/style/street-style.ts` on the street map, `lib/journeys.ts` (text).
 
 ## Data path
 
@@ -74,7 +74,7 @@ Each journey line of the place panel starts with a 8 px square in its route's he
 
 ## Switch
 
-`Paths` (`components/paths-toggle.tsx`, a design-system `Toggle`, `aria-pressed`, name constant) bottom right above the credits card; stored in `localStorage` key `paths-layer` (absent = on; try/catch everywhere); read after hydration. Off hides all paths on both maps, the lit legs included.
+There is no switch: the paths follow the overlay (boxes and labels). The engines keep `setPaths` for checks.
 
 ## Accessibility
 
