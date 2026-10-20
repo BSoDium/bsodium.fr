@@ -83,8 +83,10 @@ export interface Placement {
 /**
  * The biggest planet whose CAPTION stays clear of the home screen's content, and where it goes. The planet's lower part may go under the content (it
  * is a drawing that fades into the page there; only the words must be readable): the lowest line of the caption, `CAPTION_BOTTOM_R` of a radius
- * below the centre, stays `gap` above the top of whatever stands in the column the words span (`CAPTION_HALF_R` of a radius to each side). The
- * centre is as low as the middle of the page allows and no lower than the highest thing (the ring) needs to keep its margin from the top edge.
+ * below the centre, stays `gap` above the top of whatever stands in the column the words span (`CAPTION_HALF_R` of a radius to each side). That is
+ * the MINIMUM: where there is more room the globe uses it, as big as the window allows and in the middle of the free room (the space above the ring
+ * equal to the space between the planet's bottom and the content under it), never lower than the page's middle and never nearer the top than the
+ * ring needs to keep its margin.
  * Searched from `rMax` downward: a smaller planet has a narrower column and may clear a block that a larger one would stand over.
  */
 export function placeAbove(a: PlaceArgs): Placement | null {
@@ -95,9 +97,18 @@ export function placeAbove(a: PlaceArgs): Placement | null {
   for (let r = a.rMax; r >= rMin; r -= 2) {
     let top = a.height;
     for (const b of a.blocks) if (b.x1 > a.cx - CAPTION_HALF_R * r && b.x0 < a.cx + CAPTION_HALF_R * r) top = Math.min(top, b.top);
-    const highest = margin + Math.max(r, a.reachTop(r)); // the centre cannot be nearer the top than this
+    const reach = Math.max(r, a.reachTop(r));
+    const highest = margin + reach; // the centre cannot be nearer the top than this
     const lowest = Math.min(a.height / 2, top - gap - CAPTION_BOTTOM_R * r); // nor lower than this (and never below the page's middle)
-    if (highest <= lowest) return { r, lift: Math.max(0, a.height / 2 - lowest), top };
+    if (highest <= lowest) {
+      // Between the two the globe takes the middle of the free room: the space above the ring equal to the space between the planet's bottom and
+      // what stands under the planet (where there is room for the whole planet above the content: when there is not, the caption rule holds).
+      let under = a.height;
+      for (const b of a.blocks) if (b.x1 > a.cx - r && b.x0 < a.cx + r) under = Math.min(under, b.top);
+      const balanced = (under - gap + reach - r) / 2;
+      const centre = Math.min(lowest, Math.max(highest, balanced));
+      return { r, lift: Math.max(0, a.height / 2 - centre), top };
+    }
   }
   // Nothing fits: the smallest planet, as high as it goes (the caller does not draw words that would be cut or run over the content).
   let top = a.height;

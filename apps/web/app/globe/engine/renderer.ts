@@ -57,7 +57,7 @@ import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
 import { SHOWCASE_STATE, bandLat, inBand, shellWindowFactor, type CaptionContent } from "./caption";
-import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, RING_STATE } from "./ring";
+import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, ringRoomRadius, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
 import { CAPTION, ENERGY, INSET_EASE, CAPTION_LOAD, RING, SKY, START_VIEW, TUNING } from "./tuning";
@@ -468,8 +468,8 @@ export class GlobeRenderer {
     if (!this.showcaseActive || this.blocks.length === 0) return { zoom: floor, placement: null };
     const t = RING.type.targetEmPx;
     const extra = CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
-    const placement = placeAbove({ height: h, cx: free / 2, blocks: this.blocks, rMax: silhouetteRadiusPx(floor, h), reachTop: (r) => r * (1 + RING.gap) + extra });
-    return { zoom: placement ? Math.min(floor, silhouetteZoom(placement.r, h)) : floor, placement };
+    const placement = placeAbove({ height: h, cx: free / 2, blocks: this.blocks, rMax: Math.max(silhouetteRadiusPx(floor, h), ringRoomRadius({ freeWidth: free, height: h })), reachTop: (r) => r * (1 + RING.gap) + extra });
+    return { zoom: placement ? silhouetteZoom(placement.r, h) : floor, placement };
   }
 
   /**
