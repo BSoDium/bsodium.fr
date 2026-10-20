@@ -52,7 +52,7 @@ export class TrailDotsLayer {
   }
 
   setLegs(legs: DotLeg[]) {
-    this.legs = legs.filter((l) => l.mode !== "road");
+    this.legs = legs; // roads too: their line is MapLibre's, but their head's spark is drawn here (legCells gives a road no cells)
     this.signature = "";
   }
   setFocus(keys: readonly string[]) {
