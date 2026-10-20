@@ -3,7 +3,7 @@ import { expInterp } from "../core/art-line";
 import { roleLevel } from "../../engine/palette";
 import { ERASE, MAX_LEVELS, PALETTE_CAPACITY, TRAIL_LEVEL_BASE, lineColor, routeColor, trailLevel } from "../core/palette";
 import { PALETTE_COUNT, TRAIL_BANDS } from "../../paths/trail";
-import { BORDER_TILE_MINZOOM, DEFAULT_HANDOFF, ROUTE_LAYER_IDS, ROUTE_HEAD_ID, SPECS, gradientOf, routeGradientId, WORLD_PLACEHOLDER_BELOW, borderHandoff, hasPlaceholder, buildStreetStyle, graticule, layerIds, linePaint, focusFilter, type Schema } from "./street-style";
+import { BORDER_TILE_MINZOOM, DEFAULT_HANDOFF, ROUTE_LAYER_IDS, ROUTE_HEAD_ID, SPECS, gradientOf, routeGradientId, WORLD_PLACEHOLDER_BELOW, borderHandoff, hasPlaceholder, buildStreetStyle, DASH_STEPS, applyDashScale, dashScaleOf, dashStepOf, graticule, layerIds, linePaint, focusFilter, type Schema } from "./street-style";
 import { decodeLevel, evalFilter, levelOfPaint } from "./probe";
 
 const empty: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -320,3 +320,25 @@ describe("borders: one line per frontier (owner report: a wavy second line besid
 });
 
 type L = { id: string; minzoom?: number; maxzoom?: number; paint: Record<string, unknown> };
+
+describe("dash length follows the zoom", () => {
+  it("scales by 2^-(fraction of the zoom), in steps that wrap at a whole level", () => {
+    expect(dashStepOf(10)).toBe(0);
+    expect(dashStepOf(10.5)).toBe(DASH_STEPS / 2);
+    expect(dashStepOf(10.99)).toBe(DASH_STEPS);
+    expect(dashScaleOf(0)).toBe(1);
+    expect(dashScaleOf(DASH_STEPS)).toBeCloseTo(0.5, 10);
+    // MapLibre sizes dashes at floor(zoom): the drawn length grows 2^frac, the scale takes exactly that back
+    for (let s = 0; s <= DASH_STEPS; s++) expect(dashScaleOf(s) * 2 ** (s / DASH_STEPS)).toBeCloseTo(1, 10);
+  });
+  it("re-sets the dash of every dashed layer, the graticule and the paths included, and leaves solid ones alone", () => {
+    const set: Record<string, number[]> = {};
+    const have = new Set([...SPECS.filter((s) => s.type === "line" && s.dash).map((s) => s.id), "graticule", "routes-faint-flight", "routes-focus-rail", "routes-faint-rail-tick", "routes-faint-road"]);
+    const map = { getLayer: (id: string) => (have.has(id) ? {} : undefined), setPaintProperty: (id: string, prop: string, v: number[]) => { expect(prop).toBe("line-dasharray"); set[id] = v; } };
+    applyDashScale(map as never, DASH_STEPS);
+    expect(set["graticule"]).toEqual([0.75, 1.25]);
+    expect(set["routes-faint-flight"]![0]).toBeCloseTo(0.75, 10);
+    expect(Object.keys(set)).toContain("routes-faint-rail-tick");
+    expect(set["routes-faint-road"]).toBeUndefined();
+  });
+});
