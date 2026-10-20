@@ -37,3 +37,70 @@ export function liftFor(a: LiftArgs): number {
   const room = a.height / 2 - reach - margin;
   return Math.max(0, Math.min(overlap, room));
 }
+
+/* ------------------------------------------------------------------ placing the globe above the home screen's content */
+
+/** A block of the home screen over the globe (`GlobeShowcase.blocks`): across the container `x0` to `x1`, its top edge `top` px from the container's top. */
+export interface PlaceBlock {
+  x0: number;
+  x1: number;
+  top: number;
+}
+
+/**
+ * How far below the planet's centre the lowest line of the caption reaches, in planet radii (the four rows are centred on the equator, one cap
+ * height of 0.084 and 1.7 caps from baseline to baseline, on a shell above the surface; measured on the page: 0.31, with air).
+ */
+export const CAPTION_BOTTOM_R = 0.32;
+/** How far to each side of the planet's centre the caption's words reach, in planet radii (`CAPTION.maxHalfWidth`). */
+export const CAPTION_HALF_R = 1.04;
+
+export interface PlaceArgs {
+  /** The container, CSS px, and the x of the planet's centre in it. */
+  height: number;
+  cx: number;
+  blocks: readonly PlaceBlock[];
+  /** The largest planet radius there is room for with nothing over it (CSS px). */
+  rMax: number;
+  /** How far above the planet's centre the highest drawn thing (the ring) reaches, as a function of the planet's radius. */
+  reachTop: (r: number) => number;
+  /** Air kept between the caption's lowest line and what is below it, and between the highest thing and the top edge. */
+  gap?: number;
+  margin?: number;
+  /** The smallest radius tried. */
+  rMin?: number;
+}
+
+export interface Placement {
+  /** Planet radius, CSS px. */
+  r: number;
+  /** How far the planet's centre goes up from the middle of the height (never negative). */
+  lift: number;
+  /** The top edge of what is under the caption's column at that size (the container's height when nothing is). */
+  top: number;
+}
+
+/**
+ * The biggest planet whose CAPTION stays clear of the home screen's content, and where it goes. The planet's lower part may go under the content (it
+ * is a drawing that fades into the page there; only the words must be readable): the lowest line of the caption, `CAPTION_BOTTOM_R` of a radius
+ * below the centre, stays `gap` above the top of whatever stands in the column the words span (`CAPTION_HALF_R` of a radius to each side). The
+ * centre is as low as the middle of the page allows and no lower than the highest thing (the ring) needs to keep its margin from the top edge.
+ * Searched from `rMax` downward: a smaller planet has a narrower column and may clear a block that a larger one would stand over.
+ */
+export function placeAbove(a: PlaceArgs): Placement | null {
+  const gap = a.gap ?? LIFT.gapPx;
+  const margin = a.margin ?? LIFT.marginPx;
+  const rMin = a.rMin ?? 40;
+  if (!(a.height > 0) || !(a.rMax > 0)) return null;
+  for (let r = a.rMax; r >= rMin; r -= 2) {
+    let top = a.height;
+    for (const b of a.blocks) if (b.x1 > a.cx - CAPTION_HALF_R * r && b.x0 < a.cx + CAPTION_HALF_R * r) top = Math.min(top, b.top);
+    const highest = margin + Math.max(r, a.reachTop(r)); // the centre cannot be nearer the top than this
+    const lowest = Math.min(a.height / 2, top - gap - CAPTION_BOTTOM_R * r); // nor lower than this (and never below the page's middle)
+    if (highest <= lowest) return { r, lift: Math.max(0, a.height / 2 - lowest), top };
+  }
+  // Nothing fits: the smallest planet, as high as it goes (the caller does not draw words that would be cut or run over the content).
+  let top = a.height;
+  for (const b of a.blocks) if (b.x1 > a.cx - CAPTION_HALF_R * rMin && b.x0 < a.cx + CAPTION_HALF_R * rMin) top = Math.min(top, b.top);
+  return { r: rMin, lift: Math.max(0, a.height / 2 - (margin + Math.max(rMin, a.reachTop(rMin)))), top };
+}

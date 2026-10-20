@@ -13,7 +13,7 @@
  */
 import { ColorManagement, Color, PerspectiveCamera, Vector3, WebGLRenderer } from "three";
 import type { Polylines } from "@catalyst/geodata";
-import type { GlobePlace, GlobeRoute } from "../types";
+import type { CoverBlock, GlobePlace, GlobeRoute } from "../types";
 import type { GlobeTheme } from "./colors";
 import { anchorZoom, unprojectOffset } from "./anchor";
 import { attachControls, type ControlsHost, type PointerKind } from "./controls";
@@ -26,6 +26,7 @@ import {
   clamp,
   fitZoom,
   silhouetteRadiusPx,
+  silhouetteZoom,
   normalizeLon,
   projectLonLat,
   viewBasis,
@@ -51,7 +52,7 @@ import {
 } from "./motion";
 import { snapBox } from "./group-square";
 import { IdleSpin, SPIN, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
-import { liftFor } from "./lift";
+import { liftFor, placeAbove, type Placement } from "./lift";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
@@ -117,6 +118,8 @@ export interface RendererOptions {
   captionPhrases?: CaptionContent;
   /** CSS px of the container's bottom that the app covers at start (`GlobeProps.coverBottom`); the planet is lifted clear of them as far as there is room. */
   coverBottom?: number;
+  /** The blocks of the home screen over the globe at start (`GlobeProps.showcase`'s `blocks`). */
+  coverBlocks?: readonly CoverBlock[];
   /** The home screen starts at rest: the caption is in and the boxes and labels are out from the first frame (`GlobeProps.showcase`). */
   showcase?: boolean;
 }
@@ -176,6 +179,9 @@ export class GlobeRenderer {
   private inertPress = false;
   /** CSS px of the container's bottom the app covers (the hero), the lift it asks for now, and the animated lift (see `setCover`). */
   private cover = 0;
+  /** What the home screen's content occupies over the globe (`GlobeShowcase.blocks`), and where the globe goes above it (`placeAbove`; null: no blocks given). */
+  private blocks: readonly CoverBlock[] = [];
+  private placement: Placement | null = null;
   private liftTarget = 0;
   private lift = 0;
   private liftAnim: { from: number; to: number; start: number } | null = null;
@@ -280,6 +286,7 @@ export class GlobeRenderer {
     if (opts.ringText && RING_STATE.enabled) this.ring = new RingLayer(opts.container, opts.ringText, opts.theme, this.reduced);
     this.showcaseActive = !!this.ring && SHOWCASE_STATE.enabled;
     this.cover = Math.max(0, opts.coverBottom ?? 0);
+    this.blocks = opts.coverBlocks ?? [];
     if (this.showcaseActive && opts.captionPhrases && opts.captionPhrases.sets.length + opts.captionPhrases.fixed.length > 0) {
       try {
         this.caption = new CaptionLayer({
@@ -398,10 +405,13 @@ export class GlobeRenderer {
     const inset = clampInset(this.inset, w);
     this.shiftBuf = insetShiftBuf(inset, P);
     this.fit = fitZoom(freeWidth(w, inset), h, TUNING.fitMargin);
-    this.minZoom = this.ring ? Math.min(this.fit, ringFloorZoom({ fit: this.fit, freeWidth: freeWidth(w, inset), height: h, cover: this.showcaseActive ? this.cover : 0 })) : this.fit;
+    const lowest = this.lowestFor(inset);
+    this.placement = lowest.placement;
+    this.minZoom = lowest.zoom;
     this.textFits = silhouetteRadiusPx(this.minZoom, h) >= MIN_TEXT_PLANET_PX;
     this.containerMask = fadeMask(w, inset);
     this.ring?.setMask(this.containerMask);
+    this.ring?.setCut(this.ringCut(freeWidth(w, inset)));
     this.layoutRing();
     // The lift follows the viewport and the lowest zoom: a change of those (not of the cover, which animates) applies at once.
     const key = `${w}x${h}@${this.minZoom.toFixed(4)}`;
@@ -421,14 +431,45 @@ export class GlobeRenderer {
     if (!this.ring) return;
     const { width: w, height: h } = this;
     // (the art cell is part of it: a device-pixel-ratio change moves the cell and so which face reads, and a bitmap pixel's size)
-    const key = `${w}x${h}@${this.insetTarget}x${this.pixel}`;
+    const key = `${w}x${h}@${this.insetTarget}x${this.pixel}@${this.blocks.map((b) => `${Math.round(b.x0)},${Math.round(b.x1)},${Math.round(b.top)}`).join(";")}`;
     if (key === this.ringLayoutKey) return;
     this.ringLayoutKey = key;
-    const free = freeWidth(w, clampInset(this.insetTarget, w));
-    const fit = fitZoom(free, h, TUNING.fitMargin);
-    const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h, cover: this.showcaseActive ? this.cover : 0 }));
+    const { zoom: floor } = this.lowestFor(clampInset(this.insetTarget, w));
     this.ring.setLayout(silhouetteRadiusPx(floor, h));
     this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h), cameraDistance(floor, this.bufH * this.pixel));
+  }
+
+  /**
+   * The y (CSS px from the container's top) from which the ring's letters are not drawn: the top of the home screen's highest content under the ring's
+   * column, less a little air. The ring is a line of small type round the planet; where the planet goes under the content the ring must not run over its
+   * text. Null when nothing is under the ring (or the page has no blocks).
+   */
+  private ringCut(free: number): number | null {
+    const pl = this.placement;
+    if (!pl || this.blocks.length === 0) return null;
+    const t = RING.type.targetEmPx;
+    const reach = pl.r * (1 + RING.gap) + CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
+    let top = this.height;
+    for (const b of this.blocks) if (b.x1 > free / 2 - reach && b.x0 < free / 2 + reach) top = Math.min(top, b.top);
+    return top < this.height ? Math.max(0, top - 6) : null;
+  }
+
+  /**
+   * The lowest zoom (where the home screen rests) for an inset, and where the globe goes above the home screen's content then (`placeAbove`): the
+   * biggest planet whose caption clears the blocks the app reported, with the ring's top inside the window. Without blocks (a page that gave none) it
+   * is the ring's floor, as it was; without a ring, the whole-globe fit.
+   */
+  private lowestFor(inset: number): { zoom: number; placement: Placement | null } {
+    const { width: w, height: h } = this;
+    const free = freeWidth(w, inset);
+    const fit = fitZoom(free, h, TUNING.fitMargin);
+    if (!this.ring) return { zoom: fit, placement: null };
+    const floor = Math.min(fit, ringFloorZoom({ fit, freeWidth: free, height: h }));
+    if (!this.showcaseActive || this.blocks.length === 0) return { zoom: floor, placement: null };
+    const t = RING.type.targetEmPx;
+    const extra = CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
+    const placement = placeAbove({ height: h, cx: free / 2, blocks: this.blocks, rMax: silhouetteRadiusPx(floor, h), reachTop: (r) => r * (1 + RING.gap) + extra });
+    return { zoom: placement ? Math.min(floor, silhouetteZoom(placement.r, h)) : floor, placement };
   }
 
   /**
@@ -437,7 +478,9 @@ export class GlobeRenderer {
    */
   private liftWanted(): number {
     // The lift belongs to the showcase: on a page without it (`?no-ring`, a debug page) the page is the one of before it.
-    if (!this.showcaseActive || this.cover <= 0 || this.width < 1 || this.height < 1) return 0;
+    if (!this.showcaseActive || this.width < 1 || this.height < 1) return 0;
+    if (this.placement) return this.placement.lift;
+    if (this.cover <= 0) return 0;
     const h = this.height;
     const rPx = silhouetteRadiusPx(this.minZoom, h);
     const t = RING.type.targetEmPx;
@@ -463,10 +506,13 @@ export class GlobeRenderer {
    * UI covers the bottom `px` CSS px of the container (the landing hero at rest): the planet's centre goes up by what clears it, as far as the room
    * above allows (`liftFor`), eased like the inset (zero <-> non-zero), and back down when it goes. Reduced motion: at once.
    */
-  setCover(px: number) {
+  setCover(px: number, blocks?: readonly CoverBlock[]) {
     const next = Math.max(0, Number.isFinite(px) ? px : 0);
-    if (next === this.cover) return;
+    const nextBlocks = blocks ?? [];
+    const same = nextBlocks.length === this.blocks.length && nextBlocks.every((b, i) => b.x0 === this.blocks[i]!.x0 && b.x1 === this.blocks[i]!.x1 && b.top === this.blocks[i]!.top);
+    if (next === this.cover && same) return;
     this.cover = next;
+    this.blocks = nextBlocks;
     this.noteChange();
     if (this.sized && this.showcaseActive) {
       // The lowest zoom keeps the planet and the ring above the cover (`ringFloorZoom`): a new cover moves it, and a view resting at it moves with it.

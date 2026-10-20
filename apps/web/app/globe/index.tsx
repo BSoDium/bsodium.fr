@@ -5,6 +5,7 @@ export { DEFAULT_VIEW_RADIUS_KM, placeFraming } from "./engine/framing";
 export { ringPhrases, type RingIdentity } from "./ring-text";
 export type {
   GlobeAttributionProps,
+  CoverBlock,
   GlobeFitView,
   GlobeGroup,
   GlobeGroupKind,

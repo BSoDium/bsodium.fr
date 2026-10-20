@@ -15,10 +15,7 @@
  */
 import { clamp, DEG, silhouetteZoom, smoothstep } from "./geo";
 import { rampLevel, roleLevel } from "./palette";
-import { LIFT, RING } from "./tuning";
-
-/** The least half-size (CSS px) the planet and its ring may be given above a cover: smaller than this there is no globe left to read. */
-const MIN_ROOM_PX = 40;
+import { RING } from "./tuning";
 
 /* ------------------------------------------------------------------ page flags */
 
@@ -99,12 +96,9 @@ export function ringLayout(lineLength: number, rFloorPx: number): RingLayout {
  * free area with `RING.zoom.fitMargin` of its smaller half-side left empty, and never less than `RING.zoom.floorBelowFit` levels below the
  * whole-globe fit `fit`. `height` is the viewport's (it sets the focal length); `freeWidth` the width the globe is centred in.
  */
-export function ringFloorZoom(a: { fit: number; freeWidth: number; height: number; cover?: number }): number {
+export function ringFloorZoom(a: { fit: number; freeWidth: number; height: number }): number {
   const { fit, freeWidth, height } = a;
-  let room = (Math.min(freeWidth, height) / 2) * (1 - RING.zoom.fitMargin);
-  // Something covers the bottom of the page (the landing hero: its name, its text and the list): the planet and the ring must fit in what is
-  // left above it, with the lift's air and margin, or the caption and the ring would run over the text. Never so small there is nothing to see.
-  if (a.cover && a.cover > 0) room = Math.min(room, Math.max(MIN_ROOM_PX, (height - a.cover - LIFT.gapPx - LIFT.marginPx) / 2));
+  const room = (Math.min(freeWidth, height) / 2) * (1 - RING.zoom.fitMargin);
   // Outer radius = r (1 + gap) + cap, the cap at the em the layout will pick (the target at most `emSlack` above) and a glyph of room.
   const t = RING.type.targetEmPx;
   const reach = CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;

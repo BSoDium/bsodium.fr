@@ -45,14 +45,17 @@ While the hero is `rest` at the world view (`showcaseOf(snapshot, cover)`: `stat
 
 ## Room for the globe (phones and tablets, 2026-10-20)
 
-The planet, its ring and the caption must never run over a line of the hero (owner feedback: on a phone and a tablet the orbiting text sat on the name and the list). Three rules:
+The caption (the 3D words) must never run over a line of the hero, and the globe should be as big as that allows. The hero reports the blocks of the home screen over the globe (`GlobeShowcase.blocks`: the name, the intro and search, the list; their span across the container and the y of their top, measured by `LandingHero`; the name from layout offsets, so its own travel never moves it). The globe works out its size and place itself (`engine/lift.ts` `placeAbove`, used by `GlobeRenderer.lowestFor`):
 
-- **The cover is what the planet stands over**, not only the name: `LandingHero` always counts the name and counts the intro and search (`.hero-lead`) and the list (`.hero-list`) only where they are under the planet's column, searching the largest planet that fits above what it then stands over (a wide window keeps its big planet between the text at the sides; on a tablet the list rises into the column and the planet is made smaller to stay above it). It reports the cover that makes the globe's own sizing come out at that size.
-- **The lowest zoom fits above the cover** (`ringFloorZoom({ cover })`: the planet and the whole ring in what is left above the block, with the lift's air and margin, never under half a size of 40 px), and the lift clears the RING's bottom, not only the planet's (`liftFor`: `reach`). A view resting at the old floor follows it when the cover changes.
-- **No letters that would be cut**: when the planet at that zoom is under 60 px of radius (`MIN_TEXT_PLANET_PX`), the ring and the caption are not drawn (their letters have a smallest size and would be clipped by the planet's edge); the planet is still there.
-- A phone upright holds its rows in two columns (five rows are three lines), and a short one drops the second sentence of the intro, so the globe has more of the page.
+- **The caption's lowest line sits `LIFT.gapPx` above the highest block under the column the words span** (`CAPTION_HALF_R`, 1.04 radii to each side of the centre; the lowest line is `CAPTION_BOTTOM_R`, 0.32 radii below the centre: measured on the page). The planet's own lower part may go under the content: it is a drawing that fades into the page behind the hero's scrim; only the words must be readable.
+- **The biggest planet that does it**: searched from the largest the window allows downward, since a smaller planet has a narrower column and can clear a block a larger one would stand over (a wide window keeps its big planet between the text at its sides; on a tablet the list rises into the column). The ring's top stays `LIFT.marginPx` inside the window, and the centre is as low as the middle of the page allows (never lower: the globe is not pushed down).
+- **The lowest zoom is that size** (`minZoom`), the lift is the centre's rise, and a view resting at the old floor follows it when the blocks change.
+- **The ring (flat type round the planet) is cut where the content begins** (`RingLayer.setCut`: a mask from the highest block's top under its column), so no ring letter runs over the text; the planet and the caption are not cut.
+- **No letters that would be cut**: when the planet at that zoom is under 60 px of radius (`MIN_TEXT_PLANET_PX`), neither ring nor caption is drawn (their letters have a smallest size); the planet is still there.
+- A phone upright holds the rows in two columns (five rows are three lines), and a short one drops the second sentence of the intro, so the globe has more of the page.
+- A page that gives no blocks (only `coverBottom`) keeps the earlier lift (`liftFor`: the planet and its ring clear of one cover height).
 
-Checked in the browser pane at 375 x 812, 320 x 568, 812 x 375 and 768 x 1024. Not checked: a real phone, Safari, a tablet on its side.
+Checked in the browser pane at 375 x 812, 320 x 568, 812 x 375, 850 x 1043, 768 x 1024 and 2000 x 1158. Not checked: a real phone, Safari, a tablet on its side.
 
 ## States
 
