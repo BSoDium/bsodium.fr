@@ -96,7 +96,7 @@ describe("globe layering", () => {
       "components/attribution-button.tsx -> ~/globe/street/core/attribution",
       "components/credits-dialog.tsx -> ~/globe/street/core/attribution",
       "lib/journeys.ts -> ~/globe/paths/network",
-      "lib/journeys.ts -> ~/globe/paths/trail",
+      "lib/journeys.ts -> ~/globe/paths/polyline",
       "lib/projection.ts -> ~/globe/engine/country-names",
       "lib/projection.ts -> ~/globe/engine/framing",
       "lib/projection.ts -> ~/globe/paths/trail",

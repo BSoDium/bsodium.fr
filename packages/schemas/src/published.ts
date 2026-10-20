@@ -214,6 +214,10 @@ export const publishedRouteSchema = z
   .object({
     id: slugSchema,
     title: z.string().trim().min(1).max(120),
+    /** Additive in schema version 1. A line or two about the trip, as the owner wrote it for the trip. */
+    summary: z.string().trim().min(1).max(400).optional(),
+    /** Additive in schema version 1. When the trip happened (a month or a year is enough). */
+    dates: publishedDatesSchema.optional(),
     stops: z.array(slugSchema).min(2).max(200),
     /**
      * Additive in schema version 1. One entry per consecutive pair of stops, so `stops.length - 1` entries; absent

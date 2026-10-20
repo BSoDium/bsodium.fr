@@ -63,11 +63,21 @@ describe("journeys", () => {
 describe("tripsOf", () => {
   it("gives the route with the hop before and after the visit, and counts the stops it does not draw", () => {
     const [trip] = tripsOf(projection, "beta");
-    expect(trip).toMatchObject({ id: "r1", title: "R1", stops: 4, from: "Alpha", to: "Delta", palette: 0 });
+    expect(trip).toMatchObject({ id: "r1", title: "R1", stops: 4, from: "Alpha", to: "Delta" });
     const [visit] = trip!.visits;
     expect(visit).toMatchObject({ position: 2, earlier: 0, later: 1 });
     expect(visit!.previous).toMatchObject({ slug: "alpha", mode: "road", km: 60 });
     expect(visit!.next).toMatchObject({ slug: "gamma", mode: "rail", km: 50 });
+  });
+  it("carries the trip's own words and dates, and a few points of its path for the small map", () => {
+    const withWords: PublishedProjection = { ...projection, routes: [{ ...projection.routes[0]!, title: "A Week in Alpha", summary: "Four stops.", dates: { start: "2019-07", end: "2019-08" } }] };
+    const [trip] = tripsOf(withWords, "beta");
+    expect(trip).toMatchObject({ title: "A Week in Alpha", summary: "Four stops." });
+    expect(trip!.dates?.text).toContain("2019-07");
+    expect(trip!.stopPoints.map((s) => s.slug)).toEqual(["alpha", "beta", "gamma", "delta"]);
+    expect(trip!.legPaths.map((l) => l.mode)).toEqual(["road", "rail", "flight"]);
+    expect(trip!.legPaths[2]!.points).toHaveLength(4); // a flight is its two ends
+    expect(trip!.legPaths.flatMap((l) => l.points).length).toBeLessThanOrEqual(400 * 2 + 8);
   });
   it("has no previous at the start and no next at the end", () => {
     expect(tripsOf(projection, "alpha")[0]!.visits[0]).toMatchObject({ previous: null, earlier: 0, later: 2 });

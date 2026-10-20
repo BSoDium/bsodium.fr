@@ -87,7 +87,7 @@ export function PlaceDetail({ place }: { place: PlaceDetailData }) {
           <section aria-labelledby="place-journeys" data-slot="place-journeys">
             <Stack gap={4}>
               <SectionHeader as="h2" id="place-journeys" title="Journeys" meta={place.trips.length} />
-              <Trips trips={place.trips} />
+              <Trips trips={place.trips} here={place.slug} />
             </Stack>
           </section>
         )}

@@ -12,7 +12,8 @@
  */
 import type { PublishedProjection } from "@catalyst/schemas";
 import { legLengthM } from "~/globe/paths/network";
-import { paletteOf } from "~/globe/paths/trail";
+import { decodePolyline5 } from "~/globe/paths/polyline";
+import { formatDates, type FormattedDates } from "~/lib/dates";
 import type { GlobeLeg } from "~/globe/types";
 
 type LegMode = GlobeLeg["mode"];
@@ -27,8 +28,6 @@ export interface Journey {
   /** Rounded to 10 km, at least 10. */
   km: number;
   text: string;
-  /** The route's trail palette (0 blue, 1 green, 2 ocre, 3 violet: its position among the published routes, modulo 4): the swatch beside the line. */
-  palette: number;
 }
 
 const BY: Record<LegMode, string> = { road: " by road", rail: " by train", ferry: " by ferry", flight: " by plane", walk: " on foot", unknown: "" };
@@ -62,7 +61,7 @@ export function journeysOf(projection: PublishedProjection, slug: string, nameOf
         const text = journeyText(direction, name, mode, km);
         if (seen.has(text)) return;
         seen.add(text);
-        out.push({ direction, slug: other.slug, name, mode, km, text, palette: paletteOf(order) });
+        out.push({ direction, slug: other.slug, name, mode, km, text });
       };
       if (i > 0) add(i - 1, route.stops[i - 1], "arrived");
       if (i + 1 < route.stops.length) add(i, route.stops[i + 1], "left");
@@ -97,14 +96,35 @@ export interface TripVisit {
 export interface Trip {
   id: string;
   title: string;
-  palette: number;
   /** Stops in the route / whole route length, rounded to 10 km. */
   stops: number;
   km: number;
   /** Where the route starts and ends, by name. */
   from: string;
   to: string;
+  /** The owner's line or two about the trip, and when it was. */
+  summary?: string;
+  dates: FormattedDates | null;
+  /** For the trip's own small map: the stops and, per leg, its mode and a few points of its path (`lon, lat` flat, capped for the whole trip). */
+  stopPoints: Array<{ slug: string; name: string; lon: number; lat: number }>;
+  legPaths: Array<{ mode: LegMode; points: number[] }>;
   visits: TripVisit[];
+}
+
+/** Points kept for the whole trip's small map (an overview: the ends of a leg and a few between). */
+const MAP_POINTS = 400;
+
+function mapPath(a: { lat: number; lon: number }, b: { lat: number; lon: number }, leg: { mode: string; polyline?: string } | undefined, budget: number): number[] {
+  const flat = leg?.polyline && leg.mode !== "flight" ? decodePolyline5(leg.polyline) : null;
+  if (!flat || flat.length < 4 || budget <= 2) return [a.lon, a.lat, b.lon, b.lat];
+  const n = flat.length / 2;
+  const keep = Math.min(n, budget);
+  const out: number[] = [];
+  for (let k = 0; k < keep; k++) {
+    const i = Math.round((k * (n - 1)) / (keep - 1));
+    out.push(flat[i * 2]!, flat[i * 2 + 1]!);
+  }
+  return out;
 }
 
 /** The routes that stop at `slug`, each with the hop before and the hop after every visit. Same inputs and rounding as `journeysOf`. */
@@ -140,14 +160,23 @@ export function tripsOf(projection: PublishedProjection, slug: string, nameOf: (
       const b = places[i + 1]!.coordinates;
       total += legLengthM({ lat: a.lat, lon: a.lon }, { lat: b.lat, lon: b.lon }, route.legs?.[i]);
     }
+    const budget = Math.max(2, Math.floor(MAP_POINTS / Math.max(1, places.length - 1)));
+    const legPaths: Trip["legPaths"] = [];
+    for (let i = 0; i + 1 < places.length; i++) {
+      const leg = route.legs?.[i];
+      legPaths.push({ mode: (leg?.mode ?? "unknown") as LegMode, points: mapPath(places[i]!.coordinates, places[i + 1]!.coordinates, leg, budget) });
+    }
     trips.push({
       id: route.id,
       title: route.title,
-      palette: paletteOf(order),
       stops: route.stops.length,
       km: roundKm(total),
       from: nameOf(places[0]!),
       to: nameOf(places[places.length - 1]!),
+      ...(route.summary ? { summary: route.summary } : {}),
+      dates: formatDates(route.dates),
+      stopPoints: places.map((p) => ({ slug: p!.slug, name: nameOf(p!), lon: p!.coordinates.lon, lat: p!.coordinates.lat })),
+      legPaths,
       visits,
     });
   });
