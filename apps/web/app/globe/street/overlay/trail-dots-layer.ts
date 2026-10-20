@@ -21,8 +21,8 @@ export interface DotLeg {
 }
 const modeOf = (m: unknown) => (isLegMode(m) ? m : "unknown");
 
-/** Map zoom from which the sparks are drawn (a city's scale: the boxes are big enough to hold them). */
-export const SPARK_FROM_ZOOM = 9;
+/** Map zoom from which the sparks are drawn (a region's scale: the places have their own boxes by then). */
+export const SPARK_FROM_ZOOM = 6.5;
 
 /** The legs of `legFeatures` as drawable legs: their pieces and their destination. */
 export function dotLegs(fc: GeoJSON.FeatureCollection<GeoJSON.MultiLineString>): DotLeg[] {
