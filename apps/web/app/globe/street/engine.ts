@@ -560,7 +560,10 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     // container's own space with the projection centre the map uses; the free area is the box minus the inset the host passed.
     setLodCamera(lodCam, registerMapToGlobe(v), { width: w, height: h, centreX: (w - pad()) / 2 }, w - clampInset(inset, w), cellCss);
     hud.update({ width: w, height: h, cellCss, cam: lodCam });
-    trailDots.draw((p) => map.project(p), w, h, cellCss, map.getZoom(), `${v.lon.toFixed(6)},${v.lat.toFixed(6)},${v.zoom.toFixed(5)}`);
+    // The camera's signature includes where the centre lands on screen: closing the panel changes the map's padding (the inset), which moves every
+    // projected point without changing the centre's lon, lat or zoom.
+    const at = map.project(map.getCenter());
+    trailDots.draw((p) => map.project(p), w, h, cellCss, map.getZoom(), `${v.lon.toFixed(6)},${v.lat.toFixed(6)},${v.zoom.toFixed(5)},${at.x.toFixed(2)},${at.y.toFixed(2)}`);
     // The boxes fade by time, not by camera: the map keeps repainting (and so this runs again) until the last transition has ended. The labels'
     // glides are not in this: they are DOM transforms the labels' own frames run (hud.driveGlides), the map has nothing to redraw for them.
     if (hud.boxesAnimating) map.triggerRepaint();
