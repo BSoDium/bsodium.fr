@@ -28,6 +28,22 @@ describe("showcaseOf: when the home screen shows the caption and lifts the plane
   });
 });
 
+describe("a hero born collapsed (the visitor came back to the home page from another)", () => {
+  it("keeps the header, then brings the full hero back after the idle delay with no gesture", () => {
+    vi.useFakeTimers();
+    try {
+      const m = createHeroMachine({ initial: "collapsed" });
+      expect(m.getSnapshot().state).toBe("collapsed");
+      expect(showcaseOf(m.getSnapshot(), 100).on).toBe(false);
+      vi.advanceTimersByTime(HERO_IDLE_MS);
+      expect(m.getSnapshot().state).toBe("rest");
+      m.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("isWorldView", () => {
   it("is the whole globe, within the slack, and never the street map", () => {
     expect(isWorldView({ zoom: 0 })).toBe(true);
