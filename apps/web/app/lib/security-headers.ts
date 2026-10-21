@@ -11,7 +11,7 @@ export const STATIC_SECURITY_HEADERS = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Everything the app has no use for is denied; `fullscreen` stays for its own pages.
   "Permissions-Policy":
-    "accelerometer=(), autoplay=(), bluetooth=(), browsing-topics=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), hid=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=(), xr-spatial-tracking=(), fullscreen=(self)",
+    "accelerometer=(), autoplay=(), bluetooth=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), hid=(), magnetometer=(), microphone=(), midi=(), payment=(), serial=(), usb=(), xr-spatial-tracking=(), fullscreen=(self)",
   // Legacy twin of `frame-ancestors 'none'` (the CSP, which only HTML documents carry).
   "X-Frame-Options": "DENY",
   // No other origin gets a window handle to a Catalyst page (and vice versa). Nothing here opens popups or is opened as one.
