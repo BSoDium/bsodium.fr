@@ -60,7 +60,7 @@ import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
 import { SHOWCASE_STATE, bandLat, inBand, shellWindowFactor, type CaptionContent } from "./caption";
-import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, ringRoomRadius, ringTargetEm, RING_STATE } from "./ring";
+import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, ringRoomRadius, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
 import { CAPTION, ENERGY, INSET_EASE, CAPTION_LOAD, RING, SKY, START_VIEW, TUNING } from "./tuning";
@@ -426,7 +426,6 @@ export class GlobeRenderer {
     this.textFits = silhouetteRadiusPx(this.minZoom, h) >= MIN_TEXT_PLANET_PX;
     this.containerMask = fadeMask(w, inset);
     this.ring?.setMask(this.containerMask);
-    this.ring?.setCut(this.ringCut(freeWidth(w, inset)));
     this.layoutRing();
     // The lift follows the viewport and the lowest zoom: a change of those applies at once, but a change of the cover (the home screen coming or
     // going: `setCover` moves the lowest zoom with it) is eased like the inset, so the planet glides into its place instead of jumping.
@@ -453,21 +452,6 @@ export class GlobeRenderer {
     const { zoom: floor } = this.lowestFor(clampInset(this.insetTarget, w));
     this.ring.setLayout(silhouetteRadiusPx(floor, h));
     this.caption?.setSizing(this.pixel, silhouetteRadiusPx(floor, h), cameraDistance(floor, this.bufH * this.pixel));
-  }
-
-  /**
-   * The y (CSS px from the container's top) from which the ring's letters are not drawn: the top of the home screen's highest content under the ring's
-   * column, less a little air. The ring is a line of small type round the planet; where the planet goes under the content the ring must not run over its
-   * text. Null when nothing is under the ring (or the page has no blocks).
-   */
-  private ringCut(free: number): number | null {
-    const pl = this.placement;
-    if (!pl || this.blocks.length === 0) return null;
-    const t = ringTargetEm(pl.r);
-    const reach = pl.r * (1 + RING.gap) + CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
-    let top = this.height;
-    for (const b of this.blocks) if (b.x1 > free / 2 - reach && b.x0 < free / 2 + reach) top = Math.min(top, b.top);
-    return top < this.height ? Math.max(0, top - 6) : null;
   }
 
   /**
