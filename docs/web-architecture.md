@@ -143,7 +143,7 @@ Applied to every HTML document and data response by `entry.server.tsx` (`lib/sec
 | `Content-Security-Policy` | per response, below | documents only (a nonce cannot live in a static file) |
 | `X-Content-Type-Options` | `nosniff` | no MIME sniffing |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | outgoing links get the origin, not the path |
-| `Permissions-Policy` | accelerometer, autoplay, bluetooth, browsing-topics, camera, display-capture, geolocation, gyroscope, hid, magnetometer, microphone, midi, payment, serial, usb, xr-spatial-tracking all `()`; `fullscreen=(self)` | the app uses none of them |
+| `Permissions-Policy` | accelerometer, autoplay, bluetooth, camera, display-capture, geolocation, gyroscope, hid, magnetometer, microphone, midi, payment, serial, usb, xr-spatial-tracking all `()`; `fullscreen=(self)` | the app uses none of them (`browsing-topics` was dropped on 2026-10-21: Chrome no longer knows the feature and logged "Unrecognized feature" on every page) |
 | `X-Frame-Options` | `DENY` | legacy twin of `frame-ancestors 'none'` |
 | `Cross-Origin-Opener-Policy` | `same-origin` | no cross-origin window handles; nothing here opens or is opened as a popup (checked: the street map, workers and tiles run fine under it) |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | `vercel.json` only (meaningless over plain http) |
