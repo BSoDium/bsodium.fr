@@ -1380,3 +1380,10 @@ three zooms, each place walked from 50 to 100 degrees off-centre along four bear
 nothing selected and Reykjavik, Cape Town and Hanoi (route stops) selected. Old build (quick mode): 1,440 failures over
 2,256 views; new build (full mode): 0 over 46,260 views. Unit tests: `visibility.test.ts`. Frame time unchanged (bench desktop, GPU-synced
 p50 2.1 to 2.4 ms before and after, JS render p50 0.2 to 0.3 ms); idle still 0 rAF, 0 `gl.clear`.
+
+
+## Dev server hygiene (2026-10-21)
+
+- **React Router 8 flags**: `future.v8_middleware`, `v8_splitRouteModules`, `v8_viteEnvironmentApi`, `v8_passThroughRequests` and `v8_trailingSlashAwareDataRequests` are on (`react-router.config.ts`), so the five "Future Flag Warning" notices are gone and the upgrade is a version bump. Only `v8_passThroughRequests` touched the code: a loader now gets the request as it came, so a client-side navigation's data request for `/projects/x` is `/projects/x.data?_routes=...`; the two legacy-redirect loaders (`lib/legacy-paths.ts` `withoutDataRequest`) take the suffix and `_routes` off, or the redirect pointed at `/software/x.data`. No other loader reads the request's address.
+- **Chrome DevTools' probe** (`/.well-known/appspecific/com.chrome.devtools.json`) is answered with 204 by a dev-only plugin (`vite.config.ts`): it logged a 404 with a stack trace each time.
+- **Dependencies are pre-bundled** (`optimizeDeps.include`: the lazily imported ones, `three`, `maplibre-gl`, `pmtiles`, `motion/react`, ...): found on demand, each wave re-optimised, reloaded the page and answered the open one with 504 "Outdated Optimize Dep" (a console error on every cold start).
