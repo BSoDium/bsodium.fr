@@ -343,7 +343,9 @@ other way in. Without JavaScript the globe screen shows no list (the globe itsel
 - **Place -> entry -> place.** The place panel's cards link with `state={{ from: "<place slug>" }}`; the entry shows "Back to
   <place>" (read and validated against the shell's places by `resolveBackTarget`) and the shell keeps that place selected on the globe
   so the camera does not move. History state survives a reload; without it the entry simply has no back link (its Places section
-  links to `/locations/:slug` anyway).
+  links to `/locations/:slug` anyway). An entry opened any other way (a list, a search, a link, a reload) has no "from": the shell
+  then keeps its own first place selected (`focusPlaceOf`: the authored order of `placeSlugs`, then the places that name it), so the map beside
+  it is on what it is about, in-app (the globe flies there) and on a direct load (it starts framed on it).
 - **Data.** `lib/entries.ts`: `listEntries` (summaries: cover, tags, meta, places, no body), `getEntryDetail` (body, places, related,
   previous/next in the kind), `entriesOfPlace` (a place's `related` and the entries' `placeSlugs`, each once, grouped by kind). Both
   directions of the entry/place link are merged everywhere. `index` (the 1-based position of the entry in
