@@ -211,10 +211,10 @@ export class TrailDotsLayer {
         const step = lit ? 0 : this.quiet?.get(leg.key) ?? 0;
         // a straight line quietened up close: each tone of the path mixed toward the page, solid (never an opacity)
         const quieter = (band: number) => css(this.trail[trailIndex(0, band)]!.map((v, i) => v + (this.page[i]! - v) * STRAIGHT_FADE_MIX * (step / STRAIGHT_FADE_STEPS)) as unknown as TrailRgb);
-        for (const c of legCells(parts, leg.mode, { cols, rows }, 3, zoom >= TICK_FROM_STREET)) {
-          const band = Math.min(TRAIL_BANDS - 1, c.band);
-          ink(c.col, c.row, lit ? color("lit") : step ? quieter(band) : color(band));
-        }
+        // the leg's tones, worked out once (a cell is one `fillRect`: no string or array made per cell)
+        const tones = lit ? null : Array.from({ length: TRAIL_BANDS }, (_, band) => (step ? quieter(band) : color(band)));
+        const litTone = lit ? color("lit") : "";
+        for (const c of legCells(parts, leg.mode, { cols, rows }, 3, zoom >= TICK_FROM_STREET)) ink(c.col, c.row, tones ? tones[Math.min(TRAIL_BANDS - 1, c.band)]! : litTone);
       }
       const head = this.opts.lines && zoom >= SPARK_FROM_ZOOM ? project(leg.head, 0) : null;
       if (head) {
