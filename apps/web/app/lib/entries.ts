@@ -350,6 +350,16 @@ export function viewSearch(search: string | URLSearchParams, view: EntryView): s
  * The place a visitor came from inside the panel, read from the navigation state (`{ from: "<place slug>" }`, set by the links on
  * the place panel). State comes from history and can be anything: only a string that names a known place counts.
  */
+/**
+ * The place the globe is on while an entry is open: the place the visitor came from when they opened it from a place's panel, else the entry's own first
+ * place (its authored order: the primary one), when the globe knows it. An entry opened from a list, a search or a link has no "came from", and the map beside it
+ * should still be on the place it is about (a piece of software made in Toulouse opens on Toulouse). Null when the entry has no place the globe knows.
+ */
+export function focusPlaceOf(cameFrom: string | null, entryPlaces: readonly { slug: string }[] | null | undefined, known: (slug: string) => boolean): string | null {
+  if (cameFrom && known(cameFrom)) return cameFrom;
+  return entryPlaces?.find((p) => known(p.slug))?.slug ?? null;
+}
+
 export function resolveBackTarget(state: unknown, places: readonly { slug: string; name: string }[]): { slug: string; name: string; href: string } | null {
   const from = typeof state === "object" && state !== null ? (state as { from?: unknown }).from : undefined;
   if (typeof from !== "string") return null;
