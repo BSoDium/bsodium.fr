@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ICON_H, ICON_W, MODE_ICONS } from "./mode-icons";
+import { hasIcon } from "./mode-icons";
+import { MODE_ICON_NODES } from "./mode-icon-paths";
 import { LEG_MODES } from "./modes";
 import { legCells } from "./trail-dots";
 
@@ -36,19 +37,20 @@ describe("legCells: the patterns written cell by cell", () => {
 });
 
 describe("the pictures of the modes", () => {
-  it("are 9 x 7 cells of # and ., one per mode but unknown", () => {
+  it("are the vector icons of Lucide: every mode but unknown has one, with something to draw", () => {
     for (const mode of LEG_MODES) {
-      const icon = MODE_ICONS[mode];
       if (mode === "unknown") {
-        expect(icon).toBeNull();
+        expect(hasIcon(mode)).toBe(false);
         continue;
       }
-      expect(icon, mode).toHaveLength(ICON_H);
-      for (const row of icon!) expect(row, mode).toMatch(new RegExp(`^[#.]{${ICON_W}}$`));
+      expect(hasIcon(mode), mode).toBe(true);
+      const icon = MODE_ICON_NODES[mode]!;
+      expect(icon.node.length, mode).toBeGreaterThan(0);
+      for (const [tag, attrs] of icon.node) expect(tag === "path" ? attrs.d : tag === "circle" ? attrs.r : "x", mode).toBeTruthy();
     }
   });
   it("are different from each other", () => {
-    const seen = new Set(LEG_MODES.filter((m) => MODE_ICONS[m]).map((m) => MODE_ICONS[m]!.join("|")));
+    const seen = new Set(LEG_MODES.filter((m) => hasIcon(m)).map((m) => MODE_ICON_NODES[m]!.name));
     expect(seen.size).toBe(LEG_MODES.length - 1);
   });
 });

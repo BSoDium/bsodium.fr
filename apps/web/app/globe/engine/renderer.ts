@@ -1968,7 +1968,7 @@ export class GlobeRenderer {
     this.cleanups = [];
     this.ring?.dispose();
     this.ring = null;
-    this.legIcons?.canvas.remove();
+    this.legIcons?.dispose();
     this.legIcons = null;
     this.caption?.dispose();
     this.caption = null;

@@ -10,7 +10,7 @@ import type { TrailRgb } from "./trail";
 import { TRAIL_BANDS, trailIndex } from "./trail";
 import { isLegMode } from "./modes";
 import { legCells } from "./trail-dots";
-import { ICON_H, ICON_W, MODE_ICONS } from "./mode-icons";
+import { BADGE_PX, badgeElement, hasIcon } from "./mode-icons";
 import { ARC_LIFT_PER_RADIAN } from "./network";
 
 type LonLat = [number, number];
@@ -85,12 +85,17 @@ export class TrailDotsLayer {
     this.canvas.setAttribute("aria-hidden", "true");
     Object.assign(this.canvas.style, { position: "absolute", left: "0", top: "0", pointerEvents: "none", imageRendering: "pixelated" });
     // under the boxes of the street map's overlay, or over the globe's own canvas
-    if (opts.onTop) root.append(this.canvas);
-    else root.prepend(this.canvas);
+    Object.assign(this.badges.style, { position: "absolute", left: "0", top: "0", width: "0", height: "0", pointerEvents: "none", overflow: "visible" });
+    this.badges.dataset.legBadges = "";
+    this.badges.setAttribute("aria-hidden", "true");
+    if (opts.onTop) root.append(this.canvas, this.badges);
+    else root.prepend(this.canvas, this.badges);
   }
 
   private left = 0;
   private top = 0;
+  /** The badges (DOM, full resolution) over the canvas: `mode-icons.ts`. */
+  private readonly badges = document.createElement("div");
   /** Where the canvas sits in its container (CSS px), when it is not at the corner. */
   setOrigin(left: number, top: number) {
     if (left === this.left && top === this.top) return;
@@ -98,6 +103,14 @@ export class TrailDotsLayer {
     this.top = top;
     this.canvas.style.left = `${left}px`;
     this.canvas.style.top = `${top}px`;
+    this.badges.style.left = `${left}px`;
+    this.badges.style.top = `${top}px`;
+  }
+
+  /** Take both elements out of the page. */
+  dispose() {
+    this.canvas.remove();
+    this.badges.remove();
   }
 
   setLegs(legs: DotLeg[]) {
@@ -143,6 +156,7 @@ export class TrailDotsLayer {
     this.canvas.style.width = `${cols * cell}px`;
     this.canvas.style.height = `${rows * cell}px`;
     ctx.clearRect(0, 0, cols, rows);
+    this.badges.replaceChildren();
     if (!this.visible || this.legs.length === 0) return;
     const color = (band: number | "lit" | "spark") => css(this.trail[trailIndex(0, band)]!);
     const ink = (col: number, row: number, fill: string) => {
@@ -193,47 +207,50 @@ export class TrailDotsLayer {
       for (const part of parts) for (let i = 1; i < part.length; i++) length += Math.hypot(part[i]![0] - part[i - 1]![0], part[i]![1] - part[i - 1]![1]);
       candidates.push({ leg, lit, length, parts });
     }
-    if (zoom >= this.opts.iconFromZoom) this.drawIcons(ctx, candidates, cols, rows, color);
+    if (zoom >= this.opts.iconFromZoom) this.drawIcons(candidates, cols, rows, cell, color);
   }
 
   /**
-   * One small picture of the mode on each long enough leg, the selected place's first and then the longest: at the middle of the leg (or the nearest
-   * place along it that is on screen), on a plate of the page colour that cuts the line, and only where it does not touch another picture (so a
-   * crowd of legs shows a picture each where there is room and none where there is not).
+   * One badge with the picture of the mode on each long enough leg, the selected place's first and then the longest: at the middle of the leg (or the
+   * nearest place along it that is on screen), on the cell grid so it moves in the same steps as the line, in the colour of the path there (the
+   * selected place's legs in the lit colour) with the icon in the page colour, at full resolution; and only where it does not touch another badge
+   * (so a crowd of legs shows a badge each where there is room and none where there is not).
    */
   private drawIcons(
-    ctx: CanvasRenderingContext2D,
     candidates: ReadonlyArray<{ leg: DotLeg; lit: boolean; length: number; parts: ReadonlyArray<ReadonlyArray<readonly [number, number]>> }>,
     cols: number,
     rows: number,
+    cell: number,
     color: (band: number | "lit" | "spark") => string,
   ): void {
     const order = [...candidates].sort((a, b) => Number(b.lit) - Number(a.lit) || b.length - a.length);
     const placed: Array<{ x0: number; y0: number; x1: number; y1: number }> = [];
-    const plate = css(this.page);
+    const ink = css(this.page);
+    const half = BADGE_PX / 2;
+    const frag = document.createDocumentFragment();
     for (const c of order) {
-      const icon = MODE_ICONS[c.leg.mode];
-      if (!icon || c.length < (c.lit ? ICON_MIN_CELLS_LIT : ICON_MIN_CELLS)) continue;
-      let spot: { x: number; y: number } | null = null;
+      if (!hasIcon(c.leg.mode) || c.length < (c.lit ? ICON_MIN_CELLS_LIT : ICON_MIN_CELLS)) continue;
+      let spot: { x: number; y: number; f: number } | null = null;
       for (const f of [0.5, 0.38, 0.62, 0.26, 0.74]) {
         const p = pointAt(c.parts, c.length * f);
-        if (p && p.x >= ICON_W && p.y >= ICON_H && p.x < cols - ICON_W && p.y < rows - ICON_H) {
-          spot = p;
+        if (p && p.x * cell >= BADGE_PX && p.y * cell >= BADGE_PX && p.x < cols - BADGE_PX / cell && p.y < rows - BADGE_PX / cell) {
+          spot = { ...p, f };
           break;
         }
       }
       if (!spot) continue;
-      const x0 = Math.round(spot.x) - Math.floor(ICON_W / 2);
-      const y0 = Math.round(spot.y) - Math.floor(ICON_H / 2);
-      const box = { x0: x0 - ICON_GAP, y0: y0 - ICON_GAP, x1: x0 + ICON_W + ICON_GAP, y1: y0 + ICON_H + ICON_GAP };
+      const cx = Math.round(spot.x) * cell + cell / 2;
+      const cy = Math.round(spot.y) * cell + cell / 2;
+      const box = { x0: cx - half - ICON_GAP * cell, y0: cy - half - ICON_GAP * cell, x1: cx + half + ICON_GAP * cell, y1: cy + half + ICON_GAP * cell };
       if (placed.some((q) => box.x0 < q.x1 && box.x1 > q.x0 && box.y0 < q.y1 && box.y1 > q.y0)) continue;
       placed.push(box);
-      ctx.fillStyle = plate;
-      ctx.fillRect(x0 - 1, y0 - 1, ICON_W + 2, ICON_H + 2);
-      ctx.fillStyle = c.lit ? color("lit") : color(Math.min(TRAIL_BANDS - 1, 3));
-      icon.forEach((row, dy) => {
-        for (let dx = 0; dx < row.length; dx++) if (row[dx] === "#") ctx.fillRect(x0 + dx, y0 + dy, 1, 1);
-      });
+      const band = Math.min(TRAIL_BANDS - 1, Math.floor(spot.f * TRAIL_BANDS));
+      const el = badgeElement(c.leg.mode, c.lit ? color("lit") : color(band), ink, ink);
+      if (!el) continue;
+      el.style.left = `${cx - half}px`;
+      el.style.top = `${cy - half}px`;
+      frag.append(el);
     }
+    this.badges.append(frag);
   }
 }
