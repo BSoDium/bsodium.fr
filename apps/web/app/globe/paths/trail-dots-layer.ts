@@ -12,6 +12,7 @@ import { isLegMode } from "./modes";
 import { legCells } from "./trail-dots";
 import { BADGE_PX, badgeElement, hasIcon } from "./mode-icons";
 import { ARC_LIFT_PER_RADIAN } from "./network";
+import { STRAIGHT_FADE_MIX, STRAIGHT_FADE_STEPS } from "./thin";
 
 type LonLat = [number, number];
 export interface DotLeg {
@@ -28,9 +29,10 @@ const modeOf = (m: unknown) => (isLegMode(m) ? m : "unknown");
 /** Map zoom from which the sparks are drawn (a region's scale: the places have their own boxes by then). */
 export const SPARK_FROM_ZOOM = 6.5;
 /** Map zoom from which the legs wear the picture of their mode, how long (art pixels) a leg must be to wear one, and the air kept between two pictures. */
-export const ICON_FROM_ZOOM = 5;
-export const ICON_MIN_CELLS = 44;
-export const ICON_MIN_CELLS_LIT = 24;
+export const ICON_FROM_ZOOM = 5.5;
+/** The share of the view's smaller side (in art pixels) a leg must span to wear a picture, and the selected place's legs (they may be shorter). */
+export const ICON_MIN_SHARE = 0.3;
+export const ICON_MIN_SHARE_LIT = 0.18;
 export const ICON_GAP = 3;
 /** Map zoom from which a rail's cross-ticks are drawn (before it a rail is a dashed line, as on the globe: `paths/lod.ts` `TICK_FROM`). */
 export const TICK_FROM_STREET = 6.5;
@@ -78,6 +80,8 @@ export class TrailDotsLayer {
   /** The legs that stay at this zoom (`paths/thin.ts`), or null: all of them. */
   private kept: ReadonlySet<string> | null = null;
   private page: TrailRgb = [1, 1, 1];
+  /** The straight legs quietened at this view (`paths/thin.ts` `fadeStraight`), by key with their step; null: none. */
+  private quiet: ReadonlyMap<string, number> | null = null;
 
   /** `lines: false`: the legs' lines are drawn by someone else (the globe's shader); only the pictures of the modes are drawn here. `iconFromZoom`: the zoom (the caller's own) from which they show. */
   constructor(root: HTMLElement, private readonly opts: { lines: boolean; iconFromZoom: number; onTop?: boolean } = { lines: true, iconFromZoom: ICON_FROM_ZOOM }) {
@@ -127,6 +131,11 @@ export class TrailDotsLayer {
     this.kept = keys;
     this.signature = "";
   }
+  setQuiet(map: ReadonlyMap<string, number> | null) {
+    if (map === this.quiet) return;
+    this.quiet = map;
+    this.signature = "";
+  }
   setPage(rgb: TrailRgb) {
     this.page = rgb;
     this.signature = "";
@@ -136,8 +145,14 @@ export class TrailDotsLayer {
     this.signature = "";
   }
   setVisible(on: boolean) {
+    if (on === this.visible) return;
     this.visible = on;
     this.signature = "";
+    // hidden: nothing may stay on screen (the next `draw` only comes when the lines are back, so the pictures and the dots are cleared now)
+    if (!on) {
+      this.ctx?.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.badges.replaceChildren();
+    }
   }
 
   /** Draw for a camera: `project` gives container CSS px, `camera` is anything that changes when the view does (it keys the redraw). */
@@ -193,7 +208,13 @@ export class TrailDotsLayer {
         if (cur.length) parts.push(cur);
       }
       if (this.opts.lines) {
-        for (const c of legCells(parts, leg.mode, { cols, rows }, 3, zoom >= TICK_FROM_STREET)) ink(c.col, c.row, lit ? color("lit") : color(Math.min(TRAIL_BANDS - 1, c.band)));
+        const step = lit ? 0 : this.quiet?.get(leg.key) ?? 0;
+        // a straight line quietened up close: each tone of the path mixed toward the page, solid (never an opacity)
+        const quieter = (band: number) => css(this.trail[trailIndex(0, band)]!.map((v, i) => v + (this.page[i]! - v) * STRAIGHT_FADE_MIX * (step / STRAIGHT_FADE_STEPS)) as unknown as TrailRgb);
+        for (const c of legCells(parts, leg.mode, { cols, rows }, 3, zoom >= TICK_FROM_STREET)) {
+          const band = Math.min(TRAIL_BANDS - 1, c.band);
+          ink(c.col, c.row, lit ? color("lit") : step ? quieter(band) : color(band));
+        }
       }
       const head = this.opts.lines && zoom >= SPARK_FROM_ZOOM ? project(leg.head, 0) : null;
       if (head) {
@@ -229,7 +250,7 @@ export class TrailDotsLayer {
     const half = BADGE_PX / 2;
     const frag = document.createDocumentFragment();
     for (const c of order) {
-      if (!hasIcon(c.leg.mode) || c.length < (c.lit ? ICON_MIN_CELLS_LIT : ICON_MIN_CELLS)) continue;
+      if (!hasIcon(c.leg.mode) || c.length < (c.lit ? ICON_MIN_SHARE_LIT : ICON_MIN_SHARE) * Math.min(cols, rows) || this.quiet?.has(c.leg.key)) continue;
       let spot: { x: number; y: number; f: number } | null = null;
       for (const f of [0.5, 0.38, 0.62, 0.26, 0.74]) {
         const p = pointAt(c.parts, c.length * f);

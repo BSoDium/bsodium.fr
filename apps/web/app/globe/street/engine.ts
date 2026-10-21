@@ -41,7 +41,7 @@ import { probeSource, type ProbeConfig, type ProbeOutcome } from "./net/probe";
 import { HudLayer } from "./overlay/hud-layer";
 import { LayerSwitch, switchRules, type SwitchView } from "./style/layer-switch";
 import { TrailDotsLayer, dotLegs } from "../paths/trail-dots-layer";
-import { thinLegs, thinZoomOf, type ThinLeg } from "../paths/thin";
+import { fadeStraight, thinLegs, thinZoomOf, type ThinLeg } from "../paths/thin";
 import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, applyDashScale, applyKeptLegs, buildStreetStyle, dashStepOf, focusFilter, graticule, headFocusFilter, ROUTE_HEAD_FOCUS_ID, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
 import { STREET_TUNING } from "./tuning";
 import type { AnimateOptions, FlyOptions, RevealOptions, StreetDebug, StreetMap, StreetMapOptions, StreetView } from "./types";
@@ -610,17 +610,21 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     dashStep = -1;
   });
   // The legs that stay at this zoom (`paths/thin.ts`), worked out when the zoom steps by a quarter or the selected place changes.
-  const thinList: ThinLeg[] = legs.features.map((f) => ({ key: String(f.properties?.key), parts: f.geometry.coordinates as unknown as ThinLeg["parts"] }));
+  const thinList: ThinLeg[] = legs.features.map((f) => ({ key: String(f.properties?.key), parts: f.geometry.coordinates as unknown as ThinLeg["parts"], straight: !!f.properties?.arc || f.properties?.mode === "flight" }));
   let thinSig = "";
   const updateThinning = () => {
     const z = thinZoomOf(map.getZoom());
-    const sig = `${z}|${cellCss}|${focusKeys.join(",")}`;
+    const view = Math.max(root.clientWidth, root.clientHeight);
+    const sig = `${z}|${cellCss}|${view}|${focusKeys.join(",")}`;
     if (sig === thinSig) return;
     thinSig = sig;
     const lit = new Set(focusKeys);
-    const kept = thinLegs(thinList.map((l) => (lit.has(l.key) ? { ...l, lit: true } : l)), z, cellCss);
+    const list = thinList.map((l) => (lit.has(l.key) ? { ...l, lit: true } : l));
+    const kept = thinLegs(list, z, cellCss);
     applyKeptLegs(map, kept);
     trailDots.setKept(kept);
+    // the straight lines quieten with the share of the screen they take (the shared rule, `paths/thin.ts`)
+    trailDots.setQuiet(fadeStraight(list, z, view));
   };
   onMap("style.load", () => {
     thinSig = "";

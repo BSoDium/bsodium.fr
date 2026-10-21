@@ -18,6 +18,8 @@ export interface ThinLeg {
   parts: ReadonlyArray<ReadonlyArray<LonLat>>;
   /** The leg is next to the selected place: always kept, and first. */
   lit?: boolean;
+  /** The leg is a straight line or an arc (a flight, a leg without a road under it), not a path that follows the ground: `fadeStraight` quietens it up close. */
+  straight?: boolean;
 }
 
 /** The key of a leg: the route and the position of the leg in it (the street map's source, its filters and the globe's layer all use it). */
@@ -81,4 +83,42 @@ export function thinLegs(legs: readonly ThinLeg[], zoom: number, cellCss: number
     for (const c of m.cells) covered.add(c);
   }
   return kept;
+}
+
+/**
+ * Straight lines (a flight, an arc: nothing under them) are a feature of the far view; up close they cut across every road and every box (owner,
+ * 2026-10-21). So they quieten with how much of the screen they take, not with the zoom alone: a leg whose endpoints are up to `STRAIGHT_FADE_FROM`
+ * screens apart is drawn as it is (a short flight, Minsk to Moscow, stays readable at the zoom that fits it), from there to `STRAIGHT_FADE_TO` screens it
+ * steps through `STRAIGHT_FADE_STEPS` tones toward the page colour (solid, never an opacity), the last `STRAIGHT_FADE_MIX` of the way.
+ * The legs of the selected place (`lit`) are never quietened.
+ */
+export const STRAIGHT_FADE_FROM = 1;
+export const STRAIGHT_FADE_TO = 3;
+export const STRAIGHT_FADE_STEPS = 3;
+export const STRAIGHT_FADE_MIX = 0.8;
+
+/** The step (0 as it is .. `STRAIGHT_FADE_STEPS`) of a straight leg `span` CSS px between its ends in a view `view` CSS px across (its larger side). */
+export function straightFadeLevel(span: number, view: number): number {
+  if (!(view > 0)) return 0;
+  const t = (span / view - STRAIGHT_FADE_FROM) / (STRAIGHT_FADE_TO - STRAIGHT_FADE_FROM);
+  return t <= 0 ? 0 : Math.min(STRAIGHT_FADE_STEPS, Math.ceil(t * STRAIGHT_FADE_STEPS - 1e-9));
+}
+
+/** The quietened straight legs at a Web Mercator `zoom`, by key, with their step; null when none is. `view` is the larger side of the view in CSS px. */
+export function fadeStraight(legs: readonly ThinLeg[], zoom: number, view: number): Map<string, number> | null {
+  let out: Map<string, number> | null = null;
+  const world = 512 * 2 ** zoom;
+  for (const leg of legs) {
+    if (!leg.straight || leg.lit) continue;
+    const first = leg.parts[0]?.[0];
+    const lastPart = leg.parts[leg.parts.length - 1];
+    const last = lastPart?.[lastPart.length - 1];
+    if (!first || !last) continue;
+    const [ax, ay] = px(first, zoom);
+    const [bx, by] = px(last, zoom);
+    const dx = Math.abs(bx - ax);
+    const level = straightFadeLevel(Math.hypot(Math.min(dx, world - dx), by - ay), view);
+    if (level > 0) (out ??= new Map()).set(leg.key, level);
+  }
+  return out;
 }

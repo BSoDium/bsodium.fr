@@ -18,7 +18,7 @@ import { coastLevel } from "./palette";
 import { TUNING } from "./tuning";
 import { FADE_FROM_CELLS, FADE_FULL_CELLS, farOf, TICK_FROM, levelFor, metresPerCell } from "../paths/lod";
 import { buildBuffers, buildNetwork, legsAt, type PathBuffers, type PathNetwork } from "../paths/network";
-import { legKey, thinLegs, thinZoomOf, type ThinLeg } from "../paths/thin";
+import { fadeStraight, legKey, thinLegs, thinZoomOf, type ThinLeg } from "../paths/thin";
 
 /** Marching speed of the dashes of a leg while it draws on, in px per second. */
 const MARCH_PX_PER_S = 30;
@@ -30,6 +30,8 @@ const STATE_FWD = 128;
 const STATE_REV = 255;
 /** A leg thinned away at this zoom (`paths/thin.ts`): the vertex shader clips it (a value between `none` and the lit states). */
 const STATE_HIDDEN = 26;
+/** A straight leg quietened by its step 1..3 (`paths/thin.ts` `fadeStraight`): 52 + 4 per step, between hidden and lit (the vertex shader reads it). */
+const STATE_QUIET = 52;
 
 export interface PathStats {
   legs: number;
@@ -69,6 +71,9 @@ export class RouteLayer {
   /** Legs thinned away at this zoom, the keys that stay (null: all) and what they were worked out for. */
   private hidden = new Set<number>();
   private kept: ReadonlySet<string> | null = null;
+  /** Straight legs quietened at this view: leg index -> step, and by key (for the pictures of the modes). */
+  private quiet = new Map<number, number>();
+  private quietKeys: ReadonlyMap<string, number> | null = null;
   private thinList: ThinLeg[] | null = null;
   private thinSig = "";
   private litRoutes = new Set<string>();
@@ -171,6 +176,7 @@ export class RouteLayer {
 
   /** The legs thinned away, as the state of their texel (the lit ones are never hidden). */
   private applyHidden() {
+    for (const [leg, step] of this.quiet) if (!this.lit.has(leg)) this.stateData[leg] = STATE_QUIET + 4 * (step - 1);
     for (const leg of this.hidden) if (!this.lit.has(leg)) this.stateData[leg] = STATE_HIDDEN;
   }
 
@@ -179,10 +185,10 @@ export class RouteLayer {
    * latitude's secant) and `cssPerCell` the art pixel. Cheap when the zoom has not moved by a quarter step or the selection has not changed.
    * Returns the keys of the legs that stay (null: all of them), for the pictures of the modes.
    */
-  setThinning(zoom: number, cssPerCell: number): ReadonlySet<string> | null {
+  setThinning(zoom: number, cssPerCell: number, view = 0): ReadonlySet<string> | null {
     if (!this.state || this.network.legs.length === 0) return null;
     const z = thinZoomOf(zoom);
-    const sig = `${z}|${cssPerCell}`;
+    const sig = `${z}|${cssPerCell}|${Math.round(view)}`;
     if (sig === this.thinSig) return this.kept;
     this.thinSig = sig;
     if (!this.thinList) {
@@ -191,14 +197,18 @@ export class RouteLayer {
         const lvl = leg.levels[Math.min(2, leg.levels.length - 1)] ?? leg.levels[0]!;
         const pts: Array<readonly [number, number]> = [];
         for (const i of lvl) pts.push([leg.lonlat[i * 2]!, leg.lonlat[i * 2 + 1]!]);
-        return { key: legKey(leg.routeId, leg.legIndex), parts: [pts] };
+        return { key: legKey(leg.routeId, leg.legIndex), parts: [pts], straight: leg.arc || leg.mode === "flight" };
       });
     }
     const list = this.thinList.map((l, i) => (this.lit.has(i) ? { ...l, lit: true } : l));
     const kept = thinLegs(list, z, cssPerCell);
     this.kept = kept;
     for (const leg of this.hidden) if (!this.lit.has(leg)) this.stateData[leg] = STATE_NONE;
+    for (const leg of this.quiet.keys()) if (!this.lit.has(leg)) this.stateData[leg] = STATE_NONE;
     this.hidden.clear();
+    this.quiet.clear();
+    this.quietKeys = fadeStraight(list, z, view);
+    if (this.quietKeys) this.thinList.forEach((l, i) => { const step = this.quietKeys!.get(l.key); if (step) this.quiet.set(i, step); });
     if (kept) this.thinList.forEach((l, i) => { if (!kept.has(l.key) && !this.lit.has(i)) this.hidden.add(i); });
     this.applyHidden();
     this.state.needsUpdate = true;
@@ -235,6 +245,11 @@ export class RouteLayer {
   /** Whether the layer is drawn now (on, and the overlay is present). */
   get visible(): boolean {
     return this.enabled && this.presence > 0;
+  }
+
+  /** The straight legs quietened at this view, by key with their step (null: none). */
+  get quietLegs(): ReadonlyMap<string, number> | null {
+    return this.quietKeys;
   }
 
   /** The keys (`paths/thin.ts` `legKey`) of the legs lit now. */

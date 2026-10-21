@@ -60,7 +60,7 @@ import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
 import { SHOWCASE_STATE, bandLat, inBand, shellWindowFactor, type CaptionContent } from "./caption";
-import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, ringRoomRadius, RING_STATE } from "./ring";
+import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, ringRoomRadius, ringTargetEm, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
 import { CAPTION, ENERGY, INSET_EASE, CAPTION_LOAD, RING, SKY, START_VIEW, TUNING } from "./tuning";
@@ -76,7 +76,7 @@ ColorManagement.enabled = false;
 
 const MARKER_RADIUS = 1;
 /** The unified zoom from which the legs wear the picture of their mode on the globe (from far away they are lines in a tangle: a picture each would be worse). */
-const LEG_ICON_FROM_ZOOM = 2.6;
+const LEG_ICON_FROM_ZOOM = 4.5;
 /** The smallest planet radius (CSS px, at the lowest zoom) the ring's and the caption's letters are drawn for: their letters have a smallest size, under it they would be cut by the planet's edge. */
 const MIN_TEXT_PLANET_PX = 60;
 const easeInset = cubicBezier(...INSET_EASE);
@@ -460,7 +460,7 @@ export class GlobeRenderer {
   private ringCut(free: number): number | null {
     const pl = this.placement;
     if (!pl || this.blocks.length === 0) return null;
-    const t = RING.type.targetEmPx;
+    const t = ringTargetEm(pl.r);
     const reach = pl.r * (1 + RING.gap) + CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
     let top = this.height;
     for (const b of this.blocks) if (b.x1 > free / 2 - reach && b.x0 < free / 2 + reach) top = Math.min(top, b.top);
@@ -1625,6 +1625,7 @@ export class GlobeRenderer {
     const cy = ch / 2 - this.liftBuf * P;
     const lift = routeLift(v.zoom);
     icons.setKept(this.globe.kept);
+    icons.setQuiet(routes.quietLegs);
     icons.setOrigin(this.canvasLeft, this.canvasTop);
     icons.setFocus(this.globe.routes.litKeys());
     const camera = `${v.lon.toFixed(4)},${v.lat.toFixed(4)},${v.zoom.toFixed(4)},${this.shiftBuf},${this.liftBuf},${cw}x${ch},${lift.toFixed(3)},${routes.overlayPresence}`;
@@ -1908,7 +1909,7 @@ export class GlobeRenderer {
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
     const now = performance.now();
-    this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced, v.lat);
+    this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced, v.lat, Math.max(this.width, this.height));
     this.lastBasis = { d: b.d, lon: v.lon, lat: v.lat };
     this.caption?.sync(b.d, v.lon, v.lat, now);
     this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf, lift: this.liftBuf }, now, this.reduced);

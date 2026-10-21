@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OFF_ZOOM, thinLegs, thinZoomOf, type ThinLeg } from "./thin";
+import { fadeStraight, OFF_ZOOM, STRAIGHT_FADE_STEPS, straightFadeLevel, thinLegs, thinZoomOf, type ThinLeg } from "./thin";
 
 const leg = (key: string, a: [number, number], b: [number, number], lit = false): ThinLeg => ({ key, parts: [[a, b]], lit });
 
@@ -34,5 +34,26 @@ describe("thinLegs", () => {
   it("quantises the zoom to quarters", () => {
     expect(thinZoomOf(5.1)).toBe(5);
     expect(thinZoomOf(5.2)).toBe(5.25);
+  });
+});
+
+describe("fadeStraight: straight lines quieten with the share of the screen they take", () => {
+  it("steps from as-it-is (up to a screen) to the last step (three screens), nothing before", () => {
+    expect(straightFadeLevel(500, 1000)).toBe(0);
+    expect(straightFadeLevel(1000, 1000)).toBe(0);
+    expect(straightFadeLevel(1500, 1000)).toBe(1);
+    expect(straightFadeLevel(2500, 1000)).toBe(3);
+    expect(straightFadeLevel(9000, 1000)).toBe(STRAIGHT_FADE_STEPS);
+    expect(straightFadeLevel(100, 0)).toBe(0);
+  });
+  it("a short flight (Minsk to Moscow) stays as it is where it fits the screen, and goes quiet once it is much bigger than the screen", () => {
+    const flight: ThinLeg = { key: "f", parts: [[[27.57, 53.9], [37.62, 55.75]]], straight: true };
+    expect(fadeStraight([flight], 5, 1200)).toBeNull(); // ~ 0.9 of a screen wide
+    expect(fadeStraight([flight], 8, 1200)!.get("f")).toBe(STRAIGHT_FADE_STEPS);
+  });
+  it("leaves the legs that follow the ground and the selected place's legs alone", () => {
+    const ground: ThinLeg = { key: "g", parts: [[[0, 0], [30, 0]]] };
+    const lit: ThinLeg = { key: "l", parts: [[[0, 0], [30, 0]]], straight: true, lit: true };
+    expect(fadeStraight([ground, lit], 8, 1000)).toBeNull();
   });
 });
