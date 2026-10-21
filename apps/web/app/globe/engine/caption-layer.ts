@@ -132,7 +132,8 @@ const FRAG = /* glsl */ `
     vec3 face = acc ? uAccent : uFace;
     vec3 outl = acc ? uAccentOutline : uOutline;
     vec3 side = acc ? uAccentSide : uSide;
-    vec3 col = front ? (isOutline ? outl : face) : (vLayer < uEdgeLayer ? face : side);
+    // a row seen from behind (past the horizon, curling back towards the planet) is the thickness' tone whole: the back of the type is quieter than its face
+    vec3 col = !gl_FrontFacing ? side : (front ? (isOutline ? outl : face) : (vLayer < uEdgeLayer ? face : side));
     // Premultiplied output, blended "over" (see the material): the glyph's inside is exactly 1, so an interior pixel is exactly opaque whatever
     // stacks behind it; only an edge is partly transparent (and then properly premultiplied: no bright fringe).
     float a = smoothstep(0.1, 0.9, t.a);

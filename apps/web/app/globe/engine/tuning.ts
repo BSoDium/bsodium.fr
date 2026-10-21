@@ -238,7 +238,7 @@ export const CAPTION = {
    * (feat/palettes, PR #289: copied here, re-point to the tokens when it merges). A tinted word's contour and thickness derive from ITS face the
    * way the neutral ones derive from the neutral face (the same shares), so the whole letter is one colour. `outlineMix` is the contour's
    * share of the way from the page colour to the text colour (2.0:1 against the page in both schemes, 3.5 to 3.7:1 against the face), `sideMix`
-   * the thickness's (a step closer to the page: 1.7:1). `sideMode`: `page` (the exact page colour for both), `mix` (by those shares), `edge`
+   * the thickness's, which is also the whole of a row seen from behind (a step closer to the page: about 1.3:1; owner, 2026-10-21: "too visible", it was 0.34 and 0.3). `sideMode`: `page` (the exact page colour for both), `mix` (by those shares), `edge`
    * (the thickness as in `mix` with a thin text-coloured line on the far `edgeSlices` slices).
    */
   colors: {
@@ -246,7 +246,7 @@ export const CAPTION = {
     accent: { light: "#246192", dark: "#84adda" },
     sideMode: "mix" as "page" | "mix" | "edge",
     outlineMix: { light: 0.42, dark: 0.37 },
-    sideMix: { light: 0.34, dark: 0.3 },
+    sideMix: { light: 0.2, dark: 0.18 },
     edgeSlices: 2,
   },
   /** Sampling: the shader looks `lodBias` levels sharper than the screen asks (negative: sharper). Texture: texels in a cap height. */
