@@ -190,6 +190,8 @@ export class GlobeRenderer {
   private blocks: readonly CoverBlock[] = [];
   private placement: Placement | null = null;
   private liftTarget = 0;
+  /** True while `setCover` applies a new cover: the lift that follows is eased, not snapped. */
+  private easeLift = false;
   private lift = 0;
   private liftAnim: { from: number; to: number; start: number } | null = null;
   /** The lift in whole buffer pixels, like `shiftBuf`. */
@@ -426,11 +428,12 @@ export class GlobeRenderer {
     this.ring?.setMask(this.containerMask);
     this.ring?.setCut(this.ringCut(freeWidth(w, inset)));
     this.layoutRing();
-    // The lift follows the viewport and the lowest zoom: a change of those (not of the cover, which animates) applies at once.
+    // The lift follows the viewport and the lowest zoom: a change of those applies at once, but a change of the cover (the home screen coming or
+    // going: `setCover` moves the lowest zoom with it) is eased like the inset, so the planet glides into its place instead of jumping.
     const key = `${w}x${h}@${this.minZoom.toFixed(4)}`;
     if (key !== this.liftKey) {
       this.liftKey = key;
-      this.retargetLift(false);
+      this.retargetLift(this.easeLift);
     }
     this.liftBuf = Math.round(this.lift / P);
     const mask = fadeMask(w, inset, this.canvasLeft) ?? "";
@@ -524,14 +527,20 @@ export class GlobeRenderer {
     const nextBlocks = blocks ?? [];
     const same = nextBlocks.length === this.blocks.length && nextBlocks.every((b, i) => b.x0 === this.blocks[i]!.x0 && b.x1 === this.blocks[i]!.x1 && b.top === this.blocks[i]!.top);
     if (next === this.cover && same) return;
+    const prevBlocks = this.blocks;
     this.cover = next;
     this.blocks = nextBlocks;
     this.noteChange();
     if (this.sized && this.showcaseActive) {
       // The lowest zoom keeps the planet and the ring above the cover (`ringFloorZoom`): a new cover moves it, and a view resting at it moves with it.
+      // When the cover goes away (the home screen gives way to the globe) the planet keeps its size and only glides to its new place: the lowest
+      // zoom is lower then, and snapping the view to it made the planet shrink and jump while the boxes faded in (owner, 2026-10-21).
       const atFloor = Math.abs(this.view.zoom - this.minZoom) < 1e-6;
+      const leaving = nextBlocks.length === 0 && prevBlocks.length > 0;
+      this.easeLift = !this.reduced;
       this.applyInset();
-      this.view = { ...this.view, zoom: atFloor ? this.minZoom : clamp(this.view.zoom, this.minZoom, this.maxZoomAt(this.view.lat)) };
+      this.easeLift = false;
+      this.view = { ...this.view, zoom: atFloor && !leaving ? this.minZoom : clamp(this.view.zoom, this.minZoom, this.maxZoomAt(this.view.lat)) };
     }
     this.retargetLift(true);
   }
