@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loader } from "~/routes/legacy-poems";
 import { loader as projectsLoader } from "~/routes/legacy-projects";
 import { KIND_PATHS } from "./entries";
-import { LEGACY_REDIRECT_STATUS, legacyPoemsTarget, legacyProjectsTarget } from "./legacy-paths";
+import { LEGACY_REDIRECT_STATUS, legacyPoemsTarget, legacyProjectsTarget, withoutDataRequest } from "./legacy-paths";
 
 const answer = async (path: string, method = "GET") => {
   try {
@@ -115,5 +115,15 @@ describe("the projects' legacy route's loader", () => {
   });
   it("is a 404 for a shape that is not a legacy one", async () => {
     expect((await answerProjects("/projects/a/b")).status).toBe(404);
+  });
+});
+
+describe("a client-side navigation to a legacy address (its data request, React Router 8 pass-through)", () => {
+  it("redirects to the address, not to the data request's", () => {
+    expect(legacyProjectsTarget("/projects/amaze-me.data", "?_routes=routes%2Flegacy-projects")).toBe("/software/amaze-me");
+    expect(legacyPoemsTarget("/poems.data", "?tag=a&_routes=routes%2Flegacy-poems")).toBe("/poetry?tag=a");
+  });
+  it("leaves a document request's query string as it came", () => {
+    expect(withoutDataRequest("/projects/x", "?tag=rail&view=full")).toEqual({ pathname: "/projects/x", search: "?tag=rail&view=full" });
   });
 });

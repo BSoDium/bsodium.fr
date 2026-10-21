@@ -19,11 +19,26 @@ import { SECTIONS } from "./sections";
 export const LEGACY_REDIRECT_STATUS = 301;
 
 /**
+ * The address a client-side navigation asked for, from the URL of its data request: React Router 8 hands a loader the request as it came
+ * (`future.v8_passThroughRequests`), so the data request for `/projects/x` is `/projects/x.data?_routes=...`. The suffix and the router's own
+ * `_routes` parameter are not part of the address (the redirect would otherwise point at `/software/x.data`).
+ */
+export function withoutDataRequest(pathname: string, search: string): { pathname: string; search: string } {
+  const path = pathname.replace(/\.data$/, "");
+  const params = new URLSearchParams(search);
+  if (!params.has("_routes")) return { pathname: path, search }; // a document request: the query string is untouched
+  params.delete("_routes");
+  const rest = params.toString();
+  return { pathname: path, search: rest ? `?${rest}` : "" };
+}
+
+/**
  * Where a legacy address of the kind's section now lives, as a path plus the original query string; null for an address that is not one of
  * its legacy ones. The slug segment is passed through as the request carried it (already percent-encoded), so nothing is decoded or encoded
  * twice.
  */
 export function legacySectionTarget(kind: ContentKind, pathname: string, search: string): string | null {
+  ({ pathname, search } = withoutDataRequest(pathname, search));
   const section = SECTIONS[kind];
   const parts = pathname.split("/").filter(Boolean);
   if (!parts[0] || !section.formerSlugs.includes(parts[0]) || parts.length > 2) return null;
