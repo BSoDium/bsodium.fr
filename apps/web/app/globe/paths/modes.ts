@@ -36,7 +36,7 @@ export const MODE_STYLE: Record<LegMode, ModeStyle> = {
 };
 
 /**
- * The patterns written CELL BY CELL on the street map (street/overlay/trail-dots.ts): whole cells along the path, so a dot is exactly one art pixel at
+ * The patterns written CELL BY CELL on the street map (paths/trail-dots.ts): whole cells along the path, so a dot is exactly one art pixel at
  * every angle and zoom. Same periods as `MODE_STYLE` (the globe draws those in its own buffer); an `on` of 1 is a dot.
  */
 export const CELL_PATTERN: Record<LegMode, { period: number; on: number; tick: boolean } | null> = {

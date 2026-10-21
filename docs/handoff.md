@@ -68,7 +68,7 @@ Articles and projects: images stay in the flow of the text (wide, never upscaled
 | Change | Details |
 |---|---|
 | `/artworks`: an interlocking brick wall (1 / 2 / 3 / 4 columns by width, 10 px gap, natural ratios from the contract's cover size, caption plate on hover and focus, always under the picture on touch, DOM = reading order, no script) | [design-system.md](design-system.md) ("Artwork wall"), `lib/masonry.ts`, `components/entry/artwork-wall.tsx` |
-| `/poetry`: a 100 rem page, two columns from 44 rem, summary in the reading serif at 20 to 26 px in the ink, the mono line at 14 px | [design-system.md](design-system.md) ("Poetry list") |
+| `/software`, `/articles`, `/artworks`, `/poetry`: all 100 rem pages (one left edge); `/poetry` has two columns from 44 rem, summary in the reading serif at 20 to 26 px in the ink, the mono line at 14 px | [design-system.md](design-system.md) ("Poetry list") |
 | Tag rows on phones: no native scrollbar, Spotify-style edge arrows (`ScrollRow`), 44 px, solid plate | [design-system.md](design-system.md) ("Scroll row") |
 
 Not verified: a real touch device (emulated touch only); Safari and Firefox (Chromium only: the layout needs container query units and `:has()`, both in current Safari and Firefox); the caption plate on a very tall picture on a short window.

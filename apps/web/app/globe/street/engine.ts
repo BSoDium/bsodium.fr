@@ -13,7 +13,7 @@
  *  4. dispose: unregister protocols, observers, timers; remove the map (frees its context), dispose the compositor
  *     (frees the overlay context), remove all DOM. Safe to call twice.
  */
-import { Map as MLMap, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
+import { LngLat, Map as MLMap, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { readTheme, type GlobeTheme } from "../engine/colors";
 import { applyDebugLevels } from "../engine/palette";
@@ -40,8 +40,9 @@ import { createTileNetwork } from "./net/tile-protocols";
 import { probeSource, type ProbeConfig, type ProbeOutcome } from "./net/probe";
 import { HudLayer } from "./overlay/hud-layer";
 import { LayerSwitch, switchRules, type SwitchView } from "./style/layer-switch";
-import { TrailDotsLayer, dotLegs } from "./overlay/trail-dots-layer";
-import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, applyDashScale, buildStreetStyle, dashStepOf, focusFilter, graticule, headFocusFilter, ROUTE_HEAD_FOCUS_ID, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
+import { TrailDotsLayer, dotLegs } from "../paths/trail-dots-layer";
+import { fadeStraight, thinLegs, thinZoomOf, type ThinLeg } from "../paths/thin";
+import { DEFAULT_HANDOFF, PLACEHOLDER_LAYERS, ROUTE_LAYER_IDS, WORLD_PLACEHOLDER_BELOW, applyCell, applyDashScale, applyKeptLegs, buildStreetStyle, dashStepOf, focusFilter, graticule, headFocusFilter, ROUTE_HEAD_FOCUS_ID, hasPlaceholder, routeLayerId, seaFrom, type StyleTiles } from "./style/street-style";
 import { STREET_TUNING } from "./tuning";
 import type { AnimateOptions, FlyOptions, RevealOptions, StreetDebug, StreetMap, StreetMapOptions, StreetView } from "./types";
 
@@ -428,6 +429,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
   trailDotsRef = trailDots;
   trailDots.setLegs(dotLegs(legs));
   trailDots.setTrail(theme.trail);
+  trailDots.setPage(theme.background);
   trailDots.setFocus(focusKeys);
   trailDots.setVisible(pathsOn);
   perfEnd("street.create.hud", tHud);
@@ -563,7 +565,12 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     // The camera's signature includes where the centre lands on screen: closing the panel changes the map's padding (the inset), which moves every
     // projected point without changing the centre's lon, lat or zoom.
     const at = map.project(map.getCenter());
-    trailDots.draw((p) => map.project(p), w, h, cellCss, map.getZoom(), `${v.lon.toFixed(6)},${v.lat.toFixed(6)},${v.zoom.toFixed(5)},${at.x.toFixed(2)},${at.y.toFixed(2)}`);
+    // (the transform is not in the map's public typings; its `Marker` reads it the same way)
+    const camera = (map as unknown as { _camera?: { transform?: { isLocationOccluded?(l: LngLat): boolean } } })._camera?.transform;
+    const occluded = (l: LngLat): boolean => camera?.isLocationOccluded?.(l) ?? false;
+    // `project` answers for the far side of the planet too (a point behind it lands somewhere on the screen): a flight that wraps round the planet drew
+    // through it. The map's own occlusion test (what its markers use) takes those points out, and the layer splits the line there.
+    trailDots.draw((p) => (occluded(new LngLat(p[0], p[1])) ? null : map.project(p)), w, h, cellCss, map.getZoom(), `${v.lon.toFixed(6)},${v.lat.toFixed(6)},${v.zoom.toFixed(5)},${at.x.toFixed(2)},${at.y.toFixed(2)}`);
     // The boxes fade by time, not by camera: the map keeps repainting (and so this runs again) until the last transition has ended. The labels'
     // glides are not in this: they are DOM transforms the labels' own frames run (hud.driveGlides), the map has nothing to redraw for them.
     if (hud.boxesAnimating) map.triggerRepaint();
@@ -607,8 +614,29 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
   onMap("style.load", () => {
     dashStep = -1;
   });
+  // The legs that stay at this zoom (`paths/thin.ts`), worked out when the zoom steps by a quarter or the selected place changes.
+  const thinList: ThinLeg[] = legs.features.map((f) => ({ key: String(f.properties?.key), parts: f.geometry.coordinates as unknown as ThinLeg["parts"], straight: !!f.properties?.arc || f.properties?.mode === "flight" }));
+  let thinSig = "";
+  const updateThinning = () => {
+    const z = thinZoomOf(map.getZoom());
+    const view = Math.max(root.clientWidth, root.clientHeight);
+    const sig = `${z}|${cellCss}|${view}|${focusKeys.join(",")}`;
+    if (sig === thinSig) return;
+    thinSig = sig;
+    const lit = new Set(focusKeys);
+    const list = thinList.map((l) => (lit.has(l.key) ? { ...l, lit: true } : l));
+    const kept = thinLegs(list, z, cellCss);
+    applyKeptLegs(map, kept);
+    trailDots.setKept(kept);
+    // the straight lines quieten with the share of the screen they take (the shared rule, `paths/thin.ts`)
+    trailDots.setQuiet(fadeStraight(list, z, view));
+  };
+  onMap("style.load", () => {
+    thinSig = "";
+  });
   onMap("render", () => {
     renders++;
+    updateThinning();
     updateDashes();
     updatePlaceholder();
     updateLayers();
@@ -686,6 +714,7 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     applyTones(theme);
     hud.setTheme(theme);
     trailDots.setTrail(theme.trail);
+    trailDots.setPage(theme.background);
     if (!compositor.repool()) map.triggerRepaint();
   };
   scheme.addEventListener("change", onScheme);

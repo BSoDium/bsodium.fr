@@ -14,6 +14,8 @@
 import { ColorManagement, Color, PerspectiveCamera, Vector3, WebGLRenderer } from "three";
 import type { Polylines } from "@catalyst/geodata";
 import type { CoverBlock, GlobePlace, GlobeRoute } from "../types";
+import { TrailDotsLayer, dotLegs } from "../paths/trail-dots-layer";
+import { legFeatures } from "../paths/leg-features";
 import type { GlobeTheme } from "./colors";
 import { anchorZoom, unprojectOffset } from "./anchor";
 import { attachControls, type ControlsHost, type PointerKind } from "./controls";
@@ -53,11 +55,12 @@ import {
 import { snapBox } from "./group-square";
 import { IdleSpin, SPIN, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
 import { liftFor, placeAbove, type Placement } from "./lift";
+import { routeLift } from "./view";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
 import { CaptionLayer } from "./caption-layer";
 import { SHOWCASE_STATE, bandLat, inBand, shellWindowFactor, type CaptionContent } from "./caption";
-import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, ringRoomRadius, RING_STATE } from "./ring";
+import { CAP_HEIGHT_EM, ringAlpha, ringFloorZoom, ringRoomRadius, ringTargetEm, RING_STATE } from "./ring";
 import { RingLayer } from "./ring-layer";
 import { GlobeScene } from "./scene";
 import { CAPTION, ENERGY, INSET_EASE, CAPTION_LOAD, RING, SKY, START_VIEW, TUNING } from "./tuning";
@@ -72,6 +75,8 @@ import { perfEnd, perfStart } from "./perf";
 ColorManagement.enabled = false;
 
 const MARKER_RADIUS = 1;
+/** The unified zoom from which the legs wear the picture of their mode on the globe (from far away they are lines in a tangle: a picture each would be worse). */
+const LEG_ICON_FROM_ZOOM = 4.5;
 /** The smallest planet radius (CSS px, at the lowest zoom) the ring's and the caption's letters are drawn for: their letters have a smallest size, under it they would be cut by the planet's edge. */
 const MIN_TEXT_PLANET_PX = 60;
 const easeInset = cubicBezier(...INSET_EASE);
@@ -162,6 +167,8 @@ export class GlobeRenderer {
   private fit = 1;
   /** The ring of type, when there is one (engine/ring-layer.ts: a flat circle of text round the disc, unchanged by the showcase). */
   private ring: RingLayer | null = null;
+  /** The pictures of the modes on the legs (street/overlay/trail-dots-layer.ts, lines off: the shader draws the lines): a canvas over the globe's, null without routes. */
+  private legIcons: TrailDotsLayer | null = null;
   /** The caption: lines wrapped on a sphere in the globe's own scene (engine/caption-layer.ts), when the showcase is on this page. */
   private caption: CaptionLayer | null = null;
   /**
@@ -183,6 +190,8 @@ export class GlobeRenderer {
   private blocks: readonly CoverBlock[] = [];
   private placement: Placement | null = null;
   private liftTarget = 0;
+  /** True while `setCover` applies a new cover: the lift that follows is eased, not snapped. */
+  private easeLift = false;
   private lift = 0;
   private liftAnim: { from: number; to: number; start: number } | null = null;
   /** The lift in whole buffer pixels, like `shiftBuf`. */
@@ -284,6 +293,12 @@ export class GlobeRenderer {
 
     this.globe = new GlobeScene(opts);
     if (opts.ringText && RING_STATE.enabled) this.ring = new RingLayer(opts.container, opts.ringText, opts.theme, this.reduced);
+    if (opts.routes.length > 0) {
+      this.legIcons = new TrailDotsLayer(opts.container, { lines: false, iconFromZoom: LEG_ICON_FROM_ZOOM, onTop: true });
+      this.legIcons.setLegs(dotLegs(legFeatures(opts.routes)));
+      this.legIcons.setTrail(opts.theme.trail);
+      this.legIcons.setPage(opts.theme.background);
+    }
     this.showcaseActive = !!this.ring && SHOWCASE_STATE.enabled;
     this.cover = Math.max(0, opts.coverBottom ?? 0);
     this.blocks = opts.coverBlocks ?? [];
@@ -413,11 +428,12 @@ export class GlobeRenderer {
     this.ring?.setMask(this.containerMask);
     this.ring?.setCut(this.ringCut(freeWidth(w, inset)));
     this.layoutRing();
-    // The lift follows the viewport and the lowest zoom: a change of those (not of the cover, which animates) applies at once.
+    // The lift follows the viewport and the lowest zoom: a change of those applies at once, but a change of the cover (the home screen coming or
+    // going: `setCover` moves the lowest zoom with it) is eased like the inset, so the planet glides into its place instead of jumping.
     const key = `${w}x${h}@${this.minZoom.toFixed(4)}`;
     if (key !== this.liftKey) {
       this.liftKey = key;
-      this.retargetLift(false);
+      this.retargetLift(this.easeLift);
     }
     this.liftBuf = Math.round(this.lift / P);
     const mask = fadeMask(w, inset, this.canvasLeft) ?? "";
@@ -447,7 +463,7 @@ export class GlobeRenderer {
   private ringCut(free: number): number | null {
     const pl = this.placement;
     if (!pl || this.blocks.length === 0) return null;
-    const t = RING.type.targetEmPx;
+    const t = ringTargetEm(pl.r);
     const reach = pl.r * (1 + RING.gap) + CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
     let top = this.height;
     for (const b of this.blocks) if (b.x1 > free / 2 - reach && b.x0 < free / 2 + reach) top = Math.min(top, b.top);
@@ -511,14 +527,20 @@ export class GlobeRenderer {
     const nextBlocks = blocks ?? [];
     const same = nextBlocks.length === this.blocks.length && nextBlocks.every((b, i) => b.x0 === this.blocks[i]!.x0 && b.x1 === this.blocks[i]!.x1 && b.top === this.blocks[i]!.top);
     if (next === this.cover && same) return;
+    const prevBlocks = this.blocks;
     this.cover = next;
     this.blocks = nextBlocks;
     this.noteChange();
     if (this.sized && this.showcaseActive) {
       // The lowest zoom keeps the planet and the ring above the cover (`ringFloorZoom`): a new cover moves it, and a view resting at it moves with it.
+      // When the cover goes away (the home screen gives way to the globe) the planet keeps its size and only glides to its new place: the lowest
+      // zoom is lower then, and snapping the view to it made the planet shrink and jump while the boxes faded in (owner, 2026-10-21).
       const atFloor = Math.abs(this.view.zoom - this.minZoom) < 1e-6;
+      const leaving = nextBlocks.length === 0 && prevBlocks.length > 0;
+      this.easeLift = !this.reduced;
       this.applyInset();
-      this.view = { ...this.view, zoom: atFloor ? this.minZoom : clamp(this.view.zoom, this.minZoom, this.maxZoomAt(this.view.lat)) };
+      this.easeLift = false;
+      this.view = { ...this.view, zoom: atFloor && !leaving ? this.minZoom : clamp(this.view.zoom, this.minZoom, this.maxZoomAt(this.view.lat)) };
     }
     this.retargetLift(true);
   }
@@ -1550,6 +1572,7 @@ export class GlobeRenderer {
     this.syncCamera();
     this.syncNodes();
     this.syncRing();
+    this.syncLegIcons();
     perfEnd("three.sync", tp);
     // The whole buffer is drawn: a GL scissor limited to the free area saved nothing measurable (docs/web-architecture.md)
     // and left the area outside it stale, which the CSS edge-fade mask then revealed.
@@ -1589,6 +1612,44 @@ export class GlobeRenderer {
       width: this.width,
       height: this.height,
     });
+  }
+
+  /**
+   * The pictures of the modes go where the legs are, in the same frame: the middle of each leg that stays at this zoom and is long enough, lifted like
+   * its arc, not where the planet hides it. Cheap when the camera has not moved (the layer keys its drawing on the view).
+   */
+  private syncLegIcons() {
+    const icons = this.legIcons;
+    if (!icons) return;
+    const routes = this.globe.routes;
+    const shown = routes.visible;
+    icons.setVisible(shown);
+    if (!shown) return;
+    const P = this.pixel;
+    const cw = this.bufW * P;
+    const ch = this.bufH * P;
+    const v = this.drawView();
+    const basis = viewBasis(v, ch);
+    const cx = cw / 2 - this.shiftBuf * P;
+    const cy = ch / 2 - this.liftBuf * P;
+    const lift = routeLift(v.zoom);
+    icons.setKept(this.globe.kept);
+    icons.setQuiet(routes.quietLegs);
+    icons.setOrigin(this.canvasLeft, this.canvasTop);
+    icons.setFocus(this.globe.routes.litKeys());
+    const camera = `${v.lon.toFixed(4)},${v.lat.toFixed(4)},${v.zoom.toFixed(4)},${this.shiftBuf},${this.liftBuf},${cw}x${ch},${lift.toFixed(3)},${routes.overlayPresence}`;
+    icons.draw(
+      (p, l) => {
+        const s = projectLonLat(p[0], p[1], basis, cw, ch, 1 + l, cx, cy);
+        return s.visible ? { x: s.x, y: s.y } : null;
+      },
+      cw,
+      ch,
+      P,
+      v.zoom,
+      camera,
+      lift,
+    );
   }
 
   /**
@@ -1857,7 +1918,7 @@ export class GlobeRenderer {
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
     const now = performance.now();
-    this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced);
+    this.globe.syncCamera(b, v.zoom, this.pixel, now, this.reduced, v.lat, Math.max(this.width, this.height));
     this.lastBasis = { d: b.d, lon: v.lon, lat: v.lat };
     this.caption?.sync(b.d, v.lon, v.lat, now);
     this.globe.syncSky(cam, b, this.era, { w: this.bufW, h: this.bufH, shift: this.shiftBuf, lift: this.liftBuf }, now, this.reduced);
@@ -1917,6 +1978,8 @@ export class GlobeRenderer {
     this.cleanups = [];
     this.ring?.dispose();
     this.ring = null;
+    this.legIcons?.dispose();
+    this.legIcons = null;
     this.caption?.dispose();
     this.caption = null;
     this.globe.dispose();

@@ -292,9 +292,10 @@ export const RING = {
    * The type: the weight, the tracking (em added to the monospace's 0.6 em advance; the nav's `.nav-link` is 0.14), and the em size (CSS px) the
    * letters have at the lowest zoom. The line goes round a WHOLE number of times (`ringLayout`): the count is the one whose letters, at the
    * nominal tracking, come nearest `targetEmPx`, then the em is allowed to move by `emSlack` (a fraction) and the tracking takes the rest up, so
-   * the seam closes evenly at any size. The type then scales with the planet (the ring is an object of the planet's), so a closed ring stays closed.
+   * the seam closes evenly at any size. `targetEmPx` is the least: a big planet (a laptop's screen, where a CSS px is small) takes `emPerPlanet` of its
+   * radius up to `maxEmPx`, so the ring keeps its weight beside the planet (owner, 2026-10-21: it was tiny on a MacBook). The type then scales with the planet (the ring is an object of the planet's), so a closed ring stays closed.
    */
-  type: { weight: 500, tracking: 0.14, advanceEm: 0.6, targetEmPx: 11, emSlack: 0.15 },
+  type: { weight: 500, tracking: 0.14, advanceEm: 0.6, targetEmPx: 11, emSlack: 0.15, emPerPlanet: 0.042, maxEmPx: 17 },
   /** Between the phrases (and after the last, which closes the loop). */
   separator: " \u00b7 ",
   /**

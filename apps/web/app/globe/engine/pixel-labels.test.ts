@@ -532,8 +532,8 @@ describe("a box opens from a closed rectangle into corners and dashes as it grow
       expect(prev).toBe(full.gap);
     }
   });
-  it("at openness 0 the outline is a plain closed rectangle: every cell of the ring is lit, at every size, also for a strip", () => {
-    for (const [w, h] of [[5, 5], [6, 5], [9, 9], [30, 5], [5, 30], [14, 14]] as const) {
+  it("at openness 0 the outline is a plain closed rectangle: every cell of the ring is lit, at every size (a strip three times longer than it is wide is lopsided: its own test below)", () => {
+    for (const [w, h] of [[5, 5], [6, 5], [9, 9], [14, 14], [14, 6], [7, 14]] as const) {
       const b = new PixelBuffer(w + 2, h + 2);
       drawBox(b, { c0: 1, r0: 1, c1: w + 1, r1: h + 1 }, T, { alpha: 1, fillAlpha: 0, open: 0 });
       let ring = 0;
@@ -665,5 +665,48 @@ describe("a box at the screen's edge: the bleed is held on the screen, and the c
     // beside the box: down by what hangs above its top edge
     expect(selectedShiftAt(SPOT.right, 6, 3, { x: 52, y: 38, w: W }, rect)).toEqual({ dx: 0, dy: 2 });
     expect(selectedShiftAt(SPOT.insideTopLeft, 6, 3, { x: 4, y: 41, w: W }, rect)).toEqual({ dx: 0, dy: 0 });
+  });
+});
+
+describe("a lopsided box", () => {
+  const T = labelTones(12);
+  const PEAK = T.rest.box;
+  const cells = (w: number, h: number) => {
+    const b = new PixelBuffer(w + 2, h + 2);
+    drawBox(b, { c0: 1, r0: 1, c1: 1 + w, r1: 1 + h }, T, { alpha: 1, fillAlpha: 0, open: 0 }); // open 0: at its floor height, where it used to be a closed rectangle
+    return b;
+  };
+  it("a very wide and short box has solid short sides and dashed long sides", () => {
+    const w = 240;
+    const h = 14;
+    const b = cells(w, h);
+    const top = Array.from({ length: w }, (_, i) => b.get(1 + i, 1) === PEAK);
+    expect(top.filter((x) => !x).length).toBeGreaterThan(20); // dashed: gaps along the long edge
+    expect(top.slice(0, 3).every(Boolean)).toBe(true); // with its arms
+    for (let j = 0; j < h; j++) {
+      expect(b.get(1, 1 + j), `left ${j}`).toBe(PEAK); // the short sides are solid
+      expect(b.get(w, 1 + j), `right ${j}`).toBe(PEAK);
+    }
+  });
+  it("a narrow and tall one is the same turned: solid top and bottom, dashed sides", () => {
+    const w = 14;
+    const h = 240;
+    const b = cells(w, h);
+    for (let i = 0; i < w; i++) {
+      expect(b.get(1 + i, 1)).toBe(PEAK);
+      expect(b.get(1 + i, h)).toBe(PEAK);
+    }
+    const left = Array.from({ length: h }, (_, j) => b.get(1, 1 + j) === PEAK);
+    expect(left.filter((x) => !x).length).toBeGreaterThan(20);
+  });
+  it("a box that is not lopsided is as it was (a closed rectangle at its floor, dashed when open)", () => {
+    const closed = cells(30, 20);
+    for (let i = 0; i < 30; i++) expect(closed.get(1 + i, 1)).toBe(PEAK);
+    expect(BOX_STYLE.lopsided).toBe(3);
+  });
+  it("a selected lopsided box is one solid line", () => {
+    const b = new PixelBuffer(242, 16);
+    drawBox(b, { c0: 1, r0: 1, c1: 241, r1: 15 }, T, { alpha: 1, fillAlpha: 0, solid: true });
+    for (let i = 0; i < 240; i++) expect(b.get(1 + i, 1)).toBe(PEAK);
   });
 });

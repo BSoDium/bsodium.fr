@@ -6,8 +6,8 @@
  *
  * Pure: `legCells` takes a path in cell coordinates and returns the cells to ink. The canvas is `TrailDotsLayer`.
  */
-import { CELL_PATTERN, type LegMode } from "../../paths/modes";
-import { TRAIL_BANDS } from "../../paths/trail";
+import { CELL_PATTERN, type LegMode } from "./modes";
+import { TRAIL_BANDS } from "./trail";
 
 export interface Cell {
   col: number;
@@ -46,14 +46,15 @@ function clipRange(ax: number, ay: number, bx: number, by: number, x0: number, y
  * counted, so the pattern does not depend on what is visible. Cells come out in path order, one per cell of pattern ink (a rail's tick adds
  * the two cells across the dash).
  */
-export function legCells(parts: ReadonlyArray<ReadonlyArray<readonly [number, number]>>, mode: LegMode, view: { cols: number; rows: number }, margin = 3): Cell[] {
+export function legCells(parts: ReadonlyArray<ReadonlyArray<readonly [number, number]>>, mode: LegMode, view: { cols: number; rows: number }, margin = 3, ticks = true): Cell[] {
   const pattern = CELL_PATTERN[mode];
   if (!pattern) return [];
   let total = 0;
   for (const part of parts) for (let i = 1; i < part.length; i++) total += Math.hypot(part[i]![0] - part[i - 1]![0], part[i]![1] - part[i - 1]![1]);
   if (!(total > 0)) return [];
   const out: Cell[] = [];
-  const { period, on, tick } = pattern;
+  const { period, on } = pattern;
+  const tick = pattern.tick && ticks;
   let base = 0; // the path length before the piece
   const emit = (u: number, x: number, y: number) => {
     const band = Math.min(TRAIL_BANDS - 1, Math.floor((u / total) * TRAIL_BANDS));

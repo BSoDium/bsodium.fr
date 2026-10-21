@@ -21,6 +21,7 @@ import {
   relatedScore,
   RELATED_WEIGHTS,
   resolveBackTarget,
+  focusPlaceOf,
   splitMeta,
   viewSearch,
 } from "./entries";
@@ -265,5 +266,21 @@ describe("resolveBackTarget", () => {
   });
   it("ignores state that is missing, malformed or names an unknown place", () => {
     for (const state of [null, undefined, "lisbon", 3, {}, { from: 3 }, { from: "ghost" }, { from: { slug: "lisbon" } }]) expect(resolveBackTarget(state, places), JSON.stringify(state)).toBeNull();
+  });
+});
+
+describe("focusPlaceOf: the place the globe is on while an entry is open", () => {
+  const known = (s: string) => ["toulouse", "copenhagen", "lisbon"].includes(s);
+  it("is the place the visitor came from, when there is one", () => {
+    expect(focusPlaceOf("lisbon", [{ slug: "toulouse" }], known)).toBe("lisbon");
+  });
+  it("is otherwise the entry's first place the globe knows (software made in Toulouse opens on Toulouse)", () => {
+    expect(focusPlaceOf(null, [{ slug: "toulouse" }, { slug: "copenhagen" }], known)).toBe("toulouse");
+    expect(focusPlaceOf(null, [{ slug: "ghost" }, { slug: "copenhagen" }], known)).toBe("copenhagen");
+    expect(focusPlaceOf("ghost", [{ slug: "copenhagen" }], known)).toBe("copenhagen");
+  });
+  it("is null for an entry with no place", () => {
+    expect(focusPlaceOf(null, [], known)).toBeNull();
+    expect(focusPlaceOf(null, null, known)).toBeNull();
   });
 });

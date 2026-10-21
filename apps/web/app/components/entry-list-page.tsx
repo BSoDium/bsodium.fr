@@ -7,7 +7,6 @@ import { Button, ScrollRow, StatePanel } from "~/components/ui";
 import { KIND_PLURALS, kindCount, type EntrySummary } from "~/lib/entries";
 import { collectTags, filterByTag, groupByYear, parseTagFilter, shouldGroupByYear, tagSearch, type TagCount } from "~/lib/entry-list";
 import { SITE_NAME } from "~/lib/site";
-import { cn } from "~/lib/utils";
 
 /** Tags shown before "more": the rest sit one press away (the selected tag is always shown). */
 const TAGS_SHOWN = 10;
@@ -21,7 +20,7 @@ const TAGS_SHOWN = 10;
  * collection is one muted line. Each row keeps the entry's slug as its anchor id (`/articles#slug`).
  *
  * Two sections are set differently: `/artworks` is ONE brick wall of pictures (`ArtworkWall`, no year headings: the year is in each caption) and
- * `/poetry` is a wider page of poems in two columns from 44 rem of its width (the page stops at 100 rem), with the summary in the reading face at a larger size.
+ * `/poetry` sets the poems in two columns from 44 rem of the page's width. All four pages are the same width (100 rem), so the titles and the content keep their left edge from tab to tab, with the summary in the reading face at a larger size.
  */
 export function EntryListPage({ kind, items }: { kind: ContentKind; items: EntrySummary[] }) {
   const { search } = useLocation();
@@ -48,7 +47,7 @@ export function EntryListPage({ kind, items }: { kind: ContentKind; items: Entry
       data-surface="reading"
       data-layout="full"
       data-list={kind}
-      className={cn("entry mx-auto px-4 pt-[calc(var(--navbar-height)+3rem)] pb-24 outline-none md:px-14", wall ? "max-w-[120rem]" : poems ? "max-w-[100rem]" : "max-w-[90rem]")}
+      className="entry mx-auto max-w-[100rem] px-4 pt-[calc(var(--navbar-height)+3rem)] pb-24 outline-none md:px-14"
     >
       <header data-slot="list-head" className="list-head">
         <p className="list-running type-meta">

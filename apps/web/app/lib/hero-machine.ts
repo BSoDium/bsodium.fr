@@ -76,8 +76,8 @@ const browserTimers: HeroTimers = {
   clearTimeout: (handle) => globalThis.clearTimeout(handle as ReturnType<typeof setTimeout>),
 };
 
-export function createHeroMachine({ idleMs = HERO_IDLE_MS, timers = browserTimers }: { idleMs?: number; timers?: HeroTimers } = {}): HeroMachine {
-  let snapshot: HeroSnapshot = { state: "rest", world: true };
+export function createHeroMachine({ idleMs = HERO_IDLE_MS, timers = browserTimers, initial = "rest" }: { idleMs?: number; timers?: HeroTimers; initial?: HeroState } = {}): HeroMachine {
+  let snapshot: HeroSnapshot = { state: initial, world: true };
   let timer: unknown = null;
   let held = false;
   const listeners = new Set<() => void>();
@@ -101,6 +101,9 @@ export function createHeroMachine({ idleMs = HERO_IDLE_MS, timers = browserTimer
       if (snapshot.state === "collapsed" && snapshot.world) set({ state: "rest" });
     }, idleMs);
   };
+
+  // Born collapsed (the visitor came back to the home page from another): the full hero returns after the idle delay, as after a gesture.
+  arm();
 
   return {
     getSnapshot: () => snapshot,

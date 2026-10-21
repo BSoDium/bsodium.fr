@@ -61,6 +61,12 @@ export interface RingLayout {
   tracking: number;
 }
 
+/** The em (CSS px) the letters aim at beside a planet of radius `r` CSS px: the least `targetEmPx`, more for a big planet, up to `maxEmPx`. */
+export function ringTargetEm(r: number): number {
+  const { targetEmPx, emPerPlanet, maxEmPx } = RING.type;
+  return clamp(r * emPerPlanet, targetEmPx, maxEmPx);
+}
+
 /**
  * How the line sits round the ring, for a viewport: from the silhouette's radius at the lowest zoom (`rFloorPx`), where the letters should be
  * `RING.type.targetEmPx` tall. The circumference of the baseline there is C. The count is the whole number `n` whose em at the NOMINAL tracking,
@@ -69,7 +75,7 @@ export interface RingLayout {
  * kept as ratios of the silhouette, so they hold at every zoom. A function of the viewport, not of the zoom: nothing reflows while zooming.
  */
 export function ringLayout(lineLength: number, rFloorPx: number): RingLayout {
-  const target = RING.type.targetEmPx;
+  const target = ringTargetEm(rFloorPx);
   const adv = RING.type.advanceEm;
   const nominal = adv + RING.type.tracking;
   if (lineLength <= 0 || !(rFloorPx > 0)) return { repeats: 1, emPerR: target / Math.max(1, rFloorPx), tracking: RING.type.tracking };
@@ -108,9 +114,13 @@ export function ringFloorZoom(a: { fit: number; freeWidth: number; height: numbe
  */
 export function ringRoomRadius(a: { freeWidth: number; height: number }): number {
   const room = (Math.min(a.freeWidth, a.height) / 2) * (1 - RING.zoom.fitMargin);
-  const t = RING.type.targetEmPx;
-  const reach = CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
-  return Math.max(1, (room - reach) / (1 + RING.gap));
+  // The letters' size depends on the planet's (`ringTargetEm`): the radius that fits is found by letting the reach follow the radius (it settles at once).
+  let r = 1;
+  for (let i = 0; i < 4; i++) {
+    const t = ringTargetEm(r);
+    r = Math.max(1, (room - (CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t)) / (1 + RING.gap));
+  }
+  return r;
 }
 
 /**

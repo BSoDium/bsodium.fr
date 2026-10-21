@@ -47,6 +47,11 @@ export function fadeLevel(lengthCells: number, finalLevel: number): number {
  * be a fade; a step of the tone is what the art does). Far away every path is quieter, so the set of them does not read as a tangle; the legs of the
  * selected place are not affected.
  */
+/**
+ * The rail's cross-ticks (a 3-cell bar across the line in the middle of every dash) are drawn from this zoom on: from far away a rail is a dashed line
+ * (the tick at overview doubled the weight of every rail and made a region of many trips a mesh of crosses).
+ */
+export const TICK_FROM = 5.5;
 export const FAR_FROM = 1.2;
 export const FAR_TO = 2.6;
 export function farOf(zoom: number): number {

@@ -1,6 +1,6 @@
 import { useReducedMotion } from "motion/react";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useOutlet } from "react-router";
+import { useLocation, useMatches, useNavigate, useOutlet } from "react-router";
 import type { Route } from "./+types/shell";
 import { AttributionSlot } from "~/components/attribution-slot";
 import { DetailPanel, type OpenIntent } from "~/components/detail-panel";
@@ -12,7 +12,7 @@ import { useLandingHero } from "~/hooks/use-landing-hero";
 import { useViewportWidth } from "~/hooks/use-viewport-width";
 import { getProjection } from "~/lib/content.server";
 import { getTilesConfig } from "~/lib/tiles-config.server";
-import { KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
+import { focusPlaceOf, KIND_PATHS, KIND_PLURALS, parsePanelPath, parseView, resolveBackTarget, viewSearch, type EntryView } from "~/lib/entries";
 import { panelInset } from "~/lib/layout";
 import { buildPlaceIndex, placePath, toGlobeGroups } from "~/lib/projection";
 import { SITE, siteCaption, type KindCounts } from "~/lib/site";
@@ -69,10 +69,13 @@ export default function Shell({ loaderData }: Route.ComponentProps) {
   // names it) so the selection and the camera stay where they were.
   const slug = panelRoute?.type === "place" ? panelRoute.slug : null;
   const cameFrom = panelRoute?.type === "entry" ? resolveBackTarget(location.state, places)?.slug ?? null : null;
+  // An entry's own places (its route's data): with no place it was opened from, the globe goes to the first of them.
+  const matches = useMatches();
+  const entryPlaces = panelRoute?.type === "entry" ? ((matches.find((m) => (m.data as { entry?: { places?: unknown } } | undefined)?.entry?.places)?.data as { entry: { places: Array<{ slug: string }> } } | undefined)?.entry.places ?? null) : null;
   const selectedSlug = useMemo(() => {
-    const wanted = slug ?? cameFrom;
-    return places.some((p) => p.slug === wanted) ? wanted : null;
-  }, [places, slug, cameFrom]);
+    const known = (s: string) => places.some((p) => p.slug === s);
+    return slug ? (known(slug) ? slug : null) : focusPlaceOf(cameFrom, entryPlaces, known);
+  }, [places, slug, cameFrom, entryPlaces]);
   // A direct load or reload on /locations/:slug starts ALREADY framed on the place (centred on its bounding box, else on
   // its point, with the framing radius fitted to the free area): derived from the loader's data, so the very first frame
   // is the final one and nothing flies. A saved view (the globe remounting after the mobile slide-over) wins. In-app

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEG, fitZoom, silhouetteRadiusPx, silhouetteZoom } from "./geo";
 import { activeLevels, roleLevel } from "./palette";
-import { CAP_HEIGHT_EM, GlyphBuffer, placeGlyphs, ringAlpha, ringFloorZoom, ringLayout, ringPhase, ringText, ringTone } from "./ring";
+import { CAP_HEIGHT_EM, GlyphBuffer, placeGlyphs, ringAlpha, ringFloorZoom, ringLayout, ringPhase, ringText, ringTargetEm, ringTone } from "./ring";
 import { SPIN } from "./idle-spin";
 import { RING } from "./tuning";
 import { RING_LINE_BUDGET, ringPhrases } from "../ring-text";
@@ -74,18 +74,25 @@ describe("the layout: the line closes evenly round the ring", () => {
     }
   });
 
+  it("takes more em beside a big planet (a laptop screen), the least on a small one, never past the cap", () => {
+    expect(ringTargetEm(60)).toBe(RING.type.targetEmPx);
+    expect(ringTargetEm(340)).toBeGreaterThan(RING.type.targetEmPx);
+    expect(ringTargetEm(5000)).toBe(RING.type.maxEmPx);
+  });
+
   it("keeps the letters near the target size, the tracking near the nominal, and never lets them touch", () => {
     for (const r of radii.filter((v) => v >= 100)) {
       const l = ringLayout(LINE.length, r);
       const em = l.emPerR * r;
-      expect(em).toBeLessThanOrEqual(RING.type.targetEmPx * (1 + RING.type.emSlack) + 1e-9);
+      const target = ringTargetEm(r);
+      expect(em).toBeLessThanOrEqual(target * (1 + RING.type.emSlack) + 1e-9);
       expect(l.tracking).toBeGreaterThan(0.02 - 1e-9);
       expect(Math.abs(l.tracking - RING.type.tracking)).toBeLessThan(0.2);
       // within the slack of the target, or, when the line is too long for the ring at that size (a phone: about 160 letters on a circle of 770 px),
       // shrunk by what it takes to keep the tightest tracking: never more than a third below the target
-      if (em < RING.type.targetEmPx * (1 - RING.type.emSlack) - 1e-9) {
+      if (em < target * (1 - RING.type.emSlack) - 1e-9) {
         expect(l.tracking).toBeCloseTo(0.02, 9);
-        expect(em).toBeGreaterThan(RING.type.targetEmPx * (2 / 3));
+        expect(em).toBeGreaterThan(target * (2 / 3));
       }
     }
     // A ring too small for the line at the smallest em shrinks the type instead of overlapping it.

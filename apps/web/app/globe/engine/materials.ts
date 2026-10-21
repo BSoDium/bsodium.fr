@@ -5,6 +5,7 @@
  */
 import { Color, ShaderMaterial } from "three";
 import { LEG_MODES, MODE_STYLE } from "../paths/modes";
+import { STRAIGHT_FADE_MIX, STRAIGHT_FADE_STEPS } from "../paths/thin";
 import { SPARK, TRAIL_BANDS, TRAIL_ENTRIES, TRAIL_PER_PALETTE } from "../paths/trail";
 
 const PASS_THROUGH_VERTEX = /* glsl */ `
@@ -89,6 +90,7 @@ export function pathMaterial(): ShaderMaterial {
       uState: { value: null },
       uTexSize: { value: [1, 1] },
       uFar: { value: 0 },
+      uTickOn: { value: 1 },
       uFadeFrom: { value: 2 },
       uFadeFull: { value: 14 },
     },
@@ -98,7 +100,7 @@ export function pathMaterial(): ShaderMaterial {
       attribute float aDist; attribute vec4 aInfo; attribute vec3 aTan; attribute float aCopy;
       uniform vec2 uPixel; uniform float uLift; uniform float uCell; uniform sampler2D uState; uniform vec2 uTexSize;
       uniform float uFinal; uniform float uFadeFrom; uniform float uFadeFull;
-      varying float vDist; varying float vLen; varying float vMode; varying float vState; varying float vCopy; varying float vFade; varying float vPal;
+      varying float vDist; varying float vLen; varying float vMode; varying float vState; varying float vCopy; varying float vFade; varying float vPal; varying float vQuiet;
       varying vec3 vPos;
       void main() {
         float leg = aInfo.x;
@@ -108,9 +110,11 @@ export function pathMaterial(): ShaderMaterial {
         float fd = clamp((aInfo.z / uCell - uFadeFrom) / (uFadeFull - uFadeFrom), 0.0, 1.0);
         float level = fd <= 0.0 ? 0.0 : clamp(ceil(fd * uFinal), 1.0, uFinal);
         vFade = level / uFinal;
+        // a straight line quietened up close (paths/thin.ts fadeStraight): the state between hidden and lit, 52 + 4 per step (1..3)
+        vQuiet = (st > 0.2 && st < 0.25) ? floor((st * 255.0 - 48.0) / 4.0 + 0.5) : 0.0;
         vDist = aDist; vLen = aInfo.z; vMode = aInfo.y; vPal = aInfo.w; vState = st; vCopy = aCopy;
-        // a leg nothing shows is clipped away
-        if (level < 0.5 && st < 0.25) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+        // a leg nothing shows is clipped away, and so is one thinned away at this zoom (paths/thin.ts: the state between none and lit)
+        if ((level < 0.5 && st < 0.25) || (st > 0.05 && st < 0.2)) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
         // uLift scales the height above the surface: 1 = lifted arc, 0 = on the ground (street scale).
         vec3 p = normalize(position) * (1.0 + (length(position) - 1.0) * uLift);
         vPos = p;
@@ -125,8 +129,8 @@ export function pathMaterial(): ShaderMaterial {
         gl_Position = c;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uTrail[${TRAIL_ENTRIES}]; uniform vec3 uPage; uniform float uFinal; uniform float uPresence; uniform float uFront; uniform float uMarch; uniform float uCell; uniform float uFar;
-      varying float vDist; varying float vLen; varying float vMode; varying float vState; varying float vCopy; varying float vFade; varying float vPal;
+      uniform vec3 uTrail[${TRAIL_ENTRIES}]; uniform vec3 uPage; uniform float uFinal; uniform float uPresence; uniform float uFront; uniform float uMarch; uniform float uCell; uniform float uFar; uniform float uTickOn;
+      varying float vDist; varying float vLen; varying float vMode; varying float vState; varying float vCopy; varying float vFade; varying float vPal; varying float vQuiet;
       varying vec3 vPos;
       // True when the occluder sphere lies between the camera and p.
       bool behindGlobe(vec3 p) {
@@ -162,7 +166,7 @@ export function pathMaterial(): ShaderMaterial {
         if (period > 0.5) {
           float u = mod(cells, period);
           // the rail's tick: one cell across the line at the middle of each dash
-          if (vCopy > 0.5) tick = abs(vMode - 1.0) < 0.5 && u >= on * 0.5 - 0.5 && u < on * 0.5 + 0.5;
+          if (vCopy > 0.5) tick = uTickOn > 0.5 && abs(vMode - 1.0) < 0.5 && u >= on * 0.5 - 0.5 && u < on * 0.5 + 0.5;
           else if (u >= on && !sparkOn) discard;
         }
         if (vCopy > 0.5 && !tick && !sparkOn) discard;
@@ -177,6 +181,8 @@ export function pathMaterial(): ShaderMaterial {
         if (pk < 0.01) discard;
         // from far away the paths are quieter (a solid mix toward the page, not an opacity); the selected place's legs keep their strength
         col = mix(uPage, col, (inked ? 1.0 : vFade * (1.0 - 0.55 * uFar)) * pk);
+        // a straight line up close: a solid mix toward the page by its step
+        col = mix(col, uPage, ${f(STRAIGHT_FADE_MIX)} * vQuiet / ${f(STRAIGHT_FADE_STEPS)});
         gl_FragColor = vec4(col, 1.0);
       }`,
   });
