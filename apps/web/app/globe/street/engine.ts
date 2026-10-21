@@ -13,7 +13,7 @@
  *  4. dispose: unregister protocols, observers, timers; remove the map (frees its context), dispose the compositor
  *     (frees the overlay context), remove all DOM. Safe to call twice.
  */
-import { Map as MLMap, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
+import { LngLat, Map as MLMap, setWorkerUrl, type StyleSpecification } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { readTheme, type GlobeTheme } from "../engine/colors";
 import { applyDebugLevels } from "../engine/palette";
@@ -565,7 +565,12 @@ export function createStreetMap(container: HTMLElement, opts: StreetMapOptions):
     // The camera's signature includes where the centre lands on screen: closing the panel changes the map's padding (the inset), which moves every
     // projected point without changing the centre's lon, lat or zoom.
     const at = map.project(map.getCenter());
-    trailDots.draw((p) => map.project(p), w, h, cellCss, map.getZoom(), `${v.lon.toFixed(6)},${v.lat.toFixed(6)},${v.zoom.toFixed(5)},${at.x.toFixed(2)},${at.y.toFixed(2)}`);
+    // (the transform is not in the map's public typings; its `Marker` reads it the same way)
+    const camera = (map as unknown as { _camera?: { transform?: { isLocationOccluded?(l: LngLat): boolean } } })._camera?.transform;
+    const occluded = (l: LngLat): boolean => camera?.isLocationOccluded?.(l) ?? false;
+    // `project` answers for the far side of the planet too (a point behind it lands somewhere on the screen): a flight that wraps round the planet drew
+    // through it. The map's own occlusion test (what its markers use) takes those points out, and the layer splits the line there.
+    trailDots.draw((p) => (occluded(new LngLat(p[0], p[1])) ? null : map.project(p)), w, h, cellCss, map.getZoom(), `${v.lon.toFixed(6)},${v.lat.toFixed(6)},${v.zoom.toFixed(5)},${at.x.toFixed(2)},${at.y.toFixed(2)}`);
     // The boxes fade by time, not by camera: the map keeps repainting (and so this runs again) until the last transition has ended. The labels'
     // glides are not in this: they are DOM transforms the labels' own frames run (hud.driveGlides), the map has nothing to redraw for them.
     if (hud.boxesAnimating) map.triggerRepaint();
