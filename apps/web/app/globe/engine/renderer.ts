@@ -671,7 +671,10 @@ export class GlobeRenderer {
 
   /** The view the Three.js scene is drawn with: the globe cannot go closer than its own maximum. */
   private drawView(): ViewState {
-    return this.view.zoom > TUNING.maxZoom ? { ...this.view, zoom: TUNING.maxZoom } : this.view;
+    // (the cinematic interlude pulls the globe back for a while: below the page's floor, for the picture only)
+    const back = this.caption?.zoomOutLevels() ?? 0;
+    const zoom = Math.min(this.view.zoom, TUNING.maxZoom) - back;
+    return zoom === this.view.zoom ? this.view : { ...this.view, zoom };
   }
 
   setView(v: Partial<ViewState>) {
@@ -1501,7 +1504,7 @@ export class GlobeRenderer {
     // The window covers the SHELL's silhouette, not a fixed share of the planet's (the shell is above the surface: a row near the limb is
     // farther from the centre than the planet is wide; a window cut through it shows as a vertical edge on the letters).
     const dist = cameraDistance(this.drawView().zoom, ch);
-    const R = silhouetteRadiusPx(this.drawView().zoom, ch) * shellWindowFactor(dist) * 1.03 + 4;
+    const R = silhouetteRadiusPx(this.drawView().zoom, ch) * shellWindowFactor(dist, caption.maxRadius) * 1.03 + 4;
     const cx = cw / 2 - this.shiftBuf * P;
     const cy = ch / 2 - this.liftBuf * P;
     // The window: the planet's whole box (`planet`) or only its horizontal reach by the caption's own vertical band (`band`: the rows' edges over
@@ -1591,7 +1594,7 @@ export class GlobeRenderer {
     ring.update({
       cx: (this.bufW * P) / 2 - this.shiftBuf * P + this.canvasLeft,
       cy: ch / 2 - this.liftBuf * P + this.canvasTop,
-      r: silhouetteRadiusPx(this.view.zoom, ch),
+      r: silhouetteRadiusPx(this.drawView().zoom, ch),
       alpha,
       width: this.width,
       height: this.height,
@@ -1888,7 +1891,7 @@ export class GlobeRenderer {
     cam.fov = FOV_DEG;
     cam.aspect = this.bufW / this.bufH;
     // (the caption's shell is above the planet: its nearest point must be inside the near plane)
-    const reach = this.caption ? CAPTION.radius + 0.05 : 1.05;
+    const reach = this.caption ? this.caption.maxRadius + 0.05 : 1.05;
     cam.near = Math.max(0.02, b.d - reach);
     cam.far = b.d + reach;
     cam.position.set(b.c[0] * b.d, b.c[1] * b.d, b.c[2] * b.d);

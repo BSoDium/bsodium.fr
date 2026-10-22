@@ -55,6 +55,7 @@ import {
   fitScale,
   minScaleFor,
   parallelPoint,
+  placeEgg,
   placeRows,
   planPieces,
   runsText,
@@ -70,6 +71,7 @@ import {
   type CaptionStyleKey,
   type Placement,
 } from "./caption";
+import { CINEMATIC, notePlayed, planForPage } from "./cinematic";
 import { OCCLUDER_RADIUS } from "./materials";
 import { CAPTION, ENERGY } from "./tuning";
 
@@ -204,6 +206,9 @@ const BAND_FRAG = /* glsl */ `
   }
 `;
 
+/** The `set` of the big row of the cinematic interlude (engine/cinematic.ts): not a phrase set, not a fixed row. */
+const EGG = -2;
+
 /** One drawn strip: a row of a phrase set (`set` >= 0: it takes its turn) or a fixed row (`set` -1). Built once, all of them, ahead of time. */
 interface Variant {
   row: number;
@@ -231,6 +236,8 @@ interface Built {
   slotRows: number;
   /** The static fit of the block (`fitScale`: 1 unless a row would not fit its chord inside the band). */
   scale: number;
+  /** The big row of the cinematic interlude: its piece, its own placement (on its own, higher shell, centred on the equator, as large as it may be: `placeEgg`) and how far behind the planet it starts. Null: no interlude is planned. */
+  egg: { piece: CaptionPiece; place: Placement; start: number } | null;
   key: string;
 }
 
@@ -252,6 +259,8 @@ export interface CaptionState {
    * the first row's cycle count, the side each row came in from (`lastIn`) and goes out by (`lastOut`) in its current cycle.
    */
   cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number; lastOut: number[]; lastIn: number[] };
+  /** The cinematic interlude: planned, under way, how many levels of zoom the globe is pulled back by, the big row's turn (radians; null: not on the stage) and whether its strip is drawn. */
+  egg: { planned: boolean; active: boolean; zoomOut: number; theta: number | null; drawn: boolean };
   /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
   baselines: number[];
   texture: { width: number; height: number }[];
@@ -545,6 +554,15 @@ export class CaptionLayer {
     this.crisp = new CrispCanvas(opts.host, () => opts.onChange());
     // Each entrance draws the sides the lines come in from at random, from a seed of the session.
     this.motion.seed = (Math.random() * 0x7fffffff) | 0;
+    // Rarely, and only for a visitor who has been here before, the words give way to one big one for a while (engine/cinematic.ts).
+    this.motion.egg = opts.content.sets.length + opts.content.fixed.length > 0 ? planForPage(this.motion.seed, opts.reduced) : null;
+    this.motion.onCinematic = notePlayed;
+    this.motion.onResume = () => {
+      // (the showing begins again from its first phrase set)
+      this.parkSet = -1;
+      this.setShift = 0;
+      this.opts.onChange(); // (the entrance is the globe's own loop's: a frame is wanted)
+    };
     this.setTheme(opts.theme);
   }
 
@@ -609,7 +627,7 @@ export class CaptionLayer {
     b.pieces.forEach((p, i) => {
       p.cap = Math.max(b.nominal[i]!, floorCap);
     });
-    for (const v of b.variants) v.piece.cap = b.pieces[v.row]!.cap;
+    for (const v of b.variants) v.piece.cap = v.set === EGG ? v.piece.cap : b.pieces[v.row]!.cap;
     this.place();
     this.motion.setStarts(
       b.pieces.map((_, r) => this.rowStart(r)),
@@ -689,6 +707,39 @@ export class CaptionLayer {
     return Math.max(2, Math.min(cap, SLICE_STEPS.filter((x) => x <= cap).at(-1) ?? cap));
   }
 
+  /** How far the globe has pulled back for the cinematic interlude, 0 to 1 (see `zoomOutLevels`), and when it was last read. */
+  private zoomK = 0;
+  private zoomAt = -1;
+
+  /**
+   * How many levels of zoom the globe is pulled back by now (0 when there is no interlude under way): the renderer subtracts it from the zoom it
+   * draws with, so the planet, the ring and the caption shrink together, smoothly. During the interlude it is the timeline's own value
+   * (`CaptionMotion.eggZoom`); once the interlude is over or was cut short (a gesture) it gives the size back at a fixed pace.
+   */
+  zoomOutLevels(): number {
+    const shape = this.motion.egg?.shape ?? CINEMATIC.shape;
+    if (this.motion.eggActive) {
+      this.zoomK = this.motion.eggZoom();
+      this.zoomAt = -1;
+    } else if (this.zoomK > 0) {
+      const now = performance.now();
+      const dt = this.zoomAt < 0 ? 0 : Math.min(now - this.zoomAt, 64);
+      this.zoomAt = now;
+      this.zoomK = Math.max(0, this.zoomK - dt / shape.zoomCutMs);
+    }
+    return this.zoomK * shape.zoomLevels;
+  }
+
+  /** The radius of the shell a strip is on: the rows' own, or the cinematic word's higher one. */
+  private radiusOf(v: Pick<Variant, "set">): number {
+    return v.set === EGG ? CINEMATIC.radius : (this.radius ?? CAPTION.radius);
+  }
+
+  /** The largest shell the caption draws on (the renderer sizes the second canvas to the shell's silhouette). */
+  get maxRadius(): number {
+    return Math.max(this.radius ?? CAPTION.radius, this.built?.egg ? CINEMATIC.radius : 0);
+  }
+
   /** The quality now (checks). */
   get quality(): { dpr: number; slices: number } {
     return { dpr: this.dprCap, slices: this.slices };
@@ -700,7 +751,7 @@ export class CaptionLayer {
    */
   park(now: number): boolean {
     const b = this.built;
-    if (!b || !this.drifting) return false;
+    if (!b || !this.drifting || this.motion.eggActive) return false;
     let chosen = this.rowSet[0] ?? 0;
     for (let r = 0; r < b.slotRows; r++) {
       if (Math.abs(this.lastThetas[r] ?? 9) <= DRIFT.amp * 1.5) {
@@ -740,12 +791,11 @@ export class CaptionLayer {
     const b = this.built;
     const sizing = this.sizing;
     if (!b || !sizing || b.pieces.length === 0) return null;
-    const r = this.radius ?? CAPTION.radius;
     let top = -Infinity;
     let bottom = Infinity;
-    for (let i = 0; i < b.pieces.length; i++) {
-      const pl = b.places[i]!;
-      const pc = b.pieces[i]!;
+    const rows = b.pieces.map((pc, i) => ({ pc, pl: b.places[i]!, r: this.radius ?? CAPTION.radius }));
+    const all = b.egg ? [...rows, { pc: b.egg.piece, pl: b.egg.place, r: CINEMATIC.radius }] : rows;
+    for (const { pc, pl, r } of all) {
       const up = Math.min(89.5, pl.baseLat + (pl.capR * pc.box.aboveCaps) / r / DEG_);
       const dn = Math.max(-89.5, pl.baseLat - (pl.capR * pc.box.belowCaps) / r / DEG_);
       for (let a = -Math.PI; a <= Math.PI + 1e-9; a += Math.PI / 12) {
@@ -779,6 +829,7 @@ export class CaptionLayer {
     this.reduced = on;
     // (still, at the centre, the first phrase set: no roll, no turns)
     this.motion.continuous = !on;
+    if (on) this.motion.egg = null; // (reduced motion never plays it)
     if (on) this.motion.settle(this.want);
     this.opts.onChange();
   }
@@ -845,7 +896,7 @@ export class CaptionLayer {
 
   /** The entrance or the orbit exit is under way: full frames (the globe's own loop) are wanted. */
   get animating(): boolean {
-    return this.built !== null && !this.failed && this.motion.animating;
+    return this.built !== null && !this.failed && (this.motion.animating || this.zoomK > 0);
   }
 
   /** The rows are in and rolling (or turning over to the next phrase set): the caption's own capped loop draws it, nothing else. */
@@ -916,11 +967,25 @@ export class CaptionLayer {
     let any = false;
     const bands = this.dimMode === "bands" && this.dimAlpha > 0;
     let presence = 0;
+    let eggPresence = 0;
+    let eggTheta: number | null = null;
+    if (b.egg) {
+      // (for any camera distance: the globe is pulled back while it lasts)
+      b.egg.start = entranceStart({ baseLat: b.egg.place.baseLat, halfSpan: b.egg.place.halfSpan }, this.viewLat, undefined, CINEMATIC.radius);
+      this.motion.setEggStart(b.egg.start);
+      eggTheta = this.motion.eggTheta();
+    }
     for (const v of b.variants) {
       let theta = 0;
       let on = false;
       let start = 0;
-      if (v.set < 0) {
+      if (v.set === EGG) {
+        if (eggTheta !== null) {
+          theta = eggTheta;
+          start = b.egg!.start;
+          on = true;
+        }
+      } else if (v.set < 0) {
         theta = rowTheta[v.row]!;
         start = this.rowStart(v.row);
         on = true;
@@ -929,13 +994,14 @@ export class CaptionLayer {
         start = this.rowStart(v.row);
         on = true;
       }
-      const hidden = !on || lineHidden(theta, v.line, d, lat);
+      const hidden = !on || lineHidden(theta, v.line, d, lat, this.radiusOf(v));
       v.mesh.visible = !hidden;
       v.band.visible = false;
       if (hidden) continue;
       any = true;
       const p = dimPresence(theta, start);
-      presence += p;
+      if (v.set === EGG) eggPresence = p;
+      else presence += p;
       // The earth's axis is y: a line's own meridian is the view's (`lon`), turned by the entrance's `theta` (east positive, west negative).
       this.tmp.makeRotationY((lon * Math.PI) / 180 + theta);
       v.mesh.matrix.copy(this.tmp);
@@ -955,9 +1021,11 @@ export class CaptionLayer {
     }
     // The block's ellipse: its strength is the mean presence of the rows (a row that is on its way in or out is half of one).
     if (this.ellipse) {
-      const e = this.dimMode === "ellipse" && this.dimAlpha > 0 ? presence / Math.max(1, b.pieces.length) : 0;
+      const rowsE = presence / Math.max(1, b.pieces.length);
+      const egg = eggPresence > rowsE;
+      const e = this.dimMode === "ellipse" && this.dimAlpha > 0 ? Math.max(rowsE, eggPresence) : 0;
       this.ellipse.visible = e > 0.01;
-      if (this.ellipse.visible) this.updateEllipse(lat);
+      if (this.ellipse.visible) this.updateEllipse(lat, egg);
       this.ellipseU.uAlpha.value = this.dimAlpha * Math.min(1, e);
       this.ellipseU.uDisc.value = 1 / Math.sqrt(Math.max(1.0001, d * d - 1));
     }
@@ -981,17 +1049,27 @@ export class CaptionLayer {
     if (!b || !sizing) return;
     b.scale = fitScale(b.pieces, sizing.d, minScaleFor(b.pieces, sizing.r));
     placeRows(b.pieces, sizing.d, b.scale, b.places);
-    const r = this.radius ?? CAPTION.radius;
+    if (b.egg) {
+      // the big row alone, on its own higher shell: as large as its chord allows (never under twice the others' cap, never over `maxCapScale`)
+      const floorCap = CAPTION.minCapPx / sizing.r;
+      b.egg.place = placeEgg(b.egg.piece.box, sizing.d, CINEMATIC.radius, {
+        fill: Math.min(CINEMATIC.fill, (CINEMATIC.maxHalfScreen * (this.opts.host.clientWidth || Infinity)) / sizing.r),
+        minCap: Math.max(CINEMATIC.capScale * CAPTION.capR, floorCap),
+        maxCap: CINEMATIC.maxCapScale * CAPTION.capR,
+        ampRad: ((this.motion.egg?.shape ?? CINEMATIC.shape).ampDeg * Math.PI) / 180,
+      });
+    }
     for (const v of b.variants) {
-      const pl = b.places[v.row]!;
+      const pl = v.set === EGG ? b.egg!.place : b.places[v.row]!;
       // the row's parallel and size, the strip's own width: a set's row is as wide as its words
-      lineOf(v.piece, { ...pl, halfSpan: spanOf(v.piece.box.widthEm, pl.capR, pl.baseLat) / 2 }, v.line);
+      const rv = this.radiusOf(v);
+      lineOf(v.piece, { ...pl, halfSpan: spanOf(v.piece.box.widthEm, pl.capR, pl.baseLat, rv) / 2 }, v.line, rv);
       const u = v.material.uniforms;
       u.uBaseLat!.value = (v.line.baseLat * Math.PI) / 180;
       u.uBelow!.value = v.line.below;
       u.uAbove!.value = v.line.above;
       u.uHalfSpan!.value = v.line.halfSpan;
-      u.uR!.value = r;
+      u.uR!.value = rv;
       // the band: the row's strip, widened (the falloff reaches `bandReach` half heights across, a little beyond the words along)
       const bu = v.bandMaterial.uniforms;
       const mid = (v.line.above - v.line.below) / 2;
@@ -1009,24 +1087,28 @@ export class CaptionLayer {
    * row's ends and the top and bottom edges over the middle, for the camera at latitude `lat` (the fixed parallels move on the screen with the
    * camera's tilt; the ellipse follows them: four rows of trigonometry a frame, only while it is drawn).
    */
-  private updateEllipse(lat: number): void {
+  private updateEllipse(lat: number, egg = false): void {
     const b = this.built;
     const sizing = this.sizing;
     if (!b || !sizing || b.pieces.length === 0) return;
     const r = this.radius ?? CAPTION.radius;
-    const n = b.pieces.length;
+    // the rows' block, or the cinematic interlude's one big row
+    const rr = egg && b.egg ? CINEMATIC.radius : r;
+    const pieces = egg && b.egg ? [b.egg.piece] : b.pieces;
+    const places = egg && b.egg ? [b.egg.place] : b.places;
+    const n = pieces.length;
     let halfW = 0;
     const xy: [number, number] = [0, 0];
     for (let i = 0; i < n; i++) {
-      const pl = b.places[i]!;
-      halfW = Math.max(halfW, Math.abs(shellXY(Math.min(pl.halfSpan, Math.PI / 2), pl.baseLat, lat, sizing.d, r, xy)[0]));
+      const pl = places[i]!;
+      halfW = Math.max(halfW, Math.abs(shellXY(Math.min(pl.halfSpan, Math.PI / 2), pl.baseLat, lat, sizing.d, rr, xy)[0]));
     }
-    const f = b.pieces[0]!;
-    const l = b.pieces[n - 1]!;
-    const topLat = b.places[0]!.baseLat + (b.places[0]!.capR * f.box.aboveCaps) / r / DEG_;
-    const botLat = b.places[n - 1]!.baseLat - (b.places[n - 1]!.capR * l.box.belowCaps) / r / DEG_;
-    const top = shellY(0, Math.min(89.5, topLat), lat, sizing.d, r);
-    const bottom = shellY(0, Math.max(-89.5, botLat), lat, sizing.d, r);
+    const f = pieces[0]!;
+    const l = pieces[n - 1]!;
+    const topLat = places[0]!.baseLat + (places[0]!.capR * f.box.aboveCaps) / rr / DEG_;
+    const botLat = places[n - 1]!.baseLat - (places[n - 1]!.capR * l.box.belowCaps) / rr / DEG_;
+    const top = shellY(0, Math.min(89.5, topLat), lat, sizing.d, rr);
+    const bottom = shellY(0, Math.max(-89.5, botLat), lat, sizing.d, rr);
     const hh = Math.max(1e-4, (top - bottom) / 2);
     const hw = Math.max(1e-4, halfW);
     const k = Math.SQRT2 * (1 + CAPTION.dim.reach);
@@ -1061,7 +1143,7 @@ export class CaptionLayer {
     const line = best.line;
     const m = best.mesh.matrix.elements;
     const at = (a: number): [number, number, number] => {
-      const p = parallelPoint(a, line.baseLat, this.radius ?? CAPTION.radius);
+      const p = parallelPoint(a, line.baseLat, this.radiusOf(best!));
       return [m[0]! * p[0] + m[4]! * p[1] + m[8]! * p[2], m[1]! * p[0] + m[5]! * p[1] + m[9]! * p[2], m[2]! * p[0] + m[6]! * p[1] + m[10]! * p[2]];
     };
     return { left: at(-line.halfSpan), right: at(line.halfSpan) };
@@ -1078,7 +1160,7 @@ export class CaptionLayer {
     for (const v of b.variants) {
       if (!v.mesh.visible) continue;
       const m = v.mesh.matrix.elements;
-      const r = this.radius ?? CAPTION.radius;
+      const r = this.radiusOf(v);
       const turn = (p: [number, number, number]): [number, number, number] => [m[0]! * p[0] + m[4]! * p[1] + m[8]! * p[2], m[1]! * p[0] + m[5]! * p[1] + m[9]! * p[2], m[2]! * p[0] + m[6]! * p[1] + m[10]! * p[2]];
       const top: [number, number, number][] = [];
       const bottom: [number, number, number][] = [];
@@ -1106,7 +1188,7 @@ export class CaptionLayer {
 
   state(): CaptionState {
     const b = this.built;
-    const shown = (b?.variants ?? []).filter((v) => v.set < 0 || v.set === (this.rowSet[v.row] ?? 0));
+    const shown = (b?.variants ?? []).filter((v) => (v.set === EGG ? v.mesh.visible : v.set < 0 || v.set === (this.rowSet[v.row] ?? 0)));
     const slot = b?.slotRows ?? 0;
     const inSides: number[] = [];
     const outSides: number[] = [];
@@ -1127,6 +1209,7 @@ export class CaptionLayer {
       parallelsFor: 0,
       capCells: this.sizing ? (CAPTION.capR * this.sizing.r) / this.sizing.cell : 0,
       seed: this.motion.seed,
+      egg: { planned: this.motion.egg !== null, active: this.motion.eggActive, zoomOut: this.zoomK * (this.motion.egg?.shape ?? CINEMATIC.shape).zoomLevels, theta: this.motion.eggTheta(), drawn: (b?.variants ?? []).some((v) => v.set === EGG && v.mesh.visible) },
       lines: shown.map((v) => ({
         text: v.line.text,
         parent: v.row,
@@ -1210,6 +1293,8 @@ export class CaptionLayer {
     const used = new Set<CaptionStyleKey>();
     for (const set of content.sets) for (const row of set) for (const r of row) used.add(r.style ?? "plain");
     for (const row of content.fixed) for (const r of row) used.add(r.style ?? "plain");
+    const planned = this.motion.egg !== null;
+    if (planned) used.add("heavy");
     const ok = new Map<CaptionStyleKey, CaptionStyleKey>();
     await Promise.all(
       [...used].map(async (style) => {
@@ -1232,6 +1317,8 @@ export class CaptionLayer {
     const fixed = content.fixed.map(clean).filter((row) => row.some((r) => r.text.trim().length > 0));
     const slotRows = sets.reduce((a, s) => Math.max(a, s.length), 0);
     if (slotRows + fixed.length === 0) return;
+    // the big row of the cinematic interlude (only when one is planned: no texture is made for nothing)
+    const eggRuns = planned ? clean([{ text: CINEMATIC.word, style: "heavy" }]) : null;
     this.failed = false;
     const emPx = CAPTION.texCap / CAPTION_FACE.capEm;
     const probe = document.createElement("canvas").getContext("2d");
@@ -1286,6 +1373,8 @@ export class CaptionLayer {
     for (let s = 0; s < sets.length; s++) for (let r = 0; r < sets[s]!.length; r++) rowsOf.push({ row: r, set: s, runs: sets[s]![r]! });
     fixed.forEach((runs, i) => rowsOf.push({ row: slotRows + i, set: -1, runs }));
     const totalRows = slotRows + fixed.length;
+    // (the big row is the last strip, row `totalRows`: the solver and the rows' placements never see it)
+    if (eggRuns) rowsOf.push({ row: totalRows, set: EGG, runs: eggRuns });
     const reps: CaptionRun[][] = [];
     for (let r = 0; r < totalRows; r++) {
       const cands = rowsOf.filter((x) => x.row === r);
@@ -1363,7 +1452,7 @@ export class CaptionLayer {
       mesh.visible = false;
       mesh.renderOrder = 7;
       this.crisp.scene.add(mesh);
-      const piece: CaptionPiece = { runs: x.runs, text: runsText(x.runs), parent: x.row, cap: plan.pieces[x.row]!.cap, box };
+      const piece: CaptionPiece = { runs: x.runs, text: runsText(x.runs), parent: x.row, cap: x.set === EGG ? Math.max(CINEMATIC.capScale * CAPTION.capR, CAPTION.minCapPx / this.sizing!.r) : plan.pieces[x.row]!.cap, box };
       // the row's dimming band (mode `bands`): the same strip, on the planet's surface, widened; max-blended so overlapping bands never add
       const bandMaterial = new ShaderMaterial({
         vertexShader: BAND_VERT,
@@ -1406,7 +1495,8 @@ export class CaptionLayer {
       this.crisp.scene.add(this.ellipse);
     }
     for (const n of SLICE_STEPS) this.unitFor(n); // (the CPU side of every strip is made now)
-    this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, key };
+    const eggVariant = variants.find((v) => v.set === EGG);
+    this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, egg: eggVariant ? { piece: eggVariant.piece, place: { baseLat: 0, capR: 0, halfSpan: 0, y: 0 }, start: Math.PI } : null, key };
     this.place();
     this.motion.setFixedFrom(slotRows);
     this.motion.setStarts(
