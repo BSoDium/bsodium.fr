@@ -27,42 +27,29 @@ export const CINEMATIC = {
    * phone's planet is nearly as wide as the screen: the word must not leave it).
    */
   word: "Universal",
-  wordStyle: "black" as const,
+  // (the word is baked into engine/cinematic-glyphs.ts: another word, or weight, is `pnpm --filter @catalyst/web bake:word <word> <weight>`; a test holds the two together)
   /**
    * The planet and the word lean to the left while the globe is pulled back (degrees, the north pole toward the left of the screen: the studio's
    * globe is tilted on its axis and its wordmark orbits on the same slant); it eases in and out with the pull-back.
    */
   tiltDeg: 12,
   /**
-   * The letters are thicker than the caption's (a stroke in the face colour, caps: the script's own `embolden` is 0.05) and outlined in BSoD blue (the
-   * site's accent, app.css `--palette-blue`): the outline only (the thickness stays the quiet tone of the other rows), the reference hue on the light
-   * page and a lighter step of it on the dark.
+   * The word is SOLID (engine/cinematic-word.ts: a mesh with a front, a bevel, walls and a back, made from the baked outlines of the page's display face
+   * at weight 640): a WHITE face on either page, a front bevel in BSoD blue (the site's accent, app.css `--palette-blue`: #0078d7 on the light page, a
+   * lighter step of it on the dark) that is the word's outline, and grey walls only a step from the page (`sideColor`). The thickness is `depthCaps` cap
+   * heights (the rows' is a fifth of one; 0.5 was too much) and the bevel is `bevelCaps` wide and deep.
    */
-  embolden: 0,
   outline: { light: "#0078d7", dark: "#4aa3f5" },
-  /**
-   * The letters of the studio's wordmark are white metal: a white face (on either page), grey sides that darken with depth (`sideShade`: the share of
-   * the side colour left at the back of the thickness), and a thickness of `depthCaps` cap heights (the rows' is a fifth of one). Every slice of
-   * the thickness is a pass over the word, so it has its own budget: at most `slices`, one every `sliceStepDevicePx` device pixel of side (a
-   * step of two, on a 2x screen, shows as rings at a steep angle; 72 slices over the word's area is a few million fragments, nothing to the GPU).
-   */
   face: "#ffffff",
-  sideColor: { light: "#e2e5ea", dark: "#272a30" },
-  sideShade: 0.8,
-  /**
-   * The shading that makes the letters read as solid (engine/caption-layer.ts FRAG, the word's strips only): a light from the upper left of the
-   * SCREEN. The walls of the thickness take their tone from the way their edge faces (`wall`: how far a wall facing the light is above one facing away,
-   * as a share of its tone), the face is a little lighter at the top of the letters than at the foot (`faceFoot`: the share of the face tone at the
-   * foot) and the back of the word, seen from behind, is a plate of its own tone (`cap`) with walls set apart from it (`backWall`: the share of the side tone, on a light page and on a dark one), so it is not one flat shape with its own walls.
-   */
-  shading: { light: [-0.6, 0.8] as const, wall: 0.3, faceFoot: 0.84, cap: 0.96, backWall: [0.62, 1.9] as const, bevelPx: 4, bevel: 0.5, bevelDark: 0.11 },
+  sideColor: { light: "#e2e5ea", dark: "#3a3e47" },
   depthCaps: 0.3,
-  /** The thickness grows by this share of itself at its most behind the planet (`CaptionLayer`: the word seen from behind and from afar has no walls to see otherwise). */
-  depthBehind: 1,
-  slices: 160,
-  sliceStepDevicePx: 1,
-  /** The thickness is projected longer than `depth * r * sin` (the word is on a higher orbit, nearer the camera: up to about twice): the count allows for it. */
-  sliceSafety: 2,
+  bevelCaps: 0.035,
+  /**
+   * The light, in the CAMERA's frame (x right, y up, z towards the viewer), so it comes from the same side of the screen wherever the word is on its
+   * orbit: a key light from the upper left and in front, a weak fill from the lower right, an ambient share, and a faint highlight (Blinn-Phong) that
+   * makes the faces read as hard and smooth. A surface is `albedo * (ambient + diffuse * key + fill * filler) + specular`.
+   */
+  light: { key: [-0.45, 0.65, 0.62] as const, fill: [0.6, -0.3, 0.4] as const, ambient: 0.55, diffuse: 0.55, filler: 0.16, specular: 0.2, shininess: 36 },
   radius: 2,
   capScale: 2,
   maxCapScale: 6,

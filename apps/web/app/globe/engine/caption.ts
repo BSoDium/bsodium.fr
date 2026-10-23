@@ -22,13 +22,13 @@ import { clamp, DEG } from "./geo";
 /* ------------------------------------------------------------------ the faces */
 
 /** The three faces of the caption: the reading serif, the site's mono and an ornate copperplate script (Imperial Script). */
-export type CaptionFaceKey = "serif" | "mono" | "script" | "sans";
+export type CaptionFaceKey = "serif" | "mono" | "script";
 
 /**
  * The look of a stretch of words. `plain` is the reading serif in a medium weight; `heavy` and `heavy-italic` the same face at the top of its weight
  * axis (the words to highlight); `mono` the site's code face; `script` a calligraphic script.
  */
-export type CaptionStyleKey = "plain" | "heavy" | "heavy-italic" | "mono" | "script" | "black";
+export type CaptionStyleKey = "plain" | "heavy" | "heavy-italic" | "mono" | "script";
 
 /** A stretch of a line in one style (the app's words: engine/types `GlobeCaptionSpan` is the same shape). */
 /** The caption has ONE palette: BSoD Blue, used sparingly. */
@@ -67,8 +67,6 @@ export const CAPTION_STYLES: Readonly<Record<CaptionStyleKey, CaptionStyleDef>> 
   "heavy-italic": { face: "serif", weight: 700, italic: true, url: SERIF_FILES[700] },
   mono: { face: "mono", weight: 700, italic: false },
   script: { face: "script", weight: 400, italic: false },
-  // the cinematic interlude's word: the page's own display sans (declared in app.css, weight range up to 800), a firm bold, not the heaviest cut (800 read too heavy and soft)
-  black: { face: "sans", weight: 640, italic: false },
 };
 
 /**
@@ -79,8 +77,6 @@ export const CAPTION_STYLES: Readonly<Record<CaptionStyleKey, CaptionStyleDef>> 
  */
 export const CAPTION_FACES = {
   serif: { family: '"Caption Serif"', fallback: 'Georgia, "Times New Roman", serif', scale: 1, dy: 0, tracking: 0.005 + CAPTION.tracking.serif, embolden: 0, url: null },
-  // (the display sans: 0.66 em of cap height at 800 against the serif's 0.712, so drawn 1.079 times as large to agree; tracked wide, like a logotype)
-  sans: { family: '"Bricolage Grotesque Variable"', fallback: 'ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif', scale: 1.079, dy: 0, tracking: 0.07, embolden: 0, url: null },
   mono: { family: '"JetBrains Mono Variable"', fallback: 'ui-monospace, Menlo, Consolas, monospace', scale: 0.95, dy: 0, tracking: CAPTION.tracking.mono, embolden: 0, url: null },
   script: {
     family: '"Caption Script"',
@@ -138,7 +134,7 @@ export function captionColors(theme: GlobeTheme, sideMode: "page" | "mix" | "edg
 }
 
 /** The face asked of the system when a face could not be had: the handwriting is the one that can fail (its file), and the heavy italic serif stands in for it. */
-export const CAPTION_FALLBACK_STYLE: Readonly<Partial<Record<CaptionStyleKey, CaptionStyleKey>>> = { script: "heavy-italic", black: "heavy" };
+export const CAPTION_FALLBACK_STYLE: Readonly<Partial<Record<CaptionStyleKey, CaptionStyleKey>>> = { script: "heavy-italic" };
 
 /** The CSS `font` of a style at `px`. */
 export function captionFont(style: CaptionStyleKey, px: number): string {
