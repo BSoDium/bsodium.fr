@@ -54,7 +54,7 @@ import {
 } from "./motion";
 import { snapBox } from "./group-square";
 import { IdleSpin, SPIN, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
-import { liftFor, placeAbove, type Placement } from "./lift";
+import { landingScale, liftFor, placeAbove, type Placement } from "./lift";
 import { routeLift } from "./view";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
 import { NodeScreen } from "./node-screen";
@@ -468,7 +468,7 @@ export class GlobeRenderer {
     if (!this.showcaseActive || this.blocks.length === 0) return { zoom: floor, placement: null };
     const t = RING.type.targetEmPx;
     const extra = CAP_HEIGHT_EM * t * (1 + RING.type.emSlack) + t;
-    const placement = placeAbove({ height: h, cx: free / 2, blocks: this.blocks, rMax: Math.max(silhouetteRadiusPx(floor, h), ringRoomRadius({ freeWidth: free, height: h })), reachTop: (r) => r * (1 + RING.gap) + extra });
+    const placement = placeAbove({ height: h, cx: free / 2, blocks: this.blocks, rMax: Math.max(silhouetteRadiusPx(floor, h), ringRoomRadius({ freeWidth: free, height: h })) * landingScale(w), reachTop: (r) => r * (1 + RING.gap) + extra });
     return { zoom: placement ? silhouetteZoom(placement.r, h) : floor, placement };
   }
 
