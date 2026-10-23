@@ -195,6 +195,20 @@ describe("the cinematic interlude: in the caption's motion", () => {
     run(m, end + entranceMs(2) + 100, end); // (the showing is in again)
     expect(m.replayEgg(end + entranceMs(2) + 100)).toBe(m.phase === "rest");
   });
+  it("an interlude cut short by a gesture (the showcase ends) tells its sound at once, and an interlude that was not under way tells nothing", () => {
+    const m = make();
+    let ended = 0;
+    m.onCinematicEnd = () => ended++;
+    const now = run(m, at() + 3000); // (the word is coming in)
+    expect(m.phase).toBe("egg");
+    m.leave(now);
+    expect(ended).toBe(1);
+    const r = make();
+    r.onCinematicEnd = () => ended++;
+    const t = run(r, 2000); // (the resting roll)
+    r.leave(t);
+    expect(ended).toBe(1);
+  });
   it("every row leaves by the orbit exit's own path and is behind the planet when it is over", () => {
     const m = make();
     const t0 = run(m, at() + 20);

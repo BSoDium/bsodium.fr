@@ -66,6 +66,43 @@ describe("the interlude's sound", () => {
     expect(el.volume).toBe(0);
   });
 
+  it("lets go over a fade, not a cut, when the interlude is cut short, and a play() granted late does not bring it back", async () => {
+    const el = fakeAudio();
+    const handle = startSound(eggMs(CINEMATIC.shape), () => el, true)!;
+    await vi.advanceTimersByTimeAsync(SOUND.fadeInMs + 2000);
+    expect(el.volume).toBeCloseTo(SOUND.volume, 6);
+    handle.fade(SOUND.fadeCutMs);
+    await vi.advanceTimersByTimeAsync(SOUND.fadeCutMs / 2);
+    expect(el.volume).toBeGreaterThan(0);
+    expect(el.volume).toBeLessThan(SOUND.volume);
+    expect(el.calls.at(-1)).not.toBe("pause");
+    await vi.advanceTimersByTimeAsync(SOUND.fadeCutMs);
+    expect(el.volume).toBe(0);
+    expect(el.calls.at(-1)).toBe("pause");
+    // cut short before the browser granted the play: it stays quiet
+    const late = fakeAudio();
+    const h2 = startSound(8000, () => late, true)!;
+    await vi.advanceTimersByTimeAsync(1);
+    h2.fade(100);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(late.volume).toBe(0);
+  });
+
+  it("lets go when the tab is put behind (a hidden tab goes on playing, and its interlude stops drawing)", async () => {
+    const listeners: (() => void)[] = [];
+    const doc = { hidden: false, addEventListener: (_: string, f: () => void) => listeners.push(f), removeEventListener: vi.fn() };
+    vi.stubGlobal("document", doc);
+    const el = fakeAudio();
+    startSound(eggMs(CINEMATIC.shape), () => el, true);
+    await vi.advanceTimersByTimeAsync(SOUND.fadeInMs + 1000);
+    doc.hidden = true;
+    for (const f of listeners) f();
+    await vi.advanceTimersByTimeAsync(SOUND.fadeCutMs + 300);
+    expect(el.volume).toBe(0);
+    expect(el.calls.at(-1)).toBe("pause");
+    expect(doc.removeEventListener).toHaveBeenCalled();
+  });
+
   it("the sound is over with the interlude: it never runs past it", () => {
     // the part of the file that plays is `eggMs` long at most, and the file has that much after `fromSec`
     expect(SOUND.fileSec - SOUND.fromSec).toBeGreaterThanOrEqual(eggMs(CINEMATIC.shape) / 1000 - 0.6);

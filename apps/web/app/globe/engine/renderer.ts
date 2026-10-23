@@ -1159,6 +1159,15 @@ export class GlobeRenderer {
       if (t >= 1) this.latSnap = null;
       else more = true;
     }
+    if (this.overlayHeld) {
+      // (the globe is still on its way home from the interlude: the boxes begin to fade in when it has arrived, and not before)
+      if (this.caption?.pulledBack) more = true;
+      else {
+        this.overlayHeld = false;
+        this.lod.setSuppressed(false);
+        more = true;
+      }
+    }
     if (this.showcaseOn) this.guardCaption(now);
     if (this.latSnap) more = true;
     if (this.globe.routes.advance(now)) more = true;
@@ -1659,7 +1668,9 @@ export class GlobeRenderer {
    */
   private ringPresence(): number {
     const a = this.textFits ? ringAlpha(this.view.zoom, this.fit, this.minZoom) : 0;
-    return this.showcaseActive ? a * (1 - this.lod.overlayAlpha) : a;
+    // (and it is out for the whole of the cinematic interlude, while the globe is pulled back: `CaptionLayer.ringShare`)
+    const share = this.ringCut ? 0 : (this.caption?.ringShare() ?? 1);
+    return (this.showcaseActive ? a * (1 - this.lod.overlayAlpha) : a) * share;
   }
 
   /** The ring's state (checks): shown, tone, glyphs, size of its canvas; null when there is none. */
@@ -1834,8 +1845,18 @@ export class GlobeRenderer {
     this.applyShowcase();
   }
 
+  /**
+   * The overlay stays out after the showcase ends because a gesture cut the cinematic interlude short: the globe is still coming back to its size
+   * (`CaptionLayer.pulledBack`), and the boxes are placed from the page's camera, so they would fade in where the planet WILL be. They wait for it.
+   */
+  private overlayHeld = false;
+  /** The interlude was cut short by a gesture: the ring, already out, does not come back for the boxes' arrival (it would flash, then fade again). */
+  private ringCut = false;
+
   private applyShowcase() {
-    this.lod.setSuppressed(this.showcaseOn);
+    this.overlayHeld = !this.showcaseOn && !this.reduced && !!this.caption?.pulledBack;
+    this.ringCut = this.showcaseOn ? false : this.ringCut || this.overlayHeld;
+    this.lod.setSuppressed(this.showcaseOn || this.overlayHeld);
     const now = performance.now();
     if (this.showcaseOn) this.guardCaption(now);
     else {

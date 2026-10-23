@@ -34,11 +34,12 @@ export const CINEMATIC = {
    */
   tiltDeg: 12,
   /**
-   * The letters are thicker than the caption's (a stroke in the face colour, caps: the script's own `embolden` is 0.05) and outlined in gold: the
-   * outline only (the thickness stays the quiet tone of the other rows), a deeper gold on the light page and a paler one on the dark.
+   * The letters are thicker than the caption's (a stroke in the face colour, caps: the script's own `embolden` is 0.05) and outlined in BSoD blue (the
+   * site's accent, app.css `--palette-blue`): the outline only (the thickness stays the quiet tone of the other rows), the reference hue on the light
+   * page and a lighter step of it on the dark.
    */
   embolden: 0,
-  gold: { light: "#a87a12", dark: "#e6c35c" },
+  outline: { light: "#0078d7", dark: "#4aa3f5" },
   /**
    * The letters of the studio's wordmark are white metal: a white face (on either page), grey sides that darken with depth (`sideShade`: the share of
    * the side colour left at the back of the thickness), and a thickness of `depthCaps` cap heights (the rows' is a fifth of one). Every slice of
@@ -47,8 +48,17 @@ export const CINEMATIC = {
    */
   face: "#ffffff",
   sideColor: { light: "#e2e5ea", dark: "#272a30" },
-  sideShade: 1,
+  sideShade: 0.8,
+  /**
+   * The shading that makes the letters read as solid (engine/caption-layer.ts FRAG, the word's strips only): a light from the upper left of the
+   * SCREEN. The walls of the thickness take their tone from the way their edge faces (`wall`: how far a wall facing the light is above one facing away,
+   * as a share of its tone), the face is a little lighter at the top of the letters than at the foot (`faceFoot`: the share of the face tone at the
+   * foot) and the back of the word, seen from behind, is a plate of its own tone (`cap`) with walls set apart from it (`backWall`: the share of the side tone, on a light page and on a dark one), so it is not one flat shape with its own walls.
+   */
+  shading: { light: [-0.6, 0.8] as const, wall: 0.3, faceFoot: 0.84, cap: 0.96, backWall: [0.62, 1.9] as const, bevelPx: 4, bevel: 0.5, bevelDark: 0.11 },
   depthCaps: 0.3,
+  /** The thickness grows by this share of itself at its most behind the planet (`CaptionLayer`: the word seen from behind and from afar has no walls to see otherwise). */
+  depthBehind: 1,
   slices: 160,
   sliceStepDevicePx: 1,
   /** The thickness is projected longer than `depth * r * sin` (the word is on a higher orbit, nearer the camera: up to about twice): the count allows for it. */

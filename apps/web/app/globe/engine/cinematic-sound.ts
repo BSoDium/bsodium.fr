@@ -29,6 +29,8 @@ export const SOUND = {
   delayMs: 0,
   fadeInMs: 800,
   fadeOutMs: 1200,
+  /** How long it takes to let go when the interlude is cut short (a gesture, the tab put behind, the globe going away): a fade, not a cut. */
+  fadeCutMs: 900,
 } as const;
 
 export interface SoundHandle {
@@ -111,6 +113,8 @@ export function startSound(durationMs: number, make: AudioFactory = browserAudio
   }
   const audio = el;
   let done = false;
+  /** Letting go (cut short): a play() that is granted after it began must not bring the volume back up. */
+  let fading = false;
   let level = 0;
   let timer: ReturnType<typeof setInterval> | null = null;
   const timers: ReturnType<typeof setTimeout>[] = [];
@@ -121,6 +125,7 @@ export function startSound(durationMs: number, make: AudioFactory = browserAudio
   const stop = () => {
     if (done) return;
     done = true;
+    if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onHidden);
     if (timer !== null) clearInterval(timer);
     for (const t of timers) clearTimeout(t);
     set(0);
@@ -155,7 +160,9 @@ export function startSound(durationMs: number, make: AudioFactory = browserAudio
     set(0);
     // (refused, or the file is not there: silence, and nothing else)
     void audio.play().then(
-      () => ramp(SOUND.volume, SOUND.fadeInMs),
+      () => {
+        if (!fading) ramp(SOUND.volume, SOUND.fadeInMs);
+      },
       () => {
         // (refused: no touch on the page yet, or the file is not there. Silence; where the owner asks for the interlude, say why)
         if (cinematicForced()) console.info("[interlude] the browser did not let the sound play: touch the page (a click, a key) before it begins");
@@ -164,19 +171,26 @@ export function startSound(durationMs: number, make: AudioFactory = browserAudio
     );
     timers.push(setTimeout(() => ramp(0, SOUND.fadeOutMs, stop), Math.max(0, durationMs - SOUND.delayMs - SOUND.fadeOutMs)));
   };
+  // (a tab put behind goes on playing in the background, and its interlude has stopped drawing: the sound lets go with it)
+  const onHidden = () => {
+    if (typeof document !== "undefined" && document.hidden) handle.fade(SOUND.fadeCutMs);
+  };
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", onHidden);
   const go = () => {
     // seeking needs the metadata: when the element has none yet (not fetched in time), wait for it
     if (audio.readyState >= 1) begin();
     else audio.addEventListener("loadedmetadata", begin, { once: true });
   };
   timers.push(setTimeout(go, SOUND.delayMs));
-  return {
-    fade(ms = 450) {
+  const handle: SoundHandle = {
+    fade(ms = SOUND.fadeCutMs) {
       if (done) return;
+      fading = true;
       for (const t of timers) clearTimeout(t);
       timers.length = 0;
       ramp(0, ms, stop);
       timers.push(setTimeout(stop, ms + 200));
     },
   };
+  return handle;
 }

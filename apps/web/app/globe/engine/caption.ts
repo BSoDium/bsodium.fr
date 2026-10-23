@@ -1035,6 +1035,9 @@ export class CaptionMotion {
     if (this.phase === "hidden" || this.phase === "out" || this.phase === "fade") return;
     // each line goes on from where it is now (an entrance cut short keeps every line where it had got to)
     this.eggFrozen = this.phase === "egg" ? this.eggTheta() : null; // (the big row stays where it is for the fade)
+    // (an interlude cut short is over for its sound at once: it lets go over a fade of its own, not at the length of the file; the plan itself is
+    // dropped later, by the next showing)
+    if (this.phase === "egg") this.onCinematicEnd?.();
     this.leaveAngles = this.starts.map((s, i) => this.angle(now, i, s));
     this.leaveStays = this.leaveAngles.map((a, i) => Math.abs(a - (this.starts[i] ?? 0) * this.side(i)) < 1e-9);
     this.phase = exit === "orbit" ? "out" : "fade";

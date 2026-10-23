@@ -74,7 +74,7 @@ import {
   eggMs,
 } from "./caption";
 import { CINEMATIC, cinematicForced, notePlayed, planForPage } from "./cinematic";
-import { prepareSound, startSound, type SoundHandle } from "./cinematic-sound";
+import { prepareSound, SOUND, startSound, type SoundHandle } from "./cinematic-sound";
 import { OCCLUDER_RADIUS } from "./materials";
 import { CAPTION, ENERGY } from "./tuning";
 
@@ -133,6 +133,10 @@ const FRAG = /* glsl */ `
   varying float vLayer;
   void main() {
     vec4 t = texture2D(uMap, vUv, ${CAPTION.lodBias.toFixed(2)});
+    // (the derivatives are taken before the discard: every invocation of the quad takes part)
+    vec2 g = vec2(dFdx(t.a), dFdy(t.a));
+    vec2 du = dFdx(vUv);
+    vec2 dv = dFdy(vUv);
     if (t.a < 0.02) discard;
     bool front = vLayer > 0.999;
     // red is the outline, green the inside of a word in the text tone; blue marks a word picked out (its inside is blue alone, its outline red AND
@@ -142,9 +146,41 @@ const FRAG = /* glsl */ `
     vec3 face = acc ? uAccent : uFace;
     vec3 outl = acc ? uAccentOutline : uOutline;
     vec3 side = acc ? uAccentSide : uSide;
-    // a row seen from behind (past the horizon, curling back towards the planet) is the thickness' tone whole: the back of the type is quieter than its face
-    // (the thickness darkens towards its back by uSideShade: 1 for the rows, which have none of it)
-    vec3 col = !gl_FrontFacing ? side : (front ? (isOutline ? outl : face) : (vLayer < uEdgeLayer ? face : side * mix(uSideShade, 1.0, vLayer)));
+    vec3 col;
+    if (uHardSide > 0.5) {
+      // The interlude's word, lit from the upper left of the screen. A wall is the sliver of a slice that its nearer neighbours do not cover, at the
+      // slice's own edge: the edge's outward direction on the screen (the alpha's gradient, reversed) says which way the wall faces, and the wall
+      // takes the light accordingly; it also darkens towards the back of the thickness. The face is lighter at the top of the letters than at the foot.
+      float len = length(g);
+      vec2 n = len > 1e-5 ? -g / len : vec2(0.0);
+      float lit = dot(n, vec2(${CINEMATIC.shading.light[0].toFixed(3)}, ${CINEMATIC.shading.light[1].toFixed(3)})) * smoothstep(0.01, 0.12, len);
+      float wall = mix(uSideShade, 1.0, vLayer) * (1.0 + ${CINEMATIC.shading.wall.toFixed(3)} * lit);
+      float foot = mix(${CINEMATIC.shading.faceFoot.toFixed(3)}, 1.0, smoothstep(0.12, 0.88, vUv.y));
+      if (gl_FrontFacing) col = front ? (isOutline ? outl : face * foot) : side * wall;
+      // seen from behind the nearest slice is the back of the word (layer 0): a plate of its own tone, the walls round it lit as from the front
+      else {
+        // (the walls round it are seen at a long slant and mostly under the next letter: what shows must not melt into the page, so they are set
+        // apart from the plate, darker than it on a light page and lighter on a dark one, and darker still towards the far end of the thickness)
+        float lum = dot(side, vec3(0.3, 0.59, 0.11));
+        float apart = lum > 0.5 ? ${CINEMATIC.shading.backWall[0].toFixed(3)} : ${CINEMATIC.shading.backWall[1].toFixed(3)};
+        if (vLayer < 0.001) {
+          // The plate is bevelled: the glyph's coverage a few device pixels to each side says which way the nearest edge faces and how close it is
+          // (four taps, the plate's fragments only), and the rim takes the light as a wall does, but wider: from behind it is the one thing that
+          // shows the letters are solid, the walls of the thickness being under the next letter.
+          vec2 bev = vec2(texture2D(uMap, vUv + ${CINEMATIC.shading.bevelPx.toFixed(1)} * du, ${CAPTION.lodBias.toFixed(2)}).a - texture2D(uMap, vUv - ${CINEMATIC.shading.bevelPx.toFixed(1)} * du, ${CAPTION.lodBias.toFixed(2)}).a,
+                          texture2D(uMap, vUv + ${CINEMATIC.shading.bevelPx.toFixed(1)} * dv, ${CAPTION.lodBias.toFixed(2)}).a - texture2D(uMap, vUv - ${CINEMATIC.shading.bevelPx.toFixed(1)} * dv, ${CAPTION.lodBias.toFixed(2)}).a);
+          vec2 bn = -bev;
+          float bl = length(bn);
+          float rim = bl > 1e-4 ? dot(bn / bl, vec2(${CINEMATIC.shading.light[0].toFixed(3)}, ${CINEMATIC.shading.light[1].toFixed(3)})) * min(1.0, bl) : 0.0;
+          vec3 plate = side * ${CINEMATIC.shading.cap.toFixed(3)} * foot;
+          col = lum > 0.5 ? plate * (1.0 + ${CINEMATIC.shading.bevel.toFixed(3)} * rim) : plate + vec3(${CINEMATIC.shading.bevelDark.toFixed(3)}) * rim;
+        } else col = side * apart * (1.0 - 0.25 * vLayer) * (1.0 + ${CINEMATIC.shading.wall.toFixed(3)} * lit);
+      }
+    } else {
+      // a row seen from behind (past the horizon, curling back towards the planet) is the thickness' tone whole: the back of the type is quieter than its face
+      // (the thickness darkens towards its back by uSideShade: 1 for the rows, which have none of it)
+      col = !gl_FrontFacing ? side : (front ? (isOutline ? outl : face) : (vLayer < uEdgeLayer ? face : side * mix(uSideShade, 1.0, vLayer)));
+    }
     // Premultiplied output, blended "over" (see the material): the glyph's inside is exactly 1, so an interior pixel is exactly opaque whatever
     // stacks behind it; only an edge is partly transparent (and then properly premultiplied: no bright fringe).
     // (the thickness of the interlude's word has hard edges: the soft edges of many slices stacked at a steep angle read as stripes)
@@ -501,7 +537,7 @@ export class CaptionLayer {
   private accent = { value: [0, 0, 1] as number[] };
   private accentOutline = { value: [0, 0, 1] as number[] };
   private accentSide = { value: [0, 0, 1] as number[] };
-  /** The cinematic interlude's word has colours of its own (`CINEMATIC`): a white face, a gold outline, grey sides that darken with depth. */
+  /** The cinematic interlude's word has colours of its own (`CINEMATIC`): a white face, a BSoD blue outline, grey sides that darken with depth and are lit from the upper left. */
   private eggFace = { value: [1, 1, 1] as number[] };
   private eggOutline = { value: [0.7, 0.5, 0.1] as number[] };
   private eggSide = { value: [0.5, 0.5, 0.5] as number[] };
@@ -581,8 +617,9 @@ export class CaptionLayer {
       // (it began inside the caption's own frame, and that loop is the roll's, which ends here: the interlude is the globe's own frames, so ask for one)
       this.opts.onChange();
     };
+    // (the interlude is over, by itself or cut short by a gesture: the sound lets go over its own fade, whatever is left of the file)
     this.motion.onCinematicEnd = () => {
-      this.swell?.fade();
+      this.swell?.fade(SOUND.fadeCutMs);
       this.swell = null;
     };
     // With `?cinematic` the owner can play it again at will: the key U (a key press is a gesture that lets the browser play the sound, and does not
@@ -703,7 +740,7 @@ export class CaptionLayer {
     this.dimColor.value = [...theme.background];
     const dark = 0.2126 * theme.background[0] + 0.7152 * theme.background[1] + 0.0722 * theme.background[2] < 0.5;
     this.eggFace.value = [...hex(CINEMATIC.face)];
-    this.eggOutline.value = [...hex(dark ? CINEMATIC.gold.dark : CINEMATIC.gold.light)];
+    this.eggOutline.value = [...hex(dark ? CINEMATIC.outline.dark : CINEMATIC.outline.light)];
     this.eggSide.value = [...hex(dark ? CINEMATIC.sideColor.dark : CINEMATIC.sideColor.light)];
     this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
   }
@@ -769,6 +806,23 @@ export class CaptionLayer {
   /** The cinematic interlude is under way (the rows are leaving, the word is on, or the globe is coming back). */
   get interluding(): boolean {
     return this.motion.eggActive;
+  }
+
+  /**
+   * The globe is pulled back or leaning, or the interlude is under way: the picture is not at the place the page's own camera says it is. What is
+   * placed from that camera (the boxes, the labels) waits until this is over, or it appears where the planet will be and not where it is.
+   */
+  get pulledBack(): boolean {
+    return this.motion.eggActive || this.zoomK > 0;
+  }
+
+  /**
+   * How present the flat ring of type is now, 1 to 0: it is gone while the globe is pulled back (it would run through the word's orbit), out over the
+   * first fifth of the pull and back over the last fifth of the way home, whether the interlude ran its course or was cut short.
+   */
+  ringShare(): number {
+    const x = Math.min(1, this.zoomK * 5);
+    return 1 - x * x * (3 - 2 * x);
   }
 
   /** Play the interlude now (the key U with `?cinematic`): false when it cannot (the rows are not rolling, or one is under way, or there is none planned). */
@@ -969,6 +1023,7 @@ export class CaptionLayer {
    * roll's clock goes on from where it was when the globe is drawn again.
    */
   settle(): void {
+    this.zoomK = 0; // (the pull-back is a timed thing too: nothing is drawn for it to run in)
     this.motion.settle(this.want);
   }
 
@@ -1097,6 +1152,13 @@ export class CaptionLayer {
       // only as many slices as the side of the letters needs from here
       // (the word's thickness is long on the screen: a slice every device pixel of it, `CINEMATIC.sliceStepDevicePx`, or the steps of them show as rings;
       // the governor's rungs cut its budget in the same proportion as the rows')
+      if (v.set === EGG) {
+        // (seen from the far side of the planet the word's thickness is seen along its depth and from further away: it all but vanishes, and the back of
+        // the word looks like a flat plate. Its thickness grows with how far behind it is, to be as thick on the screen there as at the limb)
+        const behind = Math.max(0, -Math.cos(theta));
+        const k = Math.min(1, behind / 0.8);
+        v.material.uniforms.uDepth!.value = b.egg!.place.capR * CINEMATIC.depthCaps * (1 + CINEMATIC.depthBehind * k * k * (3 - 2 * k));
+      }
       const ns =
         v.set === EGG
           ? this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat, v.material.uniforms.uDepth!.value as number, Math.round((CINEMATIC.slices * this.slices) / CAPTION.slices), CINEMATIC.sliceStepDevicePx / this.dprNow, ALL_EGG_STEPS, CINEMATIC.sliceSafety, true)
