@@ -56,19 +56,19 @@ export const CINEMATIC = {
   fill: 1.85,
   maxHalfScreen: 0.47,
   /**
-   * The timing (engine/caption.ts `EggShape`, ms), made to the sound's length (`SOUND` in cinematic-sound.ts: 20.8 s, its loudest hit 11.7 s in,
-   * which is where the word lands: 0.5 + 0.4 + 10.8): the rows leave in `leaveMs`, the stage is empty for `gapMs`, the word comes in in `enterMs` (a very
+   * The timing (engine/caption.ts `EggShape`, ms), made to the sound's length (`SOUND` in cinematic-sound.ts: 24.1 s, a long crescendo and its final chord
+   * 20.25 s in, which is where the word lands: 0.5 + 0.4 + 19.35): the rows leave in `leaveMs`, the stage is empty for `gapMs`, the word comes in in `enterMs` (a very
    * long ease from `ease`: 1, against 2.2 for the regular rows, that lands at the roll's own speed), holds rolling through `ampDeg` for `holdMs`,
    * and leaves in `exitMs`. The globe pulls back by `zoomLevels` levels of zoom (0.7: to 62 % of its size, the word and the ring with it) and
    * LEANS over the first `zoomInMs`, stays so for as long as the word is on the stage, and comes back upright over the `zoomOutMs` AFTER it has
-   * gone (the whole is `eggMs`: about 21 s, begun at 13 s in; the idle hold at 30 s waits for it, `Renderer.freezeWhenIdle`).
+   * gone (the whole is `eggMs`: about 24 s, begun at 13 s in; the idle hold at 30 s waits for it, `Renderer.freezeWhenIdle`).
    */
-  shape: { leaveMs: 500, gapMs: 400, enterMs: 10800, ease: 1, holdMs: 5500, exitMs: 1600, ampDeg: 2.5, zoomLevels: 0.7, zoomInMs: 4500, zoomOutMs: 2000, zoomCutMs: 700 },
+  shape: { leaveMs: 500, gapMs: 400, enterMs: 19350, ease: 1, holdMs: 1000, exitMs: 1450, ampDeg: 2.5, zoomLevels: 0.7, zoomInMs: 6000, zoomOutMs: 1400, zoomCutMs: 700 },
   /** The side the word comes in from: west (-1), the way the planet turns, so it follows the surface round. */
   side: -1 as 1 | -1,
   /**
    * When it begins, as the number of cycles of the first showing that go by first (a cycle is 6.9 s): the second time the first row would leave,
-   * 13 s in (a visitor has settled; it is about 21 s long and the idle hold at 30 s waits for it).
+   * 13 s in (a visitor has settled; it is about 24 s long and the idle hold at 30 s waits for it).
    */
   cycles: [1] as const,
 } as const;

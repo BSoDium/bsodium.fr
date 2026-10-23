@@ -1,6 +1,6 @@
 /**
- * The sound of the cinematic interlude (engine/cinematic.ts): a short parody of a studio's intro (`public/audio/universal-parody.mp3`, 20.8 s: the owner's
- * file from where its sound begins to its end; the owner's own parody, supplied by them), played FAINTLY while the word is on the stage.
+ * The sound of the cinematic interlude (engine/cinematic.ts): the studio's own intro (`public/audio/universal-intro.mp3`, 24.1 s, 112 kbps, from the
+ * owner's file, which they have the rights to), played FAINTLY while the word is on the stage.
  *
  * Made so that nothing costs anything at the moment it starts: the file is fetched when the interlude is PLANNED (a few sessions in a hundred, and
  * only a returning visitor), long before it plays, into a plain audio element (no `AudioContext`: opening an audio device is a stall of 150 ms or
@@ -14,16 +14,17 @@
 import { cinematicForced } from "./cinematic";
 
 export const SOUND = {
-  url: "/audio/universal-parody.mp3",
-  /** The loudness, 0 to 1 of the element's volume: faint, a sound under the page's own (the file's own level is about -18 LUFS, loud). */
+  url: "/audio/universal-intro.mp3",
+  /** The loudness, 0 to 1 of the element's volume: faint, a sound under the page's own (the file's own level is about -17 dBFS RMS, loud). */
   volume: 0.22,
   /** The file's length, seconds: the interlude is made to it (`CINEMATIC.shape`, `eggMs`). */
-  fileSec: 20.8,
+  fileSec: 24.1,
   /**
-   * Where in the file it starts playing, seconds. The file is the source from 2.3 s (where its sound begins) to 23.1 s; the source's stinger (its
-   * loudest moment, the one hit above its bed) is at 14.0 s, that is 11.7 s into the file, and the word lands 11.7 s into the interlude
-   * (0.5 + 0.4 + 10.8): so it starts at the top of the file, with the interlude. Move this to move the sound against the picture.
+   * The moment the file is loudest, seconds into it (its climax: a long crescendo, then the final chord at 20.25 s and a decay of about three seconds):
+   * the word lands on it, 20.25 s into the interlude (0.5 + 0.4 + 19.35).
    */
+  hitSec: 20.25,
+  /** Where in the file it starts playing, seconds (the whole file: it begins quietly, which the fade-in covers). */
   fromSec: 0,
   /** How long after the interlude begins it starts, ms. */
   delayMs: 0,

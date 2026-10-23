@@ -42,12 +42,12 @@ afterEach(() => {
 describe("the interlude's sound", () => {
   it("is faint, and the file is small and there", () => {
     expect(SOUND.volume).toBeLessThanOrEqual(0.3);
-    const file = "public/audio/universal-parody.mp3";
+    const file = "public/audio/universal-intro.mp3";
     const size = statSync(file).size;
     expect(size).toBeGreaterThan(10_000);
     expect(size).toBeLessThan(400_000); // fetched only for the few sessions that play it, but still: not megabytes
     expect(readFileSync(file).subarray(0, 3).toString("latin1")).toMatch(/ID3|\xff\xfb|\xff\xf3/); // an mp3
-    expect(SOUND.url).toBe("/audio/universal-parody.mp3");
+    expect(SOUND.url).toBe("/audio/universal-intro.mp3");
   });
 
   it("starts where the file says, at the volume's own fade-in, and stops by itself with the interlude", async () => {

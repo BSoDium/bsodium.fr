@@ -135,11 +135,11 @@ describe("the cinematic interlude: the big row's trajectory", () => {
     }
   });
   it("takes well under the idle hold (and is as long as the sound it was made to)", () => {
-    expect(eggMs(s)).toBeLessThan(24000);
+    expect(eggMs(s)).toBeLessThan(26000);
     expect(Math.abs(eggMs(s) / 1000 - SOUND.fileSec)).toBeLessThan(0.6); // the sound's own length
   });
-  it("lands its word when the sound's loudest hit is (11.7 s into the file)", () => {
-    expect((s.leaveMs + s.gapMs + s.enterMs) / 1000).toBeCloseTo(11.7 - SOUND.fromSec, 6);
+  it("lands its word when the sound's final chord is (SOUND.hitSec into the file)", () => {
+    expect((s.leaveMs + s.gapMs + s.enterMs) / 1000).toBeCloseTo(SOUND.hitSec - SOUND.fromSec, 6);
   });
 });
 

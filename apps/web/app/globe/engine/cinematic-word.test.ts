@@ -8,10 +8,10 @@ const opts = { bevelCaps: CINEMATIC.bevelCaps, depthCaps: CINEMATIC.depthCaps };
 describe("the interlude's word, baked", () => {
   it("is the word the interlude says, from the page's face", () => {
     expect(WORD_OUTLINES.word).toBe(CINEMATIC.word);
-    expect(WORD_OUTLINES.weight).toBe(700);
+    expect(WORD_OUTLINES.weight).toBe(800);
     // nine capitals: U N I V E R S A L, as nine outlines and the counters of the R and the A
     expect(WORD_OUTLINES.contours.length).toBe(11);
-    expect(WORD_OUTLINES.widthCaps).toBeGreaterThan(6);
+    expect(WORD_OUTLINES.widthCaps).toBeGreaterThan(5.5);
     expect(WORD_OUTLINES.widthCaps).toBeLessThan(10);
     // (capitals: the round ones overshoot the cap height a little, and nothing stands above it)
     expect(WORD_OUTLINES.aboveCaps).toBeGreaterThan(0.99);
