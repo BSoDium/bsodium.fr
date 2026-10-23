@@ -46,10 +46,11 @@ export const CINEMATIC = {
   bevelCaps: 0.035,
   /**
    * The light, in the CAMERA's frame (x right, y up, z towards the viewer), so it comes from the same side of the screen wherever the word is on its
-   * orbit: a key light from the upper left and in front, a weak fill from the lower right, an ambient share, and a faint highlight (Blinn-Phong) that
-   * makes the faces read as hard and smooth. A surface is `albedo * (ambient + diffuse * key + fill * filler) + specular`.
+   * orbit: a key light from the upper left and in front, a weak fill from the lower right, an ambient share, and a sharp highlight (Blinn-Phong) and a REFLECTION
+   * of a procedural studio (engine/caption-layer.ts `studio`) that makes the surfaces read as polished metal: `metal` is its share of the surface (the rest is
+   * `albedo * (ambient + diffuse * key + filler * fill)`), `reflect` its brightness.
    */
-  light: { key: [-0.45, 0.65, 0.62] as const, fill: [0.6, -0.3, 0.4] as const, ambient: 0.55, diffuse: 0.55, filler: 0.16, specular: 0.2, shininess: 36 },
+  light: { key: [-0.45, 0.65, 0.62] as const, fill: [0.6, -0.3, 0.4] as const, ambient: 0.55, diffuse: 0.55, filler: 0.16, specular: 0.35, shininess: 90, metal: 0.55, reflect: 1.1 },
   radius: 2,
   capScale: 2,
   maxCapScale: 6,

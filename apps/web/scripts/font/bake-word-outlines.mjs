@@ -1,4 +1,4 @@
-// Bakes the outlines of the cinematic interlude's word into a plain TypeScript table: `pnpm --filter @catalyst/web bake:word [word] [weight] [gap]`.
+// Bakes the outlines of the cinematic interlude's word into a plain TypeScript table: `pnpm --filter @catalyst/web bake:word [word] [weight] [gap] [wide]`.
 //
 // Source: the site's mono face (JetBrains Mono, SIL OFL 1.1, public/fonts/jetbrains-mono-5.3.0-latin-wght.woff2) at its heaviest: its capitals are squarish
 // (straight sides, flat terminals, a bowl on the R and a curve on the S and U that are nearer a rounded rectangle than a circle), which is what a studio's
@@ -8,7 +8,9 @@
 //
 // The letters are then SET HERE, not by the font: a mono face gives every letter the same width, wide gaps and slab serifs on the I. The I is drawn as a plain
 // bar (the stem of the L, a full cap high), and every letter is placed so that the nearest points of its outline and the previous letter's are `gap` cap heights
-// apart (row by row, so a V tucks its arm over the E that follows and an A its foot under the L: the tight, even colour of a logotype).
+// apart (row by row, so a V tucks its arm over the E that follows and an A its foot under the L: the tight, even colour of a logotype). The letters are also
+// drawn WIDER than the face draws them (`wide` times, with a thin stroke added so that the bars the widening leaves relatively thin keep up with the stems):
+// a mono face's capitals are tall and narrow, a studio's are nearly square.
 //
 // The result is a set of closed polygons in CAP HEIGHTS (x to the right from the ink's left edge, y up from the baseline) that the engine extrudes into solid
 // letters (engine/cinematic-word.ts) without a font parser. The table is `app/globe/engine/cinematic-glyphs.ts`.
@@ -24,6 +26,9 @@ const WORD = process.argv[2] ?? "UNIVERSAL";
 const WEIGHT = Number(process.argv[3] ?? 800);
 /** The closest two letters' outlines come, cap heights. */
 const GAP = Number(process.argv[4] ?? 0.085);
+/** How much wider than the face draws them the letters are, and the stroke added to keep the horizontal bars up with the stems (cap heights). */
+const WIDE = Number(process.argv[5] ?? 1.28);
+const EMBOLDEN = 0.01;
 const CAP_PX = 800;
 /** The simplification tolerance, cap heights. */
 const EPS = 0.0022;
@@ -33,7 +38,7 @@ const page = await browser.newPage();
 await page.setContent("<canvas id=c></canvas>");
 const b64 = fs.readFileSync(FONT).toString("base64");
 const out = await page.evaluate(
-  async ({ b64, WORD, WEIGHT, GAP, CAP_PX, EPS }) => {
+  async ({ b64, WORD, WEIGHT, GAP, WIDE, EMBOLDEN, CAP_PX, EPS }) => {
     const face = new FontFace("Mono", `url(data:font/woff2;base64,${b64})`, { weight: "100 800" });
     await face.load();
     document.fonts.add(face);
@@ -43,7 +48,7 @@ const out = await page.evaluate(
     const S = CAP_PX / capEm;
     const font = `${WEIGHT} ${S}px Mono`;
     const pad = 40;
-    const W = Math.ceil(S * 0.6) + 2 * pad;
+    const W = Math.ceil(S * 0.6 * WIDE) + 2 * pad + 40;
     const asc = Math.ceil(CAP_PX * 1.15) + pad;
     const H = asc + Math.ceil(CAP_PX * 0.12) + pad;
     const c = document.getElementById("c");
@@ -54,6 +59,10 @@ const out = await page.evaluate(
       g.clearRect(0, 0, W, H);
       g.font = font;
       g.fillStyle = "#000";
+      g.strokeStyle = "#000";
+      g.lineJoin = "miter";
+      g.miterLimit = 6;
+      g.lineWidth = EMBOLDEN * CAP_PX;
       draw(g);
       return new Uint8ClampedArray(g.getImageData(0, 0, W, H).data);
     };
@@ -69,7 +78,17 @@ const out = await page.evaluate(
       return { left, right };
     };
     // the stem of the L: the first run of ink on a row through its middle
-    const L = raster((g) => g.fillText("L", pad, asc));
+    /** A letter widened about its own left edge: drawn through a stretch, filled and stroked. */
+    const wide = (g, ch) => {
+      g.save();
+      g.translate(pad, asc);
+      g.scale(WIDE, 1);
+      g.lineWidth = (EMBOLDEN * CAP_PX) / WIDE;
+      g.fillText(ch, 0, 0);
+      g.strokeText(ch, 0, 0);
+      g.restore();
+    };
+    const L = raster((g) => wide(g, "L"));
     const stem = (() => {
       const y = asc - Math.round(CAP_PX * 0.5);
       let x = 0;
@@ -78,7 +97,7 @@ const out = await page.evaluate(
       while (x < W && A(L, x, y) >= 0.5) x++;
       return x - x0;
     })();
-    const glyph = (ch) => (ch === "I" ? raster((g) => g.fillRect(pad + Math.round(S * 0.2), asc - CAP_PX, stem, CAP_PX)) : raster((g) => g.fillText(ch, pad, asc)));
+    const glyph = (ch) => (ch === "I" ? raster((g) => g.fillRect(pad + Math.round(S * 0.2), asc - CAP_PX - EMBOLDEN * CAP_PX / 2, stem, CAP_PX + EMBOLDEN * CAP_PX)) : raster((g) => wide(g, ch)));
     /** Marching squares at half coverage over one glyph's picture: its closed loops, in the picture's pixels. */
     const trace = (data) => {
       const pts = new Map();
@@ -208,13 +227,13 @@ const out = await page.evaluate(
     const xs = flat.flatMap((c) => c.filter((_, i) => i % 2 === 0));
     return { contours: flat, widthCaps: Math.max(...xs), aboveCaps: Math.max(...ys), belowCaps: Math.max(0, -Math.min(...ys)), stem: stem / CAP_PX };
   },
-  { b64, WORD, WEIGHT, GAP, CAP_PX, EPS },
+  { b64, WORD, WEIGHT, GAP, WIDE, EMBOLDEN, CAP_PX, EPS },
 );
 await browser.close();
 
 const body = `/**
  * The outlines of the cinematic interlude's word, baked by scripts/font/bake-word-outlines.mjs (do not edit): the site's mono face, JetBrains Mono
- * (SIL OFL 1.1, public/fonts/LICENSE-jetbrains-mono.txt), at weight ${WEIGHT}, traced from drawings of its letters (the I is a plain bar) and set with
+ * (SIL OFL 1.1, public/fonts/LICENSE-jetbrains-mono.txt), at weight ${WEIGHT}, traced from drawings of its letters (widened ${WIDE} times, the I a plain bar) and set with
  * the nearest points of neighbouring letters ${GAP} cap heights apart. Every contour is a closed polygon, flat \`[x0, y0, x1, y1, ...]\`, in CAP HEIGHTS: x to
  * the right from the ink's left edge, y up from the baseline. The outer contours and the holes are told apart by their winding at build time.
  */

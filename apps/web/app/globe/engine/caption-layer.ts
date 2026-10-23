@@ -161,6 +161,7 @@ const EGG_VERT = /* glsl */ `
   uniform float uDepth;
   attribute float kind;
   varying vec3 vNormal;
+  varying vec3 vView;
   varying float vKind;
   void main() {
     float lat = uBaseLat - uBelow + position.y * (uBelow + uAbove);
@@ -176,18 +177,38 @@ const EGG_VERT = /* glsl */ `
     vec3 radial = vec3(cl * sa, sl, cl * ca);
     vNormal = normalMatrix * (normal.x * east + normal.y * north + normal.z * radial);
     vKind = kind;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vView = mv.xyz;
+    gl_Position = projectionMatrix * mv;
   }
 `;
 
-/** Lit by a key light and a weak fill fixed in the camera's frame (`CINEMATIC.light`), with a faint highlight; the face, the outline and the walls are the three albedos. */
+/**
+ * Lit like polished metal: a key light and a weak fill fixed in the camera's frame (`CINEMATIC.light`), and a REFLECTION of a studio, a procedural
+ * environment of the reflected direction in the camera's frame: a bright sky over a darker band just under the horizon and a dimmer floor, with two
+ * soft boxes. The reflected direction changes across a face with the view (the vector to the fragment, not one for the whole word), so a flat face
+ * is a sweep of light and shade, not one tone; `metal` is how much of the surface is the reflection (the albedo tints it: white metal, blue
+ * metal, grey metal).
+ */
 const EGG_FRAG = /* glsl */ `
   precision highp float;
   uniform vec3 uFace;
   uniform vec3 uOutline;
   uniform vec3 uSide;
   varying vec3 vNormal;
+  varying vec3 vView;
   varying float vKind;
+  vec3 studio(vec3 r) {
+    float h = r.y;
+    vec3 sky = mix(vec3(0.78, 0.84, 0.94), vec3(1.0), smoothstep(0.0, 0.9, h));
+    vec3 floorTone = vec3(0.38, 0.4, 0.45);
+    vec3 c = mix(floorTone, sky, smoothstep(-0.3, 0.12, h));
+    float band = (h + 0.1) / 0.13;
+    c *= 1.0 - 0.38 * exp(-band * band);
+    c += 1.1 * pow(max(dot(r, normalize(vec3(-0.55, 0.62, 0.56))), 0.0), 18.0);
+    c += 0.6 * pow(max(dot(r, normalize(vec3(0.62, 0.28, 0.73))), 0.0), 30.0);
+    return c;
+  }
   void main() {
     vec3 n = normalize(vNormal);
     vec3 albedo = vKind < 0.5 ? uFace : (vKind < 1.5 ? uOutline : uSide);
@@ -196,9 +217,11 @@ const EGG_FRAG = /* glsl */ `
     float diff = max(dot(n, key), 0.0);
     float fil = max(dot(n, fill), 0.0);
     vec3 h = normalize(key + vec3(0.0, 0.0, 1.0));
-    float spec = pow(max(dot(n, h), 0.0), ${CINEMATIC.light.shininess.toFixed(1)}) * ${CINEMATIC.light.specular.toFixed(3)} * (vKind < 1.5 ? 1.0 : 0.5);
-    vec3 col = albedo * (${CINEMATIC.light.ambient.toFixed(3)} + ${CINEMATIC.light.diffuse.toFixed(3)} * diff + ${CINEMATIC.light.filler.toFixed(3)} * fil) + vec3(spec);
-    gl_FragColor = vec4(col, 1.0);
+    float spec = pow(max(dot(n, h), 0.0), ${CINEMATIC.light.shininess.toFixed(1)}) * ${CINEMATIC.light.specular.toFixed(3)} * (vKind < 1.5 ? 1.0 : 0.6);
+    vec3 lit = albedo * (${CINEMATIC.light.ambient.toFixed(3)} + ${CINEMATIC.light.diffuse.toFixed(3)} * diff + ${CINEMATIC.light.filler.toFixed(3)} * fil);
+    vec3 refl = albedo * studio(reflect(normalize(vView), n)) * ${CINEMATIC.light.reflect.toFixed(3)};
+    vec3 col = mix(lit, refl, ${CINEMATIC.light.metal.toFixed(3)}) + vec3(spec);
+    gl_FragColor = vec4(min(col, vec3(1.0)), 1.0);
   }
 `;
 
