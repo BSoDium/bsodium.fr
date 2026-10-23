@@ -27,6 +27,7 @@ export const CINEMATIC = {
    * phone's planet is nearly as wide as the screen: the word must not leave it).
    */
   word: "Universal",
+  wordStyle: "black" as const,
   /**
    * The planet and the word lean to the left while the globe is pulled back (degrees, the north pole toward the left of the screen: the studio's
    * globe is tilted on its axis and its wordmark orbits on the same slant); it eases in and out with the pull-back.
@@ -36,8 +37,19 @@ export const CINEMATIC = {
    * The letters are thicker than the caption's (a stroke in the face colour, caps: the script's own `embolden` is 0.05) and outlined in gold: the
    * outline only (the thickness stays the quiet tone of the other rows), a deeper gold on the light page and a paler one on the dark.
    */
-  embolden: 0.07,
+  embolden: 0.02,
   gold: { light: "#a87a12", dark: "#e6c35c" },
+  /**
+   * The letters of the studio's wordmark are white metal: a white face (on either page), grey sides that darken with depth (`sideShade`: the share of
+   * the side colour left at the back of the thickness), and a thickness of `depthCaps` cap heights (the rows' is a fifth of one). Every slice of
+   * the thickness is a pass over the word, so it has its own, smaller budget: at most `slices`, one every `sliceStepPx` CSS px of side.
+   */
+  face: "#ffffff",
+  sideColor: { light: "#8d939d", dark: "#6d737d" },
+  sideShade: 0.5,
+  depthCaps: 0.3,
+  slices: 20,
+  sliceStepPx: 1.4,
   radius: 2,
   capScale: 2,
   maxCapScale: 6,

@@ -71,9 +71,10 @@ import {
   type CaptionRun,
   type CaptionStyleKey,
   type Placement,
+  eggMs,
 } from "./caption";
 import { CINEMATIC, notePlayed, planForPage } from "./cinematic";
-import { startSwell, type SwellHandle } from "./cinematic-sound";
+import { prepareSound, startSound, type SoundHandle } from "./cinematic-sound";
 import { OCCLUDER_RADIUS } from "./materials";
 import { CAPTION, ENERGY } from "./tuning";
 
@@ -123,6 +124,7 @@ const FRAG = /* glsl */ `
   uniform vec3 uAccentOutline;
   uniform vec3 uAccentSide;
   uniform float uEdgeLayer;
+  uniform float uSideShade;
   varying vec2 vUv;
   varying float vLayer;
   void main() {
@@ -137,7 +139,8 @@ const FRAG = /* glsl */ `
     vec3 outl = acc ? uAccentOutline : uOutline;
     vec3 side = acc ? uAccentSide : uSide;
     // a row seen from behind (past the horizon, curling back towards the planet) is the thickness' tone whole: the back of the type is quieter than its face
-    vec3 col = !gl_FrontFacing ? side : (front ? (isOutline ? outl : face) : (vLayer < uEdgeLayer ? face : side));
+    // (the thickness darkens towards its back by uSideShade: 1 for the rows, which have none of it)
+    vec3 col = !gl_FrontFacing ? side : (front ? (isOutline ? outl : face) : (vLayer < uEdgeLayer ? face : side * mix(uSideShade, 1.0, vLayer)));
     // Premultiplied output, blended "over" (see the material): the glyph's inside is exactly 1, so an interior pixel is exactly opaque whatever
     // stacks behind it; only an edge is partly transparent (and then properly premultiplied: no bright fringe).
     float a = smoothstep(0.1, 0.9, t.a);
@@ -493,8 +496,12 @@ export class CaptionLayer {
   private accent = { value: [0, 0, 1] as number[] };
   private accentOutline = { value: [0, 0, 1] as number[] };
   private accentSide = { value: [0, 0, 1] as number[] };
-  /** The outline of the cinematic interlude's word: gold (`CINEMATIC.gold`), its own uniform, the thickness stays the rows'. */
+  /** The cinematic interlude's word has colours of its own (`CINEMATIC`): a white face, a gold outline, grey sides that darken with depth. */
+  private eggFace = { value: [1, 1, 1] as number[] };
   private eggOutline = { value: [0.7, 0.5, 0.1] as number[] };
+  private eggSide = { value: [0.5, 0.5, 0.5] as number[] };
+  private eggShade = { value: CINEMATIC.sideShade };
+  private noShade = { value: 1 };
   /** The far slices (layer below this) that carry the text colour in mode `edge` (0: none). */
   private edgeLayer = { value: 0 };
   /** Slices of the thickness now (the quality governor lowers them; `CAPTION.slices` is the best) and the most the canvas is drawn at. */
@@ -560,11 +567,12 @@ export class CaptionLayer {
     this.motion.seed = (Math.random() * 0x7fffffff) | 0;
     // Rarely, and only for a visitor who has been here before, the words give way to one big one for a while (engine/cinematic.ts).
     this.motion.egg = opts.content.sets.length + opts.content.fixed.length > 0 ? planForPage(this.motion.seed, opts.reduced) : null;
-    // (the word comes in after the rows have left and the stage has been empty: the swell begins then, and lets go when the interlude ends, or is cut short)
+    // (the sound is fetched now, long before it plays; it begins with the interlude, and lets go when it ends, or is cut short)
+    if (this.motion.egg) prepareSound();
     this.motion.onCinematic = () => {
       notePlayed();
       const shape = this.motion.egg?.shape ?? CINEMATIC.shape;
-      this.swell = startSwell(shape.leaveMs + shape.gapMs);
+      this.swell = startSound(eggMs(shape));
     };
     this.motion.onCinematicEnd = () => {
       this.swell?.fade();
@@ -579,15 +587,16 @@ export class CaptionLayer {
     this.setTheme(opts.theme);
   }
 
-  private makeMaterial(map: CanvasTexture, radius: number, outline = this.outline): ShaderMaterial {
+  private makeMaterial(map: CanvasTexture, radius: number, egg = false): ShaderMaterial {
     return new ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
       uniforms: {
         uMap: { value: map },
-        uFace: this.face,
-        uOutline: outline,
-        uSide: this.side,
+        uFace: egg ? this.eggFace : this.face,
+        uOutline: egg ? this.eggOutline : this.outline,
+        uSide: egg ? this.eggSide : this.side,
+        uSideShade: egg ? this.eggShade : this.noShade,
         uAccent: this.accent,
         uAccentOutline: this.accentOutline,
         uAccentSide: this.accentSide,
@@ -673,7 +682,9 @@ export class CaptionLayer {
     this.edgeLayer.value = this.sideMode === "edge" ? (CAPTION.colors.edgeSlices - 0.5) / (this.slices - 1) : 0;
     this.dimColor.value = [...theme.background];
     const dark = 0.2126 * theme.background[0] + 0.7152 * theme.background[1] + 0.0722 * theme.background[2] < 0.5;
+    this.eggFace.value = [...hex(CINEMATIC.face)];
     this.eggOutline.value = [...hex(dark ? CINEMATIC.gold.dark : CINEMATIC.gold.light)];
+    this.eggSide.value = [...hex(dark ? CINEMATIC.sideColor.dark : CINEMATIC.sideColor.light)];
     this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
   }
 
@@ -706,17 +717,16 @@ export class CaptionLayer {
    * governor's cap. A row at rest, within a few degrees of the middle, sees its side edge-on and a small fraction of a pixel wide: a handful of
    * slices instead of 28 (every slice is a full pass over the glyphs: the GPU cost of the caption at rest was that overdraw).
    */
-  private slicesFor(theta: number, halfSpan: number, baseLat: number, lat: number): number {
+  private slicesFor(theta: number, halfSpan: number, baseLat: number, lat: number, depth: number = CAPTION.depth, cap: number = this.slices, stepPx: number = CAPTION.sliceStepPx): number {
     const off = Math.min(Math.PI, Math.abs(theta) + halfSpan);
     const vl = lat * DEG_;
     const L = baseLat * DEG_;
     const cos = Math.sin(vl) * Math.sin(L) + Math.cos(vl) * Math.cos(L) * Math.cos(off);
     const sin = Math.sqrt(Math.max(0, 1 - cos * cos));
-    const px = CAPTION.depth * (this.sizing?.r ?? 300) * sin;
-    const n = Math.ceil(px / CAPTION.sliceStepPx) + 1;
+    const px = depth * (this.sizing?.r ?? 300) * sin;
+    const n = Math.ceil(px / stepPx) + 1;
     // (quantised to a few strips, all made when the strips are built: a row going round the orbit changes its count by a step, and no strip is
     // first made, or first used, in the middle of an exit)
-    const cap = this.slices;
     for (const step of SLICE_STEPS) if (step >= n && step <= cap) return step;
     return Math.max(2, Math.min(cap, SLICE_STEPS.filter((x) => x <= cap).at(-1) ?? cap));
   }
@@ -725,7 +735,7 @@ export class CaptionLayer {
   private zoomK = 0;
   private zoomAt = -1;
   /** The sound of the interlude under way (engine/cinematic-sound.ts), if one is playing. */
-  private swell: SwellHandle | null = null;
+  private swell: SoundHandle | null = null;
 
   /**
    * How many levels of zoom the globe is pulled back by now (0 when there is no interlude under way): the renderer subtracts it from the zoom it
@@ -1031,7 +1041,7 @@ export class CaptionLayer {
       v.mesh.matrix.copy(this.tmp);
       v.mesh.matrixWorldNeedsUpdate = true;
       // only as many slices as the side of the letters needs from here
-      const ns = this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat);
+      const ns = v.set === EGG ? this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat, v.material.uniforms.uDepth!.value as number, Math.min(this.slices, CINEMATIC.slices), CINEMATIC.sliceStepPx) : this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat);
       if (ns !== v.n) {
         v.n = ns;
         v.mesh.geometry = this.unitFor(ns);
@@ -1083,6 +1093,8 @@ export class CaptionLayer {
         ampRad: ((this.motion.egg?.shape ?? CINEMATIC.shape).ampDeg * Math.PI) / 180,
       });
     }
+    // (the word's thickness is a share of its own cap height, and changes with its size)
+    for (const v of b.variants) if (v.set === EGG) v.material.uniforms.uDepth!.value = b.egg!.place.capR * CINEMATIC.depthCaps;
     for (const v of b.variants) {
       const pl = v.set === EGG ? b.egg!.place : b.places[v.row]!;
       // the row's parallel and size, the strip's own width: a set's row is as wide as its words
@@ -1320,7 +1332,7 @@ export class CaptionLayer {
     for (const set of content.sets) for (const row of set) for (const r of row) used.add(r.style ?? "plain");
     for (const row of content.fixed) for (const r of row) used.add(r.style ?? "plain");
     const planned = this.motion.egg !== null;
-    if (planned) used.add("heavy");
+    if (planned) used.add(CINEMATIC.wordStyle);
     const ok = new Map<CaptionStyleKey, CaptionStyleKey>();
     await Promise.all(
       [...used].map(async (style) => {
@@ -1344,7 +1356,7 @@ export class CaptionLayer {
     const slotRows = sets.reduce((a, s) => Math.max(a, s.length), 0);
     if (slotRows + fixed.length === 0) return;
     // the big row of the cinematic interlude (only when one is planned: no texture is made for nothing)
-    const eggRuns = planned ? clean([{ text: CINEMATIC.word, style: "heavy" }]).map((r) => ({ ...r, embolden: CINEMATIC.embolden })) : null;
+    const eggRuns = planned ? clean([{ text: CINEMATIC.word, style: CINEMATIC.wordStyle }]).map((r) => ({ ...r, embolden: CINEMATIC.embolden })) : null;
     this.failed = false;
     const emPx = CAPTION.texCap / CAPTION_FACE.capEm;
     const probe = document.createElement("canvas").getContext("2d");
@@ -1471,7 +1483,7 @@ export class CaptionLayer {
       // (uploaded now, with the mipmaps: the first frame of a set that has not been on screen yet would otherwise pay for it)
       this.crisp.warm(tex);
       this.texSizes.push({ width: canvas.width, height: canvas.height });
-      const material = this.makeMaterial(tex, radius, x.set === EGG ? this.eggOutline : this.outline);
+      const material = this.makeMaterial(tex, radius, x.set === EGG);
       const mesh = new Mesh(this.unitFor(2), material);
       mesh.matrixAutoUpdate = false;
       mesh.frustumCulled = false;

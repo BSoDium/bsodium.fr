@@ -1,105 +1,139 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { SWELL, startSwell, swellTimes, type SwellContext, type SwellParam } from "./cinematic-sound";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SOUND, forgetSound, prepareSound, startSound, type AudioLike } from "./cinematic-sound";
 import { CINEMATIC } from "./cinematic";
+import { eggMs } from "./caption";
+import { readFileSync, statSync } from "node:fs";
 
-/** A context that records what is scheduled on it. */
-function fakeContext() {
-  const log = { gains: [] as { gain: Rec }[], oscillators: [] as { type: string; hz: number; start: number; stop: number }[], closed: false, resumed: false, filter: null as Rec | null };
-  type Rec = SwellParam & { events: [string, number, number][] };
-  const param = (initial = 0): Rec => {
-    const p: Rec = {
-      value: initial,
-      events: [],
-      setValueAtTime(v, t) { p.events.push(["set", v, t]); return p; },
-      linearRampToValueAtTime(v, t) { p.events.push(["ramp", v, t]); return p; },
-      cancelScheduledValues(t) { p.events.push(["cancel", 0, t]); return p; },
-    };
-    return p;
-  };
-  const ctx: SwellContext = {
-    currentTime: 10,
-    state: "running",
-    destination: { dest: true },
-    resume: async () => { log.resumed = true; },
-    close: async () => { log.closed = true; },
-    createGain: () => { const g = { gain: param(), connect: () => g, disconnect: () => {} }; log.gains.push(g); return g; },
-    createBiquadFilter: () => { const f = { type: "", frequency: param(), Q: { value: 0 }, connect: () => f }; log.filter = f.frequency; return f; },
-    createOscillator: () => {
-      const rec = { type: "", hz: 0, start: -1, stop: -1 };
-      log.oscillators.push(rec);
-      const o = { type: "", frequency: { set value(v: number) { rec.hz = v; } } as { value: number }, detune: { value: 0 }, connect: () => o, start: (t: number) => { rec.start = t; }, stop: (t: number) => { rec.stop = t; } };
-      return new Proxy(o, { set(target, key, value) { if (key === "type") rec.type = value as string; (target as Record<string | symbol, unknown>)[key] = value; return true; } });
-    },
-  };
-  return { ctx, log };
+/** An audio element that records what is done to it. */
+function fakeAudio(ready = 4, playResult: "ok" | "refused" = "ok") {
+  const calls: string[] = [];
+  const listeners: Record<string, (() => void)[]> = {};
+  const el: AudioLike & { volumes: number[]; calls: string[]; fire(t: string): void; plays: number } = {
+    src: "",
+    preload: "",
+    currentTime: 0,
+    readyState: ready,
+    volumes: [],
+    calls,
+    plays: 0,
+    set volume(v: number) { el.volumes.push(v); },
+    get volume() { return el.volumes.at(-1) ?? 1; },
+    load() { calls.push("load"); },
+    play() { calls.push("play"); el.plays++; return playResult === "ok" ? Promise.resolve() : Promise.reject(new Error("NotAllowedError")); },
+    pause() { calls.push("pause"); },
+    addEventListener(t: string, fn: () => void) { (listeners[t] ??= []).push(fn); },
+    fire(t: string) { for (const f of listeners[t] ?? []) f(); },
+  } as never;
+  return el;
 }
 
-afterEach(() => vi.useRealTimers());
+beforeEach(() => {
+  vi.useFakeTimers();
+  forgetSound();
+  vi.stubGlobal("location", { search: "" });
+  vi.stubGlobal("sessionStorage", { getItem: () => null });
+  vi.stubGlobal("navigator", {});
+});
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
-describe("the interlude's swell", () => {
-  it("begins when the word comes in, rises, holds and lets go, within the interlude's own length", () => {
-    const shape = CINEMATIC.shape;
-    const t = swellTimes(shape.leaveMs + shape.gapMs);
-    expect(t.begin).toBeCloseTo((shape.leaveMs + shape.gapMs) / 1000, 9);
-    expect(t.peak - t.begin).toBeCloseTo(SWELL.attackMs / 1000, 9);
-    expect(t.end).toBeGreaterThan(t.release);
-    // over before the interlude is (its length: the rows leave, the stage is empty, the word comes in, holds and goes)
-    const interlude = (shape.leaveMs + shape.gapMs + shape.enterMs + shape.holdMs + shape.exitMs) / 1000;
-    expect(t.end).toBeLessThanOrEqual(interlude);
+describe("the interlude's sound", () => {
+  it("is faint, and the file is small and there", () => {
+    expect(SOUND.volume).toBeLessThanOrEqual(0.3);
+    const file = "public/audio/universal-parody.mp3";
+    const size = statSync(file).size;
+    expect(size).toBeGreaterThan(10_000);
+    expect(size).toBeLessThan(400_000); // fetched only for the few sessions that play it, but still: not megabytes
+    expect(readFileSync(file).subarray(0, 3).toString("latin1")).toMatch(/ID3|\xff\xfb|\xff\xf3/); // an mp3
+    expect(SOUND.url).toBe("/audio/universal-parody.mp3");
   });
 
-  it("is faint: the master gain never goes above `peak`, and that is a small number", () => {
-    expect(SWELL.peak).toBeLessThanOrEqual(0.06);
-    const { ctx, log } = fakeContext();
-    expect(startSwell(900, ctx, true)).not.toBeNull();
-    const master = log.gains[0]!.gain;
-    expect(Math.max(...master.events.filter((e) => e[0] !== "cancel").map((e) => e[1]))).toBeCloseTo(SWELL.peak, 9);
-    // the oscillators' own levels sum to at most 1 (so the master is the loudness)
-    const levels = log.gains.slice(1).map((g) => g.gain.value);
-    expect(levels.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(1 + 1e-9);
+  it("starts where the file says, at the volume's own fade-in, and stops by itself with the interlude", async () => {
+    const el = fakeAudio();
+    const handle = startSound(eggMs(CINEMATIC.shape), () => el, true);
+    expect(handle).not.toBeNull();
+    expect(el.plays).toBe(0); // (not before the delay)
+    await vi.advanceTimersByTimeAsync(SOUND.delayMs + 1);
+    expect(el.plays).toBe(1);
+    expect(el.currentTime).toBe(SOUND.fromSec);
+    await vi.advanceTimersByTimeAsync(SOUND.fadeInMs + 100);
+    expect(Math.max(...el.volumes)).toBeLessThanOrEqual(SOUND.volume + 1e-9);
+    expect(el.volume).toBeCloseTo(SOUND.volume, 6);
+    await vi.advanceTimersByTimeAsync(eggMs(CINEMATIC.shape));
+    expect(el.calls.at(-1)).toBe("pause");
+    expect(el.volume).toBe(0);
   });
 
-  it("schedules a pad of two detuned oscillators a note, all started with it and stopped after it", () => {
-    const { ctx, log } = fakeContext();
-    startSwell(900, ctx, true);
-    const t = swellTimes(900);
-    expect(log.oscillators).toHaveLength(SWELL.notes.length * 2);
-    for (const o of log.oscillators) {
-      expect(o.start).toBeCloseTo(10 + t.begin, 9);
-      expect(o.stop).toBeGreaterThan(10 + t.end);
-    }
-    expect(log.resumed).toBe(true);
+  it("the sound is over with the interlude: it never runs past it", () => {
+    // the part of the file that plays is `eggMs` long at most, and the file has that much after `fromSec`
+    expect(14 - SOUND.fromSec).toBeGreaterThanOrEqual(eggMs(CINEMATIC.shape) / 1000);
   });
 
-  it("makes no sound where none may be made: nothing is created", () => {
-    const { ctx, log } = fakeContext();
-    expect(startSwell(900, ctx, false)).toBeNull();
-    expect(log.oscillators).toHaveLength(0);
-    expect(log.gains).toHaveLength(0);
+  it("makes no sound where none may be made: nothing is created or played", () => {
+    const el = fakeAudio();
+    const make = vi.fn(() => el);
+    expect(startSound(8000, make, false)).toBeNull();
+    expect(make).not.toHaveBeenCalled();
+    expect(el.plays).toBe(0);
   });
 
-  it("lets go when cut short: a quick fade to nothing, the oscillators stopped, the context closed, and twice is safe", () => {
-    vi.useFakeTimers();
-    const { ctx, log } = fakeContext();
-    const handle = startSwell(900, ctx, true)!;
+  it("takes the element that was prepared (the fetch happened long before), and prepares only once", async () => {
+    const el = fakeAudio();
+    const make = vi.fn(() => el);
+    prepareSound(make);
+    prepareSound(make);
+    expect(make).toHaveBeenCalledTimes(1);
+    expect(el.src).toBe(SOUND.url);
+    expect(el.preload).toBe("auto");
+    expect(el.calls).toContain("load");
+    const other = fakeAudio();
+    startSound(8000, () => other, true);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(el.plays).toBe(1); // the prepared one played, not a new one
+    expect(other.plays).toBe(0);
+  });
+
+  it("prepares nothing when the visitor asked for none, or the connection saves data", () => {
+    const make = vi.fn(() => fakeAudio());
+    vi.stubGlobal("location", { search: "?mute" });
+    prepareSound(make);
+    expect(make).not.toHaveBeenCalled();
+    vi.stubGlobal("location", { search: "" });
+    vi.stubGlobal("navigator", { connection: { saveData: true } });
+    prepareSound(make);
+    expect(make).not.toHaveBeenCalled();
+  });
+
+  it("waits for the metadata when the file is not there yet (it cannot be seeked before)", async () => {
+    const el = fakeAudio(0);
+    startSound(8000, () => el, true);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(el.plays).toBe(0);
+    el.readyState = 1;
+    el.fire("loadedmetadata");
+    await vi.advanceTimersByTimeAsync(10);
+    expect(el.plays).toBe(1);
+    expect(el.currentTime).toBe(SOUND.fromSec);
+  });
+
+  it("is silent, and throws nothing, when the browser refuses to play", async () => {
+    const el = fakeAudio(4, "refused");
+    expect(() => startSound(8000, () => el, true)).not.toThrow();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(el.calls.at(-1)).toBe("pause");
+    expect(el.volume).toBe(0);
+  });
+
+  it("lets go quickly when cut short, and twice is safe", async () => {
+    const el = fakeAudio();
+    const handle = startSound(8000, () => el, true)!;
+    await vi.advanceTimersByTimeAsync(SOUND.fadeInMs + 100);
     handle.fade(400);
-    const master = log.gains[0]!.gain;
-    const last = master.events.at(-1)!;
-    expect(last[0]).toBe("ramp");
-    expect(last[1]).toBe(0);
-    expect(last[2]).toBeCloseTo(10.4, 9);
-    expect(master.events.some((e) => e[0] === "cancel")).toBe(true);
-    for (const o of log.oscillators) expect(o.stop).toBeLessThan(11);
-    vi.advanceTimersByTime(1000);
-    expect(log.closed).toBe(true);
+    await vi.advanceTimersByTimeAsync(700);
+    expect(el.volume).toBe(0);
+    expect(el.calls.at(-1)).toBe("pause");
     expect(() => handle.fade()).not.toThrow();
-  });
-
-  it("closes the context after the swell has ended on its own", () => {
-    vi.useFakeTimers();
-    const { ctx, log } = fakeContext();
-    startSwell(900, ctx, true);
-    vi.advanceTimersByTime((swellTimes(900).end + 1) * 1000);
-    expect(log.closed).toBe(true);
   });
 });
