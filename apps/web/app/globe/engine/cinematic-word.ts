@@ -9,16 +9,16 @@
  * `(east, north, radial)`, with east and north in cap heights (the strip is the same scale both ways). Triangles wind counter-clockwise seen from
  * outside, in `(east, north, radial)`, which is right-handed like the world, so the faces are culled as any mesh's are.
  *
- * The outline is mitred inwards by `bevelCaps` (a vertex moves along the corner's mitre): the front face is that smaller outline, a chamfer at 45 degrees
- * joins it to the true outline a bevel's depth behind the front, and the walls run from there to a bevel's depth in front of the back, where a second
- * chamfer meets the back's smaller outline. The front chamfer is the word's OUTLINE (`kind` 1), the walls its thickness (2).
+ * The outline is mitred inwards by `bevelCaps` (a vertex moves along the corner's mitre): the front face is that smaller outline, and a chamfer at 45
+ * degrees joins it to the true outline a bevel's depth behind the front. The walls run from there straight to the back, which is the true outline, flat
+ * and sharp-edged (a bevel on the back read as a rounded word from behind). The front chamfer is the word's OUTLINE (`kind` 1), the walls its thickness (2).
  */
 import { BufferAttribute, BufferGeometry, ShapeUtils, Vector2 } from "three";
 import { WORD_OUTLINES } from "./cinematic-glyphs";
 import { CAPTION_FACE, type PieceBox } from "./caption";
 
-/** What a vertex belongs to (the shader's colour): the front face, the front chamfer (the outline), a wall, the back's chamfer and the back. */
-export const KIND = { face: 0, outline: 1, wall: 2, backEdge: 3, back: 4 } as const;
+/** What a vertex belongs to (the shader's colour): the front face, the front chamfer (the outline), a wall and the back. */
+export const KIND = { face: 0, outline: 1, wall: 2, back: 4 } as const;
 
 export interface WordMesh {
   geometry: BufferGeometry;
@@ -121,7 +121,6 @@ export function buildWordGeometry(o: { bevelCaps: number; depthCaps: number }, c
   const b = o.bevelCaps;
   const zFront = 1;
   const zFrontEdge = 1 - b / o.depthCaps;
-  const zBackEdge = b / o.depthCaps;
   const zBack = 0;
   const height = aboveCaps + belowCaps;
   const pos: number[] = [];
@@ -158,20 +157,23 @@ export function buildWordGeometry(o: { bevelCaps: number; depthCaps: number }, c
 
   for (const g of glyphPolygons(contours)) {
     const rings = [ringOf(g.outer, b), ...g.holes.map((h) => ringOf(h, b))];
-    // the front and the back: the inset outlines, outer then holes, triangulated once
-    const flat: P[] = [];
-    for (const r of rings) flat.push(...r.i);
-    const faces = ShapeUtils.triangulateShape(
-      rings[0]!.i.map((p) => new Vector2(p[0], p[1])),
-      rings.slice(1).map((r) => r.i.map((p) => new Vector2(p[0], p[1]))),
-    );
-    for (const [ia, ib, ic] of faces as [number, number, number][]) {
-      const pa = flat[ia!]!;
-      const pb = flat[ib!]!;
-      const pc = flat[ic!]!;
-      tri([pa[0], pa[1], zFront, 0, 0, 1], [pb[0], pb[1], zFront, 0, 0, 1], [pc[0], pc[1], zFront, 0, 0, 1], KIND.face);
-      tri([pa[0], pa[1], zBack, 0, 0, -1], [pb[0], pb[1], zBack, 0, 0, -1], [pc[0], pc[1], zBack, 0, 0, -1], KIND.back);
-    }
+    // the front: the inset outlines, outer then holes, triangulated; the back: the true ones
+    const cover = (pick: (r: Ring) => P[], z: number, nz: number, k: number) => {
+      const flat: P[] = [];
+      for (const r of rings) flat.push(...pick(r));
+      const faces = ShapeUtils.triangulateShape(
+        pick(rings[0]!).map((p) => new Vector2(p[0], p[1])),
+        rings.slice(1).map((r) => pick(r).map((p) => new Vector2(p[0], p[1]))),
+      );
+      for (const [ia, ib, ic] of faces as [number, number, number][]) {
+        const pa = flat[ia!]!;
+        const pb = flat[ib!]!;
+        const pc = flat[ic!]!;
+        tri([pa[0], pa[1], z, 0, 0, nz], [pb[0], pb[1], z, 0, 0, nz], [pc[0], pc[1], z, 0, 0, nz], k);
+      }
+    };
+    cover((r) => r.i, zFront, 1, KIND.face);
+    cover((r) => r.o, zBack, -1, KIND.back);
     for (const r of rings) {
       const n = r.o.length;
       for (let k = 0; k < n; k++) {
@@ -185,10 +187,8 @@ export function buildWordGeometry(o: { bevelCaps: number; depthCaps: number }, c
         const O1 = r.o[k1]!;
         // the front chamfer (45 degrees: outward and forward in equal parts)
         quad([I0[0], I0[1], zFront, s0[0], s0[1], 1], [I1[0], I1[1], zFront, s1[0], s1[1], 1], [O1[0], O1[1], zFrontEdge, s1[0], s1[1], 1], [O0[0], O0[1], zFrontEdge, s0[0], s0[1], 1], KIND.outline);
-        // the wall
-        quad([O0[0], O0[1], zFrontEdge, s0[0], s0[1], 0], [O1[0], O1[1], zFrontEdge, s1[0], s1[1], 0], [O1[0], O1[1], zBackEdge, s1[0], s1[1], 0], [O0[0], O0[1], zBackEdge, s0[0], s0[1], 0], KIND.wall);
-        // the back chamfer
-        quad([O0[0], O0[1], zBackEdge, s0[0], s0[1], -1], [O1[0], O1[1], zBackEdge, s1[0], s1[1], -1], [I1[0], I1[1], zBack, s1[0], s1[1], -1], [I0[0], I0[1], zBack, s0[0], s0[1], -1], KIND.backEdge);
+        // the wall, straight to the back
+        quad([O0[0], O0[1], zFrontEdge, s0[0], s0[1], 0], [O1[0], O1[1], zFrontEdge, s1[0], s1[1], 0], [O1[0], O1[1], zBack, s1[0], s1[1], 0], [O0[0], O0[1], zBack, s0[0], s0[1], 0], KIND.wall);
       }
     }
   }

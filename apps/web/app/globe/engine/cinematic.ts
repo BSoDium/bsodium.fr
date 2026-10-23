@@ -26,8 +26,8 @@ export const CINEMATIC = {
    * overhang the disc's sides: the studio's wordmark is about 1.8 times as wide as its globe) and `maxHalfScreen` of the stage's width (a
    * phone's planet is nearly as wide as the screen: the word must not leave it).
    */
-  word: "Universal",
-  // (the word is baked into engine/cinematic-glyphs.ts: another word, or weight, is `pnpm --filter @catalyst/web bake:word <word> <weight>`; a test holds the two together)
+  word: "UNIVERSAL",
+  // (the word is baked into engine/cinematic-glyphs.ts: another word, or weight, is `pnpm --filter @catalyst/web bake:word <word> <weight> <opsz>`; a test holds the two together)
   /**
    * The planet and the word lean to the left while the globe is pulled back (degrees, the north pole toward the left of the screen: the studio's
    * globe is tilted on its axis and its wordmark orbits on the same slant); it eases in and out with the pull-back.
@@ -35,7 +35,7 @@ export const CINEMATIC = {
   tiltDeg: 12,
   /**
    * The word is SOLID (engine/cinematic-word.ts: a mesh with a front, a bevel, walls and a back, made from the baked outlines of the page's display face
-   * at weight 640): a WHITE face on either page, a front bevel in BSoD blue (the site's accent, app.css `--palette-blue`: #0078d7 on the light page, a
+   * at weight 700, the optical size 12 cut: wide and sturdy, all capitals, sharp corners): a WHITE face on either page, a front bevel in BSoD blue (the site's accent, app.css `--palette-blue`: #0078d7 on the light page, a
    * lighter step of it on the dark) that is the word's outline, and grey walls only a step from the page (`sideColor`). The thickness is `depthCaps` cap
    * heights (the rows' is a fifth of one; 0.5 was too much) and the bevel is `bevelCaps` wide and deep.
    */

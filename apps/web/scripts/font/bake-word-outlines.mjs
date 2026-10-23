@@ -1,8 +1,8 @@
-// Bakes the outlines of the cinematic interlude's word into a plain TypeScript table: `pnpm --filter @catalyst/web bake:word [word] [weight]`.
+// Bakes the outlines of the cinematic interlude's word into a plain TypeScript table: `pnpm --filter @catalyst/web bake:word [word] [weight] [opsz]`.
 //
 // Source: the page's own display face (Bricolage Grotesque, SIL OFL 1.1, public/fonts/bricolage-grotesque-5.3.0-latin-wght-opsz.woff2). It is a variable
 // font in a woff2, which the font parser the repo has (fontkit) cannot instance, so the word is drawn the way the page draws it, in the Chromium the perf
-// scripts use (the caption's weight, the largest optical size, its own kerning and the caption's tracking), at a cap height of CAP_PX pixels, and its
+// scripts use (the caption's weight, the given optical size, its own kerning and the caption's tracking), at a cap height of CAP_PX pixels, and its
 // contours are traced from that picture (marching squares at half coverage) and simplified to within a thousandth of a cap height. The result is a set of
 // closed polygons in CAP HEIGHTS (x to the right from the ink's left edge, y up from the baseline) that the engine extrudes into solid letters
 // (engine/cinematic-word.ts) without a font parser. The table is `app/globe/engine/cinematic-glyphs.ts`.
@@ -14,21 +14,24 @@ import { launch } from "../perf/lib.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FONT = path.join(here, "../../public/fonts/bricolage-grotesque-5.3.0-latin-wght-opsz.woff2");
 const OUT = path.join(here, "../../app/globe/engine/cinematic-glyphs.ts");
-const WORD = process.argv[2] ?? "Universal";
-const WEIGHT = Number(process.argv[3] ?? 640);
+const WORD = process.argv[2] ?? "UNIVERSAL";
+const WEIGHT = Number(process.argv[3] ?? 700);
+/** The optical size: 12 is the face's sturdy, wide cut (the 96 cut is narrower and finer), nearer a studio's wordmark. */
+const OPSZ = Number(process.argv[4] ?? 12);
 /** The caption's tracking for this face, em (engine/caption.ts `CAPTION_FACES.sans`). */
-const TRACKING = 0.07;
+const TRACKING = 0.05;
 const CAP_PX = 800;
 /** The simplification tolerance, cap heights. */
-const EPS = 0.0012;
+const EPS = 0.0022;
 
 const browser = await launch({});
 const page = await browser.newPage();
 await page.setContent("<canvas id=c></canvas>");
 const b64 = fs.readFileSync(FONT).toString("base64");
 const out = await page.evaluate(
-  async ({ b64, WORD, WEIGHT, TRACKING, CAP_PX, EPS }) => {
-    const face = new FontFace("Bk", `url(data:font/woff2;base64,${b64})`, { weight: "200 800" });
+  async ({ b64, WORD, WEIGHT, OPSZ, TRACKING, CAP_PX, EPS }) => {
+    // (the optical size is fixed by the face's own descriptor: a canvas sets it from the font size, which at this size is the finest cut)
+    const face = new FontFace("Bk", `url(data:font/woff2;base64,${b64})`, { weight: "200 800", variationSettings: `"opsz" ${OPSZ}` });
     await face.load();
     document.fonts.add(face);
     const probe = document.createElement("canvas").getContext("2d");
@@ -163,13 +166,13 @@ const out = await page.evaluate(
     const xs = contours.flatMap((c) => c.filter((_, i) => i % 2 === 0));
     return { contours, widthCaps: Math.max(...xs), aboveCaps: Math.max(...ys), belowCaps: Math.max(0, -Math.min(...ys)) };
   },
-  { b64, WORD, WEIGHT, TRACKING, CAP_PX, EPS },
+  { b64, WORD, WEIGHT, OPSZ, TRACKING, CAP_PX, EPS },
 );
 await browser.close();
 
 const body = `/**
  * The outlines of the cinematic interlude's word, baked by scripts/font/bake-word-outlines.mjs (do not edit): the page's display face, Bricolage Grotesque
- * (SIL OFL 1.1, public/fonts/LICENSE-bricolage-grotesque.txt), at weight ${WEIGHT}, optical size 96, with its own kerning and the caption's tracking, traced
+ * (SIL OFL 1.1, public/fonts/LICENSE-bricolage-grotesque.txt), at weight ${WEIGHT}, optical size ${OPSZ}, with its own kerning and the caption's tracking, traced
  * from a drawing of it. Every contour is a closed polygon, flat \`[x0, y0, x1, y1, ...]\`, in CAP HEIGHTS: x to the right from the ink's left edge, y up from
  * the baseline. The outer contours and the holes are told apart by their winding at build time.
  */

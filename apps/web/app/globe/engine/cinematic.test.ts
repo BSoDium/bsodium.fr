@@ -43,7 +43,7 @@ describe("the cinematic interlude: when it may play", () => {
     expect(planCinematic({ ...base, seed: 1, forced: true, reduced: true })).toBeNull();
   });
   it("one word, at least twice the size, from the west, on a higher orbit than the rows'", () => {
-    expect(CINEMATIC.word).toBe("Universal");
+    expect(CINEMATIC.word).toBe("UNIVERSAL");
     expect(CINEMATIC.capScale).toBe(2);
     expect(CINEMATIC.side).toBe(-1);
     expect(CINEMATIC.radius).toBeGreaterThan(CAPTION.radius);

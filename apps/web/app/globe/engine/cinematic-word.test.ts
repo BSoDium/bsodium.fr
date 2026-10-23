@@ -8,18 +8,18 @@ const opts = { bevelCaps: CINEMATIC.bevelCaps, depthCaps: CINEMATIC.depthCaps };
 describe("the interlude's word, baked", () => {
   it("is the word the interlude says, from the page's face", () => {
     expect(WORD_OUTLINES.word).toBe(CINEMATIC.word);
-    expect(WORD_OUTLINES.weight).toBe(640);
-    // nine letters: U n i v e r s a l, as ten outlines (the i is two) and the counters of the e and the a
-    expect(WORD_OUTLINES.contours.length).toBe(12);
-    expect(WORD_OUTLINES.widthCaps).toBeGreaterThan(5);
-    expect(WORD_OUTLINES.widthCaps).toBeLessThan(9);
-    // (the ascender of the l stands a little above the capitals)
-    expect(WORD_OUTLINES.aboveCaps).toBeGreaterThan(1);
-    expect(WORD_OUTLINES.aboveCaps).toBeLessThan(1.3);
+    expect(WORD_OUTLINES.weight).toBe(700);
+    // nine capitals: U N I V E R S A L, as nine outlines and the counters of the R and the A
+    expect(WORD_OUTLINES.contours.length).toBe(11);
+    expect(WORD_OUTLINES.widthCaps).toBeGreaterThan(6);
+    expect(WORD_OUTLINES.widthCaps).toBeLessThan(10);
+    // (capitals: the round ones overshoot the cap height a little, and nothing stands above it)
+    expect(WORD_OUTLINES.aboveCaps).toBeGreaterThan(0.99);
+    expect(WORD_OUTLINES.aboveCaps).toBeLessThan(1.06);
   });
-  it("splits into outlines and holes: the e and the a each have a hole, the i is two outlines (its stem and its dot)", () => {
+  it("splits into outlines and holes: the R and the A each have a hole, the other seven capitals none", () => {
     const g = glyphPolygons();
-    expect(g.length).toBe(10);
+    expect(g.length).toBe(9);
     expect(g.reduce((a, x) => a + x.holes.length, 0)).toBe(2);
     for (const x of g) {
       expect(signed(x.outer)).toBeGreaterThan(0);
@@ -63,14 +63,14 @@ describe("the interlude's word, solid", () => {
       expect((g[0]! * n[0]! + g[1]! * n[1]! + g[2]! * n[2]!) / len).toBeGreaterThan(0);
     }
   });
-  it("is closed: the front faces cover the letters' area less the bevel, and there is a chamfer, a wall and a back chamfer for every edge", () => {
+  it("is closed: the front faces cover the letters' area less the bevel, and there is a chamfer and a wall for every edge (the back has no bevel)", () => {
     const kinds = [0, 0, 0, 0, 0];
     for (let i = 0; i < kind.count; i += 3) kinds[kind.getX(i)!]!++;
     const edges = WORD_OUTLINES.contours.reduce((a, c) => a + c.length / 2, 0);
     expect(kinds[KIND.outline]).toBe(edges * 2);
     expect(kinds[KIND.wall]).toBe(edges * 2);
-    expect(kinds[KIND.backEdge]).toBe(edges * 2);
-    expect(kinds[KIND.face]).toBe(kinds[KIND.back]);
+    // (the same polygons, inset and not: earcut may drop a sliver from one of them)
+    expect(Math.abs(kinds[KIND.face]! - kinds[KIND.back]!)).toBeLessThanOrEqual(6);
     expect(kinds[KIND.face]).toBeGreaterThan(100);
     // the front's area, from its triangles (in caps), is the letters' area (outlines less holes) less a ring of the bevel's width round every contour
     const W = WORD_OUTLINES.widthCaps;
