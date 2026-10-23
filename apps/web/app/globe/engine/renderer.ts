@@ -53,6 +53,7 @@ import {
   type Velocity,
 } from "./motion";
 import { snapBox } from "./group-square";
+import { Grace } from "./grace";
 import { IdleSpin, SPIN, pacedByRotation, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
 import { landingScale, liftFor, placeAbove, type Placement } from "./lift";
 import { routeLift } from "./view";
@@ -347,8 +348,9 @@ export class GlobeRenderer {
       // no location: no overlay
     }
     // The energy pass: what makes the resting home screen stand still (docs/performance.md, "Energy").
-    this.listen(window, "blur", () => this.setBlurred(true));
-    this.listen(window, "focus", () => this.setBlurred(false));
+    this.listen(window, "blur", () => this.blurGrace.start());
+    this.listen(window, "focus", () => this.blurGrace.cancel());
+    this.cleanups.push(() => this.blurGrace.dispose());
     if (typeof IntersectionObserver !== "undefined") {
       const io = new IntersectionObserver((entries) => {
         const last = entries[entries.length - 1];
@@ -1214,6 +1216,8 @@ export class GlobeRenderer {
 
   private idleFrozen = false;
   private blurred = false;
+  /** A window that lost focus is held only after `ENERGY.blurGraceMs` of it (engine/grace.ts). */
+  private blurGrace = new Grace(ENERGY.blurGraceMs, (on) => this.setBlurred(on));
   private offscreen = false;
   private freezeTimer = 0;
   private paceTimer = 0;
@@ -1229,11 +1233,18 @@ export class GlobeRenderer {
     window.clearTimeout(this.freezeTimer);
     this.freezeTimer = 0;
     if (!(ENERGY.idleFreezeMs > 0) || this.disposed) return;
-    this.freezeTimer = window.setTimeout(() => {
-      this.freezeTimer = 0;
-      this.settleThenHold();
-    }, ENERGY.idleFreezeMs);
+    this.freezeTimer = window.setTimeout(this.freezeWhenIdle, ENERGY.idleFreezeMs);
   }
+
+  /** The idle period has run out: hold, unless the cinematic interlude is under way (it is 21 s long and may begin late: it is not idle, the hold waits for its end). */
+  private freezeWhenIdle = () => {
+    this.freezeTimer = 0;
+    if (this.caption?.interluding) {
+      this.freezeTimer = window.setTimeout(this.freezeWhenIdle, 1000);
+      return;
+    }
+    this.settleThenHold();
+  };
 
   /**
    * The idle budget is spent: the rows ease to the middle of the globe, fully visible (`CAPTION.park`), and only then does everything stop; a

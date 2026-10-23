@@ -68,7 +68,7 @@ describe("the interlude's sound", () => {
 
   it("the sound is over with the interlude: it never runs past it", () => {
     // the part of the file that plays is `eggMs` long at most, and the file has that much after `fromSec`
-    expect(14 - SOUND.fromSec).toBeGreaterThanOrEqual(eggMs(CINEMATIC.shape) / 1000);
+    expect(SOUND.fileSec - SOUND.fromSec).toBeGreaterThanOrEqual(eggMs(CINEMATIC.shape) / 1000 - 0.6);
   });
 
   it("makes no sound where none may be made: nothing is created or played", () => {

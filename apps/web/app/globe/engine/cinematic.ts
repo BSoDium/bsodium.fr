@@ -42,33 +42,38 @@ export const CINEMATIC = {
   /**
    * The letters of the studio's wordmark are white metal: a white face (on either page), grey sides that darken with depth (`sideShade`: the share of
    * the side colour left at the back of the thickness), and a thickness of `depthCaps` cap heights (the rows' is a fifth of one). Every slice of
-   * the thickness is a pass over the word, so it has its own, smaller budget: at most `slices`, one every `sliceStepPx` CSS px of side.
+   * the thickness is a pass over the word, so it has its own budget: at most `slices`, one every `sliceStepDevicePx` device pixel of side (a
+   * step of two, on a 2x screen, shows as rings at a steep angle; 72 slices over the word's area is a few million fragments, nothing to the GPU).
    */
   face: "#ffffff",
   sideColor: { light: "#e2e5ea", dark: "#272a30" },
   sideShade: 1,
   depthCaps: 0.3,
-  slices: 28,
-  sliceStepPx: 0.9,
+  slices: 160,
+  sliceStepDevicePx: 1,
+  /** The thickness is projected longer than `depth * r * sin` (the word is on a higher orbit, nearer the camera: up to about twice): the count allows for it. */
+  sliceSafety: 2,
   radius: 2,
   capScale: 2,
   maxCapScale: 6,
   fill: 1.85,
   maxHalfScreen: 0.47,
   /**
-   * The timing (engine/caption.ts `EggShape`, ms): the rows leave in `leaveMs`, the stage is empty for `gapMs`, the word comes in in `enterMs` (a
+   * The timing (engine/caption.ts `EggShape`, ms), made to the sound's length (`SOUND` in cinematic-sound.ts: 20.8 s, its loudest hit 11.7 s in,
+   * which is where the word lands: 0.5 + 0.4 + 10.8): the rows leave in `leaveMs`, the stage is empty for `gapMs`, the word comes in in `enterMs` (a very
    * long ease from `ease`: 1, against 2.2 for the regular rows, that lands at the roll's own speed), holds rolling through `ampDeg` for `holdMs`,
-   * and leaves in `exitMs`. The globe pulls back by `zoomLevels` levels of zoom (0.7: to 62 % of its size, the word and the ring with it) over
-   * the first `zoomInMs` and comes back over the last `zoomOutMs`, so that the wordmark is not the size of the page. All of it is over about 8.5 s after it begins, so that it is done before the idle hold (30 s) when it begins early.
+   * and leaves in `exitMs`. The globe pulls back by `zoomLevels` levels of zoom (0.7: to 62 % of its size, the word and the ring with it) and
+   * LEANS over the first `zoomInMs`, stays so for as long as the word is on the stage, and comes back upright over the `zoomOutMs` AFTER it has
+   * gone (the whole is `eggMs`: about 21 s, begun at 13 s in; the idle hold at 30 s waits for it, `Renderer.freezeWhenIdle`).
    */
-  shape: { leaveMs: 500, gapMs: 400, enterMs: 4600, ease: 1, holdMs: 2400, exitMs: 650, ampDeg: 2.5, zoomLevels: 0.7, zoomInMs: 2200, zoomOutMs: 2000, zoomCutMs: 700 },
+  shape: { leaveMs: 500, gapMs: 400, enterMs: 10800, ease: 1, holdMs: 5500, exitMs: 1600, ampDeg: 2.5, zoomLevels: 0.7, zoomInMs: 4500, zoomOutMs: 2000, zoomCutMs: 700 },
   /** The side the word comes in from: west (-1), the way the planet turns, so it follows the surface round. */
   side: -1 as 1 | -1,
   /**
-   * When it begins, as the number of cycles of the first showing that go by first (a cycle is 6.9 s): the second or the third time the first row
-   * would leave, 13 to 20 s in (a visitor has settled, and it is over before the idle hold at 30 s).
+   * When it begins, as the number of cycles of the first showing that go by first (a cycle is 6.9 s): the second time the first row would leave,
+   * 13 s in (a visitor has settled; it is about 21 s long and the idle hold at 30 s waits for it).
    */
-  cycles: [1, 2] as const,
+  cycles: [1] as const,
 } as const;
 
 /**

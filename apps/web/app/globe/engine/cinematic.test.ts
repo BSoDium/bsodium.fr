@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CAPTION_FACE, CaptionMotion, DRIFT, cycleMs, eggMs, eggX, entranceMs, placeEgg, shellXY, type CinematicPlan } from "./caption";
 import { CINEMATIC, planCinematic } from "./cinematic";
+import { SOUND } from "./cinematic-sound";
 import { markPlayed, visitState } from "./visit";
 import { CAPTION } from "./tuning";
 
@@ -31,8 +32,11 @@ describe("the cinematic interlude: when it may play", () => {
       if (p) ns.add(p.n);
     }
     expect([...ns].sort()).toEqual([...CINEMATIC.cycles]);
-    const latest = Math.max(...CINEMATIC.cycles) * cycleMs() + CAPTION.enter.ms + CAPTION.cycle.dwellMs + eggMs(CINEMATIC.shape);
-    expect(latest).toBeLessThan(30000); // ENERGY.idleFreezeMs
+    // it may begin late enough to run past the idle hold (it is 21 s long): the renderer's hold waits for an interlude under way
+    // (`freezeWhenIdle`), so what is asked here is that it begins after the visitor has settled and before the hold would
+    const latestStart = Math.max(...CINEMATIC.cycles) * cycleMs() + CAPTION.enter.ms + CAPTION.cycle.dwellMs;
+    expect(latestStart).toBeGreaterThan(10000);
+    expect(latestStart).toBeLessThan(30000); // ENERGY.idleFreezeMs
   });
   it("the force flag plays it at the first exit, whatever the visit says (but not under reduced motion)", () => {
     expect(planCinematic({ ...base, seed: 1, returning: false, played: true, forced: true })?.n).toBe(0);
@@ -130,8 +134,12 @@ describe("the cinematic interlude: the big row's trajectory", () => {
       last = x;
     }
   });
-  it("takes well under the idle hold", () => {
-    expect(eggMs(s)).toBeLessThan(10000);
+  it("takes well under the idle hold (and is as long as the sound it was made to)", () => {
+    expect(eggMs(s)).toBeLessThan(24000);
+    expect(Math.abs(eggMs(s) / 1000 - SOUND.fileSec)).toBeLessThan(0.6); // the sound's own length
+  });
+  it("lands its word when the sound's loudest hit is (11.7 s into the file)", () => {
+    expect((s.leaveMs + s.gapMs + s.enterMs) / 1000).toBeCloseTo(11.7 - SOUND.fromSec, 6);
   });
 });
 
@@ -168,6 +176,25 @@ describe("the cinematic interlude: in the caption's motion", () => {
     expect(m.phase).toBe("egg");
     expect(told).toBe(1);
   });
+  it("can be played now (the owner's key): from the roll, once at a time, and again after it has been spent", () => {
+    const m = make();
+    let told = 0;
+    m.onCinematic = () => told++;
+    const now = run(m, 2000); // (long before its moment)
+    expect(m.phase).toBe("rest");
+    expect(m.replayEgg(now)).toBe(true);
+    expect(m.phase).toBe("egg");
+    expect(told).toBe(1);
+    expect(m.replayEgg(now)).toBe(false); // (one is under way)
+    expect(told).toBe(1);
+    // to its end: spent, the rows begin again
+    const end = run(m, now + eggMs(plan.shape) + 100, now);
+    expect(m.egg).toBeNull();
+    expect(m.replayEgg(end)).toBe(false); // (no plan: the layer makes one)
+    m.egg = { ...plan, shape: { ...plan.shape } };
+    run(m, end + entranceMs(2) + 100, end); // (the showing is in again)
+    expect(m.replayEgg(end + entranceMs(2) + 100)).toBe(m.phase === "rest");
+  });
   it("every row leaves by the orbit exit's own path and is behind the planet when it is over", () => {
     const m = make();
     const t0 = run(m, at() + 20);
@@ -201,10 +228,15 @@ describe("the cinematic interlude: in the caption's motion", () => {
     let resumed = 0;
     m.onResume = () => resumed++;
     const s = plan.shape;
-    let now = run(m, at() + eggMs(s) - 60);
+    // (the word's exit ends `zoomOutMs` before the interlude does: the globe comes back upright after it)
+    const wordGone = eggMs(s) - s.zoomOutMs;
+    let now = run(m, at() + wordGone - 60);
     expect(m.phase).toBe("egg");
     expect(Math.abs(m.eggTheta() ?? 9)).toBeGreaterThan(1.8); // (gone round the far side, east: the other way from where it came in)
     expect(m.eggTheta()!).toBeGreaterThan(0);
+    now = run(m, at() + wordGone + 60, now);
+    expect(m.eggTheta()).toBeNull(); // (gone), the globe on its way back
+    expect(m.phase).toBe("egg");
     now = run(m, at() + eggMs(s) + 60, now);
     expect(m.phase).toBe("in");
     expect(m.animating).toBe(true);
@@ -252,6 +284,22 @@ describe("the cinematic interlude: in the caption's motion", () => {
     expect(m.eggZoom()).toBeLessThan(0.02);
     run(m, at() + eggMs(s) + 100, now);
     expect(m.eggZoom()).toBe(0);
+  });
+  it("keeps the globe pulled back and leaning until the word has LEFT, and only then gives it back", () => {
+    const m = make();
+    const s = plan.shape;
+    const wordGone = s.leaveMs + s.gapMs + s.enterMs + s.holdMs + s.exitMs;
+    let now = run(m, at() + 20);
+    now = run(m, at() + s.zoomInMs + 100, now);
+    // the word is still on the stage up to `wordGone` (its exit runs to there): the globe is as far back as it was, all the time
+    for (; now < at() + wordGone - 120; now = run(m, now + 50, now)) expect(m.eggZoom(), `at ${Math.round(now - at())} ms`).toBeCloseTo(1, 6);
+    expect(m.eggTheta()).not.toBeNull();
+    // and it comes back in the `zoomOutMs` after
+    now = run(m, at() + wordGone + s.zoomOutMs / 2, now);
+    expect(m.eggTheta()).toBeNull();
+    expect(m.eggZoom()).toBeGreaterThan(0.1);
+    expect(m.eggZoom()).toBeLessThan(0.9);
+    expect(wordGone + s.zoomOutMs).toBe(eggMs(s));
   });
   it("a modest pull-back: the word stays the size it was relative to the planet", () => {
     expect(CINEMATIC.shape.zoomLevels).toBeGreaterThan(0.3);

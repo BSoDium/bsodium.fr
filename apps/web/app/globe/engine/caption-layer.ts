@@ -73,7 +73,7 @@ import {
   type Placement,
   eggMs,
 } from "./caption";
-import { CINEMATIC, notePlayed, planForPage } from "./cinematic";
+import { CINEMATIC, cinematicForced, notePlayed, planForPage } from "./cinematic";
 import { prepareSound, startSound, type SoundHandle } from "./cinematic-sound";
 import { OCCLUDER_RADIUS } from "./materials";
 import { CAPTION, ENERGY } from "./tuning";
@@ -82,6 +82,9 @@ const DEG_ = Math.PI / 180;
 
 /** The slice counts a strip is drawn with. */
 const SLICE_STEPS = [2, 3, 4, 6, 8, 12, 16, 20, 28] as const;
+/** The interlude's word is far thicker than the rows: its strips go on from there (made only when an interlude is planned). */
+const EGG_SLICE_STEPS = [40, 56, 72, 96, 128, 160] as const;
+const ALL_EGG_STEPS: readonly number[] = [...SLICE_STEPS, ...EGG_SLICE_STEPS];
 
 /**
  * One unit strip serves every line (`unitBand`: `position` is `(u, v, layer)`), and the line's parallel is a handful of uniforms: where the strip
@@ -267,7 +270,7 @@ export interface CaptionState {
    */
   cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number; lastOut: number[]; lastIn: number[] };
   /** The cinematic interlude: planned, under way, how many levels of zoom the globe is pulled back by, the big row's turn (radians; null: not on the stage) and whether its strip is drawn. */
-  egg: { planned: boolean; active: boolean; zoomOut: number; theta: number | null; drawn: boolean };
+  egg: { planned: boolean; active: boolean; zoomOut: number; theta: number | null; drawn: boolean; slices: number; depth: number; dpr: number };
   /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
   baselines: number[];
   texture: { width: number; height: number }[];
@@ -582,6 +585,18 @@ export class CaptionLayer {
       this.swell?.fade();
       this.swell = null;
     };
+    // With `?cinematic` the owner can play it again at will: the key U (a key press is a gesture that lets the browser play the sound, and does not
+    // leave the presentation, as a click on the globe does)
+    if (this.motion.egg && cinematicForced() && typeof window !== "undefined") {
+      this.onKey = (e: KeyboardEvent) => {
+        if (e.key.toLowerCase() !== "u" || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+        const t = e.target as HTMLElement | null;
+        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+        this.playInterlude();
+      };
+      window.addEventListener("keydown", this.onKey);
+      console.info("[interlude] ?cinematic: press U to play it now (a key press also lets the browser play its sound)");
+    }
     this.motion.onResume = () => {
       // (the showing begins again from its first phrase set)
       this.parkSet = -1;
@@ -722,23 +737,57 @@ export class CaptionLayer {
    * governor's cap. A row at rest, within a few degrees of the middle, sees its side edge-on and a small fraction of a pixel wide: a handful of
    * slices instead of 28 (every slice is a full pass over the glyphs: the GPU cost of the caption at rest was that overdraw).
    */
-  private slicesFor(theta: number, halfSpan: number, baseLat: number, lat: number, depth: number = CAPTION.depth, cap: number = this.slices, stepPx: number = CAPTION.sliceStepPx): number {
-    const off = Math.min(Math.PI, Math.abs(theta) + halfSpan);
+  private slicesFor(theta: number, halfSpan: number, baseLat: number, lat: number, depth: number = CAPTION.depth, cap: number = this.slices, stepPx: number = CAPTION.sliceStepPx, steps: readonly number[] = SLICE_STEPS, safety = 1, wide = false): number {
     const vl = lat * DEG_;
     const L = baseLat * DEG_;
-    const cos = Math.sin(vl) * Math.sin(L) + Math.cos(vl) * Math.cos(L) * Math.cos(off);
-    const sin = Math.sqrt(Math.max(0, 1 - cos * cos));
-    const px = depth * (this.sizing?.r ?? 300) * sin;
+    const sinAt = (off: number) => {
+      const cos = Math.sin(vl) * Math.sin(L) + Math.cos(vl) * Math.cos(L) * Math.cos(off);
+      return Math.sqrt(Math.max(0, 1 - cos * cos));
+    };
+    let sin: number;
+    if (wide) {
+      // A WIDE strip (the interlude's word spans about a radian each side of its middle): the thickness is the longest where the strip is seen edge on
+      // from the side, the radial direction square to the line of sight, and that may be anywhere between its ends, not at the far one (which can be
+      // behind the planet, edge-on to nothing: the word at the limb got 16 slices there and 128 at the centre, and the missing ones showed as rings).
+      const lo = Math.max(0, Math.abs(theta) - halfSpan);
+      const hi = Math.min(Math.PI, Math.abs(theta) + halfSpan);
+      sin = lo <= Math.PI / 2 && hi >= Math.PI / 2 ? 1 : Math.max(sinAt(lo), sinAt(hi));
+    } else sin = sinAt(Math.min(Math.PI, Math.abs(theta) + halfSpan));
+    const px = depth * (this.sizing?.r ?? 300) * sin * safety;
     const n = Math.ceil(px / stepPx) + 1;
     // (quantised to a few strips, all made when the strips are built: a row going round the orbit changes its count by a step, and no strip is
     // first made, or first used, in the middle of an exit)
-    for (const step of SLICE_STEPS) if (step >= n && step <= cap) return step;
-    return Math.max(2, Math.min(cap, SLICE_STEPS.filter((x) => x <= cap).at(-1) ?? cap));
+    for (const step of steps) if (step >= n && step <= cap) return step;
+    return Math.max(2, Math.min(cap, steps.filter((x) => x <= cap).at(-1) ?? cap));
   }
 
   /** How far the globe has pulled back for the cinematic interlude, 0 to 1 (see `zoomOutLevels`), and when it was last read. */
   private zoomK = 0;
   private zoomAt = -1;
+  private onKey: ((e: KeyboardEvent) => void) | null = null;
+
+  /** The cinematic interlude is under way (the rows are leaving, the word is on, or the globe is coming back). */
+  get interluding(): boolean {
+    return this.motion.eggActive;
+  }
+
+  /** Play the interlude now (the key U with `?cinematic`): false when it cannot (the rows are not rolling, or one is under way, or there is none planned). */
+  playInterlude(retries = 6): boolean {
+    const b = this.built;
+    if (this.disposed || this.failed || !b || !b.egg || this.motion.eggActive) return false;
+    // (one that has played is spent: a new plan, the same as the first)
+    this.motion.egg ??= { n: 0, shape: { ...CINEMATIC.shape }, side: CINEMATIC.side };
+    const ok = this.motion.replayEgg(performance.now());
+    if (ok) this.opts.onChange();
+    // (the key press is an input: it wakes a caption the idle hold had stopped, and the rows are rolling again a moment later: ask again)
+    else if (retries > 0) {
+      window.clearTimeout(this.replayTimer);
+      this.replayTimer = window.setTimeout(() => this.playInterlude(retries - 1), 500);
+    }
+    return ok;
+  }
+  private replayTimer = 0;
+
   /** The sound of the interlude under way (engine/cinematic-sound.ts), if one is playing. */
   private swell: SoundHandle | null = null;
 
@@ -1046,7 +1095,12 @@ export class CaptionLayer {
       v.mesh.matrix.copy(this.tmp);
       v.mesh.matrixWorldNeedsUpdate = true;
       // only as many slices as the side of the letters needs from here
-      const ns = v.set === EGG ? this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat, v.material.uniforms.uDepth!.value as number, Math.min(this.slices, CINEMATIC.slices), CINEMATIC.sliceStepPx) : this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat);
+      // (the word's thickness is long on the screen: a slice every device pixel of it, `CINEMATIC.sliceStepDevicePx`, or the steps of them show as rings;
+      // the governor's rungs cut its budget in the same proportion as the rows')
+      const ns =
+        v.set === EGG
+          ? this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat, v.material.uniforms.uDepth!.value as number, Math.round((CINEMATIC.slices * this.slices) / CAPTION.slices), CINEMATIC.sliceStepDevicePx / this.dprNow, ALL_EGG_STEPS, CINEMATIC.sliceSafety, true)
+          : this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat);
       if (ns !== v.n) {
         v.n = ns;
         v.mesh.geometry = this.unitFor(ns);
@@ -1163,7 +1217,11 @@ export class CaptionLayer {
   }
 
   /** Draw the caption over the globe's frame. */
+  /** The pixel ratio the caption's canvas was last drawn at (the word's slices are counted in device pixels). */
+  private dprNow = 2;
+
   renderCrisp(camera: PerspectiveCamera, rect: CaptionRect, dpr: number): void {
+    this.dprNow = dpr;
     if (!this.anyVisible || !this.built || this.failed) {
       this.crisp.hide();
       return;
@@ -1250,7 +1308,7 @@ export class CaptionLayer {
       parallelsFor: 0,
       capCells: this.sizing ? (CAPTION.capR * this.sizing.r) / this.sizing.cell : 0,
       seed: this.motion.seed,
-      egg: { planned: this.motion.egg !== null, active: this.motion.eggActive, zoomOut: this.zoomK * (this.motion.egg?.shape ?? CINEMATIC.shape).zoomLevels, theta: this.motion.eggTheta(), drawn: (b?.variants ?? []).some((v) => v.set === EGG && v.mesh.visible) },
+      egg: { planned: this.motion.egg !== null, active: this.motion.eggActive, zoomOut: this.zoomK * (this.motion.egg?.shape ?? CINEMATIC.shape).zoomLevels, theta: this.motion.eggTheta(), drawn: (b?.variants ?? []).some((v) => v.set === EGG && v.mesh.visible), slices: (b?.variants ?? []).find((v) => v.set === EGG)?.n ?? 0, depth: (b?.variants ?? []).find((v) => v.set === EGG)?.material.uniforms.uDepth!.value ?? 0, dpr: this.dprNow },
       lines: shown.map((v) => ({
         text: v.line.text,
         parent: v.row,
@@ -1271,6 +1329,8 @@ export class CaptionLayer {
 
   dispose(): void {
     if (this.disposed) return;
+    if (this.onKey) window.removeEventListener("keydown", this.onKey);
+    window.clearTimeout(this.replayTimer);
     this.swell?.fade(150); // (the globe goes away mid-interlude: so does its sound)
     this.swell = null;
     this.disposed = true;
@@ -1539,6 +1599,7 @@ export class CaptionLayer {
       this.crisp.scene.add(this.ellipse);
     }
     for (const n of SLICE_STEPS) this.unitFor(n); // (the CPU side of every strip is made now)
+    if (eggRuns) for (const n of EGG_SLICE_STEPS) this.unitFor(n);
     const eggVariant = variants.find((v) => v.set === EGG);
     this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, egg: eggVariant ? { piece: eggVariant.piece, place: { baseLat: 0, capR: 0, halfSpan: 0, y: 0 }, start: Math.PI } : null, key };
     this.place();

@@ -806,7 +806,7 @@ export interface EggShape {
   ampDeg: number;
   /**
    * The globe pulls back while it lasts (everything on it, the word included, is smaller: a smoothstep of `zoomInMs` from where the interlude
-   * begins, and back in the last `zoomOutMs`), by `zoomLevels` levels of zoom (2^-levels of its size). `zoomCutMs`: how long a cut-short interlude
+   * begins, held while the word is on the stage, and back in the `zoomOutMs` that follow its exit), by `zoomLevels` levels of zoom (2^-levels of its size). `zoomCutMs`: how long a cut-short interlude
    * (a gesture) takes to give the size back.
    */
   zoomLevels: number;
@@ -822,8 +822,11 @@ export interface CinematicPlan {
   side: 1 | -1;
 }
 
-/** Time the whole interlude takes, ms. */
-export const eggMs = (s: EggShape): number => s.leaveMs + s.gapMs + s.enterMs + s.holdMs + s.exitMs;
+/**
+ * Time the whole interlude takes, ms: the rows leave, the stage is empty, the word comes in, holds and goes, and THEN the globe gives its size and its
+ * lean back (`zoomOutMs`: owner, 2026-10-23, "do not untilt the view until the word has left").
+ */
+export const eggMs = (s: EggShape): number => s.leaveMs + s.gapMs + s.enterMs + s.holdMs + s.exitMs + s.zoomOutMs;
 
 /** The row's trajectory in the interlude: `rowX` with the interlude's own shape. `tau`: ms since the big row's entrance began. */
 export const eggX = (tau: number, start: number, s: EggShape): number => rowX(tau, start, (s.ampDeg * Math.PI) / 180, { ms: s.enterMs, ease: s.ease, dwellMs: s.holdMs, exitMs: s.exitMs });
@@ -1221,6 +1224,17 @@ export class CaptionMotion {
   /** The clock reading the interlude begins at: when the first showing's first row would begin to leave, `n` turns of the sets on. */
   private eggTrigger(): number {
     return (this.egg?.n ?? 0) * cycleMs() + CAPTION.enter.ms + CAPTION.cycle.dwellMs;
+  }
+
+  /**
+   * Begin the interlude NOW, from the resting roll (the owner's key with `?cinematic`, so that it can be seen again, with its sound, without a reload
+   * and without a click: a key is a gesture that does not leave the presentation). False when it cannot: no plan, the rows are not rolling, or one
+   * is under way.
+   */
+  replayEgg(now: number): boolean {
+    if (!this.egg || this.phase !== "rest" || !this.motionAllowed) return false;
+    this.beginEgg(now);
+    return true;
   }
 
   private beginEgg(now: number): void {
