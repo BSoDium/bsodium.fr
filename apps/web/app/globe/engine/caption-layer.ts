@@ -45,6 +45,7 @@ import {
   CaptionMotion,
   DRIFT,
   captionColors,
+  hex,
   captionFont,
   dimPresence,
   entranceStart,
@@ -72,6 +73,7 @@ import {
   type Placement,
 } from "./caption";
 import { CINEMATIC, notePlayed, planForPage } from "./cinematic";
+import { startSwell, type SwellHandle } from "./cinematic-sound";
 import { OCCLUDER_RADIUS } from "./materials";
 import { CAPTION, ENERGY } from "./tuning";
 
@@ -491,6 +493,8 @@ export class CaptionLayer {
   private accent = { value: [0, 0, 1] as number[] };
   private accentOutline = { value: [0, 0, 1] as number[] };
   private accentSide = { value: [0, 0, 1] as number[] };
+  /** The outline of the cinematic interlude's word: gold (`CINEMATIC.gold`), its own uniform, the thickness stays the rows'. */
+  private eggOutline = { value: [0.7, 0.5, 0.1] as number[] };
   /** The far slices (layer below this) that carry the text colour in mode `edge` (0: none). */
   private edgeLayer = { value: 0 };
   /** Slices of the thickness now (the quality governor lowers them; `CAPTION.slices` is the best) and the most the canvas is drawn at. */
@@ -556,7 +560,16 @@ export class CaptionLayer {
     this.motion.seed = (Math.random() * 0x7fffffff) | 0;
     // Rarely, and only for a visitor who has been here before, the words give way to one big one for a while (engine/cinematic.ts).
     this.motion.egg = opts.content.sets.length + opts.content.fixed.length > 0 ? planForPage(this.motion.seed, opts.reduced) : null;
-    this.motion.onCinematic = notePlayed;
+    // (the word comes in after the rows have left and the stage has been empty: the swell begins then, and lets go when the interlude ends, or is cut short)
+    this.motion.onCinematic = () => {
+      notePlayed();
+      const shape = this.motion.egg?.shape ?? CINEMATIC.shape;
+      this.swell = startSwell(shape.leaveMs + shape.gapMs);
+    };
+    this.motion.onCinematicEnd = () => {
+      this.swell?.fade();
+      this.swell = null;
+    };
     this.motion.onResume = () => {
       // (the showing begins again from its first phrase set)
       this.parkSet = -1;
@@ -566,14 +579,14 @@ export class CaptionLayer {
     this.setTheme(opts.theme);
   }
 
-  private makeMaterial(map: CanvasTexture, radius: number): ShaderMaterial {
+  private makeMaterial(map: CanvasTexture, radius: number, outline = this.outline): ShaderMaterial {
     return new ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
       uniforms: {
         uMap: { value: map },
         uFace: this.face,
-        uOutline: this.outline,
+        uOutline: outline,
         uSide: this.side,
         uAccent: this.accent,
         uAccentOutline: this.accentOutline,
@@ -660,6 +673,7 @@ export class CaptionLayer {
     this.edgeLayer.value = this.sideMode === "edge" ? (CAPTION.colors.edgeSlices - 0.5) / (this.slices - 1) : 0;
     this.dimColor.value = [...theme.background];
     const dark = 0.2126 * theme.background[0] + 0.7152 * theme.background[1] + 0.0722 * theme.background[2] < 0.5;
+    this.eggOutline.value = [...hex(dark ? CINEMATIC.gold.dark : CINEMATIC.gold.light)];
     this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
   }
 
@@ -710,6 +724,8 @@ export class CaptionLayer {
   /** How far the globe has pulled back for the cinematic interlude, 0 to 1 (see `zoomOutLevels`), and when it was last read. */
   private zoomK = 0;
   private zoomAt = -1;
+  /** The sound of the interlude under way (engine/cinematic-sound.ts), if one is playing. */
+  private swell: SwellHandle | null = null;
 
   /**
    * How many levels of zoom the globe is pulled back by now (0 when there is no interlude under way): the renderer subtracts it from the zoom it
@@ -728,6 +744,14 @@ export class CaptionLayer {
       this.zoomK = Math.max(0, this.zoomK - dt / shape.zoomCutMs);
     }
     return this.zoomK * shape.zoomLevels;
+  }
+
+  /**
+   * How far the picture leans now, radians (0 outside the interlude): the pull-back's own eased value times the tilt, so the planet leans in as it
+   * pulls back and comes upright as it comes back (and as it gives the size back when a gesture cuts the interlude short). Read after `zoomOutLevels`.
+   */
+  rollRad(): number {
+    return this.zoomK > 0 ? this.zoomK * ((CINEMATIC.tiltDeg * Math.PI) / 180) : 0;
   }
 
   /** The radius of the shell a strip is on: the rows' own, or the cinematic word's higher one. */
@@ -1230,6 +1254,8 @@ export class CaptionLayer {
 
   dispose(): void {
     if (this.disposed) return;
+    this.swell?.fade(150); // (the globe goes away mid-interlude: so does its sound)
+    this.swell = null;
     this.disposed = true;
     this.token++;
     this.release();
@@ -1318,7 +1344,7 @@ export class CaptionLayer {
     const slotRows = sets.reduce((a, s) => Math.max(a, s.length), 0);
     if (slotRows + fixed.length === 0) return;
     // the big row of the cinematic interlude (only when one is planned: no texture is made for nothing)
-    const eggRuns = planned ? clean([{ text: CINEMATIC.word, style: "heavy" }]) : null;
+    const eggRuns = planned ? clean([{ text: CINEMATIC.word, style: "heavy" }]).map((r) => ({ ...r, embolden: CINEMATIC.embolden })) : null;
     this.failed = false;
     const emPx = CAPTION.texCap / CAPTION_FACE.capEm;
     const probe = document.createElement("canvas").getContext("2d");
@@ -1326,7 +1352,7 @@ export class CaptionLayer {
     const hasSpacing = "letterSpacing" in probe;
     const outlinePx = CAPTION.outline * CAPTION.texCap;
     const faceOf = (run: CaptionRun) => CAPTION_FACES[CAPTION_STYLES[run.style ?? "plain"].face];
-    const emboldenPx = (run: CaptionRun) => faceOf(run).embolden * CAPTION.texCap;
+    const emboldenPx = (run: CaptionRun) => (run.embolden ?? faceOf(run).embolden) * CAPTION.texCap;
     /** Set `c`'s font and spacing for a run; the advance of the run (tracking included) is what `measureText` says then. */
     const setRun = (c: CanvasRenderingContext2D, run: CaptionRun) => {
       const f = faceOf(run);
@@ -1420,7 +1446,7 @@ export class CaptionLayer {
             const inside = run.accent ? "rgb(0 0 255)" : "rgb(0 255 0)";
             c.fillStyle = inside;
             c.fillText(run.text, px, py);
-            if (f.embolden > 0) {
+            if ((run.embolden ?? f.embolden) > 0) {
               c.lineWidth = emboldenPx(run);
               c.strokeStyle = inside;
               c.strokeText(run.text, px, py);
@@ -1445,7 +1471,7 @@ export class CaptionLayer {
       // (uploaded now, with the mipmaps: the first frame of a set that has not been on screen yet would otherwise pay for it)
       this.crisp.warm(tex);
       this.texSizes.push({ width: canvas.width, height: canvas.height });
-      const material = this.makeMaterial(tex, radius);
+      const material = this.makeMaterial(tex, radius, x.set === EGG ? this.eggOutline : this.outline);
       const mesh = new Mesh(this.unitFor(2), material);
       mesh.matrixAutoUpdate = false;
       mesh.frustumCulled = false;

@@ -673,8 +673,10 @@ export class GlobeRenderer {
   private drawView(): ViewState {
     // (the cinematic interlude pulls the globe back for a while: below the page's floor, for the picture only)
     const back = this.caption?.zoomOutLevels() ?? 0;
+    // (and it leans the planet, the words and the stars together, as the studio's globe does: the same eased value, `CaptionLayer.rollRad`)
+    const roll = this.caption?.rollRad() ?? 0;
     const zoom = Math.min(this.view.zoom, TUNING.maxZoom) - back;
-    return zoom === this.view.zoom ? this.view : { ...this.view, zoom };
+    return zoom === this.view.zoom && roll === 0 ? this.view : { ...this.view, zoom, ...(roll !== 0 ? { roll } : {}) };
   }
 
   setView(v: Partial<ViewState>) {

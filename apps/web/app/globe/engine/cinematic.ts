@@ -27,6 +27,17 @@ export const CINEMATIC = {
    * phone's planet is nearly as wide as the screen: the word must not leave it).
    */
   word: "Universal",
+  /**
+   * The planet and the word lean to the left while the globe is pulled back (degrees, the north pole toward the left of the screen: the studio's
+   * globe is tilted on its axis and its wordmark orbits on the same slant); it eases in and out with the pull-back.
+   */
+  tiltDeg: 12,
+  /**
+   * The letters are thicker than the caption's (a stroke in the face colour, caps: the script's own `embolden` is 0.05) and outlined in gold: the
+   * outline only (the thickness stays the quiet tone of the other rows), a deeper gold on the light page and a paler one on the dark.
+   */
+  embolden: 0.07,
+  gold: { light: "#a87a12", dark: "#e6c35c" },
   radius: 2,
   capScale: 2,
   maxCapScale: 6,

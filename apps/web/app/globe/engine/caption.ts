@@ -39,6 +39,8 @@ export interface CaptionRun {
   style?: CaptionStyleKey;
   /** In a palette's pastel text tone, not the secondary text tone. */
   accent?: CaptionHue;
+  /** Thickened by this many caps (a stroke in the face colour) instead of the face's own: the cinematic interlude's word is heavier than the rows. */
+  embolden?: number;
 }
 
 /** What the caption says: phrase sets that take turns in the upper rows, each set a few rows, and the rows under them that stay (the call to action). */
@@ -98,7 +100,7 @@ export const CAPTION_FACE = {
 } as const;
 
 /** `#rrggbb` as 0..1 channels. */
-const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
+export const hex = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
 
 /**
  * The colours of the caption for a theme, all solid (alpha 1). The look (round 9): the letters are TEXT-coloured (the secondary text tone:
@@ -863,6 +865,8 @@ export class CaptionMotion {
    */
   egg: CinematicPlan | null = null;
   onCinematic: (() => void) | null = null;
+  /** The interlude is over, ran out or cut short (once per interlude): what it started (the sound) lets go. */
+  onCinematicEnd: (() => void) | null = null;
   onResume: (() => void) | null = null;
   /** The clock reading (ms) when the interlude began; negative: not under way. */
   private eggAt = -1;
@@ -1232,6 +1236,7 @@ export class CaptionMotion {
 
   /** The interlude is over (it ran out, or something else took the view): spent, never again. */
   private dropEgg(): void {
+    if (this.egg) this.onCinematicEnd?.();
     this.egg = null;
     this.eggAt = -1;
     this.eggFrozen = null;
