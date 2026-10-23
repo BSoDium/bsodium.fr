@@ -37,7 +37,7 @@ export const CINEMATIC = {
    * The letters are thicker than the caption's (a stroke in the face colour, caps: the script's own `embolden` is 0.05) and outlined in gold: the
    * outline only (the thickness stays the quiet tone of the other rows), a deeper gold on the light page and a paler one on the dark.
    */
-  embolden: 0.02,
+  embolden: 0,
   gold: { light: "#a87a12", dark: "#e6c35c" },
   /**
    * The letters of the studio's wordmark are white metal: a white face (on either page), grey sides that darken with depth (`sideShade`: the share of
@@ -45,11 +45,11 @@ export const CINEMATIC = {
    * the thickness is a pass over the word, so it has its own, smaller budget: at most `slices`, one every `sliceStepPx` CSS px of side.
    */
   face: "#ffffff",
-  sideColor: { light: "#8d939d", dark: "#6d737d" },
-  sideShade: 0.5,
+  sideColor: { light: "#e2e5ea", dark: "#272a30" },
+  sideShade: 1,
   depthCaps: 0.3,
-  slices: 20,
-  sliceStepPx: 1.4,
+  slices: 28,
+  sliceStepPx: 0.9,
   radius: 2,
   capScale: 2,
   maxCapScale: 6,

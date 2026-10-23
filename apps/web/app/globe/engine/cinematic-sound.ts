@@ -6,10 +6,12 @@
  * only a returning visitor), long before it plays, into a plain audio element (no `AudioContext`: opening an audio device is a stall of 150 ms or
  * much more, on the main thread, in the frame the interlude begins in). Starting it is `play()` on an element that is already loaded.
  *
- * It only ever plays when the browser would let it (a page nobody has touched yet is not allowed a sound, and must not even try), when the tab is in
+ * It plays when the browser lets it (it is asked to, quietly: a page nobody has touched is usually refused, and then it is silent), when the tab is in
  * front, and unless the visitor asked for none (`?mute`, or sessionStorage "cinematic-mute" = "1"). It rises over `fadeInMs`, runs as long as the
  * interlude, and lets go over `fadeOutMs` at its end; cut short (a gesture, the globe going away) it fades at once (`SoundHandle.fade`).
  */
+
+import { cinematicForced } from "./cinematic";
 
 export const SOUND = {
   url: "/audio/universal-parody.mp3",
@@ -37,9 +39,8 @@ export function soundAllowed(): boolean {
   try {
     if (typeof document !== "undefined" && document.hidden) return false;
     if (new URLSearchParams(location.search).has("mute") || sessionStorage.getItem("cinematic-mute") === "1") return false;
-    // A page nobody has touched may not play a sound, and trying logs a warning: where the browser says so (Chromium, Safari, Firefox), do not try.
-    const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
-    if (activation && !activation.hasBeenActive) return false;
+    // (a page nobody has touched may be refused by the browser: it is asked all the same, `play()` says no quietly, and a site the visitor knows
+    // may be let through without a touch; an earlier version did not even ask, and the owner never heard it)
     return true;
   } catch {
     return false;
@@ -151,7 +152,14 @@ export function startSound(durationMs: number, make: AudioFactory = browserAudio
     }
     set(0);
     // (refused, or the file is not there: silence, and nothing else)
-    void audio.play().then(() => ramp(SOUND.volume, SOUND.fadeInMs), () => stop());
+    void audio.play().then(
+      () => ramp(SOUND.volume, SOUND.fadeInMs),
+      () => {
+        // (refused: no touch on the page yet, or the file is not there. Silence; where the owner asks for the interlude, say why)
+        if (cinematicForced()) console.info("[interlude] the browser did not let the sound play: touch the page (a click, a key) before it begins");
+        stop();
+      },
+    );
     timers.push(setTimeout(() => ramp(0, SOUND.fadeOutMs, stop), Math.max(0, durationMs - SOUND.delayMs - SOUND.fadeOutMs)));
   };
   const go = () => {

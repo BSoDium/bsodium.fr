@@ -67,8 +67,8 @@ export const CAPTION_STYLES: Readonly<Record<CaptionStyleKey, CaptionStyleDef>> 
   "heavy-italic": { face: "serif", weight: 700, italic: true, url: SERIF_FILES[700] },
   mono: { face: "mono", weight: 700, italic: false },
   script: { face: "script", weight: 400, italic: false },
-  // the cinematic interlude's word: the page's own display sans (declared in app.css, weight range up to 800), as black as it goes
-  black: { face: "sans", weight: 800, italic: false },
+  // the cinematic interlude's word: the page's own display sans (declared in app.css, weight range up to 800), a firm bold, not the heaviest cut (800 read too heavy and soft)
+  black: { face: "sans", weight: 640, italic: false },
 };
 
 /**

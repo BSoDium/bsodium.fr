@@ -118,6 +118,28 @@ describe("the interlude's sound", () => {
     expect(el.currentTime).toBe(SOUND.fromSec);
   });
 
+  it("asks the browser even when the page has not been touched (it decides: the owner never heard it when it did not ask)", async () => {
+    vi.stubGlobal("navigator", { userActivation: { hasBeenActive: false } });
+    const el = fakeAudio();
+    expect(startSound(8000, () => el)).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(el.plays).toBe(1);
+  });
+
+  it("says why, to the console, only where the interlude was asked for and the browser refused", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.stubGlobal("location", { search: "?cinematic" });
+    startSound(8000, () => fakeAudio(4, "refused"), true);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(info).toHaveBeenCalledTimes(1);
+    info.mockClear();
+    vi.stubGlobal("location", { search: "" });
+    startSound(8000, () => fakeAudio(4, "refused"), true);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(info).not.toHaveBeenCalled();
+    info.mockRestore();
+  });
+
   it("is silent, and throws nothing, when the browser refuses to play", async () => {
     const el = fakeAudio(4, "refused");
     expect(() => startSound(8000, () => el, true)).not.toThrow();

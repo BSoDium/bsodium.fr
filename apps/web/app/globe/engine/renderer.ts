@@ -53,7 +53,7 @@ import {
   type Velocity,
 } from "./motion";
 import { snapBox } from "./group-square";
-import { IdleSpin, SPIN, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
+import { IdleSpin, SPIN, pacedByRotation, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
 import { landingScale, liftFor, placeAbove, type Placement } from "./lift";
 import { routeLift } from "./view";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
@@ -1048,7 +1048,7 @@ export class GlobeRenderer {
    * that animation is the boxes' own transitions that the turn causes (limb crossings), and its frames are paced like the turn's: not faster than `SPIN.minFrameMs`.
    */
   private keepGoing(cameraMoving: boolean) {
-    if (this.spin.spinning && !cameraMoving) this.chainSpin();
+    if (!cameraMoving && pacedByRotation({ spinning: this.spin.spinning, forced: false, captionAnimating: this.caption?.animating ?? false })) this.chainSpin();
     else this.requestRender();
   }
 
@@ -1362,7 +1362,7 @@ export class GlobeRenderer {
     if (this.disposed || this.hidden || this.lost) return;
     const now = performance.now();
     // The rotation's own frame chain follows the display (a frame per refresh) but not faster than `SPIN.minFrameMs`: a frame that nothing else asked for is skipped when it is too soon.
-    if (!this.forced && this.spin.spinning && !spinFrameDue(now, this.lastTickAt, { ...SPIN, minFrameMs: Math.max(SPIN.minFrameMs, ENERGY.spinFrameMs) })) {
+    if (pacedByRotation({ spinning: this.spin.spinning, forced: this.forced, captionAnimating: this.caption?.animating ?? false }) && !spinFrameDue(now, this.lastTickAt, { ...SPIN, minFrameMs: Math.max(SPIN.minFrameMs, ENERGY.spinFrameMs) })) {
       // (paced by a timer: no wake at the display's rate for a frame that is not due)
       if (!this.paceTimer) {
         const wait = Math.max(4, Math.max(SPIN.minFrameMs, ENERGY.spinFrameMs) - (now - this.lastTickAt));

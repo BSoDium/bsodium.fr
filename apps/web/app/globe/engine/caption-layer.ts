@@ -125,6 +125,7 @@ const FRAG = /* glsl */ `
   uniform vec3 uAccentSide;
   uniform float uEdgeLayer;
   uniform float uSideShade;
+  uniform float uHardSide;
   varying vec2 vUv;
   varying float vLayer;
   void main() {
@@ -143,7 +144,8 @@ const FRAG = /* glsl */ `
     vec3 col = !gl_FrontFacing ? side : (front ? (isOutline ? outl : face) : (vLayer < uEdgeLayer ? face : side * mix(uSideShade, 1.0, vLayer)));
     // Premultiplied output, blended "over" (see the material): the glyph's inside is exactly 1, so an interior pixel is exactly opaque whatever
     // stacks behind it; only an edge is partly transparent (and then properly premultiplied: no bright fringe).
-    float a = smoothstep(0.1, 0.9, t.a);
+    // (the thickness of the interlude's word has hard edges: the soft edges of many slices stacked at a steep angle read as stripes)
+    float a = (uHardSide > 0.5 && !front) ? step(0.4, t.a) : smoothstep(0.1, 0.9, t.a);
     gl_FragColor = vec4(col * a, a);
   }
 `;
@@ -573,6 +575,8 @@ export class CaptionLayer {
       notePlayed();
       const shape = this.motion.egg?.shape ?? CINEMATIC.shape;
       this.swell = startSound(eggMs(shape));
+      // (it began inside the caption's own frame, and that loop is the roll's, which ends here: the interlude is the globe's own frames, so ask for one)
+      this.opts.onChange();
     };
     this.motion.onCinematicEnd = () => {
       this.swell?.fade();
@@ -597,6 +601,7 @@ export class CaptionLayer {
         uOutline: egg ? this.eggOutline : this.outline,
         uSide: egg ? this.eggSide : this.side,
         uSideShade: egg ? this.eggShade : this.noShade,
+        uHardSide: { value: egg ? 1 : 0 },
         uAccent: this.accent,
         uAccentOutline: this.accentOutline,
         uAccentSide: this.accentSide,
@@ -1437,8 +1442,9 @@ export class CaptionLayer {
       if (!c) throw new Error("no 2D context");
       c.textBaseline = "alphabetic";
       c.textAlign = "left";
-      c.lineJoin = "round";
-      c.miterLimit = 2;
+      // (the interlude's word has sharp corners: a round join rounds every corner of the glyph by half the outline's width, which at its size is a lot)
+      c.lineJoin = x.set === EGG ? "miter" : "round";
+      c.miterLimit = x.set === EGG ? 6 : 2;
       // The words one after the other on one baseline. First the outline (red, drawn at twice its width: the half inside the letter is covered by
       // the fill that follows), then the inside (green): the outline is outside the glyph, so the face keeps its whole area.
       const baseline = b.above;
