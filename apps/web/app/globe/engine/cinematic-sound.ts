@@ -160,6 +160,7 @@ export function prepareSound(deps: SoundDeps = browserDeps): void {
  * and starts the file's fetch and decode if they have not begun. Safe to call twice.
  */
 export function unlockSound(deps: SoundDeps = browserDeps): void {
+  if (!soundAllowed()) return; // (asked for none: no device is opened for nothing)
   prepareSound(deps);
   const c = context(deps);
   if (c && c.state !== "running") void c.resume().catch(() => undefined);

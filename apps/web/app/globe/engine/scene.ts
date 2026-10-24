@@ -74,6 +74,7 @@ export class GlobeScene {
   private surfaceNow = 0;
   private surfaceStrength = 1;
   private surfaceLoading = false;
+  private disposed = false;
   private surfaceTex: Texture | null = null;
   private mistMesh: Mesh | null = null;
   private atmosphereMesh: Mesh | null = null;
@@ -244,11 +245,15 @@ export class GlobeScene {
    * Load the land's picture (`surfaceMaterial`), once; `done` is called when it is in (the frame is drawn again). Nothing is drawn of it before that, and a failure leaves none.
    */
   loadSurface(url: string, done: () => void) {
-    if (this.surfaceReady || this.surfaceLoading) return;
+    if (this.surfaceReady || this.surfaceLoading || this.disposed) return;
     this.surfaceLoading = true;
     new TextureLoader().load(
       url,
       (tex) => {
+        if (this.disposed) {
+          tex.dispose(); // (the globe went away while it was on its way)
+          return;
+        }
         tex.magFilter = LinearFilter;
         tex.minFilter = LinearFilter;
         tex.wrapS = RepeatWrapping;
@@ -375,6 +380,7 @@ export class GlobeScene {
   }
 
   dispose() {
+    this.disposed = true;
     this.landTex?.dispose();
     this.surfaceTex?.dispose();
     this.routes.dispose();

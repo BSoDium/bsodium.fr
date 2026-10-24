@@ -1043,10 +1043,12 @@ export class CaptionLayer {
     if (!b) {
       // (not built yet: it will be, the sizing is on its way)
       if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
+      else this.disarm();
       return false;
     }
     if (!this.motion.egg) {
       this.motion.egg = onDemandPlan();
+      this.armed = true;
       prepareSound();
     }
     if (!b.egg) {
@@ -1054,14 +1056,25 @@ export class CaptionLayer {
       b.key = "stale";
       void this.build();
       if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
+      else this.disarm();
       return false;
     }
     const ok = this.motion.replayEgg(performance.now());
-    if (ok) this.opts.onChange();
-    // (the rows may not be rolling yet, or the idle hold had stopped the caption: it is woken by the input, and asked again a moment later)
-    else if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
+    if (ok) {
+      this.armed = false;
+      this.opts.onChange();
+    } else if (retries > 0) {
+      // (the rows may not be rolling yet, or the idle hold had stopped the caption: it is woken by the input, and asked again a moment later)
+      this.later(() => this.summonInterlude(retries - 1));
+    } else this.disarm();
     return ok;
   }
+  /** A plan made for a request that could not be played is dropped: the interlude is never to begin by itself, later, for a visitor who has gone elsewhere. */
+  private disarm(): void {
+    if (this.armed && !this.motion.eggActive) this.motion.egg = null;
+    this.armed = false;
+  }
+  private armed = false;
   private later(fn: () => void): void {
     window.clearTimeout(this.replayTimer);
     this.replayTimer = window.setTimeout(fn, 400);

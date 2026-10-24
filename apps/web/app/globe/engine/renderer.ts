@@ -2049,7 +2049,7 @@ export class GlobeRenderer {
     const over = pose ? { lon, lat } : undefined;
     this.lastBasis = { d, lon: v.lon, lat: v.lat, cam: over };
     this.caption?.sync(d, v.lon, v.lat, now, over);
-    this.syncTagline(d);
+    this.syncTagline();
     this.globe.syncSky(cam, skyBasis, this.era, { w: this.bufW, h: this.bufH, shift: this.camShift, lift: this.camLift }, now, this.reduced, this.flying || (this.caption?.landShare() ?? 0) > 0);
   }
 
@@ -2104,9 +2104,10 @@ export class GlobeRenderer {
   private taglineOpacity = 0;
 
   /** Place the line under the globe as it is drawn now (the planet's centre and radius on the screen) and set how much of it shows. */
-  private syncTagline(d: number) {
+  private syncTagline() {
     const share = this.caption?.eggTagline() ?? 0;
-    if (share <= 0 && !this.tagline) return;
+    // (nothing to do, and no style written, when it is not shown and was not: it is a frame's work for the rest of the session otherwise)
+    if (share <= 0 && (!this.tagline || this.taglineOpacity === 0)) return;
     const spec = CINEMATIC.tagline;
     if (!this.tagline) {
       const el = this.opts.container.ownerDocument.createElement("div");
