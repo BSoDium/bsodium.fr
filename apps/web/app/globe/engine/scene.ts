@@ -270,8 +270,8 @@ export class GlobeScene {
   }
 
   /**
-   * The land's picture: `fade` 0 (not drawn at all) to 1 (the zoom's, `engine/surface.ts`: pixels taken out in the dither), `strength` 0..1 how far its tones are from the
-   * page's colour.
+   * The land's picture: `fade` is the share of its pixels drawn, 0 (none) to 1 (all), taken out in the lines' ordered dither (`engine/surface.ts`: the zoom's fade times the
+   * coverage); `strength` 0..1 how far its tones are from the page's colour (1: the tones themselves).
    */
   setSurface(fade: number, strength = 1) {
     const x = Math.min(1, Math.max(0, fade));

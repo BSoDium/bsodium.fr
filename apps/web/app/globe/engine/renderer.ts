@@ -59,7 +59,7 @@ import { Grace } from "./grace";
 import { IdleSpin, SPIN, pacedByRotation, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
 import { CINEMATIC } from "./cinematic";
 import { blendPose, flightOffsetShare, flightPose } from "./flight";
-import { SURFACE, surfaceFade, surfaceStrength } from "./surface";
+import { SURFACE, surfaceCoverage, surfaceFade } from "./surface";
 import { landingScale, liftFor, placeAbove, type Placement } from "./lift";
 import { routeLift } from "./view";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
@@ -2028,7 +2028,7 @@ export class GlobeRenderer {
     // the land's own picture: for the unzoomed views (fading out with the zoom, where the borders come in), stronger in the interlude
     // (not by the zoom while the interlude flies: its close shots are not a visitor's zoom)
     const inInterlude = this.flying || land > 0;
-    this.globe.setSurface(surfaceFade(inInterlude ? 0 : zoom), surfaceStrength(land));
+    this.globe.setSurface(surfaceFade(inInterlude ? 0 : zoom) * surfaceCoverage(land));
     this.globe.setCity(CINEMATIC.planet.cities ? (this.caption?.cityShare() ?? 0) : 0);
     // the page's own hero steps back with it (app.css `--interlude`): written when it moves by a hundredth
     if (Math.abs(land - this.interludeVar) >= 0.01 || (land === 0 && this.interludeVar !== 0)) {
