@@ -8,6 +8,8 @@ import {
   LinearFilter,
   LineSegments,
   Mesh,
+  NearestFilter,
+  NoColorSpace,
   Points,
   RedFormat,
   RepeatWrapping,
@@ -16,6 +18,8 @@ import {
   Scene,
   SphereGeometry,
   type ShaderMaterial,
+  type Texture,
+  TextureLoader,
 } from "three";
 import type { GlobePlace, GlobeRoute } from "../types";
 import type { GlobeTheme, Rgb } from "./colors";
@@ -25,7 +29,7 @@ import type { ViewBasis } from "./geo";
 import { zoomToRadiusPx } from "./geo";
 import { LAND_H, LAND_W, landMask } from "./land";
 import { GRATICULE_STEP_DEG, graticuleSegments, polylinesToSegments } from "./geometry";
-import { OCCLUDER_RADIUS, atmosphereMaterial, cityMaterial, grainMaterial, mistMaterial, lineMaterial, occluderMaterial, silhouetteMaterial } from "./materials";
+import { OCCLUDER_RADIUS, atmosphereMaterial, cityMaterial, surfaceMaterial, mistMaterial, lineMaterial, occluderMaterial, silhouetteMaterial } from "./materials";
 import { RouteLayer } from "./route-layer";
 import { SKY_STATE, viewToGalactic } from "./sky";
 import { SkyLayer } from "./sky-layer";
@@ -62,8 +66,12 @@ export class GlobeScene {
   private city = cityMaterial();
   private atmosphere = atmosphereMaterial();
   private mist = mistMaterial();
-  private grain = grainMaterial();
-  private grainMesh: Mesh | null = null;
+  private surface = surfaceMaterial();
+  private surfaceMesh: Mesh | null = null;
+  private surfaceReady = false;
+  private surfaceNow = 0;
+  private surfaceLoading = false;
+  private surfaceTex: Texture | null = null;
   private mistMesh: Mesh | null = null;
   private atmosphereMesh: Mesh | null = null;
   private atmosphereNow = 0;
@@ -91,7 +99,7 @@ export class GlobeScene {
     coastlines: Polylines;
     borders: Polylines;
   }) {
-    this.materials.push(this.occluder, this.city, this.atmosphere, this.mist, this.grain, this.graticule, this.borders, this.coast, this.silhouette);
+    this.materials.push(this.occluder, this.city, this.atmosphere, this.mist, this.surface, this.graticule, this.borders, this.coast, this.silhouette);
     this.coastData = data.coastlines;
 
     const disc = new SphereGeometry(OCCLUDER_RADIUS, 96, 48);
@@ -116,13 +124,13 @@ export class GlobeScene {
     this.mistMesh.visible = false;
     this.mistMesh.frustumCulled = false;
     this.add(this.mistMesh, 5);
-    // and the grain on the land, under the mist (over the lines: it is faint)
-    const grainSkin = new SphereGeometry(1.002, 96, 48);
-    this.geometries.push(grainSkin);
-    this.grainMesh = new Mesh(grainSkin, this.grain);
-    this.grainMesh.visible = false;
-    this.grainMesh.frustumCulled = false;
-    this.add(this.grainMesh, 4);
+    // and the land's own picture (satellite, in grey pixels), under the mist: over the lines' own layer, faint
+    const surfaceSkin = new SphereGeometry(1.002, 96, 48);
+    this.geometries.push(surfaceSkin);
+    this.surfaceMesh = new Mesh(surfaceSkin, this.surface);
+    this.surfaceMesh.visible = false;
+    this.surfaceMesh.frustumCulled = false;
+    this.add(this.surfaceMesh, 4);
 
     this.add(new LineSegments(this.track(segmentGeometry(graticuleSegments(GRATICULE_STEP_DEG, 3))), this.graticule), 1);
     this.bordersLines = new LineSegments(this.track(segmentGeometry(polylinesToSegments(data.borders, 1))), this.borders);
@@ -185,10 +193,10 @@ export class GlobeScene {
     const mixTo = (k: number) => [0, 1, 2].map((i) => bg[i]! + (t.ink[i]! - bg[i]!) * k) as [number, number, number];
     this.atmosphere.uniforms.uColor!.value.setRGB(...mixTo(0.55));
     this.mist.uniforms.uColor!.value.setRGB(...mixTo(0.3));
-    this.grain.uniforms.uColor!.value.setRGB(...mixTo(0.55));
+    this.surface.uniforms.uColor!.value.setRGB(...mixTo(0.55));
     this.atmosphere.uniforms.uCover!.value = t.scheme === "dark" ? 0.55 : 0.45;
     this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.5 : 0.4;
-    this.grain.uniforms.uCover!.value = t.scheme === "dark" ? 0.32 : 0.28;
+    this.surface.uniforms.uCover!.value = t.scheme === "dark" ? 0.5 : 0.42;
     this.graticule.uniforms.uColor!.value.setRGB(...t.grid);
     this.ramp = t.ramp;
     this.borderLevelNow = -1;
@@ -214,7 +222,6 @@ export class GlobeScene {
     tex.needsUpdate = true;
     this.landTex = tex;
     this.occluder.uniforms.uLandMap!.value = tex;
-    this.grain.uniforms.uLandMap!.value = tex;
   }
 
   /** The sun's direction in the earth's frame (the planet's light; the letters have the same one in the camera's frame). */
@@ -225,20 +232,52 @@ export class GlobeScene {
   }
 
   /**
-   * The mist, 0 (none: nothing of it is drawn) to 1: a thin grey glow just over the limb, a veil on the ground thickening to the horizon (bleeding in from the limb), and a faint grain over the
-   * land. Drawn for the length of the interlude only.
+   * Load the land's picture (`surfaceMaterial`), once; `done` is called when it is in (the frame is drawn again). Nothing is drawn of it before that, and a failure leaves none.
+   */
+  loadSurface(url: string, done: () => void) {
+    if (this.surfaceReady || this.surfaceLoading) return;
+    this.surfaceLoading = true;
+    new TextureLoader().load(
+      url,
+      (tex) => {
+        tex.magFilter = NearestFilter;
+        tex.minFilter = LinearFilter;
+        tex.wrapS = RepeatWrapping;
+        tex.wrapT = ClampToEdgeWrapping;
+        tex.generateMipmaps = false;
+        tex.colorSpace = NoColorSpace;
+        this.surface.uniforms.uEarth!.value = tex;
+        this.surfaceTex = tex;
+        this.surfaceReady = true;
+        this.setSurface(this.surfaceNow);
+        done();
+      },
+      undefined,
+      () => {
+        this.surfaceLoading = false;
+      },
+    );
+  }
+
+  /** How much of the land's picture is shown, 0 (not drawn at all) to 1 (`SURFACE`, engine/surface.ts, sets it from the zoom). */
+  setSurface(k: number) {
+    const x = Math.min(1, Math.max(0, k));
+    this.surfaceNow = x;
+    this.surface.uniforms.uAmt!.value = x;
+    if (this.surfaceMesh) this.surfaceMesh.visible = this.surfaceReady && x > 0.01;
+  }
+
+  /**
+   * The mist, 0 (none: nothing of it is drawn) to 1: a thin grey glow just over the limb, a veil on the ground thickening to the horizon (bleeding in from the limb). Drawn for the length of the interlude only.
    */
   setAtmosphere(k: number) {
     const x = Math.min(1, Math.max(0, k));
     if (Math.abs(x - this.atmosphereNow) < 0.01 && !(x === 0 && this.atmosphereNow !== 0)) return;
-    if (x > 0 && !this.landTex) this.prepareLand();
     this.atmosphereNow = x;
     this.atmosphere.uniforms.uAmt!.value = x;
     this.mist.uniforms.uAmt!.value = x;
-    this.grain.uniforms.uAmt!.value = x;
     if (this.atmosphereMesh) this.atmosphereMesh.visible = x > 0;
     if (this.mistMesh) this.mistMesh.visible = x > 0;
-    if (this.grainMesh) this.grainMesh.visible = x > 0;
   }
 
   /** The places' lights, 0 (out) to 1: they come up through the dither. */
@@ -255,7 +294,6 @@ export class GlobeScene {
    */
   setLand(k: number) {
     const x = Math.min(1, Math.max(0, k));
-    if (x > 0 && !this.landTex) this.prepareLand();
     if (Math.abs(x - this.landNow) < 0.01 && !(x === 0 && this.landNow !== 0)) return;
     this.landNow = x;
     this.occluder.uniforms.uLand!.value = x;
@@ -322,6 +360,7 @@ export class GlobeScene {
 
   dispose() {
     this.landTex?.dispose();
+    this.surfaceTex?.dispose();
     this.routes.dispose();
     this.sky?.dispose();
     for (const g of this.geometries) g.dispose();

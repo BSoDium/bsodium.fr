@@ -59,6 +59,7 @@ import { Grace } from "./grace";
 import { IdleSpin, SPIN, pacedByRotation, spinBlock, spinFrameDue, type SpinContext } from "./idle-spin";
 import { CINEMATIC } from "./cinematic";
 import { blendPose, flightOffsetShare, flightPose } from "./flight";
+import { SURFACE, surfaceShare } from "./surface";
 import { landingScale, liftFor, placeAbove, type Placement } from "./lift";
 import { routeLift } from "./view";
 import { newLodCamera, setLodCamera, type LodTree } from "./lod-tree";
@@ -297,6 +298,12 @@ export class GlobeRenderer {
     opts.container.append(this.canvas);
 
     this.globe = new GlobeScene(opts);
+    // (the land's picture, 60 KB: after the first frame, in an idle moment)
+    const loadSurface = () => {
+      if (!this.disposed) this.globe.loadSurface(SURFACE.url, () => this.requestRender());
+    };
+    if (typeof requestIdleCallback === "function") requestIdleCallback(loadSurface, { timeout: 3000 });
+    else window.setTimeout(loadSurface, 800);
     if (opts.ringText && RING_STATE.enabled) this.ring = new RingLayer(opts.container, opts.ringText, opts.theme, this.reduced);
     if (opts.routes.length > 0) {
       this.legIcons = new TrailDotsLayer(opts.container, { lines: false, iconFromZoom: LEG_ICON_FROM_ZOOM, onTop: true });
@@ -323,8 +330,8 @@ export class GlobeRenderer {
         this.showcaseActive = false;
       }
     }
-    // The interlude needs the continents' picture (the grain on the land, and the fill when it is on): it is made when one is planned, in an idle moment, and not in the frame that starts it.
-    if (this.caption?.eggPlanned) {
+    // The interlude fills the continents when `planet.fill` is on: their picture is made when one is planned, in an idle moment, and not in the frame that starts it.
+    if (this.caption?.eggPlanned && CINEMATIC.planet.fill) {
       const make = () => {
         if (!this.disposed) this.globe.prepareLand();
       };
@@ -2016,8 +2023,10 @@ export class GlobeRenderer {
     const land = this.caption?.landShare() ?? 0;
     // (the filled, sun-lit planet and the places' lights are off for now, `CINEMATIC.planet`: the globe keeps its own look; the hero still steps back with `land`)
     this.globe.setLand(CINEMATIC.planet.fill ? land : 0);
-    // the mist: a thin grey glow at the limb, a veil that bleeds onto the ground and a faint grain on the land, for the length of the interlude (they follow the land's easing: in and out with it)
+    // the mist: a thin grey glow at the limb and a veil that bleeds onto the ground, for the length of the interlude (they follow the land's easing: in and out with it)
     this.globe.setAtmosphere(land * CINEMATIC.atmosphere.amount);
+    // the land's own picture: for the unzoomed views (fading out with the zoom, where the borders come in), stronger in the interlude
+    this.globe.setSurface(surfaceShare(zoom, land));
     this.globe.setCity(CINEMATIC.planet.cities ? (this.caption?.cityShare() ?? 0) : 0);
     // the page's own hero steps back with it (app.css `--interlude`): written when it moves by a hundredth
     if (Math.abs(land - this.interludeVar) >= 0.01 || (land === 0 && this.interludeVar !== 0)) {

@@ -94,7 +94,7 @@ export function occluderMaterial(): ShaderMaterial {
  *    shape of the fall), a little thicker on the sunward side. `uCover` is its alpha at the edge, `uAmt` (0..1) how much of it is there.
  *  - `mistMaterial`: ON the planet. A shell a hair over the surface (the lines are drawn at the surface), whose density grows towards the horizon: where the ground is seen
  *    at a grazing angle the mist is deep and veils the coastlines and the borders, and it BLEEDS inwards, a good part of the way to the middle, as the glow's own continuation.
- *  - `grainMaterial`: a faint random grain over the LAND only (the land mask), denser in patches (a low noise on the ground), none on the sea.
+ *  (and `surfaceMaterial`, below: the land's own picture, which is there outside the interlude too, fainter, and fades with the zoom)
  * None of them is drawn at all outside the interlude (`GlobeScene.setAtmosphere`).
  */
 const MIST_GLSL = /* glsl */ `
@@ -172,39 +172,30 @@ export function mistMaterial(): ShaderMaterial {
 }
 
 /**
- * The GRAIN: a faint random speckle of single art pixels over the land (the land mask, as the occluder reads it: the lookup is by the fragment's direction, the scene being
- * in the earth's frame) and not the sea, denser in patches where a low noise on the ground (a few cells round the globe, smoothly blended) is high, so that it reads as terrain
- * rather than as static. Its cells are fixed to the ground (a hash of the third-of-a-degree cell the fragment is in), so that the grain turns with the planet instead of staying on the screen; each cell is as many art pixels wide as the camera is near, and a pixel at least. Grey at a low alpha (`uCover`).
+ * The SURFACE: the planet's own picture, a satellite view of the land (NASA's Blue Marble, public domain) in grey pixels: `uEarth` is its brightness at 1024 x 512 (0 at sea,
+ * in 16 steps), looked up by the fragment's direction (the scene being in the earth's frame, so it turns with the planet) with NEAREST magnification, so that it stays crisp,
+ * blocks of flat grey, however near the camera comes, and is averaged when the planet is small. The brightness is posterised to a few flat steps and drawn in the
+ * mist's grey at a low alpha (`uCover`, times `uAmt`: the scene fades it with the zoom, `engine/surface.ts`). The page's linework is over it.
  */
-export function grainMaterial(): ShaderMaterial {
+export function surfaceMaterial(): ShaderMaterial {
   return new ShaderMaterial({
-    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uCover: { value: 0.3 }, uLandMap: { value: null }, uDensity: { value: 0.16 } },
+    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uCover: { value: 0.3 }, uEarth: { value: null } },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
       void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
     `,
     fragmentShader: /* glsl */ `
-      uniform vec3 uColor; uniform float uAmt; uniform float uCover; uniform sampler2D uLandMap; uniform float uDensity;
+      uniform vec3 uColor; uniform float uAmt; uniform float uCover; uniform sampler2D uEarth;
       varying vec3 vDir;
-      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-      float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
-      // value noise on the sphere's own coordinates (smooth between the corners of a cell)
-      float vnoise(vec3 p) {
-        vec3 i = floor(p); vec3 f = fract(p); f = f * f * (3.0 - 2.0 * f);
-        return mix(
-          mix(mix(hash3(i), hash3(i + vec3(1, 0, 0)), f.x), mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), f.x), f.y),
-          mix(mix(hash3(i + vec3(0, 0, 1)), hash3(i + vec3(1, 0, 1)), f.x), mix(hash3(i + vec3(0, 1, 1)), hash3(i + vec3(1, 1, 1)), f.x), f.y),
-          f.z);
-      }
       void main() {
         vec3 n = normalize(vDir);
         vec2 uv = vec2(atan(n.x, n.z) * 0.15915494 + 0.5, asin(clamp(n.y, -1.0, 1.0)) * 0.31830989 + 0.5);
-        if (texture2D(uLandMap, uv).r < 0.6) discard;
-        float clump = smoothstep(0.25, 0.85, vnoise(n * 7.0) * 0.65 + vnoise(n * 19.0) * 0.35);
-        // one random value per cell of the ground (a third of a degree), so the grain belongs to the planet and turns with it; a cell is as many art pixels wide as the camera is near
-        float p = hash(floor(uv * vec2(1080.0, 540.0)));
-        if (p >= uDensity * (0.25 + 1.5 * clump) * uAmt) discard;
-        gl_FragColor = vec4(uColor, uCover);
+        float v = texture2D(uEarth, uv).r;
+        if (v < 0.06) discard;
+        // four flat steps of grey
+        float a = (floor(v * 4.0 - 0.001) + 1.0) / 4.0 * uCover * uAmt;
+        if (a < 0.004) discard;
+        gl_FragColor = vec4(uColor, a);
       }
     `,
     side: FrontSide,
