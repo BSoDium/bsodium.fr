@@ -1131,6 +1131,11 @@ export class CaptionLayer {
     return this.zoomK > 0 ? this.zoomK * (1 - this.levelK) * ((CINEMATIC.tiltDeg * Math.PI) / 180) : 0;
   }
 
+  /** How much of the interlude's small line under the globe shows now, 0..1 (`CaptionMotion.eggTagline`). */
+  eggTagline(): number {
+    return this.motion.eggTagline();
+  }
+
   /** How far the camera has come down to the lockup's latitude, 0..1 (the pull-back's value times the levelling's: it goes back with the pull-back). */
   levelShare(): number {
     return this.zoomK * this.levelK;

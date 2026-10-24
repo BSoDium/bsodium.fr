@@ -2050,6 +2050,7 @@ export class GlobeRenderer {
     const over = pose ? { lon, lat } : undefined;
     this.lastBasis = { d, lon: v.lon, lat: v.lat, cam: over };
     this.caption?.sync(d, v.lon, v.lat, now, over);
+    this.syncTagline(d);
     this.globe.syncSky(cam, skyBasis, this.era, { w: this.bufW, h: this.bufH, shift: this.camShift, lift: this.camLift }, now, this.reduced, this.flying || (this.caption?.landShare() ?? 0) > 0);
   }
 
@@ -2099,7 +2100,57 @@ export class GlobeRenderer {
   /* ------------------------------ teardown ------------------------------ */
 
   /** Frees every GL resource, the listeners and the canvas. Safe to call twice. */
+  /** The interlude's small line under the globe (`CINEMATIC.tagline`): one element of the page's own, made when first wanted, not in the canvas. */
+  private tagline: HTMLDivElement | null = null;
+  private taglineOpacity = 0;
+
+  /** Place the line under the globe as it is drawn now (the planet's centre and radius on the screen) and set how much of it shows. */
+  private syncTagline(d: number) {
+    const share = this.caption?.eggTagline() ?? 0;
+    if (share <= 0 && !this.tagline) return;
+    const spec = CINEMATIC.tagline;
+    if (!this.tagline) {
+      const el = this.opts.container.ownerDocument.createElement("div");
+      el.setAttribute("aria-hidden", "true");
+      el.textContent = spec.text;
+      Object.assign(el.style, {
+        position: "absolute",
+        left: "0",
+        top: "0",
+        zIndex: "9",
+        pointerEvents: "none",
+        whiteSpace: "nowrap",
+        textTransform: "uppercase",
+        fontFamily: "var(--font-sans)",
+        fontWeight: "300",
+        letterSpacing: `${spec.tracking}em`,
+        wordSpacing: "0.6em",
+        color: "var(--foreground, currentColor)",
+        opacity: "0",
+        willChange: "opacity",
+      });
+      this.opts.container.append(el);
+      this.tagline = el;
+    }
+    const P = this.pixel;
+    const R = this.silhouetteFromCamera();
+    const cx = (this.bufW * P) / 2 - this.camShift * P + this.canvasLeft;
+    const cy = (this.bufH * P) / 2 - this.camLift * P + this.canvasTop;
+    const size = Math.max(spec.minPx, spec.size * R);
+    const el = this.tagline;
+    el.style.fontSize = `${size.toFixed(1)}px`;
+    // (the line's letter spacing trails its last letter: half of it is taken back so that the middle of the visible letters is the planet's)
+    el.style.transform = `translate(${(cx - 0).toFixed(1)}px, ${(cy + spec.gap * R).toFixed(1)}px) translate(-50%, -50%) translateX(${(spec.tracking * size * 0.5).toFixed(1)}px)`;
+    const o = Math.round(share * 0.75 * 100) / 100;
+    if (o !== this.taglineOpacity) {
+      this.taglineOpacity = o;
+      el.style.opacity = String(o);
+    }
+  }
+
   dispose() {
+    this.tagline?.remove();
+    this.tagline = null;
     if (this.disposed) return;
     this.disposed = true;
     this.cancelFrame();

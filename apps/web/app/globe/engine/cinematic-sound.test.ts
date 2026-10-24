@@ -228,22 +228,51 @@ describe("the interlude's sound", () => {
     expect(g.source.started.length).toBe(0);
   });
 
-  it("lets go when the tab is put behind (a hidden tab goes on playing, and its interlude stops drawing)", async () => {
+  it("goes on playing when the tab is put behind: only the interlude's end or a gesture lets go of it", async () => {
     const listeners: (() => void)[] = [];
     const doc = { hidden: false, addEventListener: (_: string, fn: () => void) => listeners.push(fn), removeEventListener: vi.fn() };
     vi.stubGlobal("document", doc);
     const f = fakeContext();
     const deps = fakeDeps(f.ctx);
     prepareSound(deps);
-    startSound(eggMs(CINEMATIC.shape), deps, true);
+    const h = startSound(eggMs(CINEMATIC.shape), deps, true)!;
     await vi.advanceTimersByTimeAsync(1000);
+    const rampsBefore = f.ramps.length;
     doc.hidden = true;
     for (const fn of listeners) fn();
-    const ramp = f.ramps.at(-1)!;
-    expect(ramp[0]).toBe(0);
-    expect(ramp[1] - f.ctx.time).toBeCloseTo(SOUND.fadeCutMs / 1000, 2);
     await vi.advanceTimersByTimeAsync(SOUND.fadeCutMs + 400);
+    expect(f.ramps.length).toBe(rampsBefore); // no fade was scheduled
+    expect(f.source.stopped.length).toBe(1); // (only the one stop at the planned end)
+    // the interlude ends or is cut short: then it lets go
+    h.fade(300);
+    expect(f.ramps.at(-1)![0]).toBe(0);
+    await vi.advanceTimersByTimeAsync(1000);
     expect(doc.removeEventListener).toHaveBeenCalled();
+  });
+
+  it("asks a suspended context (a phone's, with the page behind) to run again while the interlude lasts, and stops asking when it is over", async () => {
+    const listeners: (() => void)[] = [];
+    const doc = { hidden: false, addEventListener: (_: string, fn: () => void) => listeners.push(fn), removeEventListener: vi.fn() };
+    vi.stubGlobal("document", doc);
+    const f = fakeContext();
+    const resume = vi.spyOn(f.ctx, "resume");
+    const deps = fakeDeps(f.ctx);
+    prepareSound(deps);
+    const h = startSound(eggMs(CINEMATIC.shape), deps, true)!;
+    await vi.advanceTimersByTimeAsync(500);
+    resume.mockClear();
+    f.ctx.state = "suspended";
+    f.ctx.onstatechange?.();
+    expect(resume).toHaveBeenCalledTimes(1);
+    f.ctx.state = "suspended";
+    for (const fn of listeners) fn();
+    expect(resume).toHaveBeenCalledTimes(2);
+    h.fade(100);
+    await vi.advanceTimersByTimeAsync(1000);
+    resume.mockClear();
+    f.ctx.state = "suspended";
+    for (const fn of listeners) fn();
+    expect(resume).not.toHaveBeenCalled();
   });
 
   it("the sound is over with the interlude: it never runs past it", () => {

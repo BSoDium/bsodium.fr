@@ -273,6 +273,27 @@ describe("the cinematic interlude: in the caption's motion", () => {
     now = run(m, at() + land + 100, now);
     expect(m.eggFlight()).toBe(1);
   });
+  it("the small line under the globe comes in after the word lands, stays through its hold and goes with its exit", () => {
+    const m = make();
+    expect(m.eggTagline()).toBe(0);
+    const s = plan.shape;
+    const land = s.leaveMs + s.gapMs + s.enterMs;
+    let now = run(m, at() + land - 200);
+    expect(m.eggTagline()).toBe(0);
+    now = run(m, at() + land + CINEMATIC.tagline.inMs + 50, now);
+    expect(m.eggTagline()).toBeGreaterThan(0.99);
+    now = run(m, at() + land + s.holdMs, now);
+    expect(m.eggTagline()).toBeGreaterThan(0.99);
+    now = run(m, at() + land + s.holdMs + CINEMATIC.tagline.outMs + 50, now);
+    expect(m.eggTagline()).toBeCloseTo(0, 5);
+  });
+  it("the interlude runs on the wall clock: a long stall (a tab left behind) puts it where the music is", () => {
+    const m = make();
+    const t0 = run(m, at() + 20);
+    expect(m.phase).toBe("egg");
+    m.tick(t0 + 5000); // (one frame, five seconds later)
+    expect(m.eggFlight()).toBeGreaterThan(0.2);
+  });
   it("every row leaves by the orbit exit's own path and is behind the planet when it is over", () => {
     const m = make();
     const t0 = run(m, at() + 20);

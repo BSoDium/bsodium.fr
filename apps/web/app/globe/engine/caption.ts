@@ -16,6 +16,7 @@
  * horizon is not there (it can never be seen from behind, mirrored).
  */
 import { CAPTION, START_VIEW } from "./tuning";
+import { CINEMATIC } from "./cinematic";
 import type { GlobeTheme } from "./colors";
 import { clamp, DEG } from "./geo";
 
@@ -1067,7 +1068,8 @@ export class CaptionMotion {
   tick(now: number): void {
     if (this.phase === "fade" && now - this.t0 >= CAPTION.fadeMs) this.phase = "hidden";
     if (this.lastNow >= 0 && (this.phase === "in" || this.phase === "rest" || this.phase === "egg") && !this.pending && !this.frozen) {
-      this.clock += Math.min(Math.max(now - this.lastNow, 0), CAPTION.drift.maxStepMs);
+      // (the interlude runs on the wall clock, as its sound does: a stall or a tab left behind does not leave the picture behind the music)
+      this.clock += this.phase === "egg" ? Math.max(now - this.lastNow, 0) : Math.min(Math.max(now - this.lastNow, 0), CAPTION.drift.maxStepMs);
       this.ticked = true;
       if (this.egg && this.eggAt < 0 && this.phase === "rest" && this.motionAllowed && this.clock >= this.eggTrigger()) this.beginEgg(now);
       else if (this.egg && this.phase === "egg" && this.clock - this.eggAt >= eggMs(this.egg.shape)) this.endEgg(now);
@@ -1228,6 +1230,22 @@ export class CaptionMotion {
       return x * x * (3 - 2 * x);
     };
     return Math.min(smooth(t / s.zoomInMs), smooth((eggMs(s) - t) / s.zoomOutMs));
+  }
+
+  /**
+   * The studio's small line under the globe (`CINEMATIC.tagline`): 0 until the word has landed, in over `tagline.inMs`, held while the word holds, and out with its exit
+   * (over `tagline.outMs` from the end of the hold): 0..1, 0 outside the interlude.
+   */
+  eggTagline(): number {
+    if (this.phase !== "egg" || !this.egg || this.eggAt < 0) return 0;
+    const s = this.egg.shape;
+    const land = s.leaveMs + s.gapMs + s.enterMs;
+    const t = this.clock - this.eggAt;
+    const smooth = (p: number) => {
+      const x = clamp(p, 0, 1);
+      return x * x * (3 - 2 * x);
+    };
+    return smooth((t - land) / CINEMATIC.tagline.inMs) * (1 - smooth((t - land - s.holdMs) / CINEMATIC.tagline.outMs));
   }
 
   /** The interlude's rows have left (after `leaveMs`): they are not drawn for the rest of it, whatever the flight's camera could see of the ring they went out along. */

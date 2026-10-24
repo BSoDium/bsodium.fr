@@ -106,6 +106,12 @@ export const CINEMATIC = {
   planet: { fill: false, cities: false },
   /** The atmosphere (a thin grey glow round the planet's limb): how much of it, for the whole interlude. `dim`: the letters seen through it (a sight line that passes within `reach` planet radii of the limb before reaching them) dim into the page's colour by up to `amount`. */
   atmosphere: { amount: 1, dim: { amount: 0.85, reach: 0.16 } },
+  /**
+   * The studio's small line under the globe, a parody of its own ("A COMCAST COMPANY"), set in the page's light sans in wide-spaced capitals: it comes in over `inMs` once the
+   * word has landed and goes with its exit over `outMs`. `gap`: how far under the planet's centre its middle is, in planet radii (the studio's is 1.24); `size`: its height, planet
+   * radii, at least `minPx`; `tracking`: its letter spacing, em.
+   */
+  tagline: { text: "This is a parody, please don't sue me", inMs: 700, outMs: 700, gap: 1.24, size: 0.06, minPx: 9, tracking: 0.35 },
   /** The places' lights come up through the dither when the word lands (the chord), over `inMs`, and go over `outMs`. */
   city: { inMs: 240, outMs: 500 },
   /** The side the word comes in from: EAST (1), as the studio's does. */

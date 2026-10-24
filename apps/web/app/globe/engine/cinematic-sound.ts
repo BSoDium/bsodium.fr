@@ -11,9 +11,9 @@
  * `AudioContext` (opening a device is a stall of 150 ms or more, on the main thread) is made in an idle moment after the visitor's first gesture, which
  * is also what lets the browser start it. Starting is then a source and a gain on a context that is already running.
  *
- * It plays when the browser lets it (a page nobody has touched is refused, and then it is silent), when the tab is in front, and unless the visitor
+ * It plays when the browser lets it (a page nobody has touched is refused, and then it is silent), when the tab is in front AT ITS START, and unless the visitor
  * asked for none (`?mute`, or sessionStorage "cinematic-mute" = "1"). It rises over `fadeInMs`, runs as long as the interlude, and lets go over
- * `fadeOutMs` at its end; cut short (a gesture, the tab put behind, the globe going away) it fades at once (`SoundHandle.fade`).
+ * `fadeOutMs` at its end; cut short (a gesture, the globe going away) it fades at once (`SoundHandle.fade`); a tab put behind does not stop it.
  */
 
 import { cinematicForced } from "./cinematic";
@@ -71,6 +71,7 @@ export interface SourceLike {
 }
 export interface ContextLike {
   state: string;
+  onstatechange?: (() => void) | null;
   currentTime: number;
   destination: unknown;
   resume(): Promise<void>;
@@ -181,7 +182,8 @@ export function startSound(durationMs: number, deps: SoundDeps = browserDeps, al
     if (done) return;
     done = true;
     if (guard !== null) clearTimeout(guard);
-    if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onHidden);
+    if (typeof document !== "undefined") document.removeEventListener("visibilitychange", keepRunning);
+    if (c) c.onstatechange = null;
     try {
       if (src) {
         src.onended = null;
@@ -204,11 +206,13 @@ export function startSound(durationMs: number, deps: SoundDeps = browserDeps, al
     if (guard !== null) clearTimeout(guard);
     guard = setTimeout(stop, ms + 250);
   };
-  // (a tab put behind goes on playing in the background, and its interlude has stopped drawing: the sound lets go with it)
-  const onHidden = () => {
-    if (typeof document !== "undefined" && document.hidden) fade(SOUND.fadeCutMs);
+  // The sound lives as long as the interlude does, and no longer: a tab put behind does NOT stop it (the interlude runs on the wall clock, so the picture is where the music is when
+  // the visitor comes back), and the visitor's gesture, the globe going away or the end of the interlude are what let go of it (`SoundHandle.fade`). The browser may SUSPEND the
+  // context (a phone does, when the page goes behind or the screen locks): it is asked to run again at once and when the page comes back.
+  const keepRunning = () => {
+    if (!done && c && c.state !== "running") void c.resume().catch(() => undefined);
   };
-  if (typeof document !== "undefined") document.addEventListener("visibilitychange", onHidden);
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", keepRunning);
   const begin = async () => {
     try {
       if (!buffer && loading) await loading;
@@ -238,6 +242,7 @@ export function startSound(durationMs: number, deps: SoundDeps = browserDeps, al
       gain.gain.setValueAtTime(SOUND.volume, now + Math.max(fin, remain - fout));
       gain.gain.linearRampToValueAtTime(0, now + remain);
       src.onended = stop;
+      c.onstatechange = keepRunning;
       src.start(now, SOUND.fromSec + lag);
       src.stop(now + remain + 0.05);
       guard = setTimeout(stop, remain * 1000 + 500);
