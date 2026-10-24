@@ -825,6 +825,10 @@ export interface CinematicPlan {
  * Time the whole interlude takes, ms: the rows leave, the stage is empty, the word comes in, holds and goes, and THEN the globe gives its size and its
  * lean back (`zoomOutMs`: owner, 2026-10-23, "do not untilt the view until the word has left").
  */
+/** A frame longer than this is a tab that was left behind, not a hitch (the interlude's clock follows the wall clock across it); a hitch moves it by at most `EGG_HITCH_STEP_MS`. */
+export const EGG_HITCH_MS = 1000;
+export const EGG_HITCH_STEP_MS = 100;
+
 export const eggMs = (s: EggShape): number => s.leaveMs + s.gapMs + s.enterMs + s.holdMs + s.exitMs + s.zoomOutMs;
 
 /** The row's trajectory in the interlude: `rowX` with the interlude's own shape. `tau`: ms since the big row's entrance began. */
@@ -1068,14 +1072,39 @@ export class CaptionMotion {
   tick(now: number): void {
     if (this.phase === "fade" && now - this.t0 >= CAPTION.fadeMs) this.phase = "hidden";
     if (this.lastNow >= 0 && (this.phase === "in" || this.phase === "rest" || this.phase === "egg") && !this.pending && !this.frozen) {
-      // (the interlude runs on the wall clock, as its sound does: a stall or a tab left behind does not leave the picture behind the music)
-      this.clock += this.phase === "egg" ? Math.max(now - this.lastNow, 0) : Math.min(Math.max(now - this.lastNow, 0), CAPTION.drift.maxStepMs);
+      const dt = Math.max(now - this.lastNow, 0);
+      this.clock += this.phase === "egg" ? this.eggStep(dt) : Math.min(dt, CAPTION.drift.maxStepMs);
       this.ticked = true;
-      if (this.egg && this.eggAt < 0 && this.phase === "rest" && this.motionAllowed && this.clock >= this.eggTrigger()) this.beginEgg(now);
+      if (this.egg && this.eggAt < 0 && this.phase === "rest" && this.motionAllowed && this.clock >= this.eggTrigger() && this.eggReady()) this.beginEgg(now);
       else if (this.egg && this.phase === "egg" && this.clock - this.eggAt >= eggMs(this.egg.shape)) this.endEgg(now);
     }
     this.lastNow = now;
   }
+
+  /**
+   * Whether the interlude may begin: its word has been sent to the GPU (the layer sets it: compiled and uploaded, nothing left to do in the frame it first shows in).
+   * An interlude that began before that would stall in the middle of its first moments.
+   */
+  eggReady: () => boolean = () => true;
+
+  /**
+   * How far the interlude's clock moves in a frame of `dt` ms. It follows the wall clock, as its sound does: a tab left behind (a gap of over a second) puts it where the
+   * music is. A stall of the frame itself (a hitch of a few hundred ms) does NOT make the picture jump, which is what a word that has just come over the horizon would show
+   * as a pop: the clock takes at most `EGG_HITCH_STEP_MS` of it, and the rest is owed and repaid at half as much again as the frame's own time (the picture runs
+   * a little faster for a moment, and is back with the music).
+   */
+  private eggStep(dt: number): number {
+    if (dt > EGG_HITCH_MS) {
+      this.eggOwed = 0;
+      return dt;
+    }
+    const take = Math.min(dt, EGG_HITCH_STEP_MS);
+    this.eggOwed += dt - take;
+    const extra = Math.min(this.eggOwed, take * 0.5);
+    this.eggOwed -= extra;
+    return take + extra;
+  }
+  private eggOwed = 0;
 
   /** The clock now, ms since the entrance began (the first row's). */
   private time(now: number): number {
@@ -1291,7 +1320,7 @@ export class CaptionMotion {
    * is under way.
    */
   replayEgg(now: number): boolean {
-    if (!this.egg || this.phase !== "rest" || !this.motionAllowed) return false;
+    if (!this.egg || this.phase !== "rest" || !this.motionAllowed || !this.eggReady()) return false;
     this.beginEgg(now);
     return true;
   }
@@ -1299,6 +1328,7 @@ export class CaptionMotion {
   private beginEgg(now: number): void {
     this.eggFrom = this.starts.map((s, i) => this.angle(now, i, s));
     this.eggAt = this.clock;
+    this.eggOwed = 0;
     this.eggFrozen = null;
     this.phase = "egg";
     this.onCinematic?.();

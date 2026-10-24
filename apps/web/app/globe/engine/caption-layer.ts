@@ -516,6 +516,26 @@ class CrispCanvas {
   }
   private probe = new Uint8Array(4);
 
+  /**
+   * Compile the program and upload the buffers of a mesh now, drawing it nowhere: one pass over the scene with the mesh made visible and everything clipped to a pixel
+   * of the (hidden) canvas. The first draw of a mesh does both in the middle of the frame it first shows in, which on a phone is a stall of hundreds of ms (it is
+   * drawn on the canvas itself and not on a target: the program is keyed by where it renders, and a warmed one would be another program).
+   */
+  warmMesh(mesh: Mesh, camera: PerspectiveCamera): void {
+    if (this.lost) return;
+    const r = this.renderer;
+    const was = mesh.visible;
+    mesh.visible = true;
+    r.setScissorTest(true);
+    r.setScissor(0, 0, 1, 1);
+    try {
+      r.render(this.scene, camera);
+    } finally {
+      r.setScissorTest(false);
+      mesh.visible = was;
+    }
+  }
+
   /** Upload a texture now (its first use would do it in the middle of a frame: the first time a phrase set comes round). */
   warm(tex: CanvasTexture): void {
     this.renderer.initTexture(tex);
@@ -727,6 +747,7 @@ export class CaptionLayer {
     this.motion.egg = opts.content.sets.length + opts.content.fixed.length > 0 ? planForPage(this.motion.seed, opts.reduced) : null;
     // (the sound is fetched now, long before it plays; it begins with the interlude, and lets go when it ends, or is cut short)
     if (this.motion.egg) prepareSound();
+    this.motion.eggReady = () => this.eggWarm;
     this.motion.onCinematic = () => {
       notePlayed();
       const shape = this.motion.egg?.shape ?? CINEMATIC.shape;
@@ -1074,6 +1095,13 @@ export class CaptionLayer {
       else this.disarm();
       return false;
     }
+    if (!this.eggWarm) {
+      // (the word is built but not yet on the GPU: the next frame does it)
+      this.opts.onChange();
+      if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
+      else this.disarm();
+      return false;
+    }
     const ok = this.motion.replayEgg(performance.now());
     if (ok) {
       this.armed = false;
@@ -1092,6 +1120,9 @@ export class CaptionLayer {
   private armed = false;
   /** The word's mesh is wanted although no interlude is planned (`prewarmInterlude`). */
   private prewarmed = false;
+  /** The word's mesh is waiting for a camera to be sent to the GPU with (`warmEgg`, at the next frame), and has been (the interlude may begin). */
+  private warmPending = false;
+  private eggWarm = false;
   private later(fn: () => void): void {
     window.clearTimeout(this.replayTimer);
     this.replayTimer = window.setTimeout(fn, 400);
@@ -1590,6 +1621,7 @@ export class CaptionLayer {
   /** The pixel ratio the caption's canvas was last drawn at (the word's slices are counted in device pixels). */
 
   renderCrisp(camera: PerspectiveCamera, rect: CaptionRect, dpr: number, artPx = 1): void {
+    if (this.warmPending) this.warmEgg(camera);
     // (the interlude's word goes BEHIND the hero's name, not over it)
     this.crisp.setZ(this.interludePixels ? "9" : "15");
     if (!this.anyVisible || !this.built || this.failed) {
@@ -1602,6 +1634,24 @@ export class CaptionLayer {
     this.eggPlanet.value.set(0, 0, 0).applyMatrix4(camera.matrixWorldInverse);
     const pixelated = this.interludePixels && artPx > 1;
     this.crisp.render(camera, rect, pixelated ? 1 / artPx : Math.min(dpr, ENERGY.captionDpr, this.dprCap), pixelated);
+  }
+
+  /**
+   * Send the word to the GPU now (program compiled, buffers uploaded), at the first frame after it was built and long before it can show: the interlude does not
+   * begin until this is done (`CaptionMotion.eggReady`). Its first draw, in the middle of the flight, was a stall of hundreds of ms on a phone, and the picture,
+   * which follows the music's clock, then showed the word already risen over the horizon: a pop.
+   */
+  private warmEgg(camera: PerspectiveCamera): void {
+    const v = this.built?.variants.find((x) => x.set === EGG);
+    this.warmPending = false;
+    if (!v || this.failed) return;
+    camera.updateMatrixWorld();
+    try {
+      this.crisp.warmMesh(v.mesh, camera);
+    } catch {
+      /* the context went: the first real draw does what the warm-up would have */
+    }
+    this.eggWarm = true;
   }
 
   /** Whether the caption's canvas is drawn at the art's resolution now: the interlude is under way, or the globe is coming back from it. */
@@ -1725,6 +1775,8 @@ export class CaptionLayer {
 
   /** Take the strips out of the scene and free what they hold (texture, per-strip material). */
   private release(): void {
+    this.eggWarm = false;
+    this.warmPending = false;
     for (const v of this.built?.variants ?? []) {
       this.crisp.scene.remove(v.mesh);
       this.crisp.scene.remove(v.band);
@@ -1978,6 +2030,9 @@ export class CaptionLayer {
     for (const n of SLICE_STEPS) this.unitFor(n); // (the CPU side of every strip is made now)
     const eggVariant = variants.find((v) => v.set === EGG);
     this.built = { pieces: plan.pieces, nominal, places: [], variants, slotRows, scale: 1, egg: eggVariant ? { piece: eggVariant.piece, place: { baseLat: 0, capR: 0, halfSpan: 0, y: 0 }, start: Math.PI } : null, key };
+    // (the word's mesh is sent to the GPU at the next frame, before the interlude may begin: see `warmEgg`)
+    this.eggWarm = false;
+    this.warmPending = eggVariant !== undefined;
     this.place();
     this.motion.setFixedFrom(slotRows);
     this.motion.setStarts(
