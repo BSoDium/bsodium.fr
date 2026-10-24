@@ -1033,6 +1033,21 @@ export class CaptionLayer {
   private cityWant = false;
 
   /**
+   * The palette lists its entry: make the word's mesh now (the strips are built again and replace the old ones when made) and fetch the sound, without planning anything: the
+   * interlude does not begin by itself. Then asking for it costs no build in the frame that starts it.
+   */
+  prewarmInterlude(): void {
+    if (this.disposed || this.failed || this.prewarmed || this.motion.egg) return;
+    this.prewarmed = true;
+    prepareSound();
+    const b = this.built;
+    if (b && !b.egg) {
+      b.key = "stale";
+      void this.build();
+    }
+  }
+
+  /**
    * The visitor asks for the interlude (the search palette's entry): arms one if none is planned (the word's mesh and the sound are made only now, then), and plays it
    * from the resting roll as soon as the rows are rolling. Call it from the gesture itself (the sound is unlocked there). False when it cannot be played (one is under way, or
    * the caption is not there).
@@ -1075,6 +1090,8 @@ export class CaptionLayer {
     this.armed = false;
   }
   private armed = false;
+  /** The word's mesh is wanted although no interlude is planned (`prewarmInterlude`). */
+  private prewarmed = false;
   private later(fn: () => void): void {
     window.clearTimeout(this.replayTimer);
     this.replayTimer = window.setTimeout(fn, 400);
@@ -1758,7 +1775,7 @@ export class CaptionLayer {
     const used = new Set<CaptionStyleKey>();
     for (const set of content.sets) for (const row of set) for (const r of row) used.add(r.style ?? "plain");
     for (const row of content.fixed) for (const r of row) used.add(r.style ?? "plain");
-    const planned = this.motion.egg !== null;
+    const planned = this.motion.egg !== null || this.prewarmed;
     const ok = new Map<CaptionStyleKey, CaptionStyleKey>();
     await Promise.all(
       [...used].map(async (style) => {

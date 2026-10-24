@@ -17,7 +17,7 @@ import { stressRoutes } from "./paths/stress";
 import { applyDebugLevels } from "./engine/palette";
 import { applySpinFlags } from "./engine/idle-spin";
 import { applySkyFlags } from "./engine/sky";
-import { PLAY_INTERLUDE_EVENT, type PlayInterludeRequest } from "./interlude";
+import { PLAY_INTERLUDE_EVENT, PREPARE_INTERLUDE_EVENT, type PlayInterludeRequest } from "./interlude";
 import { applyRingFlags, ringText } from "./engine/ring";
 import { applyShowcaseFlags } from "./engine/caption";
 import { applyDebugArtPixel } from "./engine/tuning";
@@ -178,8 +178,15 @@ export default function GlobeCanvas({
       detail.handled = true;
       handle.playInterlude();
     };
+    const onPrepare = () => {
+      if (latest.current.showcase) handleRef.current?.prepareInterlude();
+    };
     window.addEventListener(PLAY_INTERLUDE_EVENT, onPlay);
-    return () => window.removeEventListener(PLAY_INTERLUDE_EVENT, onPlay);
+    window.addEventListener(PREPARE_INTERLUDE_EVENT, onPrepare);
+    return () => {
+      window.removeEventListener(PLAY_INTERLUDE_EVENT, onPlay);
+      window.removeEventListener(PREPARE_INTERLUDE_EVENT, onPrepare);
+    };
   }, []);
 
   useEffect(() => {
