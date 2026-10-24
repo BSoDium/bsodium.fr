@@ -8,6 +8,7 @@ import {
   LinearFilter,
   LineSegments,
   Mesh,
+  NearestFilter,
   NoColorSpace,
   Points,
   RedFormat,
@@ -69,6 +70,7 @@ export class GlobeScene {
   private surfaceMesh: Mesh | null = null;
   private surfaceReady = false;
   private surfaceNow = 0;
+  private surfaceStrength = 1;
   private surfaceLoading = false;
   private surfaceTex: Texture | null = null;
   private mistMesh: Mesh | null = null;
@@ -123,13 +125,14 @@ export class GlobeScene {
     this.mistMesh.visible = false;
     this.mistMesh.frustumCulled = false;
     this.add(this.mistMesh, 5);
-    // and the land's own picture (satellite, in grey pixels), under the mist: over the lines' own layer, faint
+    // and the land's own picture (satellite, flat patches in a few tones), over the sea and under the lines
     const surfaceSkin = new SphereGeometry(1.002, 96, 48);
     this.geometries.push(surfaceSkin);
     this.surfaceMesh = new Mesh(surfaceSkin, this.surface);
     this.surfaceMesh.visible = false;
     this.surfaceMesh.frustumCulled = false;
-    this.add(this.surfaceMesh, 4);
+    // (under the lines, which are drawn over it: its colours are solid)
+    this.add(this.surfaceMesh, 0.6);
 
     this.add(new LineSegments(this.track(segmentGeometry(graticuleSegments(GRATICULE_STEP_DEG, 3))), this.graticule), 1);
     this.bordersLines = new LineSegments(this.track(segmentGeometry(polylinesToSegments(data.borders, 1))), this.borders);
@@ -192,10 +195,14 @@ export class GlobeScene {
     const mixTo = (k: number) => [0, 1, 2].map((i) => bg[i]! + (t.ink[i]! - bg[i]!) * k) as [number, number, number];
     this.atmosphere.uniforms.uColor!.value.setRGB(...mixTo(t.scheme === "dark" ? 0.5 : 0.3));
     this.mist.uniforms.uColor!.value.setRGB(...mixTo(t.scheme === "dark" ? 0.3 : 0.18));
-    this.surface.uniforms.uColor!.value.setRGB(...mixTo(0.5));
+    // the land's three tones: darker ground, middle, lighter, each a step from the page's colour towards its ink (the page's own two ends, no hue)
+    const tones = t.scheme === "dark" ? [0.2, 0.13, 0.07] : [0.17, 0.11, 0.06];
+    this.surface.uniforms.uBg!.value.setRGB(...bg);
+    this.surface.uniforms.uTone0!.value.setRGB(...mixTo(tones[0]!));
+    this.surface.uniforms.uTone1!.value.setRGB(...mixTo(tones[1]!));
+    this.surface.uniforms.uTone2!.value.setRGB(...mixTo(tones[2]!));
     this.atmosphere.uniforms.uCover!.value = t.scheme === "dark" ? 0.4 : 0.26;
     this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.36 : 0.24;
-    this.surface.uniforms.uCover!.value = t.scheme === "dark" ? 0.4 : 0.34;
     this.graticule.uniforms.uColor!.value.setRGB(...t.grid);
     this.ramp = t.ramp;
     this.borderLevelNow = -1;
@@ -239,8 +246,8 @@ export class GlobeScene {
     new TextureLoader().load(
       url,
       (tex) => {
-        tex.magFilter = LinearFilter;
-        tex.minFilter = LinearFilter;
+        tex.magFilter = NearestFilter;
+        tex.minFilter = NearestFilter;
         tex.wrapS = RepeatWrapping;
         tex.wrapT = ClampToEdgeWrapping;
         tex.generateMipmaps = false;
@@ -248,7 +255,7 @@ export class GlobeScene {
         this.surface.uniforms.uEarth!.value = tex;
         this.surfaceTex = tex;
         this.surfaceReady = true;
-        this.setSurface(this.surfaceNow);
+        this.setSurface(this.surfaceNow, this.surfaceStrength);
         done();
       },
       undefined,
@@ -258,11 +265,16 @@ export class GlobeScene {
     );
   }
 
-  /** How much of the land's picture is shown, 0 (not drawn at all) to 1 (`SURFACE`, engine/surface.ts, sets it from the zoom). */
-  setSurface(k: number) {
-    const x = Math.min(1, Math.max(0, k));
+  /**
+   * The land's picture: `fade` 0 (not drawn at all) to 1 (the zoom's, `engine/surface.ts`: pixels taken out in the dither), `strength` 0..1 how far its tones are from the
+   * page's colour.
+   */
+  setSurface(fade: number, strength = 1) {
+    const x = Math.min(1, Math.max(0, fade));
     this.surfaceNow = x;
+    this.surfaceStrength = strength;
     this.surface.uniforms.uAmt!.value = x;
+    this.surface.uniforms.uStrength!.value = strength;
     if (this.surfaceMesh) this.surfaceMesh.visible = this.surfaceReady && x > 0.01;
   }
 

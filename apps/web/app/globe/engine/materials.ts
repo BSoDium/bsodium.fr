@@ -172,44 +172,46 @@ export function mistMaterial(): ShaderMaterial {
 }
 
 /**
- * The SURFACE: the planet's own picture, a satellite view of the land (NASA's Blue Marble, public domain, smoothed) as a field of DOTS ON THE ART'S OWN PIXELS: `uEarth` is its
- * brightness (0 at sea; filtered, so that the regions are smooth), looked up by the fragment's direction (the scene being in the earth's frame, so the regions turn with the
- * planet) and turned into a DENSITY, the darker the ground the denser the dots (a twentieth of the pixels in the brightest deserts and ice, over two fifths in the darkest
- * forests), fading to nothing at the coast. Which cells of the ground (2048 x 1024, about an art pixel each at the resting view, larger as the camera nears) hold a dot is not the ordered dither's square matrix but an
- * organic, unaligned threshold (interleaved gradient noise on the cell's coordinates, a pattern with no grid in it): the dots belong to the planet and move with it, they do
- * not stay on the screen while the earth slides under them. `uAmt` (0..1: the scene thins it with the
- * zoom, `engine/surface.ts`) scales the density; a dot is a flat grey (`uColor`) at `uCover`.
+ * The SURFACE: the planet's own picture, a satellite view of the land (NASA's Blue Marble, public domain, smoothed) as FLAT PATCHES in a palette of a few colours, 8-bit
+ * style: the sea is the page's colour, and the land is one of three tones, by how bright the ground is (`uEarth`: the picture's brightness, looked up by the fragment's
+ * direction, the scene being in the earth's frame so that the patches turn with the planet, with NEAREST sampling at 1024 x 512, so that the patches have square, pixel-art
+ * edges, crisp however near the camera comes). `uTone0..2` are the tones (darkest ground first; each a step from the page's colour towards its ink), `uBg` the page's colour,
+ * `uStrength` (0..1) how far the tones are taken from `uBg`. The colours are SOLID (no blending): the layer is drawn UNDER the lines, which are drawn over it. `uAmt` (0..1: the
+ * scene fades it with the zoom, `engine/surface.ts`) takes pixels out of the patches in the lines' ordered dither, the page's way of a fade.
  */
 export function surfaceMaterial(): ShaderMaterial {
   return new ShaderMaterial({
-    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uCover: { value: 0.6 }, uEarth: { value: null } },
+    uniforms: {
+      uBg: { value: new Color() },
+      uTone0: { value: new Color() },
+      uTone1: { value: new Color() },
+      uTone2: { value: new Color() },
+      uStrength: { value: 1 },
+      uAmt: { value: 0 },
+      uEarth: { value: null },
+    },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
       void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
     `,
     fragmentShader: /* glsl */ `
-      uniform vec3 uColor; uniform float uAmt; uniform float uCover; uniform sampler2D uEarth;
+      uniform vec3 uBg; uniform vec3 uTone0; uniform vec3 uTone1; uniform vec3 uTone2; uniform float uStrength; uniform float uAmt; uniform sampler2D uEarth;
       varying vec3 vDir;
-      // interleaved gradient noise: a threshold in 0..1 per pixel, evenly spread and with no square matrix in it
-      float gradientNoise(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+      ${DITHER_GLSL}
       void main() {
         vec3 n = normalize(vDir);
         vec2 uv = vec2(atan(n.x, n.z) * 0.15915494 + 0.5, asin(clamp(n.y, -1.0, 1.0)) * 0.31830989 + 0.5);
         float v = texture2D(uEarth, uv).r;
-        if (v < 0.04) discard;
-        // brightness 0..1 over the land (the picture lifts it to 0.2 and over); dark is dense; thin out into the sea
-        float dark = 1.0 - clamp((v - 0.2) / 0.8, 0.0, 1.0);
-        float density = (0.05 + 0.4 * dark * dark) * smoothstep(0.04, 0.2, v) * uAmt;
-        // (a cell of the ground, about one art pixel wide at the resting view: the dots stay where they are on the planet as it moves)
-        if (gradientNoise(floor(uv * vec2(2048.0, 1024.0))) >= density) discard;
-        gl_FragColor = vec4(uColor, uCover);
+        if (v < 0.1) discard;
+        ditherDiscard(uAmt);
+        // the land is dark, middle or light ground (thresholds on the picture's brightness, which the picture lifts to 0.2 and over)
+        vec3 tone = v < 0.42 ? uTone0 : (v < 0.62 ? uTone1 : uTone2);
+        gl_FragColor = vec4(mix(uBg, tone, uStrength), 1.0);
       }
     `,
     side: FrontSide,
-    blending: NormalBlending,
     depthTest: true,
     depthWrite: false,
-    transparent: true,
   });
 }
 
