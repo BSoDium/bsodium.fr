@@ -89,7 +89,7 @@ export const CINEMATIC = {
    * (so that it is behind the planet at `wordFromU`, and rises over the horizon, as the studio's does). (The start, relative
    * to the page's meridian, is worked out from this and the word's span: `CaptionLayer.sync`.)
    */
-  leadStartLon: 205,
+  leadStartLon: 218,
   /**
    * The word is not drawn before this point of the flight (0..1): while the camera dives in from the page's view no camera could hide a word that long (its span is
    * wider than the unseen part of the ring), so it is not there; at this point the camera is in place at the opening shot and the word, by `leadStartLon`, is behind
