@@ -189,20 +189,22 @@ export function surfaceMaterial(): ShaderMaterial {
       uStrength: { value: 1 },
       uAmt: { value: 0 },
       uEarth: { value: null },
+      uLandMap: { value: null },
     },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
       void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
     `,
     fragmentShader: /* glsl */ `
-      uniform vec3 uBg; uniform vec3 uTone0; uniform vec3 uTone1; uniform vec3 uTone2; uniform float uStrength; uniform float uAmt; uniform sampler2D uEarth;
+      uniform vec3 uBg; uniform vec3 uTone0; uniform vec3 uTone1; uniform vec3 uTone2; uniform float uStrength; uniform float uAmt; uniform sampler2D uEarth; uniform sampler2D uLandMap;
       varying vec3 vDir;
       ${DITHER_GLSL}
       void main() {
         vec3 n = normalize(vDir);
         vec2 uv = vec2(atan(n.x, n.z) * 0.15915494 + 0.5, asin(clamp(n.y, -1.0, 1.0)) * 0.31830989 + 0.5);
+        // the land is the coastlines' own fill (the land mask, filtered and cut at a half: its edge falls between the texels, exactly on the drawn outline, at the art's resolution)
+        if (texture2D(uLandMap, uv).r < 0.5) discard;
         float v = texture2D(uEarth, uv).r;
-        if (v < 0.1) discard;
         ditherDiscard(uAmt);
         // the land is dark, middle or light ground (thresholds on the picture's brightness, which the picture lifts to 0.2 and over)
         vec3 tone = v < 0.42 ? uTone0 : (v < 0.62 ? uTone1 : uTone2);

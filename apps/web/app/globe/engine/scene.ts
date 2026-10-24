@@ -8,7 +8,6 @@ import {
   LinearFilter,
   LineSegments,
   Mesh,
-  NearestFilter,
   NoColorSpace,
   Points,
   RedFormat,
@@ -27,7 +26,7 @@ import { FadeArray, clockStep } from "./fade";
 import { borderLevel, bordersWanted } from "./palette";
 import type { ViewBasis } from "./geo";
 import { zoomToRadiusPx } from "./geo";
-import { LAND_H, LAND_W, landMask } from "./land";
+import { landMask } from "./land";
 import { GRATICULE_STEP_DEG, graticuleSegments, polylinesToSegments } from "./geometry";
 import { OCCLUDER_RADIUS, atmosphereMaterial, cityMaterial, surfaceMaterial, mistMaterial, lineMaterial, occluderMaterial, silhouetteMaterial } from "./materials";
 import { RouteLayer } from "./route-layer";
@@ -39,6 +38,9 @@ import { TUNING } from "./tuning";
 
 /** How much of the ink the filled land has (the rest is the page's colour): near the ink, as the letters' metal is. */
 const LAND_SHARE = 0.86;
+/** The land mask's grid (7 ms to make, 8 MB): fine enough that the fill is on the drawn outline down to a pixel or two at the flight's closest shots. */
+const MASK_W = 4096;
+const MASK_H = 2048;
 /** The mist: the glow stands `SHELL` radii over the surface (a layer of the planet: it shrinks with it). */
 const SHELL = 0.022;
 /** The most lights (places) the planet shows at the chord. */
@@ -218,7 +220,7 @@ export class GlobeScene {
    */
   prepareLand() {
     if (this.landTex || !this.coastData) return;
-    const tex = new DataTexture(landMask(this.coastData), LAND_W, LAND_H, RedFormat, UnsignedByteType);
+    const tex = new DataTexture(landMask(this.coastData, MASK_W, MASK_H), MASK_W, MASK_H, RedFormat, UnsignedByteType);
     tex.magFilter = LinearFilter;
     tex.minFilter = LinearFilter;
     tex.wrapS = RepeatWrapping;
@@ -228,6 +230,7 @@ export class GlobeScene {
     tex.needsUpdate = true;
     this.landTex = tex;
     this.occluder.uniforms.uLandMap!.value = tex;
+    this.surface.uniforms.uLandMap!.value = tex;
   }
 
   /** The sun's direction in the earth's frame (the planet's light; the letters have the same one in the camera's frame). */
@@ -246,8 +249,8 @@ export class GlobeScene {
     new TextureLoader().load(
       url,
       (tex) => {
-        tex.magFilter = NearestFilter;
-        tex.minFilter = NearestFilter;
+        tex.magFilter = LinearFilter;
+        tex.minFilter = LinearFilter;
         tex.wrapS = RepeatWrapping;
         tex.wrapT = ClampToEdgeWrapping;
         tex.generateMipmaps = false;
@@ -255,6 +258,7 @@ export class GlobeScene {
         this.surface.uniforms.uEarth!.value = tex;
         this.surfaceTex = tex;
         this.surfaceReady = true;
+        this.prepareLand(); // (the coastlines' fill, for the patches' edge)
         this.setSurface(this.surfaceNow, this.surfaceStrength);
         done();
       },
@@ -275,7 +279,7 @@ export class GlobeScene {
     this.surfaceStrength = strength;
     this.surface.uniforms.uAmt!.value = x;
     this.surface.uniforms.uStrength!.value = strength;
-    if (this.surfaceMesh) this.surfaceMesh.visible = this.surfaceReady && x > 0.01;
+    if (this.surfaceMesh) this.surfaceMesh.visible = this.surfaceReady && this.landTex !== null && x > 0.01;
   }
 
   /**
