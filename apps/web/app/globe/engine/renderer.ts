@@ -690,7 +690,10 @@ export class GlobeRenderer {
     // (and it leans the planet, the words and the stars together, as the studio's globe does: the same eased value, `CaptionLayer.rollRad`)
     const roll = this.caption?.rollRad() ?? 0;
     const zoom = Math.min(this.view.zoom, TUNING.maxZoom) - back;
-    return zoom === this.view.zoom && roll === 0 ? this.view : { ...this.view, zoom, ...(roll !== 0 ? { roll } : {}) };
+    // (and it brings the camera down to the equator's plane, nearly: the word, on the equator, is then a straight line across the planet, as in the studio's lockup)
+    const k = this.caption?.levelShare() ?? 0;
+    const lat = k > 0 ? this.view.lat + (CINEMATIC.lockLat - this.view.lat) * k : this.view.lat;
+    return zoom === this.view.zoom && roll === 0 && lat === this.view.lat ? this.view : { ...this.view, zoom, lat, ...(roll !== 0 ? { roll } : {}) };
   }
 
   setView(v: Partial<ViewState>) {
@@ -2015,7 +2018,7 @@ export class GlobeRenderer {
     this.globe.setLand(CINEMATIC.planet.fill ? land : 0);
     // the mist: a thin grey glow at the limb, a veil on the ground and faint beams from the land, for the length of the interlude (they follow the land's easing: in and out with it)
     this.globe.setAtmosphere(land * CINEMATIC.atmosphere.amount);
-    this.globe.frameAtmosphere(d, this.bufH / 2 / Math.tan((FOV_DEG * Math.PI) / 360), this.bufW, this.bufH, performance.now());
+    this.globe.frameAtmosphere(this.bufW, this.bufH, performance.now());
     this.globe.setCity(CINEMATIC.planet.cities ? (this.caption?.cityShare() ?? 0) : 0);
     // the page's own hero steps back with it (app.css `--interlude`): written when it moves by a hundredth
     if (Math.abs(land - this.interludeVar) >= 0.01 || (land === 0 && this.interludeVar !== 0)) {

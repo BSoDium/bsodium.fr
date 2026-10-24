@@ -36,8 +36,8 @@ import { TUNING } from "./tuning";
 
 /** How much of the ink the filled land has (the rest is the page's colour): near the ink, as the letters' metal is. */
 const LAND_SHARE = 0.86;
-/** The mist: the glow is `glowPx` buffer pixels thick (kept between the least and most it may stand off the surface), and the beams (`prepareBeams`): how many, how long (radii). */
-const BEAMS = { count: 20, lenMin: 0.22, lenMax: 0.6, glowPx: 4, minShell: 0.004, maxShell: 0.06 };
+/** The mist: the glow stands `shell` radii over the surface (a layer of the planet: it shrinks with it), and the beams (`prepareBeams`): how many, how long (radii). */
+const BEAMS = { count: 48, lenMin: 0.2, lenMax: 0.6, shell: 0.022 };
 const BEAM_SEED = 0x51ed;
 /** The most lights (places) the planet shows at the chord. */
 const CITY_LIGHTS = 16;
@@ -103,12 +103,13 @@ export class GlobeScene {
     // Each layer is drawn in a fixed order (renderOrder) over the disc: grid, borders, coast, routes, horizon outline,
     // markers (last, so nothing can draw over a marker).
     // the atmosphere shell (the cinematic interlude's: hidden, and not drawn at all, outside it)
-    const shell = new SphereGeometry(1, 96, 48); // (scaled to a few art pixels over the limb each frame: `frameAtmosphere`)
+    const shell = new SphereGeometry(1, 96, 48); // (scaled to its height: `BEAMS.shell`)
     this.geometries.push(shell);
     this.atmosphereMesh = new Mesh(shell, this.atmosphere);
     this.atmosphereMesh.visible = false;
     this.atmosphereMesh.frustumCulled = false;
-    this.atmosphereMesh.scale.setScalar(1.03);
+    this.atmosphereMesh.scale.setScalar(1 + BEAMS.shell);
+    this.atmosphere.uniforms.uShell!.value = 1 + BEAMS.shell;
     this.add(this.atmosphereMesh, 0.5);
     // and the mist on the ground itself, over the lines (a hair above the surface, which the lines are drawn on)
     const skin = new SphereGeometry(1.004, 96, 48);
@@ -282,16 +283,11 @@ export class GlobeScene {
   }
 
   /**
-   * What the mist needs each frame it is there: the glow's shell is made `thicknessPx` drawing-buffer pixels thick at the limb (whatever the distance: the shell is
-   * `thicknessPx * sqrt(d^2 - 1) / focalPx` over the surface, a radial offset at the limb being seen foreshortened by exactly that), the size of a pixel for the beams'
-   * width, and the clock for their swell.
+   * What the mist needs each frame it is there: the size of a pixel (the beams' width) and the clock (their swell). The glow's shell is a FIXED height over the
+   * surface (`BEAMS.shell` radii, set once), so that it is a physical layer of the planet: it shrinks with the planet as the camera draws away.
    */
-  frameAtmosphere(d: number, focalPx: number, bufW: number, bufH: number, nowMs: number) {
+  frameAtmosphere(bufW: number, bufH: number, nowMs: number) {
     if (this.atmosphereNow <= 0) return;
-    const over = Math.min(BEAMS.maxShell, Math.max(BEAMS.minShell, (BEAMS.glowPx * Math.sqrt(Math.max(1e-4, d * d - 1))) / Math.max(1, focalPx)));
-    const shell = 1 + over;
-    this.atmosphere.uniforms.uShell!.value = shell;
-    this.atmosphereMesh?.scale.setScalar(shell);
     this.beams.uniforms.uPixel!.value = [2 / bufW, 2 / bufH];
     this.beams.uniforms.uTime!.value = nowMs / 1000;
   }

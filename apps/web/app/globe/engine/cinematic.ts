@@ -30,9 +30,11 @@ export const CINEMATIC = {
   // (the word is baked into engine/cinematic-glyphs.ts: another word, or weight, is `pnpm --filter @catalyst/web bake:word <word> <weight> <opsz>`; a test holds the two together)
   /**
    * The planet and the word lean to the left while the globe is pulled back (degrees, the north pole toward the left of the screen: the studio's
-   * globe is tilted on its axis and its wordmark orbits on the same slant); it eases in and out with the pull-back.
+   * globe is tilted on its axis and its wordmark orbits on the same slant); it eases in with the pull-back and is put upright over the last `shape.levelMs` before the word lands (the lockup is level), as the camera comes down to `lockLat`.
    */
   tiltDeg: 12,
+  /** The camera's latitude at the lockup, degrees (the page's is brought to it with the levelling): the word on the equator is then a nearly straight line. */
+  lockLat: 4,
   /**
    * The word is SOLID (engine/cinematic-word.ts: a mesh with a front, a bevel, walls and a back, made from the baked outlines of a plain sans) and COLOURLESS:
    * every surface is a step from the PAGE's colour towards its ink (`tone`: how far, per scheme), so that it lies in the page instead of over it. Fully lit,
@@ -60,7 +62,7 @@ export const CINEMATIC = {
    * `faceShine`: how bright the thin strip lights of the studio are in the bevel's reflection and in a face's (the glints that run along the edges).
    */
   light: { key: [-0.5, 0.45, 0.74] as const, fill: [0.6, -0.3, 0.4] as const, ambient: 0.5, diffuse: 0.5, filler: 0.14, specular: 0.22, shininess: 90, faceShine: 0.8, wallShine: 1.1, edgeShine: 1.5, outlineMix: 0.6 },
-  radius: 1.5,
+  radius: 2,
   /**
    * On its way out the letters DISSOLVE in the art's ordered dither, one by one, as they pass behind the planet (no shrinking, no clipping line): a fragment is
    * gone once its angle from the page's view axis (as the planet sees it) is `to` degrees, going from whole at `from`; the word's last stretch finishes what is left
@@ -80,7 +82,7 @@ export const CINEMATIC = {
    * LEANS over the first `zoomInMs`, stays so for as long as the word is on the stage, and comes back upright over the `zoomOutMs` AFTER it has
    * gone (the whole is `eggMs`: about 24 s, begun at 13 s in; the idle hold at 30 s waits for it, `Renderer.freezeWhenIdle`).
    */
-  shape: { leaveMs: 500, gapMs: 400, enterMs: 19350, ease: 1, holdMs: 1000, exitMs: 1450, ampDeg: 2.5, zoomLevels: 0.7, zoomInMs: 6000, zoomOutMs: 1400, zoomCutMs: 1000 },
+  shape: { leaveMs: 500, gapMs: 400, enterMs: 19350, ease: 1, holdMs: 1000, exitMs: 1450, ampDeg: 2.5, zoomLevels: 1, zoomInMs: 6000, zoomOutMs: 1400, zoomCutMs: 1000, levelMs: 5500 },
   /**
    * Where the word starts: the longitude its LEADING end (the west one) begins at, degrees east, in the earth's own frame, not the page's. The flight's
    * first camera is over Greece (22 E) at 0.15 earth radii, from where the equatorial shell is seen only up to about 111 E: the word starts BEYOND that

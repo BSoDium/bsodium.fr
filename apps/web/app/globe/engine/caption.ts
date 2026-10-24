@@ -809,6 +809,8 @@ export interface EggShape {
   zoomInMs: number;
   zoomOutMs: number;
   zoomCutMs: number;
+  /** The lean and the camera's height are put right (upright, level with the word) over the last `levelMs` before the word lands, and stay so: the lockup. */
+  levelMs: number;
 }
 
 /** The interlude as planned for a session: after cycle `n` of the first showing has begun to leave, from the side `side` (-1 west, +1 east). */
@@ -1226,6 +1228,14 @@ export class CaptionMotion {
       return x * x * (3 - 2 * x);
     };
     return Math.min(smooth(t / s.zoomInMs), smooth((eggMs(s) - t) / s.zoomOutMs));
+  }
+
+  /** How far the picture has been put upright and level, 0 to 1: smooth over the `levelMs` before the word lands, 1 from then on (0 outside the interlude). */
+  eggLevel(): number {
+    if (this.phase !== "egg" || !this.egg || this.eggAt < 0) return 0;
+    const s = this.egg.shape;
+    const x = clamp((this.clock - this.eggAt - (s.leaveMs + s.gapMs + s.enterMs - s.levelMs)) / s.levelMs, 0, 1);
+    return x * x * (3 - 2 * x);
   }
 
   /**

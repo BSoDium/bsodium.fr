@@ -84,7 +84,7 @@ export const FLIGHT = {
     { u: 0.61, lon: 5, lat: 36, alt: 1.5, look: [50, 6, 1.5], level: 0.9, pitch: -3, roll: -2, horizon: 0.7, bearing: 85 },
     { u: 0.75, lon: 2, lat: 26, alt: 2.4, look: [14, 2, 0.9], level: 0.5, pitch: 0, roll: 2, horizon: 0, bearing: 85 },
     // the space view, reached with the word still on its way in: the letters line up in front of the planet over the last part
-    { u: 0.87, lon: 0, lat: 12, alt: 3.2, look: [0, 0, 0.1], level: 0.15, pitch: 0, roll: 8, horizon: 0, bearing: 85 },
+    { u: 0.87, lon: 0, lat: 12, alt: 3.2, look: [0, 0, 0.1], level: 0.15, pitch: 0, roll: 6, horizon: 0, bearing: 85 },
   ] satisfies readonly FlightKey[],
 };
 

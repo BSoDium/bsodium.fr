@@ -955,6 +955,8 @@ export class CaptionLayer {
 
   /** How far the globe has pulled back for the cinematic interlude, 0 to 1 (see `zoomOutLevels`), and when it was last read. */
   private zoomK = 0;
+  /** How far the picture is put upright and level (`CaptionMotion.eggLevel`); kept as it is when the interlude ends or is cut short (the pull-back then takes it back). */
+  private levelK = 0;
   private zoomAt = -1;
   private onKey: ((e: KeyboardEvent) => void) | null = null;
 
@@ -1053,6 +1055,7 @@ export class CaptionLayer {
     const shape = this.motion.egg?.shape ?? CINEMATIC.shape;
     if (this.motion.eggActive) {
       this.zoomK = this.motion.eggZoom();
+      this.levelK = this.motion.eggLevel();
       this.zoomAt = -1;
     } else if (this.zoomK > 0) {
       const now = performance.now();
@@ -1106,7 +1109,12 @@ export class CaptionLayer {
    * pulls back and comes upright as it comes back (and as it gives the size back when a gesture cuts the interlude short). Read after `zoomOutLevels`.
    */
   rollRad(): number {
-    return this.zoomK > 0 ? this.zoomK * ((CINEMATIC.tiltDeg * Math.PI) / 180) : 0;
+    return this.zoomK > 0 ? this.zoomK * (1 - this.levelK) * ((CINEMATIC.tiltDeg * Math.PI) / 180) : 0;
+  }
+
+  /** How far the camera has come down to the lockup's latitude, 0..1 (the pull-back's value times the levelling's: it goes back with the pull-back). */
+  levelShare(): number {
+    return this.zoomK * this.levelK;
   }
 
   /** The radius of the shell a strip is on: the rows' own, or the cinematic word's higher one. */
