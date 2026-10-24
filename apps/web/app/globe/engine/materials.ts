@@ -94,7 +94,7 @@ export function occluderMaterial(): ShaderMaterial {
  *    shape of the fall), a little thicker on the sunward side. `uCover` is its alpha at the edge, `uAmt` (0..1) how much of it is there.
  *  - `mistMaterial`: ON the planet. A shell a hair over the surface (the lines are drawn at the surface), whose density grows towards the horizon: where the ground is seen
  *    at a grazing angle the mist is deep and veils the coastlines and the borders, and it BLEEDS inwards, a good part of the way to the middle, as the glow's own continuation.
- *  - `grainMaterial`: a faint random grain of single pixels over the LAND only (the land mask), denser in patches (a low noise on the ground), none on the sea.
+ *  - `grainMaterial`: a faint random grain over the LAND only (the land mask), denser in patches (a low noise on the ground), none on the sea.
  * None of them is drawn at all outside the interlude (`GlobeScene.setAtmosphere`).
  */
 const MIST_GLSL = /* glsl */ `
@@ -174,7 +174,7 @@ export function mistMaterial(): ShaderMaterial {
 /**
  * The GRAIN: a faint random speckle of single art pixels over the land (the land mask, as the occluder reads it: the lookup is by the fragment's direction, the scene being
  * in the earth's frame) and not the sea, denser in patches where a low noise on the ground (a few cells round the globe, smoothly blended) is high, so that it reads as terrain
- * rather than as static. The pixels are a hash of the fragment's own position on the art grid, grey at a low alpha (`uCover`).
+ * rather than as static. Its cells are fixed to the ground (a hash of the third-of-a-degree cell the fragment is in), so that the grain turns with the planet instead of staying on the screen; each cell is as many art pixels wide as the camera is near, and a pixel at least. Grey at a low alpha (`uCover`).
  */
 export function grainMaterial(): ShaderMaterial {
   return new ShaderMaterial({
@@ -201,7 +201,8 @@ export function grainMaterial(): ShaderMaterial {
         vec2 uv = vec2(atan(n.x, n.z) * 0.15915494 + 0.5, asin(clamp(n.y, -1.0, 1.0)) * 0.31830989 + 0.5);
         if (texture2D(uLandMap, uv).r < 0.6) discard;
         float clump = smoothstep(0.25, 0.85, vnoise(n * 7.0) * 0.65 + vnoise(n * 19.0) * 0.35);
-        float p = hash(floor(gl_FragCoord.xy));
+        // one random value per cell of the ground (a third of a degree), so the grain belongs to the planet and turns with it; a cell is as many art pixels wide as the camera is near
+        float p = hash(floor(uv * vec2(1080.0, 540.0)));
         if (p >= uDensity * (0.25 + 1.5 * clump) * uAmt) discard;
         gl_FragColor = vec4(uColor, uCover);
       }

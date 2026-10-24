@@ -1380,17 +1380,21 @@ export class CaptionLayer {
       (u.uAxis!.value as number[])[1] = ax[1];
       (u.uAxis!.value as number[])[2] = ax[2];
     }
+    // (the rows are gone once they have left: the flight's camera would see them go on round the ring behind the planet)
+    const rowsOut = this.motion.eggRowsOut();
     for (const v of b.variants) {
       let theta = 0;
       let on = false;
       let start = 0;
       if (v.set === EGG) {
-        // (not before the camera is in place: `CINEMATIC.wordFromU`)
+        // (not before the camera is in place, and the word behind the planet then: `CINEMATIC.wordFromU`)
         if (eggTheta !== null && this.flightU >= CINEMATIC.wordFromU) {
           theta = eggTheta;
           start = b.egg!.start;
           on = true;
         }
+      } else if (rowsOut) {
+        // gone
       } else if (v.set < 0) {
         theta = rowTheta[v.row]!;
         start = this.rowStart(v.row);

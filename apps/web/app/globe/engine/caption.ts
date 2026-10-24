@@ -1230,6 +1230,11 @@ export class CaptionMotion {
     return Math.min(smooth(t / s.zoomInMs), smooth((eggMs(s) - t) / s.zoomOutMs));
   }
 
+  /** The interlude's rows have left (after `leaveMs`): they are not drawn for the rest of it, whatever the flight's camera could see of the ring they went out along. */
+  eggRowsOut(): boolean {
+    return this.phase === "egg" && !!this.egg && this.eggAt >= 0 && this.clock - this.eggAt >= this.egg.shape.leaveMs;
+  }
+
   /** How far the picture has been put upright and level, 0 to 1: smooth over the `levelMs` before the word lands, 1 from then on (0 outside the interlude). */
   eggLevel(): number {
     if (this.phase !== "egg" || !this.egg || this.eggAt < 0) return 0;

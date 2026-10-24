@@ -34,7 +34,7 @@ export const CINEMATIC = {
    */
   tiltDeg: 12,
   /** The camera's latitude at the lockup, degrees (the page's is brought to it with the levelling): the word on the equator is then a nearly straight line. */
-  lockLat: 4,
+  lockLat: -4,
   /**
    * The word is SOLID (engine/cinematic-word.ts: a mesh with a front, a bevel, walls and a back, made from the baked outlines of a plain sans) and COLOURLESS:
    * every surface is a step from the PAGE's colour towards its ink (`tone`: how far, per scheme), so that it lies in the page instead of over it. Fully lit,
@@ -86,13 +86,14 @@ export const CINEMATIC = {
   /**
    * Where the word starts: the longitude its LEADING end (the west one) begins at, degrees east, in the earth's own frame, not the page's. The flight's
    * first camera is over Greece (22 E) at 0.15 earth radii, from where the equatorial shell is seen only up to about 111 E: the word starts BEYOND that
-   * (135 E), so that it is hidden when the camera arrives and comes up over the horizon about three seconds in, as the studio's does. (The start, relative
+   * (so that it is behind the planet at `wordFromU`, and rises over the horizon, as the studio's does). (The start, relative
    * to the page's meridian, is worked out from this and the word's span: `CaptionLayer.sync`.)
    */
-  leadStartLon: 180,
+  leadStartLon: 205,
   /**
-   * The word is not drawn before this point of the flight (0..1): while the camera dives in from the page's view it could be seen from the high camera,
-   * beside the planet, and would be seen to appear. The camera is in place at 0.1.
+   * The word is not drawn before this point of the flight (0..1): while the camera dives in from the page's view no camera could hide a word that long (its span is
+   * wider than the unseen part of the ring), so it is not there; at this point the camera is in place at the opening shot and the word, by `leadStartLon`, is behind
+   * the planet, to rise over the horizon.
    */
   wordFromU: 0.35,
   /** The continents are filled with the ink for the whole interlude (the planet's disc, `GlobeScene.setLand`), eased in over `inMs` and out over `outMs`. */
