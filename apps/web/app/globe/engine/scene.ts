@@ -7,6 +7,7 @@ import {
   DataTexture,
   LinearFilter,
   LineSegments,
+  Float32BufferAttribute,
   Mesh,
   Points,
   RedFormat,
@@ -25,7 +26,7 @@ import type { ViewBasis } from "./geo";
 import { zoomToRadiusPx } from "./geo";
 import { LAND_H, LAND_W, landMask } from "./land";
 import { GRATICULE_STEP_DEG, graticuleSegments, polylinesToSegments } from "./geometry";
-import { OCCLUDER_RADIUS, atmosphereMaterial, cityMaterial, mistMaterial, lineMaterial, occluderMaterial, silhouetteMaterial } from "./materials";
+import { OCCLUDER_RADIUS, atmosphereMaterial, beamMaterial, cityMaterial, mistMaterial, lineMaterial, occluderMaterial, silhouetteMaterial } from "./materials";
 import { RouteLayer } from "./route-layer";
 import { SKY_STATE, viewToGalactic } from "./sky";
 import { SkyLayer } from "./sky-layer";
@@ -35,6 +36,9 @@ import { TUNING } from "./tuning";
 
 /** How much of the ink the filled land has (the rest is the page's colour): near the ink, as the letters' metal is. */
 const LAND_SHARE = 0.86;
+/** The mist: the glow is `glowPx` buffer pixels thick (kept between the least and most it may stand off the surface), and the beams (`prepareBeams`): how many, how long (radii). */
+const BEAMS = { count: 20, lenMin: 0.22, lenMax: 0.6, glowPx: 4, minShell: 0.004, maxShell: 0.06 };
+const BEAM_SEED = 0x51ed;
 /** The most lights (places) the planet shows at the chord. */
 const CITY_LIGHTS = 16;
 
@@ -60,6 +64,8 @@ export class GlobeScene {
   private city = cityMaterial();
   private atmosphere = atmosphereMaterial();
   private mist = mistMaterial();
+  private beams = beamMaterial();
+  private beamMesh: Mesh | null = null;
   private mistMesh: Mesh | null = null;
   private atmosphereMesh: Mesh | null = null;
   private atmosphereNow = 0;
@@ -87,7 +93,7 @@ export class GlobeScene {
     coastlines: Polylines;
     borders: Polylines;
   }) {
-    this.materials.push(this.occluder, this.city, this.atmosphere, this.mist, this.graticule, this.borders, this.coast, this.silhouette);
+    this.materials.push(this.occluder, this.city, this.atmosphere, this.mist, this.beams, this.graticule, this.borders, this.coast, this.silhouette);
     this.coastData = data.coastlines;
 
     const disc = new SphereGeometry(OCCLUDER_RADIUS, 96, 48);
@@ -97,11 +103,12 @@ export class GlobeScene {
     // Each layer is drawn in a fixed order (renderOrder) over the disc: grid, borders, coast, routes, horizon outline,
     // markers (last, so nothing can draw over a marker).
     // the atmosphere shell (the cinematic interlude's: hidden, and not drawn at all, outside it)
-    const shell = new SphereGeometry(1.06, 96, 48);
+    const shell = new SphereGeometry(1, 96, 48); // (scaled to a few art pixels over the limb each frame: `frameAtmosphere`)
     this.geometries.push(shell);
     this.atmosphereMesh = new Mesh(shell, this.atmosphere);
     this.atmosphereMesh.visible = false;
     this.atmosphereMesh.frustumCulled = false;
+    this.atmosphereMesh.scale.setScalar(1.03);
     this.add(this.atmosphereMesh, 0.5);
     // and the mist on the ground itself, over the lines (a hair above the surface, which the lines are drawn on)
     const skin = new SphereGeometry(1.004, 96, 48);
@@ -170,10 +177,12 @@ export class GlobeScene {
     // veil on the ground is the page's own colour with a trace of ink, so it covers the lines without painting anything.
     const bg = t.background;
     const mixTo = (k: number) => [0, 1, 2].map((i) => bg[i]! + (t.ink[i]! - bg[i]!) * k) as [number, number, number];
-    this.atmosphere.uniforms.uColor!.value.setRGB(...mixTo(0.5));
+    this.atmosphere.uniforms.uColor!.value.setRGB(...mixTo(0.55));
     this.mist.uniforms.uColor!.value.setRGB(...mixTo(0.12));
-    this.atmosphere.uniforms.uCover!.value = t.scheme === "dark" ? 0.28 : 0.22;
-    this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.42 : 0.34;
+    this.beams.uniforms.uColor!.value.setRGB(...mixTo(0.55));
+    this.atmosphere.uniforms.uCover!.value = t.scheme === "dark" ? 0.55 : 0.45;
+    this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.4 : 0.32;
+    this.beams.uniforms.uCover!.value = t.scheme === "dark" ? 0.3 : 0.26;
     this.graticule.uniforms.uColor!.value.setRGB(...t.grid);
     this.ramp = t.ramp;
     this.borderLevelNow = -1;
@@ -208,16 +217,83 @@ export class GlobeScene {
     this.city.uniforms.uSun!.value = [x, y, z];
   }
 
-  /** The atmosphere, 0 (none: the shell is not drawn) to 1: a thin dithered glow round the limb, in the accent. */
-  setAtmosphere(k: number, shell?: number) {
+  /**
+   * Make the beams now: a place on the land for each (a few ms for the coarse mask; the interlude is planned, so not in the frame that starts it). Idempotent. A fixed
+   * seed, so the same lights rise in the same places each time.
+   */
+  prepareBeams() {
+    if (this.beamMesh || !this.coastData) return;
+    const mask = landMask(this.coastData, 512, 256);
+    let seed = BEAM_SEED;
+    const rnd = () => {
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const pos: number[] = [];
+    const info: number[] = [];
+    const idx: number[] = [];
+    for (let n = 0, tries = 0; n < BEAMS.count && tries < 4000; tries++) {
+      const lon = (rnd() * 2 - 1) * Math.PI;
+      const lat = Math.asin(rnd() * 2 - 1);
+      if (Math.abs(lat) > 1.2) continue; // (not the ice caps)
+      const col = Math.min(511, Math.floor(((lon / Math.PI + 1) / 2) * 512));
+      const row = Math.min(255, Math.floor(((lat / (Math.PI / 2) + 1) / 2) * 256));
+      if (mask[row * 512 + col] !== 255) continue;
+      const len = BEAMS.lenMin + rnd() * (BEAMS.lenMax - BEAMS.lenMin);
+      const sd = rnd();
+      const x = Math.cos(lat) * Math.sin(lon);
+      const y = Math.sin(lat);
+      const z = Math.cos(lat) * Math.cos(lon);
+      const o = n * 4;
+      for (const [t, side] of [[0, -1], [0, 1], [1, -1], [1, 1]] as const) {
+        pos.push(x, y, z);
+        info.push(t, side, len, sd);
+      }
+      idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);
+      n++;
+    }
+    const g = this.track(new BufferGeometry());
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.setAttribute("aBeam", new Float32BufferAttribute(info, 4));
+    g.setIndex(idx);
+    this.beamMesh = new Mesh(g, this.beams);
+    this.beamMesh.visible = false;
+    this.beamMesh.frustumCulled = false;
+    this.add(this.beamMesh, 4);
+  }
+
+  /**
+   * The mist, 0 (none: nothing of it is drawn) to 1: a thin grey glow just over the limb, a veil on the ground thickening to the horizon, and the faint beams from the
+   * land. Drawn for the length of the interlude only.
+   */
+  setAtmosphere(k: number) {
     const x = Math.min(1, Math.max(0, k));
     if (Math.abs(x - this.atmosphereNow) < 0.01 && !(x === 0 && this.atmosphereNow !== 0)) return;
+    if (x > 0 && !this.beamMesh) this.prepareBeams();
     this.atmosphereNow = x;
     this.atmosphere.uniforms.uAmt!.value = x;
-    if (shell !== undefined) this.atmosphere.uniforms.uShell!.value = shell;
     this.mist.uniforms.uAmt!.value = x;
+    this.beams.uniforms.uAmt!.value = x;
     if (this.atmosphereMesh) this.atmosphereMesh.visible = x > 0;
     if (this.mistMesh) this.mistMesh.visible = x > 0;
+    if (this.beamMesh) this.beamMesh.visible = x > 0;
+  }
+
+  /**
+   * What the mist needs each frame it is there: the glow's shell is made `thicknessPx` drawing-buffer pixels thick at the limb (whatever the distance: the shell is
+   * `thicknessPx * sqrt(d^2 - 1) / focalPx` over the surface, a radial offset at the limb being seen foreshortened by exactly that), the size of a pixel for the beams'
+   * width, and the clock for their swell.
+   */
+  frameAtmosphere(d: number, focalPx: number, bufW: number, bufH: number, nowMs: number) {
+    if (this.atmosphereNow <= 0) return;
+    const over = Math.min(BEAMS.maxShell, Math.max(BEAMS.minShell, (BEAMS.glowPx * Math.sqrt(Math.max(1e-4, d * d - 1))) / Math.max(1, focalPx)));
+    const shell = 1 + over;
+    this.atmosphere.uniforms.uShell!.value = shell;
+    this.atmosphereMesh?.scale.setScalar(shell);
+    this.beams.uniforms.uPixel!.value = [2 / bufW, 2 / bufH];
+    this.beams.uniforms.uTime!.value = nowMs / 1000;
   }
 
   /** The places' lights, 0 (out) to 1: they come up through the dither. */
