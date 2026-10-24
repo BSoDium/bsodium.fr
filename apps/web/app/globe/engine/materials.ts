@@ -175,9 +175,9 @@ export function mistMaterial(): ShaderMaterial {
  * The SURFACE: the planet's own picture, a satellite view of the land (NASA's Blue Marble, public domain, smoothed) as a field of DOTS ON THE ART'S OWN PIXELS: `uEarth` is its
  * brightness (0 at sea; filtered, so that the regions are smooth), looked up by the fragment's direction (the scene being in the earth's frame, so the regions turn with the
  * planet) and turned into a DENSITY, the darker the ground the denser the dots (a twentieth of the pixels in the brightest deserts and ice, over two fifths in the darkest
- * forests), fading to nothing at the coast. Each dot is exactly ONE drawing-buffer pixel, which is an art pixel, so that nothing falls between the pixels of the page's own
- * grid; and which pixels hold a dot is not the ordered dither's square matrix but an organic, unaligned threshold (interleaved gradient noise on the pixel's coordinates, a
- * pattern with no grid in it). The regions move with the ground, the dots are the screen's, as every dither of the page is. `uAmt` (0..1: the scene thins it with the
+ * forests), fading to nothing at the coast. Which cells of the ground (2048 x 1024, about an art pixel each at the resting view, larger as the camera nears) hold a dot is not the ordered dither's square matrix but an
+ * organic, unaligned threshold (interleaved gradient noise on the cell's coordinates, a pattern with no grid in it): the dots belong to the planet and move with it, they do
+ * not stay on the screen while the earth slides under them. `uAmt` (0..1: the scene thins it with the
  * zoom, `engine/surface.ts`) scales the density; a dot is a flat grey (`uColor`) at `uCover`.
  */
 export function surfaceMaterial(): ShaderMaterial {
@@ -200,7 +200,8 @@ export function surfaceMaterial(): ShaderMaterial {
         // brightness 0..1 over the land (the picture lifts it to 0.2 and over); dark is dense; thin out into the sea
         float dark = 1.0 - clamp((v - 0.2) / 0.8, 0.0, 1.0);
         float density = (0.05 + 0.4 * dark * dark) * smoothstep(0.04, 0.2, v) * uAmt;
-        if (gradientNoise(floor(gl_FragCoord.xy)) >= density) discard;
+        // (a cell of the ground, about one art pixel wide at the resting view: the dots stay where they are on the planet as it moves)
+        if (gradientNoise(floor(uv * vec2(2048.0, 1024.0))) >= density) discard;
         gl_FragColor = vec4(uColor, uCover);
       }
     `,

@@ -190,11 +190,11 @@ export class GlobeScene {
     // veil on the ground is the page's own colour with a trace of ink, so it covers the lines without painting anything.
     const bg = t.background;
     const mixTo = (k: number) => [0, 1, 2].map((i) => bg[i]! + (t.ink[i]! - bg[i]!) * k) as [number, number, number];
-    this.atmosphere.uniforms.uColor!.value.setRGB(...mixTo(0.55));
-    this.mist.uniforms.uColor!.value.setRGB(...mixTo(0.3));
+    this.atmosphere.uniforms.uColor!.value.setRGB(...mixTo(t.scheme === "dark" ? 0.5 : 0.3));
+    this.mist.uniforms.uColor!.value.setRGB(...mixTo(t.scheme === "dark" ? 0.3 : 0.18));
     this.surface.uniforms.uColor!.value.setRGB(...mixTo(0.5));
-    this.atmosphere.uniforms.uCover!.value = t.scheme === "dark" ? 0.55 : 0.45;
-    this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.5 : 0.4;
+    this.atmosphere.uniforms.uCover!.value = t.scheme === "dark" ? 0.4 : 0.26;
+    this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.36 : 0.24;
     this.surface.uniforms.uCover!.value = t.scheme === "dark" ? 0.4 : 0.34;
     this.graticule.uniforms.uColor!.value.setRGB(...t.grid);
     this.ramp = t.ramp;
@@ -327,7 +327,7 @@ export class GlobeScene {
   kept: ReadonlySet<string> | null = null;
 
   /** Per-frame uniforms that depend on the camera. `now` is the clock (ms) the border fade runs on; `instant`: reduced motion. */
-  syncCamera(basis: ViewBasis, zoom: number, pixel: number, now: number, instant: boolean, lat = 0, view = 0) {
+  syncCamera(basis: ViewBasis, zoom: number, pixel: number, now: number, instant: boolean, lat = 0, view = 0, hold = false) {
     this.routes.setLift(routeLift(zoom));
     this.routes.setScale(pixel, zoomToRadiusPx(zoom));
     // the Web Mercator zoom with the scale the centre has on the globe (the unified zoom less log2 of the secant of the latitude)
@@ -335,11 +335,12 @@ export class GlobeScene {
     // Borders: on from the zoom `TUNING.borderZoom` (a hysteresis), off below. The fade is a timed TONE (a line is always solid): the faintest
     // grey level stepping up through the palette to the coast level (the coastline's, `borderLevel`) over `FADE_MS`, whatever the camera does, so the globe
     // at rest never shows a half-faded border. Never a dither: a low-coverage dither on 1px lines reads as noise instead of a fade.
-    this.bordersOn = bordersWanted(this.bordersOn, zoom, TUNING.borderZoom);
+    // (`hold`: the cinematic interlude's camera flies in and out of the borders' zoom range, which is no reason for them to come and go: they stay as they were)
+    if (!hold) this.bordersOn = bordersWanted(this.bordersOn, zoom, TUNING.borderZoom);
     if (!this.bordersSeen) {
       this.bordersSeen = true; // the first frame starts in its state
       this.borderFade.snap(0, this.bordersOn);
-    } else this.borderFade.set(0, this.bordersOn);
+    } else if (!hold) this.borderFade.set(0, this.bordersOn);
     if (this.borderFade.moving) this.borderFade.step(clockStep(this.lastClock, now), instant);
     this.lastClock = now;
     this.setBorderLevel(borderLevel(this.borderFade.value(0), this.ramp.length));

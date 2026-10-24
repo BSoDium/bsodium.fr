@@ -2026,7 +2026,9 @@ export class GlobeRenderer {
     // the mist: a thin grey glow at the limb and a veil that bleeds onto the ground, for the length of the interlude (they follow the land's easing: in and out with it)
     this.globe.setAtmosphere(land * CINEMATIC.atmosphere.amount);
     // the land's own picture: for the unzoomed views (fading out with the zoom, where the borders come in), stronger in the interlude
-    this.globe.setSurface(surfaceShare(zoom, land));
+    // (not by the zoom while the interlude flies: its close shots are not a visitor's zoom)
+    const inInterlude = this.flying || land > 0;
+    this.globe.setSurface(surfaceShare(inInterlude ? 0 : zoom, land));
     this.globe.setCity(CINEMATIC.planet.cities ? (this.caption?.cityShare() ?? 0) : 0);
     // the page's own hero steps back with it (app.css `--interlude`): written when it moves by a hundredth
     if (Math.abs(land - this.interludeVar) >= 0.01 || (land === 0 && this.interludeVar !== 0)) {
@@ -2043,7 +2045,7 @@ export class GlobeRenderer {
     const sun = this.sunVec.set(...CINEMATIC.light.key).normalize().transformDirection(cam.matrixWorld);
     this.globe.setSun(sun.x, sun.y, sun.z);
     const now = performance.now();
-    this.globe.syncCamera(b, zoom, this.pixel, now, this.reduced, lat, Math.max(this.width, this.height));
+    this.globe.syncCamera(b, zoom, this.pixel, now, this.reduced, lat, Math.max(this.width, this.height), inInterlude);
     // (the caption's lines stay on the page's meridian and latitude; only what is hidden is the flying camera's)
     const over = pose ? { lon, lat } : undefined;
     this.lastBasis = { d, lon: v.lon, lat: v.lat, cam: over };
