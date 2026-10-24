@@ -29,6 +29,7 @@ import {
   OneFactor,
   OneMinusSrcAlphaFactor,
   Mesh,
+  Vector3,
   MeshBasicMaterial,
   type PerspectiveCamera,
   Scene,
@@ -45,9 +46,9 @@ import {
   CaptionMotion,
   DRIFT,
   captionColors,
-  hex,
   captionFont,
   dimPresence,
+  eggExitShare,
   entranceStart,
   lineHidden,
   lineOf,
@@ -73,8 +74,9 @@ import {
   type Placement,
   eggMs,
 } from "./caption";
-import { CINEMATIC, cinematicForced, notePlayed, planForPage } from "./cinematic";
+import { CINEMATIC, notePlayed, onDemandPlan, planForPage } from "./cinematic";
 import { buildWordGeometry } from "./cinematic-word";
+import { lonLatToVec3 } from "./geo";
 import { prepareSound, SOUND, startSound, type SoundHandle } from "./cinematic-sound";
 import { OCCLUDER_RADIUS } from "./materials";
 import { CAPTION, ENERGY } from "./tuning";
@@ -159,10 +161,12 @@ const EGG_VERT = /* glsl */ `
   uniform float uHalfSpan;
   uniform float uR;
   uniform float uDepth;
+  uniform vec3 uAxis;
   attribute float kind;
   varying vec3 vNormal;
   varying vec3 vView;
   varying float vKind;
+  varying float vCosPsi;
   void main() {
     float lat = uBaseLat - uBelow + position.y * (uBelow + uAbove);
     float a = (position.x * 2.0 - 1.0) * uHalfSpan;
@@ -177,6 +181,8 @@ const EGG_VERT = /* glsl */ `
     vec3 radial = vec3(cl * sa, sl, cl * ca);
     vNormal = normalMatrix * (normal.x * east + normal.y * north + normal.z * radial);
     vKind = kind;
+    // the angle from the page's view axis, in the earth's frame (the strip is turned about the earth's axis by the mesh's matrix): how far round the planet this point is
+    vCosPsi = dot(normalize((modelMatrix * vec4(p, 1.0)).xyz), uAxis);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     vView = mv.xyz;
     gl_Position = projectionMatrix * mv;
@@ -195,23 +201,55 @@ const EGG_FRAG = /* glsl */ `
   uniform vec3 uFace;
   uniform vec3 uOutline;
   uniform vec3 uSide;
+  uniform vec3 uBack;
+  uniform float uGlint;
+  uniform float uExposure;
+  uniform float uSky;
+  uniform float uFaceGain;
+  uniform float uDissolve;
+  uniform float uFinal;
+  uniform vec3 uPlanet;
+  uniform vec3 uHaze;
   varying vec3 vNormal;
   varying vec3 vView;
   varying float vKind;
-  vec3 studio(vec3 r) {
-    float h = r.y;
-    vec3 sky = mix(vec3(0.78, 0.84, 0.94), vec3(1.0), smoothstep(0.0, 0.9, h));
-    vec3 floorTone = vec3(0.38, 0.4, 0.45);
-    vec3 c = mix(floorTone, sky, smoothstep(-0.3, 0.12, h));
-    float band = (h + 0.1) / 0.13;
-    c *= 1.0 - 0.38 * exp(-band * band);
-    c += 1.1 * pow(max(dot(r, normalize(vec3(-0.55, 0.62, 0.56))), 0.0), 18.0);
-    c += 0.6 * pow(max(dot(r, normalize(vec3(0.62, 0.28, 0.73))), 0.0), 30.0);
-    return c;
+  varying float vCosPsi;
+  // (the thin strip lights, a few degrees wide, are what a face does not reflect, one direction, but the bevels do, one after another as the word turns)
+  // Metal in space: nothing is lit but by a few soft boxes and strips, so the surfaces are the page's own tone and show only the REFLECTION of them, which
+  // slides across the faces and runs along the bevels as the word turns. The result is how much of a box the reflected direction is in (0 outside them all).
+  // BANDS, not lobes: a round box reflects as a disc on a large flat face (two planets on the letters in the far view, with nothing there). A band is the set
+  // of directions near a great circle, so it crosses a face as a straight sweep and wraps a bevel as a line.
+  float band(vec3 r, vec3 axis, float centre, float w) { return 1.0 - smoothstep(w, w * 2.2, abs(dot(r, normalize(axis)) - centre)); }
+  float studio(vec3 r) {
+    float s = 0.55 * band(r, vec3(-0.4, 0.8, 0.45), 0.35, 0.1);
+    s += 1.0 * band(r, vec3(0.9, 0.25, 0.35), 0.15, 0.06);
+    s += 0.6 * band(r, vec3(-0.15, -0.9, 0.4), 0.3, 0.12);
+    // (the broad sky share lifts every face a little: on the dark page; on the light one it would grey them, and the form is in the bands alone)
+    s += 0.45 * uSky * smoothstep(0.1, 0.95, r.y);
+    return s;
+  }
+  // the lines' own ordered dither, on the art's pixels (this canvas is drawn at the art's resolution)
+  float dither2(vec2 a) { return fract(a.x * 0.5 + a.y * a.y * 0.75); }
+  float dither4(vec2 a) { return dither2(0.5 * a) * 0.25 + dither2(a); }
+  float strips(vec3 r) {
+    float s = 0.0;
+    s += 1.0 - smoothstep(0.004, 0.012, abs(dot(r, normalize(vec3(-0.35, 0.82, 0.45))) - 0.1));
+    s += 1.0 - smoothstep(0.004, 0.012, abs(dot(r, normalize(vec3(0.7, 0.2, 0.7))) - 0.4));
+    s += 1.0 - smoothstep(0.004, 0.012, abs(dot(r, normalize(vec3(-0.8, -0.1, 0.6))) + 0.2));
+    s += 1.0 - smoothstep(0.004, 0.012, abs(dot(r, normalize(vec3(0.2, -0.6, 0.78))) - 0.3));
+    return s;
   }
   void main() {
+    // Passing behind the planet: the letters are UNLOADED, a pixel at a time in the lines' own ordered dither, the first to pass (the farthest round) first. Only
+    // on the way out (uDissolve), and all of it at the end (uFinal).
+    if (uDissolve > 0.5) {
+      float psi = acos(clamp(vCosPsi, -1.0, 1.0));
+      float k = max(smoothstep(${((CINEMATIC.dissolve.from * Math.PI) / 180).toFixed(4)}, ${((CINEMATIC.dissolve.to * Math.PI) / 180).toFixed(4)}, psi), uFinal);
+      if (k > dither4(floor(gl_FragCoord.xy))) discard;
+    }
     vec3 n = normalize(vNormal);
-    vec3 albedo = vKind < 0.5 ? uFace : (vKind < 1.5 ? uOutline : uSide);
+    // face, the rim (the accent), the walls, the back (towards the planet: out of the sun, its own tone)
+    vec3 albedo = vKind < 0.5 ? uFace : (vKind < 1.5 ? uOutline : (vKind < 3.5 ? uSide : uBack));
     vec3 key = normalize(vec3(${CINEMATIC.light.key.map((x) => x.toFixed(3)).join(", ")}));
     vec3 fill = normalize(vec3(${CINEMATIC.light.fill.map((x) => x.toFixed(3)).join(", ")}));
     float diff = max(dot(n, key), 0.0);
@@ -219,9 +257,30 @@ const EGG_FRAG = /* glsl */ `
     vec3 h = normalize(key + vec3(0.0, 0.0, 1.0));
     float spec = pow(max(dot(n, h), 0.0), ${CINEMATIC.light.shininess.toFixed(1)}) * ${CINEMATIC.light.specular.toFixed(3)} * (vKind < 1.5 ? 1.0 : 0.6);
     vec3 lit = albedo * (${CINEMATIC.light.ambient.toFixed(3)} + ${CINEMATIC.light.diffuse.toFixed(3)} * diff + ${CINEMATIC.light.filler.toFixed(3)} * fil);
-    vec3 refl = albedo * studio(reflect(normalize(vView), n)) * ${CINEMATIC.light.reflect.toFixed(3)};
-    vec3 col = mix(lit, refl, ${CINEMATIC.light.metal.toFixed(3)}) + vec3(spec);
-    gl_FragColor = vec4(min(col, vec3(1.0)), 1.0);
+    vec3 rv = reflect(normalize(vView), n);
+    // how much each surface shines: the bevel the most (it turns the quickest), the walls, the faces, the backs (out of the light) hardly
+    float gain = vKind < 0.5 ? ${CINEMATIC.light.faceShine.toFixed(3)} * uFaceGain : (vKind < 1.5 ? ${CINEMATIC.light.edgeShine.toFixed(3)} : (vKind < 3.5 ? ${CINEMATIC.light.wallShine.toFixed(3)} : 0.25));
+    vec3 col = lit * uExposure + vec3(uGlint * (studio(rv) * gain + strips(rv) * ${CINEMATIC.light.edgeShine.toFixed(3)} * (vKind > 3.5 ? 0.3 : 1.0)));
+    col += vec3(spec * uGlint * 0.5 * (vKind > 3.5 ? 0.3 : 1.0));
+    // the outline is the line: the ink, hardly lit
+    if (vKind > 0.5 && vKind < 1.5) col = mix(col, uOutline, ${CINEMATIC.light.outlineMix.toFixed(2)});
+    // Behind the planet's atmosphere: a letter whose sight line has passed close to the planet before reaching it is seen THROUGH the air at the limb, and dims into the HAZE's
+    // colour (the page's own on the dark page; on the light page a grey step towards the ink: the page's white would LIGHTEN the letters) the nearer that line grazed the planet (b, in planet radii: 1 is the limb itself, where the letters are about to go behind it)
+    {
+      float len = length(vView);
+      vec3 dir = vView / max(len, 1e-4);
+      float tc = dot(uPlanet, dir);
+      if (tc > 0.0 && tc < len) {
+        float b = length(uPlanet - tc * dir);
+        float haze = ${CINEMATIC.atmosphere.dim.amount.toFixed(3)} * (1.0 - smoothstep(1.0, 1.0 + ${CINEMATIC.atmosphere.dim.reach.toFixed(3)}, b));
+        col = mix(col, uHaze, haze);
+      }
+    }
+    // a few levels, dithered on the art's pixels: the word is made of the globe's own pixels and tones
+    float L = ${CINEMATIC.levels.toFixed(1)};
+    col = clamp(col, 0.0, 1.0);
+    col = floor(col * (L - 1.0) + dither4(floor(gl_FragCoord.xy))) / (L - 1.0);
+    gl_FragColor = vec4(col, 1.0);
   }
 `;
 
@@ -288,6 +347,9 @@ const BAND_FRAG = /* glsl */ `
   }
 `;
 
+/** An angle brought into -pi..pi. */
+const wrapRad = (a: number): number => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+
 /** The `set` of the big row of the cinematic interlude (engine/cinematic.ts): not a phrase set, not a fixed row. */
 const EGG = -2;
 
@@ -341,8 +403,6 @@ export interface CaptionState {
    * the first row's cycle count, the side each row came in from (`lastIn`) and goes out by (`lastOut`) in its current cycle.
    */
   cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number; lastOut: number[]; lastIn: number[] };
-  /** The cinematic interlude: planned, under way, how many levels of zoom the globe is pulled back by, the big row's turn (radians; null: not on the stage) and whether its strip is drawn. */
-  egg: { planned: boolean; active: boolean; zoomOut: number; theta: number | null; drawn: boolean; slices: number; depth: number; dpr: number };
   /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
   baselines: number[];
   texture: { width: number; height: number }[];
@@ -371,7 +431,7 @@ class CrispCanvas {
   private lost = false;
   private shown = false;
   /** What was last written to the canvas and its style: a frame writes only what changed (a size change clears the buffer and re-runs layout). */
-  private last = { w: -1, h: -1, dpr: -1, left: NaN, top: NaN, mask: "", pos: "", size: "" };
+  private last = { w: -1, h: -1, dpr: -1, left: NaN, top: NaN, mask: "", pos: "", size: "", pixelated: false };
 
   constructor(host: HTMLElement, onRestore: () => void) {
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
@@ -401,7 +461,7 @@ class CrispCanvas {
     this.scene.add(globe);
   }
 
-  render(camera: PerspectiveCamera, rect: CaptionRect, dpr: number): void {
+  render(camera: PerspectiveCamera, rect: CaptionRect, dpr: number, pixelated = false): void {
     if (this.lost) return;
     const r = this.renderer;
     const el = r.domElement;
@@ -417,6 +477,11 @@ class CrispCanvas {
       L.dpr = dpr;
       el.style.width = `${w}px`;
       el.style.height = `${h}px`;
+    }
+    // (the interlude's word is drawn at the globe's own pixel size and enlarged without smoothing: the art's grid)
+    if (pixelated !== L.pixelated) {
+      el.style.imageRendering = pixelated ? "pixelated" : "";
+      L.pixelated = pixelated;
     }
     if (rect.left !== L.left) {
       el.style.left = `${rect.left}px`;
@@ -454,6 +519,14 @@ class CrispCanvas {
   /** Upload a texture now (its first use would do it in the middle of a frame: the first time a phrase set comes round). */
   warm(tex: CanvasTexture): void {
     this.renderer.initTexture(tex);
+  }
+
+  /** The canvas's stacking: above the hero (15) or, for the interlude, below its text and its wash (9, the hero is 10), so the word and the planet go behind the name. */
+  private z = "15";
+  setZ(z: string): void {
+    if (z === this.z) return;
+    this.z = z;
+    this.renderer.domElement.style.zIndex = z;
   }
 
   hide(): void {
@@ -577,6 +650,16 @@ export class CaptionLayer {
   private eggFace = { value: [1, 1, 1] as number[] };
   private eggOutline = { value: [0.7, 0.5, 0.1] as number[] };
   private eggSide = { value: [0.5, 0.5, 0.5] as number[] };
+  private eggBack = { value: [0.2, 0.2, 0.2] as number[] };
+  private eggGlint = { value: 0 };
+  private eggExposure = { value: 1 };
+  private eggSky = { value: 1 };
+  private eggFaceGain = { value: 1 };
+  /** The uniforms of the dissolve, shared by the word's material (`EGG_VERT`, `EGG_FRAG`). */
+  /** The planet's centre in the camera's frame (set per frame in `renderCrisp`): the word's letters dim behind its atmosphere (`EGG_FRAG`). */
+  private eggPlanet = { value: new Vector3() };
+  private eggHaze = { value: [0, 0, 0] as number[] };
+  private eggDissolve = { uDissolve: { value: 0 }, uFinal: { value: 0 }, uAxis: { value: [0, 0, 1] as number[] } };
   /** The far slices (layer below this) that carry the text colour in mode `edge` (0: none). */
   private edgeLayer = { value: 0 };
   /** Slices of the thickness now (the quality governor lowers them; `CAPTION.slices` is the best) and the most the canvas is drawn at. */
@@ -656,18 +739,6 @@ export class CaptionLayer {
       this.swell?.fade(SOUND.fadeCutMs);
       this.swell = null;
     };
-    // With `?cinematic` the owner can play it again at will: the key U (a key press is a gesture that lets the browser play the sound, and does not
-    // leave the presentation, as a click on the globe does)
-    if (this.motion.egg && cinematicForced() && typeof window !== "undefined") {
-      this.onKey = (e: KeyboardEvent) => {
-        if (e.key.toLowerCase() !== "u" || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-        const t = e.target as HTMLElement | null;
-        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-        this.playInterlude();
-      };
-      window.addEventListener("keydown", this.onKey);
-      console.info("[interlude] ?cinematic: press U to play it now (a key press also lets the browser play its sound)");
-    }
     this.motion.onResume = () => {
       // (the showing begins again from its first phrase set)
       this.parkSet = -1;
@@ -689,6 +760,16 @@ export class CaptionLayer {
         uFace: this.eggFace,
         uOutline: this.eggOutline,
         uSide: this.eggSide,
+        uBack: this.eggBack,
+        uGlint: this.eggGlint,
+        uExposure: this.eggExposure,
+        uSky: this.eggSky,
+        uFaceGain: this.eggFaceGain,
+        uDissolve: this.eggDissolve.uDissolve,
+        uFinal: this.eggDissolve.uFinal,
+        uAxis: this.eggDissolve.uAxis,
+        uPlanet: this.eggPlanet,
+        uHaze: this.eggHaze,
         uBaseLat: { value: 0 },
         uBelow: { value: 0 },
         uAbove: { value: 0 },
@@ -823,9 +904,18 @@ export class CaptionLayer {
     this.edgeLayer.value = this.sideMode === "edge" ? (CAPTION.colors.edgeSlices - 0.5) / (this.slices - 1) : 0;
     this.dimColor.value = [...theme.background];
     const dark = 0.2126 * theme.background[0] + 0.7152 * theme.background[1] + 0.0722 * theme.background[2] < 0.5;
-    this.eggFace.value = [...hex(CINEMATIC.face)];
-    this.eggOutline.value = [...hex(dark ? CINEMATIC.outline.dark : CINEMATIC.outline.light)];
-    this.eggSide.value = [...hex(dark ? CINEMATIC.sideColor.dark : CINEMATIC.sideColor.light)];
+    // the word is colourless: each surface is a step from the page's colour towards the ink (`CINEMATIC.tone`)
+    const tone = dark ? CINEMATIC.tone.dark : CINEMATIC.tone.light;
+    const toward = (k: number): number[] => [0, 1, 2].map((i) => theme.background[i]! + (theme.ink[i]! - theme.background[i]!) * k);
+    this.eggFace.value = toward(tone.face);
+    this.eggSide.value = toward(tone.side);
+    this.eggBack.value = toward(tone.back);
+    this.eggOutline.value = toward(tone.outline);
+    this.eggGlint.value = tone.glint;
+    this.eggExposure.value = tone.exposure;
+    this.eggSky.value = tone.sky;
+    this.eggFaceGain.value = tone.faceGain;
+    this.eggHaze.value = dark ? [...theme.background] : toward(CINEMATIC.atmosphere.dim.lightTone);
     this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
   }
 
@@ -872,8 +962,9 @@ export class CaptionLayer {
 
   /** How far the globe has pulled back for the cinematic interlude, 0 to 1 (see `zoomOutLevels`), and when it was last read. */
   private zoomK = 0;
+  /** How far the picture is put upright and level (`CaptionMotion.eggLevel`); kept as it is when the interlude ends or is cut short (the pull-back then takes it back). */
+  private levelK = 0;
   private zoomAt = -1;
-  private onKey: ((e: KeyboardEvent) => void) | null = null;
 
   /** The cinematic interlude is under way (the rows are leaving, the word is on, or the globe is coming back). */
   get interluding(): boolean {
@@ -885,7 +976,7 @@ export class CaptionLayer {
    * placed from that camera (the boxes, the labels) waits until this is over, or it appears where the planet will be and not where it is.
    */
   get pulledBack(): boolean {
-    return this.motion.eggActive || this.zoomK > 0;
+    return this.motion.eggActive || this.zoomK > 0 || this.flightU < 1;
   }
 
   /**
@@ -894,23 +985,99 @@ export class CaptionLayer {
    */
   ringShare(): number {
     const x = Math.min(1, this.zoomK * 5);
-    return 1 - x * x * (3 - 2 * x);
+    // (and the moment the camera leaves the page's own, the ring is not round anything: it goes in the first moments of the dive)
+    const y = Math.min(1, (1 - this.flightU) * 30);
+    return Math.min(1 - x * x * (3 - 2 * x), 1 - y * y * (3 - 2 * y));
   }
 
-  /** Play the interlude now (the key U with `?cinematic`): false when it cannot (the rows are not rolling, or one is under way, or there is none planned). */
-  playInterlude(retries = 6): boolean {
+  /** An interlude is planned for this page (the globe makes what it needs of it, such as the land's picture, ahead of time). */
+  get eggPlanned(): boolean {
+    return this.motion.egg !== null;
+  }
+
+  /**
+   * How much the continents are filled with the ink now, 0 to 1: the whole of the interlude (the flight, the word, the globe coming back), eased in and
+   * out (`CINEMATIC.land`). Read once a frame, after `flightProgress` and `zoomOutLevels`.
+   */
+  landShare(): number {
+    // (a flight cut short is not wanted: the fill goes with the camera's glide)
+    const want = this.motion.eggActive || (this.cutK === 0 && (this.zoomK > 0 || this.flightU < 1));
+    const now = performance.now();
+    const dt = this.landAt < 0 ? 0 : Math.min(now - this.landAt, 64);
+    this.landAt = want || this.landK > 0 ? now : -1;
+    // (cut short: the fill goes with the camera's glide, not over the natural ending's slower fade)
+    const out = this.cutK > 0 ? CINEMATIC.land.cutMs : CINEMATIC.land.outMs;
+    this.landK = Math.min(1, Math.max(0, this.landK + (want ? dt / CINEMATIC.land.inMs : -dt / out)));
+    this.landWant = want;
+    return this.landK * this.landK * (3 - 2 * this.landK);
+  }
+  private landK = 0;
+  private landAt = -1;
+  private landWant = false;
+
+  /**
+   * How much the places' lights are up now, 0 to 1: they come up through the dither over `CINEMATIC.city.inMs` when the word has landed (the chord), the
+   * one accent, and go with the end of the interlude (or a cut) over `outMs`.
+   */
+  cityShare(): number {
+    const want = this.motion.eggActive && this.flightU >= 1;
+    const now = performance.now();
+    const dt = this.cityAt < 0 ? 0 : Math.min(now - this.cityAt, 64);
+    this.cityAt = want || this.cityK > 0 ? now : -1;
+    this.cityK = Math.min(1, Math.max(0, this.cityK + (want ? dt / CINEMATIC.city.inMs : -dt / CINEMATIC.city.outMs)));
+    this.cityWant = want;
+    return this.cityK;
+  }
+  private cityK = 0;
+  private cityAt = -1;
+  private cityWant = false;
+
+  /**
+   * The visitor asks for the interlude (the search palette's entry): arms one if none is planned (the word's mesh and the sound are made only now, then), and plays it
+   * from the resting roll as soon as the rows are rolling. Call it from the gesture itself (the sound is unlocked there). False when it cannot be played (one is under way, or
+   * the caption is not there).
+   */
+  summonInterlude(retries = 14): boolean {
+    if (this.disposed || this.failed || this.motion.eggActive) return false;
     const b = this.built;
-    if (this.disposed || this.failed || !b || !b.egg || this.motion.eggActive) return false;
-    // (one that has played is spent: a new plan, the same as the first)
-    this.motion.egg ??= { n: 0, shape: { ...CINEMATIC.shape }, side: CINEMATIC.side };
-    const ok = this.motion.replayEgg(performance.now());
-    if (ok) this.opts.onChange();
-    // (the key press is an input: it wakes a caption the idle hold had stopped, and the rows are rolling again a moment later: ask again)
-    else if (retries > 0) {
-      window.clearTimeout(this.replayTimer);
-      this.replayTimer = window.setTimeout(() => this.playInterlude(retries - 1), 500);
+    if (!b) {
+      // (not built yet: it will be, the sizing is on its way)
+      if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
+      else this.disarm();
+      return false;
     }
+    if (!this.motion.egg) {
+      this.motion.egg = onDemandPlan();
+      this.armed = true;
+      prepareSound();
+    }
+    if (!b.egg) {
+      // (the word's mesh is made now: the strips are built again, and replace the old ones when they are made)
+      b.key = "stale";
+      void this.build();
+      if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
+      else this.disarm();
+      return false;
+    }
+    const ok = this.motion.replayEgg(performance.now());
+    if (ok) {
+      this.armed = false;
+      this.opts.onChange();
+    } else if (retries > 0) {
+      // (the rows may not be rolling yet, or the idle hold had stopped the caption: it is woken by the input, and asked again a moment later)
+      this.later(() => this.summonInterlude(retries - 1));
+    } else this.disarm();
     return ok;
+  }
+  /** A plan made for a request that could not be played is dropped: the interlude is never to begin by itself, later, for a visitor who has gone elsewhere. */
+  private disarm(): void {
+    if (this.armed && !this.motion.eggActive) this.motion.egg = null;
+    this.armed = false;
+  }
+  private armed = false;
+  private later(fn: () => void): void {
+    window.clearTimeout(this.replayTimer);
+    this.replayTimer = window.setTimeout(fn, 400);
   }
   private replayTimer = 0;
 
@@ -926,6 +1093,7 @@ export class CaptionLayer {
     const shape = this.motion.egg?.shape ?? CINEMATIC.shape;
     if (this.motion.eggActive) {
       this.zoomK = this.motion.eggZoom();
+      this.levelK = this.motion.eggLevel();
       this.zoomAt = -1;
     } else if (this.zoomK > 0) {
       const now = performance.now();
@@ -937,11 +1105,51 @@ export class CaptionLayer {
   }
 
   /**
+   * How far the camera's flight has got now, 0 to 1 (engine/flight.ts; 1: the page's own camera, no flight). During the interlude it is the timeline's own
+   * value (`CaptionMotion.eggFlight`); when the interlude is cut short it runs on to 1 at the pace the globe gives its size back (a flight cut short
+   * is flown to its end, quickly). Read with `zoomOutLevels`, once a frame.
+   */
+  flightProgress(): number {
+    if (this.motion.eggActive) {
+      this.flightU = this.motion.eggFlight();
+      this.flightAt = -1;
+      this.cutK = 0;
+    } else if (this.flightU < 1) {
+      // cut short: the flight is held where it was and the camera glides from there to the page's own (`flightCut`), over the time the globe gives its
+      // size back; when it has arrived the flight is over
+      const now = performance.now();
+      const dt = this.flightAt < 0 ? 0 : Math.min(now - this.flightAt, 64);
+      this.flightAt = now;
+      this.cutK = Math.min(1, this.cutK + dt / (this.motion.egg?.shape ?? CINEMATIC.shape).zoomCutMs);
+      if (this.cutK >= 1) this.flightU = 1;
+    }
+    return this.flightU;
+  }
+
+  /** How far a cut-short flight has glided to the page's own camera, 0 to 1, eased (0 outside one). */
+  flightCut(): number {
+    return this.cutK * this.cutK * (3 - 2 * this.cutK);
+  }
+  private cutK = 0;
+  private flightU = 1;
+  private flightAt = -1;
+
+  /**
    * How far the picture leans now, radians (0 outside the interlude): the pull-back's own eased value times the tilt, so the planet leans in as it
    * pulls back and comes upright as it comes back (and as it gives the size back when a gesture cuts the interlude short). Read after `zoomOutLevels`.
    */
   rollRad(): number {
-    return this.zoomK > 0 ? this.zoomK * ((CINEMATIC.tiltDeg * Math.PI) / 180) : 0;
+    return this.zoomK > 0 ? this.zoomK * (1 - this.levelK) * ((CINEMATIC.tiltDeg * Math.PI) / 180) : 0;
+  }
+
+  /** How much of the interlude's small line under the globe shows now, 0..1 (`CaptionMotion.eggTagline`). */
+  eggTagline(): number {
+    return this.motion.eggTagline();
+  }
+
+  /** How far the camera has come down to the lockup's latitude, 0..1 (the pull-back's value times the levelling's: it goes back with the pull-back). */
+  levelShare(): number {
+    return this.zoomK * this.levelK;
   }
 
   /** The radius of the shell a strip is on: the rows' own, or the cinematic word's higher one. */
@@ -1095,7 +1303,11 @@ export class CaptionLayer {
    * roll's clock goes on from where it was when the globe is drawn again.
    */
   settle(): void {
-    this.zoomK = 0; // (the pull-back is a timed thing too: nothing is drawn for it to run in)
+    this.zoomK = 0; // (the pull-back and the flight are timed things too: nothing is drawn for them to run in)
+    this.flightU = 1;
+    this.cutK = 0;
+    this.landK = 0;
+    this.cityK = 0;
     this.motion.settle(this.want);
   }
 
@@ -1111,7 +1323,7 @@ export class CaptionLayer {
 
   /** The entrance or the orbit exit is under way: full frames (the globe's own loop) are wanted. */
   get animating(): boolean {
-    return this.built !== null && !this.failed && (this.motion.animating || this.zoomK > 0);
+    return this.built !== null && !this.failed && (this.motion.animating || this.zoomK > 0 || this.flightU < 1 || (this.landWant ? this.landK < 1 : this.landK > 0) || (this.cityWant ? this.cityK < 1 : this.cityK > 0));
   }
 
   /** The rows are in and rolling (or turning over to the next phrase set): the caption's own capped loop draws it, nothing else. */
@@ -1142,10 +1354,14 @@ export class CaptionLayer {
    * Per frame, after the camera is current: turn every line to where the clock has it. `lon` and `lat` are the view's longitude and latitude
    * (degrees: the lines are centred on the view's meridian; their parallels are FIXED, on the equator's side, and never move for the camera's
    * tilt: `lat` is only the camera's, for what is hidden and for where the dimming sits), `d` the camera's distance, `now` the clock the
-   * entrance runs on (the same one `show` and `hide` were given).
+   * entrance runs on (the same one `show` and `hide` were given). `cam`: the camera's own longitude and latitude, when it is not over the view's (the
+   * interlude's flight): the lines stay on the view's meridian, and it is only what is hidden that is the camera's.
    */
-  sync(d: number, lon: number, lat: number, now: number): void {
+  sync(d: number, lon: number, lat: number, now: number, cam?: { lon: number; lat: number }): void {
     this.viewLat = lat;
+    // (what is hidden, and how thick, is for the camera: while the interlude's camera flies, it is not on the page's meridian)
+    const camLat = cam ? cam.lat : lat;
+    const dLon = cam ? wrapRad(((lon - cam.lon) * Math.PI) / 180) : 0;
     const b = this.built;
     if (!b || this.failed) return;
     if (this.motion.waiting) this.motion.begin(now, CAPTION.enter.loadDelayMs);
@@ -1182,24 +1398,38 @@ export class CaptionLayer {
     let any = false;
     const bands = this.dimMode === "bands" && this.dimAlpha > 0;
     let presence = 0;
-    let eggPresence = 0;
     let eggTheta: number | null = null;
     if (b.egg) {
-      // (for any camera distance: the globe is pulled back while it lasts)
-      b.egg.start = entranceStart({ baseLat: b.egg.place.baseLat, halfSpan: b.egg.place.halfSpan }, this.viewLat, undefined, CINEMATIC.radius);
+      // (the word's start, east of the page's meridian: its leading end at `CINEMATIC.leadStartLon`, a span of the word beyond it)
+      b.egg.start = (((((CINEMATIC.leadStartLon + (b.egg.place.halfSpan * 180) / Math.PI - lon) % 360) + 360) % 360) * Math.PI) / 180;
       this.motion.setEggStart(b.egg.start);
       eggTheta = this.motion.eggTheta();
+      // the letters dissolve as they pass behind the planet (the shader, from the page's view axis); how far through its exit the word is
+      const shapeNow = this.motion.egg?.shape ?? CINEMATIC.shape;
+      const q = eggTheta === null ? 0 : eggExitShare(eggTheta * this.motion.eggSide, shapeNow);
+      const u = this.eggDissolve;
+      u.uDissolve!.value = q > 0 ? 1 : 0;
+      u.uFinal!.value = Math.min(1, Math.max(0, (q - CINEMATIC.dissolve.final) / Math.max(1e-6, 1 - CINEMATIC.dissolve.final)));
+      const ax = lonLatToVec3(lon, lat);
+      (u.uAxis!.value as number[])[0] = ax[0];
+      (u.uAxis!.value as number[])[1] = ax[1];
+      (u.uAxis!.value as number[])[2] = ax[2];
     }
+    // (the rows are gone once they have left: the flight's camera would see them go on round the ring behind the planet)
+    const rowsOut = this.motion.eggRowsOut();
     for (const v of b.variants) {
       let theta = 0;
       let on = false;
       let start = 0;
       if (v.set === EGG) {
-        if (eggTheta !== null) {
+        // (not before the camera is in place, and the word behind the planet then: `CINEMATIC.wordFromU`)
+        if (eggTheta !== null && this.flightU >= CINEMATIC.wordFromU) {
           theta = eggTheta;
           start = b.egg!.start;
           on = true;
         }
+      } else if (rowsOut) {
+        // gone
       } else if (v.set < 0) {
         theta = rowTheta[v.row]!;
         start = this.rowStart(v.row);
@@ -1209,20 +1439,20 @@ export class CaptionLayer {
         start = this.rowStart(v.row);
         on = true;
       }
-      const hidden = !on || lineHidden(theta, v.line, d, lat, this.radiusOf(v));
+      const thetaCam = wrapRad(theta + dLon);
+      const hidden = !on || lineHidden(thetaCam, v.line, d, camLat, this.radiusOf(v));
       v.mesh.visible = !hidden;
       v.band.visible = false;
       if (hidden) continue;
       any = true;
       const p = dimPresence(theta, start);
-      if (v.set === EGG) eggPresence = p;
-      else presence += p;
+      if (v.set !== EGG) presence += p;
       // The earth's axis is y: a line's own meridian is the view's (`lon`), turned by the entrance's `theta` (east positive, west negative).
       this.tmp.makeRotationY((lon * Math.PI) / 180 + theta);
       v.mesh.matrix.copy(this.tmp);
       v.mesh.matrixWorldNeedsUpdate = true;
       // only as many slices as the side of the letters needs from here (the interlude's word is a solid mesh: no slices)
-      const ns = v.set === EGG ? v.n : this.slicesFor(theta, v.line.halfSpan, v.line.baseLat, lat);
+      const ns = v.set === EGG ? v.n : this.slicesFor(thetaCam, v.line.halfSpan, v.line.baseLat, camLat);
       if (ns !== v.n) {
         v.n = ns;
         v.mesh.geometry = this.unitFor(ns);
@@ -1237,8 +1467,9 @@ export class CaptionLayer {
     // The block's ellipse: its strength is the mean presence of the rows (a row that is on its way in or out is half of one).
     if (this.ellipse) {
       const rowsE = presence / Math.max(1, b.pieces.length);
-      const egg = eggPresence > rowsE;
-      const e = this.dimMode === "ellipse" && this.dimAlpha > 0 ? Math.max(rowsE, eggPresence) : 0;
+      // (the interlude's word is lit and contrasted enough: no dimming of the planet behind it, which was a band across the filled land)
+      const egg = false;
+      const e = this.dimMode === "ellipse" && this.dimAlpha > 0 ? rowsE : 0;
       this.ellipse.visible = e > 0.01;
       if (this.ellipse.visible) this.updateEllipse(lat, egg);
       this.ellipseU.uAlpha.value = this.dimAlpha * Math.min(1, e);
@@ -1340,15 +1571,25 @@ export class CaptionLayer {
 
   /** Draw the caption over the globe's frame. */
   /** The pixel ratio the caption's canvas was last drawn at (the word's slices are counted in device pixels). */
-  private dprNow = 2;
 
-  renderCrisp(camera: PerspectiveCamera, rect: CaptionRect, dpr: number): void {
-    this.dprNow = dpr;
+  renderCrisp(camera: PerspectiveCamera, rect: CaptionRect, dpr: number, artPx = 1): void {
+    // (the interlude's word goes BEHIND the hero's name, not over it)
+    this.crisp.setZ(this.interludePixels ? "9" : "15");
     if (!this.anyVisible || !this.built || this.failed) {
       this.crisp.hide();
       return;
     }
-    this.crisp.render(camera, rect, Math.min(dpr, ENERGY.captionDpr, this.dprCap));
+    // The interlude's word is drawn at the ART's resolution (one drawing-buffer pixel per art pixel, `artPx` CSS px) and enlarged without smoothing, so
+    // that it is made of the same pixels as the globe it lies over; the rows are crisp as ever.
+    camera.updateMatrixWorld();
+    this.eggPlanet.value.set(0, 0, 0).applyMatrix4(camera.matrixWorldInverse);
+    const pixelated = this.interludePixels && artPx > 1;
+    this.crisp.render(camera, rect, pixelated ? 1 / artPx : Math.min(dpr, ENERGY.captionDpr, this.dprCap), pixelated);
+  }
+
+  /** Whether the caption's canvas is drawn at the art's resolution now: the interlude is under way, or the globe is coming back from it. */
+  get interludePixels(): boolean {
+    return this.motion.eggActive || this.flightU < 1 || this.zoomK > 0;
   }
 
   /**
@@ -1430,7 +1671,6 @@ export class CaptionLayer {
       parallelsFor: 0,
       capCells: this.sizing ? (CAPTION.capR * this.sizing.r) / this.sizing.cell : 0,
       seed: this.motion.seed,
-      egg: { planned: this.motion.egg !== null, active: this.motion.eggActive, zoomOut: this.zoomK * (this.motion.egg?.shape ?? CINEMATIC.shape).zoomLevels, theta: this.motion.eggTheta(), drawn: (b?.variants ?? []).some((v) => v.set === EGG && v.mesh.visible), slices: (b?.variants ?? []).find((v) => v.set === EGG)?.n ?? 0, depth: (b?.variants ?? []).find((v) => v.set === EGG)?.material.uniforms.uDepth!.value ?? 0, dpr: this.dprNow },
       lines: shown.map((v) => ({
         text: v.line.text,
         parent: v.row,
@@ -1451,7 +1691,6 @@ export class CaptionLayer {
 
   dispose(): void {
     if (this.disposed) return;
-    if (this.onKey) window.removeEventListener("keydown", this.onKey);
     window.clearTimeout(this.replayTimer);
     this.swell?.fade(150); // (the globe goes away mid-interlude: so does its sound)
     this.swell = null;
@@ -1545,7 +1784,7 @@ export class CaptionLayer {
     // the big row of the cinematic interlude (only when one is planned: no texture is made for nothing)
     const eggRuns = planned ? clean([{ text: CINEMATIC.word }]) : null;
     // (the word is a solid mesh made from baked outlines: no face to load, no texture to draw; its box comes with the mesh)
-    const eggWord = planned ? buildWordGeometry({ bevelCaps: CINEMATIC.bevelCaps, depthCaps: CINEMATIC.depthCaps }) : null;
+    const eggWord = planned ? buildWordGeometry({ bevelCaps: CINEMATIC.bevelCaps, depthCaps: CINEMATIC.depthCaps, bevelSegments: CINEMATIC.bevelSegments }) : null;
     this.failed = false;
     const emPx = CAPTION.texCap / CAPTION_FACE.capEm;
     const probe = document.createElement("canvas").getContext("2d");

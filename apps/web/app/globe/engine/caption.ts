@@ -16,6 +16,7 @@
  * horizon is not there (it can never be seen from behind, mirrored).
  */
 import { CAPTION, START_VIEW } from "./tuning";
+import { CINEMATIC } from "./cinematic";
 import type { GlobeTheme } from "./colors";
 import { clamp, DEG } from "./geo";
 
@@ -809,6 +810,8 @@ export interface EggShape {
   zoomInMs: number;
   zoomOutMs: number;
   zoomCutMs: number;
+  /** The lean and the camera's height are put right (upright, level with the word) over the last `levelMs` before the word lands, and stay so: the lockup. */
+  levelMs: number;
 }
 
 /** The interlude as planned for a session: after cycle `n` of the first showing has begun to leave, from the side `side` (-1 west, +1 east). */
@@ -825,7 +828,25 @@ export interface CinematicPlan {
 export const eggMs = (s: EggShape): number => s.leaveMs + s.gapMs + s.enterMs + s.holdMs + s.exitMs + s.zoomOutMs;
 
 /** The row's trajectory in the interlude: `rowX` with the interlude's own shape. `tau`: ms since the big row's entrance began. */
-export const eggX = (tau: number, start: number, s: EggShape): number => rowX(tau, start, (s.ampDeg * Math.PI) / 180, { ms: s.enterMs, ease: s.ease, dwellMs: s.holdMs, exitMs: s.exitMs });
+export const eggX = (tau: number, start: number, s: EggShape): number => {
+  const amp = (s.ampDeg * Math.PI) / 180;
+  const x = rowX(tau, start, amp, { ms: s.enterMs, ease: s.ease, dwellMs: s.holdMs, exitMs: s.exitMs });
+  // The exit's share of the way is stretched so that the word ends DIRECTLY BEHIND the planet (half a turn from the view), wherever it came in from (which
+  // depends on the page's longitude), and still moves as the row's own exit does. The word is about 114 degrees long: only the middle of the far side hides
+  // all of it: the letters dissolve in the art's dither as they pass behind (`eggExitShare`, the layer's shader).
+  if (x >= -amp) return x;
+  const k = (Math.PI - amp) / Math.max(1e-6, start - amp);
+  return -amp + (x + amp) * k;
+};
+
+/**
+ * How far through its exit the word is at the turn `x` (the value `eggX` gives), 0 (not yet past the middle) to 1 (directly behind the planet). The layer's
+ * shader dissolves the letters in the art's dither as they pass behind the planet (`CINEMATIC.dissolve`), and finishes whatever is left as this reaches 1.
+ */
+export function eggExitShare(x: number, s: EggShape): number {
+  const amp = (s.ampDeg * Math.PI) / 180;
+  return x >= -amp ? 0 : Math.min(1, (-x - amp) / Math.max(1e-6, Math.PI - amp));
+}
 
 /** How the caption leaves: a fade (the interaction's exit: cheap) or the orbit (the lines travel behind the planet). */
 export type CaptionExit = "fade" | "orbit";
@@ -1047,7 +1068,8 @@ export class CaptionMotion {
   tick(now: number): void {
     if (this.phase === "fade" && now - this.t0 >= CAPTION.fadeMs) this.phase = "hidden";
     if (this.lastNow >= 0 && (this.phase === "in" || this.phase === "rest" || this.phase === "egg") && !this.pending && !this.frozen) {
-      this.clock += Math.min(Math.max(now - this.lastNow, 0), CAPTION.drift.maxStepMs);
+      // (the interlude runs on the wall clock, as its sound does: a stall or a tab left behind does not leave the picture behind the music)
+      this.clock += this.phase === "egg" ? Math.max(now - this.lastNow, 0) : Math.min(Math.max(now - this.lastNow, 0), CAPTION.drift.maxStepMs);
       this.ticked = true;
       if (this.egg && this.eggAt < 0 && this.phase === "rest" && this.motionAllowed && this.clock >= this.eggTrigger()) this.beginEgg(now);
       else if (this.egg && this.phase === "egg" && this.clock - this.eggAt >= eggMs(this.egg.shape)) this.endEgg(now);
@@ -1210,6 +1232,45 @@ export class CaptionMotion {
     return Math.min(smooth(t / s.zoomInMs), smooth((eggMs(s) - t) / s.zoomOutMs));
   }
 
+  /**
+   * The studio's small line under the globe (`CINEMATIC.tagline`): 0 until the word has landed, in over `tagline.inMs`, held while the word holds, and out with its exit
+   * (over `tagline.outMs` from the end of the hold): 0..1, 0 outside the interlude.
+   */
+  eggTagline(): number {
+    if (this.phase !== "egg" || !this.egg || this.eggAt < 0) return 0;
+    const s = this.egg.shape;
+    const land = s.leaveMs + s.gapMs + s.enterMs;
+    const t = this.clock - this.eggAt;
+    const smooth = (p: number) => {
+      const x = clamp(p, 0, 1);
+      return x * x * (3 - 2 * x);
+    };
+    return smooth((t - land) / CINEMATIC.tagline.inMs) * (1 - smooth((t - land - s.holdMs) / CINEMATIC.tagline.outMs));
+  }
+
+  /** The interlude's rows have left (after `leaveMs`): they are not drawn for the rest of it, whatever the flight's camera could see of the ring they went out along. */
+  eggRowsOut(): boolean {
+    return this.phase === "egg" && !!this.egg && this.eggAt >= 0 && this.clock - this.eggAt >= this.egg.shape.leaveMs;
+  }
+
+  /** How far the picture has been put upright and level, 0 to 1: smooth over the `levelMs` before the word lands, 1 from then on (0 outside the interlude). */
+  eggLevel(): number {
+    if (this.phase !== "egg" || !this.egg || this.eggAt < 0) return 0;
+    const s = this.egg.shape;
+    const x = clamp((this.clock - this.eggAt - (s.leaveMs + s.gapMs + s.enterMs - s.levelMs)) / s.levelMs, 0, 1);
+    return x * x * (3 - 2 * x);
+  }
+
+  /**
+   * How far the camera's flight has got, 0 to 1 (engine/flight.ts): linear in the interlude's clock from its start to the moment the word lands (the rows'
+   * leaving, the empty stage and the word's entrance), 1 from then on; 1 too outside the interlude (the page's own camera).
+   */
+  eggFlight(): number {
+    if (this.phase !== "egg" || !this.egg || this.eggAt < 0) return 1;
+    const s = this.egg.shape;
+    return clamp((this.clock - this.eggAt) / (s.leaveMs + s.gapMs + s.enterMs), 0, 1);
+  }
+
   /** Where the big row starts, radians behind the planet (the layer: it follows the camera's tilt). */
   setEggStart(rad: number): void {
     this.eggStart = rad;
@@ -1226,8 +1287,7 @@ export class CaptionMotion {
   }
 
   /**
-   * Begin the interlude NOW, from the resting roll (the owner's key with `?cinematic`, so that it can be seen again, with its sound, without a reload
-   * and without a click: a key is a gesture that does not leave the presentation). False when it cannot: no plan, the rows are not rolling, or one
+   * Begin the interlude NOW, from the resting roll (the visitor asks for it, the palette's "I like surprises", so that it can be seen as often as it is asked for, with its sound, without a reload). False when it cannot: no plan, the rows are not rolling, or one
    * is under way.
    */
   replayEgg(now: number): boolean {
@@ -1263,6 +1323,11 @@ export class CaptionMotion {
    * The turn of the big row now, radians (positive: east of the central meridian), or null while it is not on the stage (before it comes in, after
    * it has gone, or outside the interlude). A leaving cut short holds it where it was for the fade.
    */
+  /** The side the word comes in from now (1 east, -1 west): `eggTheta` times this is the row's own turn, `eggX`. */
+  get eggSide(): number {
+    return this.egg?.side ?? 1;
+  }
+
   eggTheta(): number | null {
     if (this.eggFrozen !== null) return this.eggFrozen;
     if (this.phase !== "egg" || !this.egg || this.eggAt < 0) return null;

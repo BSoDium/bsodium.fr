@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { CAPTION_FACE, CaptionMotion, DRIFT, cycleMs, eggMs, eggX, entranceMs, placeEgg, shellXY, type CinematicPlan } from "./caption";
-import { CINEMATIC, planCinematic } from "./cinematic";
+import { CAPTION_FACE, CaptionMotion, eggExitShare, DRIFT, cycleMs, eggMs, eggX, entranceMs, placeEgg, shellXY, type CinematicPlan } from "./caption";
+import { CINEMATIC, onDemandPlan, planCinematic } from "./cinematic";
 import { SOUND } from "./cinematic-sound";
 import { markPlayed, visitState } from "./visit";
 import { CAPTION } from "./tuning";
@@ -38,14 +38,17 @@ describe("the cinematic interlude: when it may play", () => {
     expect(latestStart).toBeGreaterThan(10000);
     expect(latestStart).toBeLessThan(30000); // ENERGY.idleFreezeMs
   });
-  it("the force flag plays it at the first exit, whatever the visit says (but not under reduced motion)", () => {
-    expect(planCinematic({ ...base, seed: 1, returning: false, played: true, forced: true })?.n).toBe(0);
-    expect(planCinematic({ ...base, seed: 1, forced: true, reduced: true })).toBeNull();
+  it("a visitor who asks for it gets it at the first exit, whatever the visit says, with the interlude's own shape", () => {
+    const p = onDemandPlan();
+    expect(p.n).toBe(0);
+    expect(p.side).toBe(CINEMATIC.side);
+    expect(p.shape).toEqual(CINEMATIC.shape);
+    expect(p.shape).not.toBe(CINEMATIC.shape); // (its own copy)
   });
-  it("one word, at least twice the size, from the west, on a higher orbit than the rows'", () => {
+  it("one word, at least twice the size, from the east, on a higher orbit than the rows'", () => {
     expect(CINEMATIC.word).toBe("UNIVERSAL");
     expect(CINEMATIC.capScale).toBe(2);
-    expect(CINEMATIC.side).toBe(-1);
+    expect(CINEMATIC.side).toBe(1);
     expect(CINEMATIC.radius).toBeGreaterThan(CAPTION.radius);
   });
 });
@@ -123,8 +126,58 @@ describe("the cinematic interlude: the big row's trajectory", () => {
     expect(eggX(0, start, s)).toBe(start);
     expect(eggX(s.enterMs, start, s)).toBeCloseTo((s.ampDeg * Math.PI) / 180, 12);
     expect(eggX(s.enterMs + s.holdMs, start, s)).toBeCloseTo(-(s.ampDeg * Math.PI) / 180, 12);
-    expect(eggX(tIn, start, s)).toBeCloseTo(-start, 12);
-    expect(eggX(tIn + 1000, start, s)).toBe(-start);
+    // (it ends DIRECTLY BEHIND the planet, half a turn from the view, wherever it came in from)
+    expect(eggX(tIn, start, s)).toBeCloseTo(-Math.PI, 12);
+    expect(eggX(tIn + 1000, start, s)).toBeCloseTo(-Math.PI, 12);
+  });
+  /** The dissolve's amount at an angle `psi` from the view axis (what the word's shader does: smoothstep from `from` to `to`, and all of it with the exit's last stretch `q`). */
+  const dissolved = (psi: number, q: number): number => {
+    const a = CINEMATIC.dissolve.from * (Math.PI / 180);
+    const b = CINEMATIC.dissolve.to * (Math.PI / 180);
+    const t = Math.min(1, Math.max(0, (psi - a) / (b - a)));
+    const fin = Math.min(1, Math.max(0, (q - CINEMATIC.dissolve.final) / (1 - CINEMATIC.dissolve.final)));
+    return Math.max(t * t * (3 - 2 * t), fin);
+  };
+  it("the exit ends exactly behind the planet, and by then every letter has been dissolved, whatever the word's span and the page's longitude", () => {
+    const rad = Math.PI / 180;
+    for (const half of [40, 57, 70, 80]) {
+      for (const lon of [-90, 0, 40, 120]) {
+        const startRad = ((((CINEMATIC.leadStartLon + half - lon) % 360) + 360) % 360) * rad;
+        const endTheta = eggX(tIn + 1, startRad, s);
+        expect(endTheta).toBeCloseTo(-Math.PI, 9);
+        expect(eggExitShare(endTheta, s)).toBeCloseTo(1, 9);
+        // every point of the word, with the last stretch done: gone
+        for (let i = 0; i <= 100; i++) {
+          const psi = Math.abs((((Math.PI - half * rad + (2 * half * rad * i) / 100 + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) - Math.PI);
+          expect(dissolved(psi, 1), `half ${half}, page ${lon} E`).toBeCloseTo(1, 9);
+          // (a word of up to 112 degrees is gone by its position alone; a longer one is finished by the exit's last stretch)
+          if (half <= 56) expect(dissolved(psi, 0), `half ${half} by position`).toBeCloseTo(1, 9);
+        }
+      }
+    }
+  });
+  it("unloads the letters one by one: the farthest round goes first, nothing is touched before the word is past the middle, and the shape is whole until then", () => {
+    // (a point is dissolved by its angle: the one farther round is always at least as dissolved as the nearer one)
+    let last = 0;
+    for (let deg = 0; deg <= 180; deg += 2) {
+      const d = dissolved(deg * (Math.PI / 180), 0);
+      expect(d).toBeGreaterThanOrEqual(last - 1e-12);
+      last = d;
+    }
+    expect(dissolved(CINEMATIC.dissolve.from * (Math.PI / 180) - 0.01, 0)).toBe(0);
+    expect(dissolved(CINEMATIC.dissolve.to * (Math.PI / 180), 0)).toBeCloseTo(1, 12);
+    // and by the time a point is beside the disc's limb (the ring is higher than the planet) it is gone: 125 degrees is where the disc hides it from the far cameras
+    expect(CINEMATIC.dissolve.to).toBeLessThan(125);
+    // the share of the exit: nothing before the middle, whole at the end, steady between
+    const rad = Math.PI / 180;
+    expect(eggExitShare(eggX(s.enterMs, 190 * rad, s), s)).toBe(0);
+    let q = 0;
+    for (let t = s.enterMs + s.holdMs; t <= tIn; t += 10) {
+      const v = eggExitShare(eggX(t, 190 * rad, s), s);
+      expect(v).toBeGreaterThanOrEqual(q - 1e-9);
+      q = v;
+    }
+    expect(q).toBeCloseTo(1, 9);
   });
   it("only ever moves on: monotone from behind the planet on one side to behind it on the other", () => {
     let last = Infinity;
@@ -134,9 +187,11 @@ describe("the cinematic interlude: the big row's trajectory", () => {
       last = x;
     }
   });
-  it("takes well under the idle hold (and is as long as the sound it was made to)", () => {
-    expect(eggMs(s)).toBeLessThan(26000);
-    expect(Math.abs(eggMs(s) / 1000 - SOUND.fileSec)).toBeLessThan(0.6); // the sound's own length
+  it("takes well under the idle hold, and is as long as the sound it was made to plus the lockup's hold (the studio's line is read on the last frame, after the chord)", () => {
+    expect(eggMs(s)).toBeLessThan(27000);
+    const extra = eggMs(s) / 1000 - SOUND.fileSec;
+    expect(extra).toBeGreaterThanOrEqual(-0.6); // (never shorter than the sound)
+    expect(extra).toBeLessThan(3); // (and the silence at the end is no longer than that)
   });
   it("lands its word when the sound's final chord is (SOUND.hitSec into the file)", () => {
     expect((s.leaveMs + s.gapMs + s.enterMs) / 1000).toBeCloseTo(SOUND.hitSec - SOUND.fromSec, 6);
@@ -176,7 +231,7 @@ describe("the cinematic interlude: in the caption's motion", () => {
     expect(m.phase).toBe("egg");
     expect(told).toBe(1);
   });
-  it("can be played now (the owner's key): from the roll, once at a time, and again after it has been spent", () => {
+  it("can be played now (the visitor asked for it): from the roll, once at a time, and again after it has been spent", () => {
     const m = make();
     let told = 0;
     m.onCinematic = () => told++;
@@ -209,6 +264,41 @@ describe("the cinematic interlude: in the caption's motion", () => {
     r.leave(t);
     expect(ended).toBe(1);
   });
+  it("the camera's flight runs from the interlude's start to the word's landing, and is over (1) outside it", () => {
+    const m = make();
+    expect(m.eggFlight()).toBe(1); // (not under way)
+    const s = plan.shape;
+    const land = s.leaveMs + s.gapMs + s.enterMs;
+    let now = run(m, at() + 20);
+    expect(m.phase).toBe("egg");
+    expect(m.eggFlight()).toBeLessThan(0.01);
+    now = run(m, at() + land / 2, now);
+    expect(m.eggFlight()).toBeGreaterThan(0.4);
+    expect(m.eggFlight()).toBeLessThan(0.6);
+    now = run(m, at() + land + 100, now);
+    expect(m.eggFlight()).toBe(1);
+  });
+  it("the small line under the globe comes in after the word lands, stays through its hold and goes with its exit", () => {
+    const m = make();
+    expect(m.eggTagline()).toBe(0);
+    const s = plan.shape;
+    const land = s.leaveMs + s.gapMs + s.enterMs;
+    let now = run(m, at() + land - 200);
+    expect(m.eggTagline()).toBe(0);
+    now = run(m, at() + land + CINEMATIC.tagline.inMs + 50, now);
+    expect(m.eggTagline()).toBeGreaterThan(0.99);
+    now = run(m, at() + land + s.holdMs, now);
+    expect(m.eggTagline()).toBeGreaterThan(0.99);
+    now = run(m, at() + land + s.holdMs + CINEMATIC.tagline.outMs + 50, now);
+    expect(m.eggTagline()).toBeCloseTo(0, 5);
+  });
+  it("the interlude runs on the wall clock: a long stall (a tab left behind) puts it where the music is", () => {
+    const m = make();
+    const t0 = run(m, at() + 20);
+    expect(m.phase).toBe("egg");
+    m.tick(t0 + 5000); // (one frame, five seconds later)
+    expect(m.eggFlight()).toBeGreaterThan(0.2);
+  });
   it("every row leaves by the orbit exit's own path and is behind the planet when it is over", () => {
     const m = make();
     const t0 = run(m, at() + 20);
@@ -221,14 +311,14 @@ describe("the cinematic interlude: in the caption's motion", () => {
     const done = run(m, at() + plan.shape.leaveMs + 50, mid);
     starts.forEach((s, i) => expect(Math.abs(rows(m, done)[i]!)).toBeCloseTo(s, 9));
   });
-  it("the stage is empty for a beat, then the big row comes in from the west, slowly, and holds near the centre", () => {
+  it("the stage is empty for a beat, then the big row comes in from the east, slowly, and holds near the centre", () => {
     const m = make();
     const s = plan.shape;
     let now = run(m, at() + s.leaveMs + s.gapMs / 2);
     expect(m.eggTheta()).toBeNull(); // (the beat)
     now = run(m, at() + s.leaveMs + s.gapMs + 300, now);
     const early = m.eggTheta()!;
-    expect(early).toBeLessThan(0); // from the west
+    expect(early).toBeGreaterThan(0); // from the east
     expect(Math.abs(early)).toBeLessThan(2.4); // not yet in
     now = run(m, at() + s.leaveMs + s.gapMs + s.enterMs + s.holdMs / 2, now);
     expect(Math.abs(m.eggTheta()!)).toBeLessThan(0.05); // (the roll's amplitude: 2.5 degrees)
@@ -237,7 +327,7 @@ describe("the cinematic interlude: in the caption's motion", () => {
     run(m2, at() + s.leaveMs + s.gapMs + s.enterMs / 3);
     expect(Math.abs(m2.eggTheta()!)).toBeGreaterThan(1.0);
   });
-  it("goes on round to the east, is gone, and the normal showing begins again from its start, once", () => {
+  it("goes on round to the west, is gone, and the normal showing begins again from its start, once", () => {
     const m = make();
     let resumed = 0;
     m.onResume = () => resumed++;
@@ -246,8 +336,8 @@ describe("the cinematic interlude: in the caption's motion", () => {
     const wordGone = eggMs(s) - s.zoomOutMs;
     let now = run(m, at() + wordGone - 60);
     expect(m.phase).toBe("egg");
-    expect(Math.abs(m.eggTheta() ?? 9)).toBeGreaterThan(1.8); // (gone round the far side, east: the other way from where it came in)
-    expect(m.eggTheta()!).toBeGreaterThan(0);
+    expect(Math.abs(m.eggTheta() ?? 9)).toBeGreaterThan(1.8); // (gone round the far side, west: the other way from where it came in)
+    expect(m.eggTheta()!).toBeLessThan(0);
     now = run(m, at() + wordGone + 60, now);
     expect(m.eggTheta()).toBeNull(); // (gone), the globe on its way back
     expect(m.phase).toBe("egg");
