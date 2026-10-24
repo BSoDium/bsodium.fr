@@ -8,7 +8,6 @@ import {
   LinearFilter,
   LineSegments,
   Mesh,
-  NearestFilter,
   NoColorSpace,
   Points,
   RedFormat,
@@ -240,7 +239,7 @@ export class GlobeScene {
     new TextureLoader().load(
       url,
       (tex) => {
-        tex.magFilter = NearestFilter;
+        tex.magFilter = LinearFilter;
         tex.minFilter = LinearFilter;
         tex.wrapS = RepeatWrapping;
         tex.wrapT = ClampToEdgeWrapping;

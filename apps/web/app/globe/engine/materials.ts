@@ -172,12 +172,13 @@ export function mistMaterial(): ShaderMaterial {
 }
 
 /**
- * The SURFACE: the planet's own picture, a satellite view of the land (NASA's Blue Marble, public domain) as a DOT MATRIX: `uEarth` is its brightness at 1024 x 512 (0 at
- * sea, 12 steps, smoothed so that it reads as terrain and not as noise), looked up by the fragment's direction (the scene being in the earth's frame, so it turns with the planet). Each texel of the picture is one cell of the
- * matrix, and whether it holds a dot is the ordered dither's call (the lines' own `dither4`, on the cell's coordinates, so the pattern belongs to the ground and turns with
- * it) against the cell's DENSITY: the darker the ground, the denser the dots (a twentieth of the cells in the brightest deserts and ice, over two fifths in the darkest forests),
- * with space left between them. A dot is a flat grey (`uColor`, at `uCover`); `uAmt` (0..1: the scene fades it with the zoom, `engine/surface.ts`) thins the dots out. Nothing
- * is filtered (nearest in the picture), so the cells stay crisp squares however near the camera comes.
+ * The SURFACE: the planet's own picture, a satellite view of the land (NASA's Blue Marble, public domain, smoothed) as a field of DOTS ON THE ART'S OWN PIXELS: `uEarth` is its
+ * brightness (0 at sea; filtered, so that the regions are smooth), looked up by the fragment's direction (the scene being in the earth's frame, so the regions turn with the
+ * planet) and turned into a DENSITY, the darker the ground the denser the dots (a twentieth of the pixels in the brightest deserts and ice, over two fifths in the darkest
+ * forests), fading to nothing at the coast. Each dot is exactly ONE drawing-buffer pixel, which is an art pixel, so that nothing falls between the pixels of the page's own
+ * grid; and which pixels hold a dot is not the ordered dither's square matrix but an organic, unaligned threshold (interleaved gradient noise on the pixel's coordinates, a
+ * pattern with no grid in it). The regions move with the ground, the dots are the screen's, as every dither of the page is. `uAmt` (0..1: the scene thins it with the
+ * zoom, `engine/surface.ts`) scales the density; a dot is a flat grey (`uColor`) at `uCover`.
  */
 export function surfaceMaterial(): ShaderMaterial {
   return new ShaderMaterial({
@@ -189,16 +190,17 @@ export function surfaceMaterial(): ShaderMaterial {
     fragmentShader: /* glsl */ `
       uniform vec3 uColor; uniform float uAmt; uniform float uCover; uniform sampler2D uEarth;
       varying vec3 vDir;
-      ${MIST_GLSL}
+      // interleaved gradient noise: a threshold in 0..1 per pixel, evenly spread and with no square matrix in it
+      float gradientNoise(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
       void main() {
         vec3 n = normalize(vDir);
         vec2 uv = vec2(atan(n.x, n.z) * 0.15915494 + 0.5, asin(clamp(n.y, -1.0, 1.0)) * 0.31830989 + 0.5);
         float v = texture2D(uEarth, uv).r;
-        if (v < 0.06) discard;
-        // brightness 0..1 over the land (the picture lifts it to 0.2 and over); dark is dense
+        if (v < 0.04) discard;
+        // brightness 0..1 over the land (the picture lifts it to 0.2 and over); dark is dense; thin out into the sea
         float dark = 1.0 - clamp((v - 0.2) / 0.8, 0.0, 1.0);
-        float density = (0.05 + 0.4 * dark * dark) * uAmt;
-        if (dither4(floor(uv * vec2(1024.0, 512.0))) >= density) discard;
+        float density = (0.05 + 0.4 * dark * dark) * smoothstep(0.04, 0.2, v) * uAmt;
+        if (gradientNoise(floor(gl_FragCoord.xy)) >= density) discard;
         gl_FragColor = vec4(uColor, uCover);
       }
     `,
