@@ -7,7 +7,6 @@ import {
   DataTexture,
   LinearFilter,
   LineSegments,
-  Float32BufferAttribute,
   Mesh,
   Points,
   RedFormat,
@@ -26,7 +25,7 @@ import type { ViewBasis } from "./geo";
 import { zoomToRadiusPx } from "./geo";
 import { LAND_H, LAND_W, landMask } from "./land";
 import { GRATICULE_STEP_DEG, graticuleSegments, polylinesToSegments } from "./geometry";
-import { OCCLUDER_RADIUS, atmosphereMaterial, beamMaterial, cityMaterial, mistMaterial, lineMaterial, occluderMaterial, silhouetteMaterial } from "./materials";
+import { OCCLUDER_RADIUS, atmosphereMaterial, cityMaterial, grainMaterial, mistMaterial, lineMaterial, occluderMaterial, silhouetteMaterial } from "./materials";
 import { RouteLayer } from "./route-layer";
 import { SKY_STATE, viewToGalactic } from "./sky";
 import { SkyLayer } from "./sky-layer";
@@ -36,9 +35,8 @@ import { TUNING } from "./tuning";
 
 /** How much of the ink the filled land has (the rest is the page's colour): near the ink, as the letters' metal is. */
 const LAND_SHARE = 0.86;
-/** The mist: the glow stands `shell` radii over the surface (a layer of the planet: it shrinks with it), and the beams (`prepareBeams`): how many, how long (radii). */
-const BEAMS = { count: 48, lenMin: 0.2, lenMax: 0.6, shell: 0.022 };
-const BEAM_SEED = 0x51ed;
+/** The mist: the glow stands `SHELL` radii over the surface (a layer of the planet: it shrinks with it). */
+const SHELL = 0.022;
 /** The most lights (places) the planet shows at the chord. */
 const CITY_LIGHTS = 16;
 
@@ -64,8 +62,8 @@ export class GlobeScene {
   private city = cityMaterial();
   private atmosphere = atmosphereMaterial();
   private mist = mistMaterial();
-  private beams = beamMaterial();
-  private beamMesh: Mesh | null = null;
+  private grain = grainMaterial();
+  private grainMesh: Mesh | null = null;
   private mistMesh: Mesh | null = null;
   private atmosphereMesh: Mesh | null = null;
   private atmosphereNow = 0;
@@ -93,7 +91,7 @@ export class GlobeScene {
     coastlines: Polylines;
     borders: Polylines;
   }) {
-    this.materials.push(this.occluder, this.city, this.atmosphere, this.mist, this.beams, this.graticule, this.borders, this.coast, this.silhouette);
+    this.materials.push(this.occluder, this.city, this.atmosphere, this.mist, this.grain, this.graticule, this.borders, this.coast, this.silhouette);
     this.coastData = data.coastlines;
 
     const disc = new SphereGeometry(OCCLUDER_RADIUS, 96, 48);
@@ -103,13 +101,13 @@ export class GlobeScene {
     // Each layer is drawn in a fixed order (renderOrder) over the disc: grid, borders, coast, routes, horizon outline,
     // markers (last, so nothing can draw over a marker).
     // the atmosphere shell (the cinematic interlude's: hidden, and not drawn at all, outside it)
-    const shell = new SphereGeometry(1, 96, 48); // (scaled to its height: `BEAMS.shell`)
+    const shell = new SphereGeometry(1, 96, 48); // (scaled to its height: `SHELL`)
     this.geometries.push(shell);
     this.atmosphereMesh = new Mesh(shell, this.atmosphere);
     this.atmosphereMesh.visible = false;
     this.atmosphereMesh.frustumCulled = false;
-    this.atmosphereMesh.scale.setScalar(1 + BEAMS.shell);
-    this.atmosphere.uniforms.uShell!.value = 1 + BEAMS.shell;
+    this.atmosphereMesh.scale.setScalar(1 + SHELL);
+    this.atmosphere.uniforms.uShell!.value = 1 + SHELL;
     this.add(this.atmosphereMesh, 0.5);
     // and the mist on the ground itself, over the lines (a hair above the surface, which the lines are drawn on)
     const skin = new SphereGeometry(1.004, 96, 48);
@@ -118,6 +116,13 @@ export class GlobeScene {
     this.mistMesh.visible = false;
     this.mistMesh.frustumCulled = false;
     this.add(this.mistMesh, 5);
+    // and the grain on the land, under the mist (over the lines: it is faint)
+    const grainSkin = new SphereGeometry(1.002, 96, 48);
+    this.geometries.push(grainSkin);
+    this.grainMesh = new Mesh(grainSkin, this.grain);
+    this.grainMesh.visible = false;
+    this.grainMesh.frustumCulled = false;
+    this.add(this.grainMesh, 4);
 
     this.add(new LineSegments(this.track(segmentGeometry(graticuleSegments(GRATICULE_STEP_DEG, 3))), this.graticule), 1);
     this.bordersLines = new LineSegments(this.track(segmentGeometry(polylinesToSegments(data.borders, 1))), this.borders);
@@ -179,11 +184,11 @@ export class GlobeScene {
     const bg = t.background;
     const mixTo = (k: number) => [0, 1, 2].map((i) => bg[i]! + (t.ink[i]! - bg[i]!) * k) as [number, number, number];
     this.atmosphere.uniforms.uColor!.value.setRGB(...mixTo(0.55));
-    this.mist.uniforms.uColor!.value.setRGB(...mixTo(0.12));
-    this.beams.uniforms.uColor!.value.setRGB(...mixTo(0.55));
+    this.mist.uniforms.uColor!.value.setRGB(...mixTo(0.3));
+    this.grain.uniforms.uColor!.value.setRGB(...mixTo(0.55));
     this.atmosphere.uniforms.uCover!.value = t.scheme === "dark" ? 0.55 : 0.45;
-    this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.4 : 0.32;
-    this.beams.uniforms.uCover!.value = t.scheme === "dark" ? 0.3 : 0.26;
+    this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.5 : 0.4;
+    this.grain.uniforms.uCover!.value = t.scheme === "dark" ? 0.32 : 0.28;
     this.graticule.uniforms.uColor!.value.setRGB(...t.grid);
     this.ramp = t.ramp;
     this.borderLevelNow = -1;
@@ -209,6 +214,7 @@ export class GlobeScene {
     tex.needsUpdate = true;
     this.landTex = tex;
     this.occluder.uniforms.uLandMap!.value = tex;
+    this.grain.uniforms.uLandMap!.value = tex;
   }
 
   /** The sun's direction in the earth's frame (the planet's light; the letters have the same one in the camera's frame). */
@@ -219,77 +225,20 @@ export class GlobeScene {
   }
 
   /**
-   * Make the beams now: a place on the land for each (a few ms for the coarse mask; the interlude is planned, so not in the frame that starts it). Idempotent. A fixed
-   * seed, so the same lights rise in the same places each time.
-   */
-  prepareBeams() {
-    if (this.beamMesh || !this.coastData) return;
-    const mask = landMask(this.coastData, 512, 256);
-    let seed = BEAM_SEED;
-    const rnd = () => {
-      seed = (seed + 0x6d2b79f5) | 0;
-      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-    const pos: number[] = [];
-    const info: number[] = [];
-    const idx: number[] = [];
-    for (let n = 0, tries = 0; n < BEAMS.count && tries < 4000; tries++) {
-      const lon = (rnd() * 2 - 1) * Math.PI;
-      const lat = Math.asin(rnd() * 2 - 1);
-      if (Math.abs(lat) > 1.2) continue; // (not the ice caps)
-      const col = Math.min(511, Math.floor(((lon / Math.PI + 1) / 2) * 512));
-      const row = Math.min(255, Math.floor(((lat / (Math.PI / 2) + 1) / 2) * 256));
-      if (mask[row * 512 + col] !== 255) continue;
-      const len = BEAMS.lenMin + rnd() * (BEAMS.lenMax - BEAMS.lenMin);
-      const sd = rnd();
-      const x = Math.cos(lat) * Math.sin(lon);
-      const y = Math.sin(lat);
-      const z = Math.cos(lat) * Math.cos(lon);
-      const o = n * 4;
-      for (const [t, side] of [[0, -1], [0, 1], [1, -1], [1, 1]] as const) {
-        pos.push(x, y, z);
-        info.push(t, side, len, sd);
-      }
-      idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);
-      n++;
-    }
-    const g = this.track(new BufferGeometry());
-    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
-    g.setAttribute("aBeam", new Float32BufferAttribute(info, 4));
-    g.setIndex(idx);
-    this.beamMesh = new Mesh(g, this.beams);
-    this.beamMesh.visible = false;
-    this.beamMesh.frustumCulled = false;
-    this.add(this.beamMesh, 4);
-  }
-
-  /**
-   * The mist, 0 (none: nothing of it is drawn) to 1: a thin grey glow just over the limb, a veil on the ground thickening to the horizon, and the faint beams from the
+   * The mist, 0 (none: nothing of it is drawn) to 1: a thin grey glow just over the limb, a veil on the ground thickening to the horizon (bleeding in from the limb), and a faint grain over the
    * land. Drawn for the length of the interlude only.
    */
   setAtmosphere(k: number) {
     const x = Math.min(1, Math.max(0, k));
     if (Math.abs(x - this.atmosphereNow) < 0.01 && !(x === 0 && this.atmosphereNow !== 0)) return;
-    if (x > 0 && !this.beamMesh) this.prepareBeams();
+    if (x > 0 && !this.landTex) this.prepareLand();
     this.atmosphereNow = x;
     this.atmosphere.uniforms.uAmt!.value = x;
     this.mist.uniforms.uAmt!.value = x;
-    this.beams.uniforms.uAmt!.value = x;
+    this.grain.uniforms.uAmt!.value = x;
     if (this.atmosphereMesh) this.atmosphereMesh.visible = x > 0;
     if (this.mistMesh) this.mistMesh.visible = x > 0;
-    if (this.beamMesh) this.beamMesh.visible = x > 0;
-  }
-
-  /**
-   * What the mist needs each frame it is there: the size of a pixel (the beams' width) and the clock (their swell). The glow's shell is a FIXED height over the
-   * surface (`BEAMS.shell` radii, set once), so that it is a physical layer of the planet: it shrinks with the planet as the camera draws away.
-   */
-  frameAtmosphere(bufW: number, bufH: number, nowMs: number) {
-    if (this.atmosphereNow <= 0) return;
-    this.beams.uniforms.uPixel!.value = [2 / bufW, 2 / bufH];
-    this.beams.uniforms.uTime!.value = nowMs / 1000;
+    if (this.grainMesh) this.grainMesh.visible = x > 0;
   }
 
   /** The places' lights, 0 (out) to 1: they come up through the dither. */

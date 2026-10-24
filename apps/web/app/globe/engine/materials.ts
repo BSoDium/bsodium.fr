@@ -3,7 +3,7 @@
  * `ColorManagement` note in renderer.ts. Visibility of borders is ordered-dither coverage, not alpha, so the
  * output never contains a blended pixel.
  */
-import { BackSide, Color, DoubleSide, FrontSide, NormalBlending, ShaderMaterial } from "three";
+import { BackSide, Color, FrontSide, NormalBlending, ShaderMaterial } from "three";
 import { LEG_MODES, MODE_STYLE } from "../paths/modes";
 import { STRAIGHT_FADE_MIX, STRAIGHT_FADE_STEPS } from "../paths/thin";
 import { SPARK, TRAIL_BANDS, TRAIL_ENTRIES, TRAIL_PER_PALETTE } from "../paths/trail";
@@ -86,19 +86,30 @@ export function occluderMaterial(): ShaderMaterial {
 }
 
 /**
- * The MIST of the cinematic interlude: a haze that lies on the planet, thickest at the horizon and thinning smoothly upward, in plain GREY (a smooth alpha over what is
- * behind it: the glow is a gradient, not a dither, which read as black and white dots). Three layers, one material each:
- *  - `atmosphereMaterial`: ABOVE the limb. The inside of a shell a little over the surface (a few art pixels thick: `GlobeScene.frameAtmosphere` sizes it to the screen),
- *    so it is seen only beyond the disc (the disc's depth hides its far side across the middle). Its density is 1 at the planet's own edge and falls smoothly to 0 at the
- *    shell's top (`uPower`: the shape of the fall), a little thicker on the sunward side. `uCover` is its alpha at the edge, `uAmt` (0..1) how much of it is there.
+ * The MIST of the cinematic interlude: a haze that lies on the planet, thickest at the horizon and thinning smoothly upward, in GREY pixels (not the ink's black and
+ * white: its colour is a step from the page's towards its ink, at a low alpha) on the art's own pixels. The haze's density is quantised to a few levels, each a flat grey, and
+ * the steps between them are the lines' ordered dither: a pixelated gradient, not a smooth one. Three layers, one material each:
+ *  - `atmosphereMaterial`: ABOVE the limb. The inside of a shell a little over the surface (a fixed height: it is a layer of the planet, so it shrinks with it), so it is seen
+ *    only beyond the disc (the disc's depth hides its far side across the middle). Its density is 1 at the planet's own edge and falls to 0 at the shell's top (`uPower`: the
+ *    shape of the fall), a little thicker on the sunward side. `uCover` is its alpha at the edge, `uAmt` (0..1) how much of it is there.
  *  - `mistMaterial`: ON the planet. A shell a hair over the surface (the lines are drawn at the surface), whose density grows towards the horizon: where the ground is seen
- *    at a grazing angle the mist is deep and veils the coastlines and the borders, so the land goes into the haze as it recedes and comes out of it as it nears.
- *  - `beamMaterial`: faint shafts of light that rise from a few places on the land towards space, fading with height.
+ *    at a grazing angle the mist is deep and veils the coastlines and the borders, and it BLEEDS inwards, a good part of the way to the middle, as the glow's own continuation.
+ *  - `grainMaterial`: a faint random grain of single pixels over the LAND only (the land mask), denser in patches (a low noise on the ground), none on the sea.
  * None of them is drawn at all outside the interlude (`GlobeScene.setAtmosphere`).
  */
+const MIST_GLSL = /* glsl */ `
+  float dither2(vec2 a) { return fract(a.x * 0.5 + a.y * a.y * 0.75); }
+  float dither4(vec2 a) { return dither2(0.5 * a) * 0.25 + dither2(a); }
+  // n (0..1) in "levels" flat steps, the step between two taken by the ordered dither on the art's pixels
+  float stepped(float n, float levels) {
+    float v = clamp(n, 0.0, 1.0) * levels;
+    return (floor(v) + (fract(v) > dither4(floor(gl_FragCoord.xy)) ? 1.0 : 0.0)) / levels;
+  }
+`;
+
 export function atmosphereMaterial(): ShaderMaterial {
   return new ShaderMaterial({
-    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uSun: { value: [0, 0, 1] }, uShell: { value: 1.03 }, uPower: { value: 1.8 }, uCover: { value: 0.5 } },
+    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uSun: { value: [0, 0, 1] }, uShell: { value: 1.03 }, uPower: { value: 1.6 }, uCover: { value: 0.5 } },
     vertexShader: /* glsl */ `
       varying vec3 vPos;
       void main() { vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
@@ -106,6 +117,7 @@ export function atmosphereMaterial(): ShaderMaterial {
     fragmentShader: /* glsl */ `
       uniform vec3 uColor; uniform float uAmt; uniform vec3 uSun; uniform float uShell; uniform float uPower; uniform float uCover;
       varying vec3 vPos;
+      ${MIST_GLSL}
       void main() {
         // (the shell is the unit sphere scaled to uShell: the vertex is in the unit sphere's frame, so its direction is its position)
         vec3 n = normalize(vPos);
@@ -115,7 +127,7 @@ export function atmosphereMaterial(): ShaderMaterial {
         float edge = sqrt(max(1.0 - 1.0 / (uShell * uShell), 1e-4));
         float h = clamp(abs(dot(n, toEye)) / edge, 0.0, 1.0);
         float sunward = 0.75 + 0.25 * clamp(dot(n, uSun) * 1.4 + 0.2, 0.0, 1.0);
-        float a = pow(h, uPower) * sunward * uCover * uAmt;
+        float a = stepped(pow(h, uPower) * sunward * uAmt, 3.0) * uCover;
         if (a < 0.004) discard;
         gl_FragColor = vec4(uColor, a);
       }
@@ -138,13 +150,15 @@ export function mistMaterial(): ShaderMaterial {
     fragmentShader: /* glsl */ `
       uniform vec3 uColor; uniform float uAmt; uniform float uCover;
       varying vec3 vPos;
+      ${MIST_GLSL}
       void main() {
         vec3 n = normalize(vPos);
         vec3 toEye = normalize(cameraPosition - vPos);
-        // how grazing the ground is seen: 0 looking straight down, 1 at the horizon; the mist is deep from about half way, and smooth
+        // how grazing the ground is seen: 0 looking straight down, 1 at the horizon. The haze begins well in (about a fifth of the way in from the limb, a third of the
+        // way round) and is deepest at the edge, where it meets the glow above it: the glow bleeds onto the planet
         float g = 1.0 - clamp(dot(n, toEye), 0.0, 1.0);
-        float deep = smoothstep(0.4, 1.0, g);
-        float a = deep * deep * (3.0 - 2.0 * deep) * uCover * uAmt;
+        float deep = smoothstep(0.18, 1.0, g);
+        float a = stepped(deep * deep * (3.0 - 2.0 * deep) * uAmt, 3.0) * uCover;
         if (a < 0.004) discard;
         gl_FragColor = vec4(uColor, a);
       }
@@ -158,46 +172,42 @@ export function mistMaterial(): ShaderMaterial {
 }
 
 /**
- * The BEAMS: a thin shaft of light from each of a few places on the land, straight up to space, a pixel or two wide on the screen and fading with height, each
- * slowly swelling and ebbing at its own pace. A quad per beam, laid out in the vertex shader across the beam's projected direction (so it is as wide at the limb,
- * where it is horizontal on the screen, as in the middle). Per vertex: `position` the place (a unit vector), `aBeam` = (0 at the foot or 1 at the tip, -1 or 1 the
- * side, the length in radii, a seed). `uPixel` is the size of a drawing-buffer pixel in clip space; `uHalf` half the width in pixels.
+ * The GRAIN: a faint random speckle of single art pixels over the land (the land mask, as the occluder reads it: the lookup is by the fragment's direction, the scene being
+ * in the earth's frame) and not the sea, denser in patches where a low noise on the ground (a few cells round the globe, smoothly blended) is high, so that it reads as terrain
+ * rather than as static. The pixels are a hash of the fragment's own position on the art grid, grey at a low alpha (`uCover`).
  */
-export function beamMaterial(): ShaderMaterial {
+export function grainMaterial(): ShaderMaterial {
   return new ShaderMaterial({
-    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uCover: { value: 0.3 }, uTime: { value: 0 }, uPixel: { value: [0.002, 0.002] }, uHalf: { value: 0.8 } },
+    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uCover: { value: 0.3 }, uLandMap: { value: null }, uDensity: { value: 0.16 } },
     vertexShader: /* glsl */ `
-      attribute vec4 aBeam;
-      uniform vec2 uPixel; uniform float uHalf;
-      varying float vAlong; varying float vSide; varying float vSeed;
-      void main() {
-        vec3 dir = normalize(position);
-        vec4 c0 = projectionMatrix * modelViewMatrix * vec4(dir * 1.003, 1.0);
-        vec4 c1 = projectionMatrix * modelViewMatrix * vec4(dir * (1.003 + aBeam.z), 1.0);
-        vAlong = aBeam.x; vSide = aBeam.y; vSeed = aBeam.w;
-        if (c0.w < 0.02 || c1.w < 0.02) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
-        vec2 dv = (c1.xy / c1.w - c0.xy / c0.w) / uPixel;
-        float l = length(dv);
-        vec2 along = l > 1e-3 ? dv / l : vec2(0.0, 1.0);
-        vec2 perp = vec2(-along.y, along.x);
-        vec4 c = aBeam.x > 0.5 ? c1 : c0;
-        c.xy += perp * aBeam.y * uHalf * uPixel * c.w;
-        gl_Position = c;
-      }
+      varying vec3 vDir;
+      void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
     `,
     fragmentShader: /* glsl */ `
-      uniform vec3 uColor; uniform float uAmt; uniform float uCover; uniform float uTime;
-      varying float vAlong; varying float vSide; varying float vSeed;
+      uniform vec3 uColor; uniform float uAmt; uniform float uCover; uniform sampler2D uLandMap; uniform float uDensity;
+      varying vec3 vDir;
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+      // value noise on the sphere's own coordinates (smooth between the corners of a cell)
+      float vnoise(vec3 p) {
+        vec3 i = floor(p); vec3 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(mix(hash3(i), hash3(i + vec3(1, 0, 0)), f.x), mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), f.x), f.y),
+          mix(mix(hash3(i + vec3(0, 0, 1)), hash3(i + vec3(1, 0, 1)), f.x), mix(hash3(i + vec3(0, 1, 1)), hash3(i + vec3(1, 1, 1)), f.x), f.y),
+          f.z);
+      }
       void main() {
-        // slowly in and out at its own pace, never quite out; brightest at the foot, gone at the tip; softer at the sides
-        float swell = 0.35 + 0.65 * (0.5 + 0.5 * sin(uTime * (0.35 + 0.5 * fract(vSeed * 7.31)) + vSeed * 6.2831));
-        float a = pow(1.0 - vAlong, 1.7) * (1.0 - 0.35 * abs(vSide)) * swell * uCover * uAmt;
-        if (a < 0.004) discard;
-        gl_FragColor = vec4(uColor, a);
+        vec3 n = normalize(vDir);
+        vec2 uv = vec2(atan(n.x, n.z) * 0.15915494 + 0.5, asin(clamp(n.y, -1.0, 1.0)) * 0.31830989 + 0.5);
+        if (texture2D(uLandMap, uv).r < 0.6) discard;
+        float clump = smoothstep(0.25, 0.85, vnoise(n * 7.0) * 0.65 + vnoise(n * 19.0) * 0.35);
+        float p = hash(floor(gl_FragCoord.xy));
+        if (p >= uDensity * (0.25 + 1.5 * clump) * uAmt) discard;
+        gl_FragColor = vec4(uColor, uCover);
       }
     `,
+    side: FrontSide,
     blending: NormalBlending,
-    side: DoubleSide,
     depthTest: true,
     depthWrite: false,
     transparent: true,
