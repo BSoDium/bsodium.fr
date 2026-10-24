@@ -2050,7 +2050,7 @@ export class GlobeRenderer {
     const over = pose ? { lon, lat } : undefined;
     this.lastBasis = { d, lon: v.lon, lat: v.lat, cam: over };
     this.caption?.sync(d, v.lon, v.lat, now, over);
-    this.globe.syncSky(cam, skyBasis, this.era, { w: this.bufW, h: this.bufH, shift: this.camShift, lift: this.camLift }, now, this.reduced);
+    this.globe.syncSky(cam, skyBasis, this.era, { w: this.bufW, h: this.bufH, shift: this.camShift, lift: this.camLift }, now, this.reduced, this.flying || (this.caption?.landShare() ?? 0) > 0);
   }
 
   /* ------------------------------ diagnostics ------------------------------ */

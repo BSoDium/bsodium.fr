@@ -104,8 +104,8 @@ export const CINEMATIC = {
    * `occluderMaterial`), `cities` the places' lights at the chord.
    */
   planet: { fill: false, cities: false },
-  /** The atmosphere (a thin glow of the accent round the planet's limb, in the dither): how much of it, for the whole interlude. */
-  atmosphere: { amount: 1 },
+  /** The atmosphere (a thin grey glow round the planet's limb): how much of it, for the whole interlude. `dim`: the letters seen through it (a sight line that passes within `reach` planet radii of the limb before reaching them) dim into the page's colour by up to `amount`. */
+  atmosphere: { amount: 1, dim: { amount: 0.85, reach: 0.16 } },
   /** The places' lights come up through the dither when the word lands (the chord), over `inMs`, and go over `outMs`. */
   city: { inMs: 240, outMs: 500 },
   /** The side the word comes in from: EAST (1), as the studio's does. */

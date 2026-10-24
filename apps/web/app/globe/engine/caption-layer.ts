@@ -29,6 +29,7 @@ import {
   OneFactor,
   OneMinusSrcAlphaFactor,
   Mesh,
+  Vector3,
   MeshBasicMaterial,
   type PerspectiveCamera,
   Scene,
@@ -207,6 +208,8 @@ const EGG_FRAG = /* glsl */ `
   uniform float uFaceGain;
   uniform float uDissolve;
   uniform float uFinal;
+  uniform vec3 uPlanet;
+  uniform vec3 uPage;
   varying vec3 vNormal;
   varying vec3 vView;
   varying float vKind;
@@ -261,6 +264,18 @@ const EGG_FRAG = /* glsl */ `
     col += vec3(spec * uGlint * 0.5 * (vKind > 3.5 ? 0.3 : 1.0));
     // the outline is the line: the ink, hardly lit
     if (vKind > 0.5 && vKind < 1.5) col = mix(col, uOutline, ${CINEMATIC.light.outlineMix.toFixed(2)});
+    // Behind the planet's atmosphere: a letter whose sight line has passed close to the planet before reaching it is seen THROUGH the air at the limb, and dims into the page's
+    // colour the nearer that line grazed the planet (b, in planet radii: 1 is the limb itself, where the letters are about to go behind it)
+    {
+      float len = length(vView);
+      vec3 dir = vView / max(len, 1e-4);
+      float tc = dot(uPlanet, dir);
+      if (tc > 0.0 && tc < len) {
+        float b = length(uPlanet - tc * dir);
+        float haze = ${CINEMATIC.atmosphere.dim.amount.toFixed(3)} * (1.0 - smoothstep(1.0, 1.0 + ${CINEMATIC.atmosphere.dim.reach.toFixed(3)}, b));
+        col = mix(col, uPage, haze);
+      }
+    }
     // a few levels, dithered on the art's pixels: the word is made of the globe's own pixels and tones
     float L = ${CINEMATIC.levels.toFixed(1)};
     col = clamp(col, 0.0, 1.0);
@@ -643,6 +658,8 @@ export class CaptionLayer {
   private eggSky = { value: 1 };
   private eggFaceGain = { value: 1 };
   /** The uniforms of the dissolve, shared by the word's material (`EGG_VERT`, `EGG_FRAG`). */
+  /** The planet's centre in the camera's frame (set per frame in `renderCrisp`): the word's letters dim behind its atmosphere (`EGG_FRAG`). */
+  private eggPlanet = { value: new Vector3() };
   private eggDissolve = { uDissolve: { value: 0 }, uFinal: { value: 0 }, uAxis: { value: [0, 0, 1] as number[] } };
   /** The far slices (layer below this) that carry the text colour in mode `edge` (0: none). */
   private edgeLayer = { value: 0 };
@@ -764,6 +781,8 @@ export class CaptionLayer {
         uDissolve: this.eggDissolve.uDissolve,
         uFinal: this.eggDissolve.uFinal,
         uAxis: this.eggDissolve.uAxis,
+        uPlanet: this.eggPlanet,
+        uPage: this.dimColor,
         uBaseLat: { value: 0 },
         uBelow: { value: 0 },
         uAbove: { value: 0 },
@@ -1548,6 +1567,8 @@ export class CaptionLayer {
     }
     // The interlude's word is drawn at the ART's resolution (one drawing-buffer pixel per art pixel, `artPx` CSS px) and enlarged without smoothing, so
     // that it is made of the same pixels as the globe it lies over; the rows are crisp as ever.
+    camera.updateMatrixWorld();
+    this.eggPlanet.value.set(0, 0, 0).applyMatrix4(camera.matrixWorldInverse);
     const pixelated = this.interludePixels && artPx > 1;
     this.crisp.render(camera, rect, pixelated ? 1 / artPx : Math.min(dpr, ENERGY.captionDpr, this.dprCap), pixelated);
   }
