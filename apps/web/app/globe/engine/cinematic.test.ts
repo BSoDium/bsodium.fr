@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAPTION_FACE, CaptionMotion, eggExitShare, DRIFT, cycleMs, eggMs, eggX, entranceMs, placeEgg, shellXY, type CinematicPlan } from "./caption";
+import { CAPTION_FACE, CaptionMotion, EGG_HITCH_STEP_MS, eggExitShare, DRIFT, cycleMs, eggMs, eggX, entranceMs, placeEgg, shellXY, type CinematicPlan } from "./caption";
 import { CINEMATIC, onDemandPlan, planCinematic } from "./cinematic";
 import { SOUND } from "./cinematic-sound";
 import { markPlayed, visitState } from "./visit";
@@ -298,6 +298,36 @@ describe("the cinematic interlude: in the caption's motion", () => {
     expect(m.phase).toBe("egg");
     m.tick(t0 + 5000); // (one frame, five seconds later)
     expect(m.eggFlight()).toBeGreaterThan(0.2);
+  });
+  it("a stall of the frame (a first draw that compiles a shader) does not make the picture jump: the clock takes a little of it and repays the rest, and is back with the music", () => {
+    const m = make();
+    const land = plan.shape.leaveMs + plan.shape.gapMs + plan.shape.enterMs;
+    let now = run(m, at() + 20);
+    expect(m.phase).toBe("egg");
+    const start = m.eggFlight() * land; // (ms into the interlude)
+    const t0 = now;
+    now += 400; // one frame that took 400 ms
+    m.tick(now);
+    const jumped = m.eggFlight() * land - start;
+    expect(jumped).toBeLessThanOrEqual(EGG_HITCH_STEP_MS * 1.5 + 1); // not the 400 ms of wall time
+    // a second of ordinary frames later it is where the wall clock is
+    for (let i = 0; i < 80; i++) {
+      now += 16;
+      m.tick(now);
+    }
+    const behind = now - t0 - (m.eggFlight() * land - start);
+    expect(Math.abs(behind)).toBeLessThan(20);
+  });
+  it("does not begin until its word is on the GPU (eggReady), and then begins at once", () => {
+    const m = make();
+    let ready = false;
+    m.eggReady = () => ready;
+    let now = run(m, at() + 200);
+    expect(m.phase).toBe("rest"); // the trigger has passed: it waits
+    expect(m.replayEgg(now)).toBe(false);
+    ready = true;
+    m.tick(now + 16);
+    expect(m.phase).toBe("egg");
   });
   it("every row leaves by the orbit exit's own path and is behind the planet when it is over", () => {
     const m = make();
