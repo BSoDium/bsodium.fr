@@ -172,14 +172,16 @@ export function mistMaterial(): ShaderMaterial {
 }
 
 /**
- * The SURFACE: the planet's own picture, a satellite view of the land (NASA's Blue Marble, public domain) in grey pixels: `uEarth` is its brightness at 1024 x 512 (0 at sea,
- * in 16 steps), looked up by the fragment's direction (the scene being in the earth's frame, so it turns with the planet) with NEAREST magnification, so that it stays crisp,
- * blocks of flat grey, however near the camera comes, and is averaged when the planet is small. The brightness is posterised to a few flat steps and drawn in the
- * mist's grey at a low alpha (`uCover`, times `uAmt`: the scene fades it with the zoom, `engine/surface.ts`). The page's linework is over it.
+ * The SURFACE: the planet's own picture, a satellite view of the land (NASA's Blue Marble, public domain) as a DOT MATRIX: `uEarth` is its brightness at 1024 x 512 (0 at
+ * sea, 12 steps, smoothed so that it reads as terrain and not as noise), looked up by the fragment's direction (the scene being in the earth's frame, so it turns with the planet). Each texel of the picture is one cell of the
+ * matrix, and whether it holds a dot is the ordered dither's call (the lines' own `dither4`, on the cell's coordinates, so the pattern belongs to the ground and turns with
+ * it) against the cell's DENSITY: the darker the ground, the denser the dots (a twentieth of the cells in the brightest deserts and ice, over two fifths in the darkest forests),
+ * with space left between them. A dot is a flat grey (`uColor`, at `uCover`); `uAmt` (0..1: the scene fades it with the zoom, `engine/surface.ts`) thins the dots out. Nothing
+ * is filtered (nearest in the picture), so the cells stay crisp squares however near the camera comes.
  */
 export function surfaceMaterial(): ShaderMaterial {
   return new ShaderMaterial({
-    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uCover: { value: 0.3 }, uEarth: { value: null } },
+    uniforms: { uColor: { value: new Color() }, uAmt: { value: 0 }, uCover: { value: 0.6 }, uEarth: { value: null } },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
       void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
@@ -187,15 +189,17 @@ export function surfaceMaterial(): ShaderMaterial {
     fragmentShader: /* glsl */ `
       uniform vec3 uColor; uniform float uAmt; uniform float uCover; uniform sampler2D uEarth;
       varying vec3 vDir;
+      ${MIST_GLSL}
       void main() {
         vec3 n = normalize(vDir);
         vec2 uv = vec2(atan(n.x, n.z) * 0.15915494 + 0.5, asin(clamp(n.y, -1.0, 1.0)) * 0.31830989 + 0.5);
         float v = texture2D(uEarth, uv).r;
         if (v < 0.06) discard;
-        // four flat steps of grey
-        float a = (floor(v * 4.0 - 0.001) + 1.0) / 4.0 * uCover * uAmt;
-        if (a < 0.004) discard;
-        gl_FragColor = vec4(uColor, a);
+        // brightness 0..1 over the land (the picture lifts it to 0.2 and over); dark is dense
+        float dark = 1.0 - clamp((v - 0.2) / 0.8, 0.0, 1.0);
+        float density = (0.05 + 0.4 * dark * dark) * uAmt;
+        if (dither4(floor(uv * vec2(1024.0, 512.0))) >= density) discard;
+        gl_FragColor = vec4(uColor, uCover);
       }
     `,
     side: FrontSide,

@@ -193,10 +193,10 @@ export class GlobeScene {
     const mixTo = (k: number) => [0, 1, 2].map((i) => bg[i]! + (t.ink[i]! - bg[i]!) * k) as [number, number, number];
     this.atmosphere.uniforms.uColor!.value.setRGB(...mixTo(0.55));
     this.mist.uniforms.uColor!.value.setRGB(...mixTo(0.3));
-    this.surface.uniforms.uColor!.value.setRGB(...mixTo(0.55));
+    this.surface.uniforms.uColor!.value.setRGB(...mixTo(0.5));
     this.atmosphere.uniforms.uCover!.value = t.scheme === "dark" ? 0.55 : 0.45;
     this.mist.uniforms.uCover!.value = t.scheme === "dark" ? 0.5 : 0.4;
-    this.surface.uniforms.uCover!.value = t.scheme === "dark" ? 0.5 : 0.42;
+    this.surface.uniforms.uCover!.value = t.scheme === "dark" ? 0.4 : 0.34;
     this.graticule.uniforms.uColor!.value.setRGB(...t.grid);
     this.ramp = t.ramp;
     this.borderLevelNow = -1;
