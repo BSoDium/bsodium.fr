@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PLAY_INTERLUDE_EVENT, requestInterlude, type PlayInterludeRequest } from "./interlude";
+import { PLAY_INTERLUDE_EVENT, PREPARE_INTERLUDE_EVENT, prepareInterlude, requestInterlude, type PlayInterludeRequest } from "./interlude";
 
 describe("asking for the interlude", () => {
   beforeEach(() => vi.stubGlobal("window", new EventTarget()));
@@ -13,5 +13,15 @@ describe("asking for the interlude", () => {
     expect(requestInterlude()).toBe(true);
     window.removeEventListener(PLAY_INTERLUDE_EVENT, on);
     expect(requestInterlude()).toBe(false);
+  });
+  it("announces that the visitor can ask for it, to whoever listens, and is a no-op without a window", () => {
+    let heard = 0;
+    const on = () => heard++;
+    window.addEventListener(PREPARE_INTERLUDE_EVENT, on);
+    prepareInterlude();
+    expect(heard).toBe(1);
+    window.removeEventListener(PREPARE_INTERLUDE_EVENT, on);
+    vi.unstubAllGlobals();
+    expect(() => prepareInterlude()).not.toThrow();
   });
 });

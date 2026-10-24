@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Frame, Icon, KeyHint, KindTag } from "~/components/ui";
-import { requestInterlude, unlockSound } from "~/globe";
+import { prepareInterlude, requestInterlude, unlockSound } from "~/globe";
 import { matchesSurprise, SURPRISE } from "~/lib/interlude";
 import { groupResults, rankItems, resultsStatus, SEARCH_LABELS, type SearchItem } from "~/lib/search";
 import { cn } from "~/lib/utils";
@@ -129,6 +129,10 @@ export function SearchPalette() {
   const { groups, flat: found } = useMemo(() => groupResults(results), [results]);
   // The surprise is for a visitor who types its words, and not under reduced motion (the interlude is all motion): the last row, after what the query found.
   const surprise = useMemo(() => matchesSurprise(query) && !(typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches), [query]);
+  // (the entry is on the list: the globe makes what the interlude needs now, while the visitor decides, so that choosing it starts it without a stall)
+  useEffect(() => {
+    if (surprise) prepareInterlude();
+  }, [surprise]);
   const flat = useMemo<Row[]>(() => (surprise ? [...found, SURPRISE_ROW] : found), [found, surprise]);
   const current = flat[Math.min(active, flat.length - 1)];
 

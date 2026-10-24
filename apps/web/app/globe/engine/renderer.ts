@@ -1711,6 +1711,11 @@ export class GlobeRenderer {
     return { ...ring.state(), overlay: this.lod.overlayAlpha, zoomAlpha: ringAlpha(this.view.zoom, this.fit, this.minZoom), presence: alpha, fit: this.fit, floor: this.minZoom, silhouettePx: silhouetteRadiusPx(this.view.zoom, this.bufH * this.pixel) };
   }
 
+  /** The visitor can now ask for the interlude (the palette lists its entry): make its mesh and fetch its sound ahead of time. */
+  prepareInterlude(): void {
+    this.caption?.prewarmInterlude();
+  }
+
   /** The visitor asks for the cinematic interlude (the search palette's entry): false when it cannot be played now. */
   playInterlude(): boolean {
     return this.caption?.summonInterlude() ?? false;
@@ -2107,7 +2112,9 @@ export class GlobeRenderer {
   private syncTagline() {
     const share = this.caption?.eggTagline() ?? 0;
     // (nothing to do, and no style written, when it is not shown and was not: it is a frame's work for the rest of the session otherwise)
-    if (share <= 0 && (!this.tagline || this.taglineOpacity === 0)) return;
+    // (the element is made when the interlude begins, not when the line first shows: building it in the frame the word lands in was a stall of a few hundred ms on a phone)
+    const started = share > 0 || (this.caption?.landShare() ?? 0) > 0;
+    if (!started && (!this.tagline || this.taglineOpacity === 0)) return;
     const spec = CINEMATIC.tagline;
     if (!this.tagline) {
       const el = this.opts.container.ownerDocument.createElement("div");
