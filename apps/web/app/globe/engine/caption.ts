@@ -1287,8 +1287,7 @@ export class CaptionMotion {
   }
 
   /**
-   * Begin the interlude NOW, from the resting roll (the owner's key with `?cinematic`, so that it can be seen again, with its sound, without a reload
-   * and without a click: a key is a gesture that does not leave the presentation). False when it cannot: no plan, the rows are not rolling, or one
+   * Begin the interlude NOW, from the resting roll (the visitor asks for it, the palette's "I like surprises", so that it can be seen as often as it is asked for, with its sound, without a reload). False when it cannot: no plan, the rows are not rolling, or one
    * is under way.
    */
   replayEgg(now: number): boolean {

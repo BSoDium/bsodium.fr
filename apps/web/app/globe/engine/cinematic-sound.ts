@@ -16,8 +16,6 @@
  * `fadeOutMs` at its end; cut short (a gesture, the globe going away) it fades at once (`SoundHandle.fade`); a tab put behind does not stop it.
  */
 
-import { cinematicForced } from "./cinematic";
-
 export const SOUND = {
   url: "/audio/universal-intro.mp3",
   /** The loudness, 0 to 1 of the gain: faint, a sound under the page's own (the file's own level is about -17 dBFS RMS, loud). */
@@ -157,6 +155,16 @@ export function prepareSound(deps: SoundDeps = browserDeps): void {
   armContext(deps);
 }
 
+/**
+ * Called inside the visitor's own gesture (a click on the palette's entry): makes the audio context and asks it to run NOW, which is the one moment a phone's browser lets it,
+ * and starts the file's fetch and decode if they have not begun. Safe to call twice.
+ */
+export function unlockSound(deps: SoundDeps = browserDeps): void {
+  prepareSound(deps);
+  const c = context(deps);
+  if (c && c.state !== "running") void c.resume().catch(() => undefined);
+}
+
 /** Forget what was prepared (tests). */
 export function forgetSound(): void {
   buffer = null;
@@ -222,8 +230,7 @@ export function startSound(durationMs: number, deps: SoundDeps = browserDeps, al
       if (c.state !== "running") await Promise.race([c.resume().catch(() => undefined), new Promise((r) => setTimeout(r, SOUND.resumeMs))]);
       if (done) return;
       if (c.state !== "running") {
-        // (refused: no touch on the page yet. Silence; where the owner asks for the interlude, say why)
-        if (cinematicForced()) console.info("[interlude] the browser did not let the sound play: touch the page (a click, a key) before it begins");
+        // (refused: no touch on the page yet. Silence)
         return stop();
       }
       const lag = (Date.now() - t0) / 1000;

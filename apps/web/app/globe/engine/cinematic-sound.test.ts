@@ -2,7 +2,7 @@ import { readFileSync, statSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eggMs } from "./caption";
 import { CINEMATIC } from "./cinematic";
-import { SOUND, forgetSound, prepareSound, startSound, type ContextLike, type SoundDeps } from "./cinematic-sound";
+import { SOUND, forgetSound, prepareSound, startSound, unlockSound, type ContextLike, type SoundDeps } from "./cinematic-sound";
 
 /** A fake audio context that records what is done to it; `state` and `resume` are the test's to set. */
 function fakeContext(state: "running" | "suspended" = "running", resume: "ok" | "never" = "ok") {
@@ -170,27 +170,30 @@ describe("the interlude's sound", () => {
     expect(f.source.started.length).toBe(1);
   });
 
-  it("makes no sound when the browser does not let the context run (a page nobody has touched), and says why only where the interlude was asked for", async () => {
+  it("makes no sound, and says nothing, when the browser does not let the context run (a page nobody has touched)", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     const f = fakeContext("suspended", "never");
     const deps = fakeDeps(f.ctx);
     prepareSound(deps);
-    vi.stubGlobal("location", { search: "?cinematic" });
     startSound(8000, deps, true);
     await vi.advanceTimersByTimeAsync(SOUND.resumeMs + 100);
     expect(f.source.started.length).toBe(0);
-    expect(info).toHaveBeenCalledTimes(1);
-    info.mockClear();
-    forgetSound();
-    vi.stubGlobal("location", { search: "" });
-    const g = fakeContext("suspended", "never");
-    const deps2 = fakeDeps(g.ctx);
-    prepareSound(deps2);
-    startSound(8000, deps2, true);
-    await vi.advanceTimersByTimeAsync(SOUND.resumeMs + 100);
-    expect(g.source.started.length).toBe(0);
     expect(info).not.toHaveBeenCalled();
     info.mockRestore();
+  });
+
+  it("unlockSound, called in the visitor's gesture, makes the context and asks it to run at once, and fetches the file", async () => {
+    const f = fakeContext("suspended");
+    const resume = vi.spyOn(f.ctx, "resume");
+    const deps = fakeDeps(f.ctx);
+    unlockSound(deps);
+    expect(deps.made).toBe(1);
+    expect(resume).toHaveBeenCalledTimes(1);
+    expect(deps.fetched).toEqual([SOUND.url]);
+    unlockSound(deps);
+    expect(deps.made).toBe(1); // (one context, kept)
+    await vi.advanceTimersByTimeAsync(10);
+    expect(f.ctx.state).toBe("running");
   });
 
   it("starts where the interlude has got to when the context is slow to run, so that it stays with the picture", async () => {
@@ -275,8 +278,8 @@ describe("the interlude's sound", () => {
     expect(resume).not.toHaveBeenCalled();
   });
 
-  it("the sound is over with the interlude: it never runs past it", () => {
-    // the part of the file that plays is `eggMs` long at most, and the file has that much after `fromSec`
-    expect(SOUND.fileSec - SOUND.fromSec).toBeGreaterThanOrEqual(eggMs(CINEMATIC.shape) / 1000 - 0.6);
+  it("the sound is over with the interlude: it never runs past it (the lockup's hold may outlast the file's decay by a few seconds)", () => {
+    expect(SOUND.fileSec - SOUND.fromSec).toBeLessThanOrEqual(eggMs(CINEMATIC.shape) / 1000 + 0.6);
+    expect(eggMs(CINEMATIC.shape) / 1000 - (SOUND.fileSec - SOUND.fromSec)).toBeLessThan(3);
   });
 });

@@ -1711,10 +1711,9 @@ export class GlobeRenderer {
     return { ...ring.state(), overlay: this.lod.overlayAlpha, zoomAlpha: ringAlpha(this.view.zoom, this.fit, this.minZoom), presence: alpha, fit: this.fit, floor: this.minZoom, silhouettePx: silhouetteRadiusPx(this.view.zoom, this.bufH * this.pixel) };
   }
 
-  /** Checks and captures: hold the interlude's camera at this point of its flight, 0..1 (null releases it), and draw. */
-  pinFlight(u: number | null) {
-    this.caption?.pinFlight(u);
-    this.requestRender();
+  /** The visitor asks for the cinematic interlude (the search palette's entry): false when it cannot be played now. */
+  playInterlude(): boolean {
+    return this.caption?.summonInterlude() ?? false;
   }
 
   /** Checks and captures: hold the caption's entrance at `ms` after its start (null releases it) and draw. */

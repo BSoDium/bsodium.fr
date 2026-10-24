@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CAPTION_FACE, CaptionMotion, eggExitShare, DRIFT, cycleMs, eggMs, eggX, entranceMs, placeEgg, shellXY, type CinematicPlan } from "./caption";
-import { CINEMATIC, planCinematic } from "./cinematic";
+import { CINEMATIC, onDemandPlan, planCinematic } from "./cinematic";
 import { SOUND } from "./cinematic-sound";
 import { markPlayed, visitState } from "./visit";
 import { CAPTION } from "./tuning";
@@ -38,9 +38,12 @@ describe("the cinematic interlude: when it may play", () => {
     expect(latestStart).toBeGreaterThan(10000);
     expect(latestStart).toBeLessThan(30000); // ENERGY.idleFreezeMs
   });
-  it("the force flag plays it at the first exit, whatever the visit says (but not under reduced motion)", () => {
-    expect(planCinematic({ ...base, seed: 1, returning: false, played: true, forced: true })?.n).toBe(0);
-    expect(planCinematic({ ...base, seed: 1, forced: true, reduced: true })).toBeNull();
+  it("a visitor who asks for it gets it at the first exit, whatever the visit says, with the interlude's own shape", () => {
+    const p = onDemandPlan();
+    expect(p.n).toBe(0);
+    expect(p.side).toBe(CINEMATIC.side);
+    expect(p.shape).toEqual(CINEMATIC.shape);
+    expect(p.shape).not.toBe(CINEMATIC.shape); // (its own copy)
   });
   it("one word, at least twice the size, from the east, on a higher orbit than the rows'", () => {
     expect(CINEMATIC.word).toBe("UNIVERSAL");
@@ -184,9 +187,11 @@ describe("the cinematic interlude: the big row's trajectory", () => {
       last = x;
     }
   });
-  it("takes well under the idle hold (and is as long as the sound it was made to)", () => {
-    expect(eggMs(s)).toBeLessThan(26000);
-    expect(Math.abs(eggMs(s) / 1000 - SOUND.fileSec)).toBeLessThan(0.6); // the sound's own length
+  it("takes well under the idle hold, and is as long as the sound it was made to plus the lockup's hold (the studio's line is read on the last frame, after the chord)", () => {
+    expect(eggMs(s)).toBeLessThan(27000);
+    const extra = eggMs(s) / 1000 - SOUND.fileSec;
+    expect(extra).toBeGreaterThanOrEqual(-0.6); // (never shorter than the sound)
+    expect(extra).toBeLessThan(3); // (and the silence at the end is no longer than that)
   });
   it("lands its word when the sound's final chord is (SOUND.hitSec into the file)", () => {
     expect((s.leaveMs + s.gapMs + s.enterMs) / 1000).toBeCloseTo(SOUND.hitSec - SOUND.fromSec, 6);
@@ -226,7 +231,7 @@ describe("the cinematic interlude: in the caption's motion", () => {
     expect(m.phase).toBe("egg");
     expect(told).toBe(1);
   });
-  it("can be played now (the owner's key): from the roll, once at a time, and again after it has been spent", () => {
+  it("can be played now (the visitor asked for it): from the roll, once at a time, and again after it has been spent", () => {
     const m = make();
     let told = 0;
     m.onCinematic = () => told++;

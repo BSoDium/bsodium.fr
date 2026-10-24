@@ -74,7 +74,7 @@ import {
   type Placement,
   eggMs,
 } from "./caption";
-import { CINEMATIC, cinematicForced, notePlayed, planForPage } from "./cinematic";
+import { CINEMATIC, notePlayed, onDemandPlan, planForPage } from "./cinematic";
 import { buildWordGeometry } from "./cinematic-word";
 import { lonLatToVec3 } from "./geo";
 import { prepareSound, SOUND, startSound, type SoundHandle } from "./cinematic-sound";
@@ -209,7 +209,7 @@ const EGG_FRAG = /* glsl */ `
   uniform float uDissolve;
   uniform float uFinal;
   uniform vec3 uPlanet;
-  uniform vec3 uPage;
+  uniform vec3 uHaze;
   varying vec3 vNormal;
   varying vec3 vView;
   varying float vKind;
@@ -264,8 +264,8 @@ const EGG_FRAG = /* glsl */ `
     col += vec3(spec * uGlint * 0.5 * (vKind > 3.5 ? 0.3 : 1.0));
     // the outline is the line: the ink, hardly lit
     if (vKind > 0.5 && vKind < 1.5) col = mix(col, uOutline, ${CINEMATIC.light.outlineMix.toFixed(2)});
-    // Behind the planet's atmosphere: a letter whose sight line has passed close to the planet before reaching it is seen THROUGH the air at the limb, and dims into the page's
-    // colour the nearer that line grazed the planet (b, in planet radii: 1 is the limb itself, where the letters are about to go behind it)
+    // Behind the planet's atmosphere: a letter whose sight line has passed close to the planet before reaching it is seen THROUGH the air at the limb, and dims into the HAZE's
+    // colour (the page's own on the dark page; on the light page a grey step towards the ink: the page's white would LIGHTEN the letters) the nearer that line grazed the planet (b, in planet radii: 1 is the limb itself, where the letters are about to go behind it)
     {
       float len = length(vView);
       vec3 dir = vView / max(len, 1e-4);
@@ -273,7 +273,7 @@ const EGG_FRAG = /* glsl */ `
       if (tc > 0.0 && tc < len) {
         float b = length(uPlanet - tc * dir);
         float haze = ${CINEMATIC.atmosphere.dim.amount.toFixed(3)} * (1.0 - smoothstep(1.0, 1.0 + ${CINEMATIC.atmosphere.dim.reach.toFixed(3)}, b));
-        col = mix(col, uPage, haze);
+        col = mix(col, uHaze, haze);
       }
     }
     // a few levels, dithered on the art's pixels: the word is made of the globe's own pixels and tones
@@ -403,8 +403,6 @@ export interface CaptionState {
    * the first row's cycle count, the side each row came in from (`lastIn`) and goes out by (`lastOut`) in its current cycle.
    */
   cycle: { sets: number; current: number; swapping: boolean; waiting: boolean; paused: boolean; swaps: number; lastOut: number[]; lastIn: number[] };
-  /** The cinematic interlude: planned, under way, how many levels of zoom the globe is pulled back by, the big row's turn (radians; null: not on the stage) and whether its strip is drawn. */
-  egg: { planned: boolean; active: boolean; zoomOut: number; theta: number | null; drawn: boolean; slices: number; depth: number; dpr: number; halfSpanDeg: number; startDeg: number; flight: number };
   /** The baselines' latitudes of the rows now in view, top to bottom (degrees). */
   baselines: number[];
   texture: { width: number; height: number }[];
@@ -660,6 +658,7 @@ export class CaptionLayer {
   /** The uniforms of the dissolve, shared by the word's material (`EGG_VERT`, `EGG_FRAG`). */
   /** The planet's centre in the camera's frame (set per frame in `renderCrisp`): the word's letters dim behind its atmosphere (`EGG_FRAG`). */
   private eggPlanet = { value: new Vector3() };
+  private eggHaze = { value: [0, 0, 0] as number[] };
   private eggDissolve = { uDissolve: { value: 0 }, uFinal: { value: 0 }, uAxis: { value: [0, 0, 1] as number[] } };
   /** The far slices (layer below this) that carry the text colour in mode `edge` (0: none). */
   private edgeLayer = { value: 0 };
@@ -740,18 +739,6 @@ export class CaptionLayer {
       this.swell?.fade(SOUND.fadeCutMs);
       this.swell = null;
     };
-    // With `?cinematic` the owner can play it again at will: the key U (a key press is a gesture that lets the browser play the sound, and does not
-    // leave the presentation, as a click on the globe does)
-    if (this.motion.egg && cinematicForced() && typeof window !== "undefined") {
-      this.onKey = (e: KeyboardEvent) => {
-        if (e.key.toLowerCase() !== "u" || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-        const t = e.target as HTMLElement | null;
-        if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-        this.playInterlude();
-      };
-      window.addEventListener("keydown", this.onKey);
-      console.info("[interlude] ?cinematic: press U to play it now (a key press also lets the browser play its sound)");
-    }
     this.motion.onResume = () => {
       // (the showing begins again from its first phrase set)
       this.parkSet = -1;
@@ -782,7 +769,7 @@ export class CaptionLayer {
         uFinal: this.eggDissolve.uFinal,
         uAxis: this.eggDissolve.uAxis,
         uPlanet: this.eggPlanet,
-        uPage: this.dimColor,
+        uHaze: this.eggHaze,
         uBaseLat: { value: 0 },
         uBelow: { value: 0 },
         uAbove: { value: 0 },
@@ -928,6 +915,7 @@ export class CaptionLayer {
     this.eggExposure.value = tone.exposure;
     this.eggSky.value = tone.sky;
     this.eggFaceGain.value = tone.faceGain;
+    this.eggHaze.value = dark ? [...theme.background] : toward(CINEMATIC.atmosphere.dim.lightTone);
     this.dimAlpha = dark ? CAPTION.dim.alpha.dark : CAPTION.dim.alpha.light;
   }
 
@@ -977,7 +965,6 @@ export class CaptionLayer {
   /** How far the picture is put upright and level (`CaptionMotion.eggLevel`); kept as it is when the interlude ends or is cut short (the pull-back then takes it back). */
   private levelK = 0;
   private zoomAt = -1;
-  private onKey: ((e: KeyboardEvent) => void) | null = null;
 
   /** The cinematic interlude is under way (the rows are leaving, the word is on, or the globe is coming back). */
   get interluding(): boolean {
@@ -1045,20 +1032,39 @@ export class CaptionLayer {
   private cityAt = -1;
   private cityWant = false;
 
-  /** Play the interlude now (the key U with `?cinematic`): false when it cannot (the rows are not rolling, or one is under way, or there is none planned). */
-  playInterlude(retries = 6): boolean {
+  /**
+   * The visitor asks for the interlude (the search palette's entry): arms one if none is planned (the word's mesh and the sound are made only now, then), and plays it
+   * from the resting roll as soon as the rows are rolling. Call it from the gesture itself (the sound is unlocked there). False when it cannot be played (one is under way, or
+   * the caption is not there).
+   */
+  summonInterlude(retries = 14): boolean {
+    if (this.disposed || this.failed || this.motion.eggActive) return false;
     const b = this.built;
-    if (this.disposed || this.failed || !b || !b.egg || this.motion.eggActive) return false;
-    // (one that has played is spent: a new plan, the same as the first)
-    this.motion.egg ??= { n: 0, shape: { ...CINEMATIC.shape }, side: CINEMATIC.side };
+    if (!b) {
+      // (not built yet: it will be, the sizing is on its way)
+      if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
+      return false;
+    }
+    if (!this.motion.egg) {
+      this.motion.egg = onDemandPlan();
+      prepareSound();
+    }
+    if (!b.egg) {
+      // (the word's mesh is made now: the strips are built again, and replace the old ones when they are made)
+      b.key = "stale";
+      void this.build();
+      if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
+      return false;
+    }
     const ok = this.motion.replayEgg(performance.now());
     if (ok) this.opts.onChange();
-    // (the key press is an input: it wakes a caption the idle hold had stopped, and the rows are rolling again a moment later: ask again)
-    else if (retries > 0) {
-      window.clearTimeout(this.replayTimer);
-      this.replayTimer = window.setTimeout(() => this.playInterlude(retries - 1), 500);
-    }
+    // (the rows may not be rolling yet, or the idle hold had stopped the caption: it is woken by the input, and asked again a moment later)
+    else if (retries > 0) this.later(() => this.summonInterlude(retries - 1));
     return ok;
+  }
+  private later(fn: () => void): void {
+    window.clearTimeout(this.replayTimer);
+    this.replayTimer = window.setTimeout(fn, 400);
   }
   private replayTimer = 0;
 
@@ -1091,7 +1097,6 @@ export class CaptionLayer {
    * is flown to its end, quickly). Read with `zoomOutLevels`, once a frame.
    */
   flightProgress(): number {
-    if (this.pinnedFlight !== null) return this.pinnedFlight;
     if (this.motion.eggActive) {
       this.flightU = this.motion.eggFlight();
       this.flightAt = -1;
@@ -1115,13 +1120,6 @@ export class CaptionLayer {
   private cutK = 0;
   private flightU = 1;
   private flightAt = -1;
-  private pinnedFlight: number | null = null;
-
-  /** Checks and captures: hold the camera at this point of its flight (null releases it). */
-  pinFlight(u: number | null): void {
-    this.pinnedFlight = u;
-    this.opts.onChange();
-  }
 
   /**
    * How far the picture leans now, radians (0 outside the interlude): the pull-back's own eased value times the tilt, so the planet leans in as it
@@ -1560,10 +1558,8 @@ export class CaptionLayer {
 
   /** Draw the caption over the globe's frame. */
   /** The pixel ratio the caption's canvas was last drawn at (the word's slices are counted in device pixels). */
-  private dprNow = 2;
 
   renderCrisp(camera: PerspectiveCamera, rect: CaptionRect, dpr: number, artPx = 1): void {
-    this.dprNow = dpr;
     // (the interlude's word goes BEHIND the hero's name, not over it)
     this.crisp.setZ(this.interludePixels ? "9" : "15");
     if (!this.anyVisible || !this.built || this.failed) {
@@ -1662,7 +1658,6 @@ export class CaptionLayer {
       parallelsFor: 0,
       capCells: this.sizing ? (CAPTION.capR * this.sizing.r) / this.sizing.cell : 0,
       seed: this.motion.seed,
-      egg: { planned: this.motion.egg !== null, active: this.motion.eggActive, zoomOut: this.zoomK * (this.motion.egg?.shape ?? CINEMATIC.shape).zoomLevels, theta: this.motion.eggTheta(), drawn: (b?.variants ?? []).some((v) => v.set === EGG && v.mesh.visible), slices: (b?.variants ?? []).find((v) => v.set === EGG)?.n ?? 0, depth: (b?.variants ?? []).find((v) => v.set === EGG)?.material.uniforms.uDepth!.value ?? 0, dpr: this.dprNow, halfSpanDeg: b?.egg ? (b.egg.place.halfSpan * 180) / Math.PI : 0, startDeg: b?.egg ? (b.egg.start * 180) / Math.PI : 0, flight: this.flightU },
       lines: shown.map((v) => ({
         text: v.line.text,
         parent: v.row,
@@ -1683,7 +1678,6 @@ export class CaptionLayer {
 
   dispose(): void {
     if (this.disposed) return;
-    if (this.onKey) window.removeEventListener("keydown", this.onKey);
     window.clearTimeout(this.replayTimer);
     this.swell?.fade(150); // (the globe goes away mid-interlude: so does its sound)
     this.swell = null;

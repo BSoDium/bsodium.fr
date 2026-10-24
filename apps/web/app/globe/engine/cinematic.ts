@@ -12,8 +12,8 @@ import { markPlayed, sessionStores, visitState } from "./visit";
  * frozen like the roll by the energy pass's hold.
  *
  * When it may play (all of them): the visitor has been here before (a first visit would only be puzzled by it), motion is not reduced, it has not
- * played in this browser session, the page is not a debug one, and the session's seeded draw says so (`chance`). `?cinematic` (or sessionStorage
- * "cinematic" = "1") plays it at the end of the first cycle, whatever the rest says (not under reduced motion): for the owner and for captures.
+ * played in this browser session, the page is not a debug one, and the session's seeded draw says so (`chance`). And the visitor can ask for it, always
+ * (the search palette's "I like surprises", `onDemandPlan`), not under reduced motion.
  */
 export const CINEMATIC = {
   /** The share of eligible sessions it plays in. */
@@ -77,12 +77,12 @@ export const CINEMATIC = {
   /**
    * The timing (engine/caption.ts `EggShape`, ms), made to the sound's length (`SOUND` in cinematic-sound.ts: 24.1 s, a long crescendo and its final chord
    * 20.25 s in, which is where the word lands: 0.5 + 0.4 + 19.35): the rows leave in `leaveMs`, the stage is empty for `gapMs`, the word comes in in `enterMs` (a very
-   * long ease from `ease`: 1, against 2.2 for the regular rows, that lands at the roll's own speed), holds rolling through `ampDeg` for `holdMs`,
+   * long ease from `ease`: 1, against 2.2 for the regular rows, that lands at the roll's own speed), holds rolling through `ampDeg` for `holdMs` (long enough to read the studio's small line under the globe),
    * and leaves in `exitMs`. The globe pulls back by `zoomLevels` levels of zoom (0.7: to 62 % of its size, the word and the ring with it) and
    * LEANS over the first `zoomInMs`, stays so for as long as the word is on the stage, and comes back upright over the `zoomOutMs` AFTER it has
    * gone (the whole is `eggMs`: about 24 s, begun at 13 s in; the idle hold at 30 s waits for it, `Renderer.freezeWhenIdle`).
    */
-  shape: { leaveMs: 500, gapMs: 400, enterMs: 19350, ease: 1, holdMs: 1000, exitMs: 1450, ampDeg: 2.5, zoomLevels: 1, zoomInMs: 6000, zoomOutMs: 1400, zoomCutMs: 1000, levelMs: 5500 },
+  shape: { leaveMs: 500, gapMs: 400, enterMs: 19350, ease: 1, holdMs: 3400, exitMs: 1450, ampDeg: 2.5, zoomLevels: 1, zoomInMs: 6000, zoomOutMs: 1400, zoomCutMs: 1000, levelMs: 5500 },
   /**
    * Where the word starts: the longitude its LEADING end (the west one) begins at, degrees east, in the earth's own frame, not the page's. The flight's
    * first camera is over Greece (22 E) at 0.15 earth radii, from where the equatorial shell is seen only up to about 111 E: the word starts BEYOND that
@@ -104,14 +104,14 @@ export const CINEMATIC = {
    * `occluderMaterial`), `cities` the places' lights at the chord.
    */
   planet: { fill: false, cities: false },
-  /** The atmosphere (a thin grey glow round the planet's limb): how much of it, for the whole interlude. `dim`: the letters seen through it (a sight line that passes within `reach` planet radii of the limb before reaching them) dim into the page's colour by up to `amount`. */
-  atmosphere: { amount: 1, dim: { amount: 0.85, reach: 0.16 } },
+  /** The atmosphere (a thin grey glow round the planet's limb): how much of it, for the whole interlude. `dim`: the letters seen through it (a sight line that passes within `reach` planet radii of the limb before reaching them) dim by up to `amount` into the page's colour (dark page) or a grey `lightTone` of the way to the ink (light page: the page's white would lighten them). */
+  atmosphere: { amount: 1, dim: { amount: 0.85, reach: 0.16, lightTone: 0.5 } },
   /**
    * The studio's small line under the globe, a parody of its own ("A COMCAST COMPANY"), set in the page's light sans in wide-spaced capitals: it comes in over `inMs` once the
    * word has landed and goes with its exit over `outMs`. `gap`: how far under the planet's centre its middle is, in planet radii (the studio's is 1.24); `size`: its height, planet
    * radii, at least `minPx`; `tracking`: its letter spacing, em.
    */
-  tagline: { text: "This is a parody, please don't sue me", inMs: 700, outMs: 700, gap: 1.24, size: 0.06, minPx: 9, tracking: 0.35 },
+  tagline: { text: "This is a parody, please don't sue me", inMs: 700, outMs: 700, gap: 1.24, size: 0.085, minPx: 10, tracking: 0.22 },
   /** The places' lights come up through the dither when the word lands (the chord), over `inMs`, and go over `outMs`. */
   city: { inMs: 240, outMs: 500 },
   /** The side the word comes in from: EAST (1), as the studio's does. */
@@ -124,14 +124,12 @@ export const CINEMATIC = {
 } as const;
 
 /**
- * The interlude's plan, or null: a pure function of the session's seed and what is known about the visit. `forced`: at the first row's first
- * exit, drawn or not (never under reduced motion).
+ * The interlude's plan, or null: a pure function of the session's seed and what is known about the visit.
  */
-export function planCinematic(input: { seed: number; returning: boolean; played: boolean; reduced: boolean; forced?: boolean }): CinematicPlan | null {
-  const { seed, returning, played, reduced, forced = false } = input;
+export function planCinematic(input: { seed: number; returning: boolean; played: boolean; reduced: boolean }): CinematicPlan | null {
+  const { seed, returning, played, reduced } = input;
   if (reduced) return null;
   const shape = { ...CINEMATIC.shape };
-  if (forced) return { n: 0, shape, side: CINEMATIC.side };
   if (!returning || played) return null;
   const next = seededUnit((seed ^ 0x43494e45) | 0);
   next(); // (the first draw of a small seed is poorly mixed)
@@ -140,16 +138,12 @@ export function planCinematic(input: { seed: number; returning: boolean; played:
   return { n: cycles[Math.min(cycles.length - 1, Math.floor(next() * cycles.length))]!, shape, side: CINEMATIC.side };
 }
 
-/** The page's own flag: `?cinematic` or sessionStorage "cinematic" = "1". */
-export function cinematicForced(): boolean {
-  try {
-    return new URLSearchParams(location.search).has("cinematic") || sessionStorage.getItem("cinematic") === "1";
-  } catch {
-    return false;
-  }
+/** The plan of an interlude the visitor asked for (the search palette's entry): at the first chance, drawn or not, once per asking. */
+export function onDemandPlan(): CinematicPlan {
+  return { n: 0, shape: { ...CINEMATIC.shape }, side: CINEMATIC.side };
 }
 
-/** Debug pages (what the browser checks run in) never play it, unless it is asked for. */
+/** Debug pages (what the browser checks run in) never draw it by chance. */
 function onDebugPage(): boolean {
   try {
     return new URLSearchParams(location.search).has("globe-debug") || sessionStorage.getItem("globe-debug") === "1";
@@ -161,9 +155,8 @@ function onDebugPage(): boolean {
 /** The plan for this page load: what the layer is given. */
 export function planForPage(seed: number, reduced: boolean): CinematicPlan | null {
   const { local, session } = sessionStores();
-  const forced = cinematicForced();
-  if (onDebugPage() && !forced) return null;
-  return planCinematic({ seed, reduced, forced, ...visitState(local, session) });
+  if (onDebugPage()) return null;
+  return planCinematic({ seed, reduced, ...visitState(local, session) });
 }
 
 /** The egg has begun: it will not play again in this browser session. */
